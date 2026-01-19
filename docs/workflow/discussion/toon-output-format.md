@@ -21,7 +21,7 @@ Tick needs to output task data in a format optimized for AI agent consumption. T
 - [x] What should the TOON output structure look like for each command type?
 - [x] How should output format selection work (flags, detection, defaults)?
 - [x] How should complex/nested data be handled in TOON?
-- [ ] Should error output also use TOON format?
+- [x] Should error output also use TOON format?
 - [ ] What about human-readable output (--plain)?
 
 ---
@@ -199,15 +199,48 @@ When commands fail, what format should errors use? Should it match the requested
 
 ### Options Considered
 
-*To be explored in discussion*
+**Option A: Always plain text errors to stderr**
+- Simple, universal, humans can always read it
+- Errors go to stderr, not mixed with stdout data
+- Agents detect via non-zero exit code
+
+**Option B: Match requested format**
+- TOON output → TOON error, JSON output → JSON error
+- Pro: Consistent parsing for agents
+- Con: More complex to implement
+
+**Option C: Structured to stdout + human message to stderr**
+- Both machine-readable and human-readable
+- Con: Duplicated information, unnecessary complexity
 
 ### Journey
 
-*Discussion will be captured here*
+Brief discussion. Errors are exceptional - simplicity wins.
+
+Agents can reliably detect errors via:
+1. Non-zero exit code (primary signal)
+2. stderr contains the error message (human-readable)
+3. stdout is empty or incomplete
+
+No need for structured error format. This is standard Unix convention.
 
 ### Decision
 
-*Pending*
+**Option A: Plain text errors to stderr**
+
+- All errors output to stderr as plain text
+- Non-zero exit codes for error conditions
+- Exit codes could be meaningful (e.g., 1 = not found, 2 = invalid input) but not required initially
+
+Example:
+```
+$ tick show tick-xyz
+Error: Task 'tick-xyz' not found
+$ echo $?
+1
+```
+
+**Rationale**: Standard Unix convention. Simple, universal. Agents check exit code first, read stderr if needed.
 
 ---
 
