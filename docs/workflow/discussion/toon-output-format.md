@@ -18,9 +18,9 @@ Tick needs to output task data in a format optimized for AI agent consumption. T
 
 ## Questions
 
-- [ ] What should the TOON output structure look like for each command type?
-- [ ] How should output format selection work (flags, detection, defaults)?
-- [ ] How should complex/nested data be handled in TOON?
+- [x] What should the TOON output structure look like for each command type?
+- [x] How should output format selection work (flags, detection, defaults)?
+- [x] How should complex/nested data be handled in TOON?
 - [ ] Should error output also use TOON format?
 - [ ] What about human-readable output (--plain)?
 
@@ -38,15 +38,69 @@ Different commands return different data shapes. `tick list` returns arrays of t
 
 ### Options Considered
 
-*To be explored in discussion*
+**Option A: Single flat table for everything**
+- Try to fit all data into one TOON table per command
+- Con: Nested arrays (blocked_by, children) don't fit TOON's tabular format
+
+**Option B: Multi-section approach**
+- Break complex output into multiple TOON sections
+- Each section is a clean, uniform table with its own schema
+- Pro: Plays to TOON's strengths, self-documenting
+
+**Option C: Fall back to JSON for complex commands**
+- Use TOON only for simple lists, JSON for `tick show` etc.
+- Con: Inconsistent, agents need to handle multiple formats
 
 ### Journey
 
-*Discussion will be captured here*
+Started by examining the research example for `tick list`:
+```
+tasks[2]{id,title,status,priority}:
+  tick-a1b2,Setup Sanctum,done,1
+  tick-c3d4,Login endpoint,open,1
+```
+
+This works well for uniform arrays. But `tick show` has nested data - blocked_by array, children, long text fields.
+
+Explored inline arrays with delimiters (`tick-a|tick-b`) but felt hacky.
+
+**Key insight**: Breaking into sections keeps TOON's strength. Each section is self-describing with its schema header. Related tasks (blockers, children) can include useful context (title, status) not just IDs.
+
+**Empty arrays question**: Should empty sections be omitted or shown with zero count?
+- Omit: Cleaner output
+- Zero count: Explicit, consistent, agents don't need "missing means empty" logic
+
+Decided: Include with zero count for consistency.
 
 ### Decision
 
-*Pending*
+**Option B: Multi-section approach**
+
+Example `tick show` output:
+```
+task{id,title,status,priority,type,parent,created,updated}:
+  tick-a1b2,Setup Sanctum,in_progress,1,task,tick-e5f6,2026-01-19T10:00:00Z,2026-01-19T14:30:00Z
+
+blocked_by[2]{id,title,status}:
+  tick-c3d4,Database migrations,done
+  tick-g7h8,Config setup,in_progress
+
+children[0]{id,title,status}:
+
+description:
+  Full task description here.
+  Can be multiple lines.
+
+notes:
+  Agent notes captured during work.
+```
+
+**Principles**:
+1. Each section has its own schema header - self-documenting
+2. Related entities include context (title, status), not just IDs
+3. Long text fields get their own unstructured sections
+4. Empty arrays shown with zero count: `blocked_by[0]{id,title,status}:`
+5. Sections can be omitted only if the field doesn't exist (vs empty)
 
 ---
 
@@ -58,15 +112,41 @@ Need to support multiple output formats: TOON (default for agents), JSON (compat
 
 ### Options Considered
 
-*To be explored in discussion*
+**Option A: TOON default (agent-first)**
+- Always output TOON, require `--pretty` for human-readable
+- Con: Humans see cryptic output by default
+
+**Option B: Human-readable default**
+- Pretty tables by default, `--toon` for agents
+- Con: Agents must always remember flag
+
+**Option C: Auto-detect (TTY vs pipe)**
+- Check if stdout is a terminal
+- Terminal → human-readable
+- Piped/redirected → TOON
+- Pro: Best of both worlds automatically
 
 ### Journey
 
-*Discussion will be captured here*
+This was discussed in detail in [CLI Command Structure & UX](cli-command-structure-ux.md) discussion.
+
+Key insight: When agents run commands via Bash tool, stdout is a pipe (not TTY). So TOON happens automatically without flags. Humans at terminals get readable output naturally.
+
+This is a well-established Unix pattern used by `ls` (colors), `git` (pager), `grep` (colors).
 
 ### Decision
 
-*Pending*
+**Option C: Auto-detect TTY** (decided in CLI discussion)
+
+| Condition | Output Format |
+|-----------|---------------|
+| No TTY (pipe/redirect) | TOON |
+| TTY (terminal) | Human-readable table |
+| `--toon` flag | Force TOON |
+| `--pretty` flag | Force human-readable |
+| `--json` flag | Force JSON |
+
+**Rationale**: Agents get TOON automatically without remembering flags. Humans get readable output. Edge cases covered by explicit flags. Intuitive, not magic.
 
 ---
 
@@ -78,15 +158,36 @@ TOON excels at uniform arrays (like task lists). But what about task details wit
 
 ### Options Considered
 
-*To be explored in discussion*
+**Option A: Inline with delimiters**
+- `blocked_by` as `tick-a|tick-b|tick-c` within the row
+- Con: Needs escaping, parsing complexity, loses structure
+
+**Option B: Multi-section output**
+- Break into separate TOON sections, each with its own schema
+- Pro: Each section is clean, self-describing
+
+**Option C: Hybrid (JSON for nested parts)**
+- TOON for main data, embedded JSON for arrays
+- Con: Two formats to parse, defeats the purpose
 
 ### Journey
 
-*Discussion will be captured here*
+See Q1 discussion. The multi-section approach emerged as the natural fit.
+
+Key realization: TOON's strength is uniform tabular data. Instead of fighting that by cramming arrays into cells, embrace it by making each array its own section.
+
+**Bonus**: Related tasks in sections can include context (title, status), not just IDs. More useful for agents deciding what to do.
 
 ### Decision
 
-*Pending*
+**Option B: Multi-section output**
+
+Same decision as Q1. Complex data handled by breaking into sections:
+- Main entity as single-row table
+- Related arrays as their own tables with full schema
+- Long text as unstructured sections
+
+See Q1 for full example.
 
 ---
 
