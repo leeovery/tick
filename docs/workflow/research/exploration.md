@@ -52,4 +52,36 @@ Core thesis: Existing tools (Beads, br, Backlog.md) are either too complex or la
 
 ---
 
+#### Integration Context: Claude Technical Workflows
+
+**Q: How does tick fit into the existing workflow package?**
+
+**A:** Tick becomes a new output format for the planning phase, replacing/complementing existing options.
+
+**Current output formats** (from [claude-technical-workflows](https://github.com/leeovery/claude-technical-workflows)):
+
+| Format | Storage | Query Method | Issues |
+|--------|---------|--------------|--------|
+| **Local Markdown** | Single `.md` file | Parse markdown | No deterministic "what's ready?" query |
+| **Beads** | JSONL + SQLite + daemon | `bd ready` | Complex - daemon, sync, hooks |
+| **Backlog.md** | Individual `.md` files | MCP or parse files | Requires MCP or markdown parsing |
+| **Linear** | External service | API/MCP | External dependency |
+
+**What Tick offers**:
+- Deterministic `tick ready` query (like Beads)
+- Simple JSONL storage (like Beads)
+- No daemon, no sync, no hooks (unlike Beads)
+- No markdown parsing required (unlike Local Markdown, Backlog.md)
+
+**Workflow integration point**:
+```
+Specification → Planning Agent → tick create (tasks, deps, epics)
+                                      ↓
+Implementation Agent → tick ready → execute task → tick done
+```
+
+The planning skill would get a new `output-tick.md` adapter alongside the existing formats.
+
+---
+
 *Research continues...*
