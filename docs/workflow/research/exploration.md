@@ -470,4 +470,46 @@ default_priority = 2
 
 ---
 
+#### Exploration: Output Format (TOON vs JSON)
+
+**Q: Should output default to JSON or a more token-efficient format?**
+
+**Context**: [TOON (Token-Oriented Object Notation)](https://github.com/toon-format/toon) is a format designed for LLM consumption that achieves 30-60% token savings over JSON while actually improving parsing accuracy (73.9% vs 69.7% in benchmarks).
+
+**JSON output**:
+```json
+[
+  {"id": "tick-a1b2", "title": "Setup Sanctum", "status": "done", "priority": 1},
+  {"id": "tick-c3d4", "title": "Login endpoint", "status": "open", "priority": 1}
+]
+```
+
+**TOON output**:
+```
+tasks[2]{id,title,status,priority}:
+  tick-a1b2,Setup Sanctum,done,1
+  tick-c3d4,Login endpoint,open,1
+```
+
+**Exploration outcome**:
+- TOON is well-suited for `tick ready` and `tick list` (uniform arrays of tasks)
+- Default to TOON for agent consumption
+- Provide `--json` flag for compatibility/debugging
+- Consider `--plain` for human-readable output
+
+**Storage vs Output**:
+
+| Concern | Storage (JSONL) | Output (TOON) |
+|---------|-----------------|---------------|
+| Token efficiency | Doesn't matter | Critical |
+| Git diffs | Clean line-by-line | N/A |
+| Human debugging | Readable | Less readable |
+| Parser maturity | Universal | Newer |
+
+**Decision**: Keep JSONL for storage, use TOON as default output format.
+
+**Note on JSONL**: JSONL (JSON Lines) and NDJSON (Newline Delimited JSON) are the same format - one JSON object per line. JSONL is the more common name.
+
+---
+
 *Research continues...*
