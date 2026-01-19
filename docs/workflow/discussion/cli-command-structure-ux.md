@@ -26,8 +26,7 @@ The research phase proposed a command structure, but several UX questions remain
 
 - [x] What should the default output format be for each command type?
 - [x] Should aliases (`ready`, `blocked`) be true aliases or standalone commands?
-- [ ] Is `dep add/remove` the right pattern for dependency management?
-      - Alternatives: `block/unblock`, `depends/undepends`, inline on create
+- [x] Is `dep add/remove` the right pattern for dependency management?
 - [ ] How should errors and feedback be communicated?
       - Exit codes, error message format, verbosity levels
 - [ ] Should there be bulk operations for planning agents?
@@ -133,6 +132,64 @@ Agents get TOON automatically without needing any flags. Simpler agent instructi
 `tick ready` and `tick blocked` are built-in commands that internally delegate to `tick list` with the appropriate flag. No code duplication - they share the list command's query logic.
 
 **Rationale**: `tick ready` is likely the most-used command (agents constantly checking what to work on next). It should be easy to type. But we don't want separate implementations that could diverge. Internal delegation gives us convenience without duplication.
+
+---
+
+## Q3: Dependency Management Pattern
+
+### Options Considered
+
+**Option A: `dep add/remove` only**
+- Dedicated subcommand for all dependency operations
+- Pro: Explicit, clear
+- Con: Can't set deps at creation time
+
+**Option B: `block/unblock`**
+- Shorter command names
+- Pro: Concise
+- Con: "Block" sounds harsh, ambiguous which task is which
+
+**Option C: Flags only (`--blocked-by`)**
+- Set dependencies only at creation/edit time
+- Pro: Natural flow when creating
+- Con: Can't manage deps without editing task
+
+**Option D: Hybrid (flags + dedicated command)**
+- `--blocked-by` on create, `dep add/rm` for later
+- Pro: Best of both worlds
+- Con: Two ways to do similar things (but for different contexts)
+
+### Argument Order Discussion
+
+Two mental models for `dep add`:
+
+1. **Task first, dependency second**: `tick dep add tick-c3d4 tick-a1b2` - "c3d4 depends on a1b2"
+2. **Blocker first, blocked second**: `tick dep add tick-a1b2 tick-c3d4` - "a1b2 blocks c3d4"
+
+**Chose Option 1** (task first) because:
+- Matches the flag pattern: `tick create "X" --blocked-by Y` has subject first
+- "I'm modifying task X" - the subject comes first
+- Reads naturally: "Add to c3d4 a dependency on a1b2"
+
+### Decision
+
+**Option D: Hybrid approach.**
+
+**At creation time:**
+```bash
+tick create "Login endpoint" --blocked-by tick-a1b2
+tick create "Complex task" --blocked-by tick-a1b2,tick-x9y8  # comma-separated
+```
+
+**Later modifications:**
+```bash
+tick dep add tick-c3d4 tick-a1b2    # c3d4 now depends on a1b2
+tick dep rm tick-c3d4 tick-a1b2     # remove that dependency
+```
+
+**Rationale**: Planning agents typically set dependencies at creation time - `--blocked-by` is natural there. Implementation agents may need to adjust dependencies as work progresses - `dep add/rm` handles that. Argument order (task first, dependency second) matches the flag pattern and reads naturally.
+
+**Note on `dep`**: While `dep` looks truncated, `tick dep add` reads clearly in context. Alternatives (`link`, `needs`, `require`) were considered but didn't improve clarity.
 
 ---
 
