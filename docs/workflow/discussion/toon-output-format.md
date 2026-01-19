@@ -1,7 +1,7 @@
 # Discussion: TOON Output Format Implementation
 
 **Date**: 2026-01-19
-**Status**: Exploring
+**Status**: Concluded
 
 ## Context
 
@@ -22,7 +22,7 @@ Tick needs to output task data in a format optimized for AI agent consumption. T
 - [x] How should output format selection work (flags, detection, defaults)?
 - [x] How should complex/nested data be handled in TOON?
 - [x] Should error output also use TOON format?
-- [ ] What about human-readable output (--plain)?
+- [x] What about human-readable output (--pretty)?
 
 ---
 
@@ -244,7 +244,7 @@ $ echo $?
 
 ---
 
-## What about human-readable output (--plain)?
+## What about human-readable output (--pretty)?
 
 ### Context
 
@@ -252,15 +252,79 @@ While agents are the primary user, humans need to read output too (debugging, ov
 
 ### Options Considered
 
-*To be explored in discussion*
+**Option A: Simple aligned table**
+```
+ID          STATUS       PRI  TITLE
+tick-a1b2   done         1    Setup Sanctum
+tick-c3d4   in_progress  1    Login endpoint
+```
+- Pro: Clean, minimal, no visual noise
+- Pro: Works in any terminal
+
+**Option B: Bordered table (MySQL style)**
+```
++------------+-------------+-----+------------------+
+| ID         | STATUS      | PRI | TITLE            |
++------------+-------------+-----+------------------+
+| tick-a1b2  | done        | 1   | Setup Sanctum    |
++------------+-------------+-----+------------------+
+```
+- Con: Heavy, cluttered for a CLI tool
+
+**Option C: Compact with icons**
+```
+tick-a1b2  ✓  Setup Sanctum
+tick-c3d4  ►  Login endpoint
+tick-e5f6  ○  Logout endpoint
+```
+- Pro: Very compact
+- Con: Less structured, harder to scan columns
 
 ### Journey
 
-*Discussion will be captured here*
+Discussed Go libraries for terminal output:
+- **tablewriter** - Classic, simple table formatting
+- **lipgloss** - Modern styling from Charm team
+- **pterm** - Batteries included (tables, colors, spinners)
+
+For tick's minimalist philosophy, heavy TUI frameworks (bubbletea, tview) are overkill.
+
+User preference: "Minimalist and clean" - no borders, no heavy styling.
+
+Subtle color for status indicators could be nice if terminal supports it, but not required. ASCII fallback for compatibility.
 
 ### Decision
 
-*Pending*
+**Option A: Simple aligned table**
+
+- Clean column-aligned output without borders
+- Optional subtle colors for status (green=done, yellow=in_progress, dim=open)
+- Graceful fallback to plain ASCII if terminal doesn't support colors
+- Use `tablewriter` or `lipgloss` for implementation (decide during planning)
+
+Example `tick list`:
+```
+ID          STATUS       PRI  TITLE
+tick-a1b2   done         1    Setup Sanctum
+tick-c3d4   in_progress  1    Login endpoint
+tick-e5f6   open         2    Logout endpoint
+```
+
+Example `tick show`:
+```
+tick-a1b2: Setup Sanctum
+Status: in_progress  Priority: 1  Type: task
+
+Blocked by:
+  tick-c3d4  done  Database migrations
+  tick-g7h8  open  Config setup
+
+Description:
+  Full task description here.
+  Can be multiple lines.
+```
+
+**Rationale**: Matches tick's minimalist philosophy. Clean, scannable, works everywhere.
 
 ---
 
@@ -268,13 +332,34 @@ While agents are the primary user, humans need to read output too (debugging, ov
 
 ### Key Insights
 
-*To emerge from discussion*
+1. **Multi-section TOON for complex data** - Instead of fighting TOON's tabular nature with nested arrays, break output into multiple self-describing sections. Each section has its own schema header.
 
-### Current State
+2. **TTY detection is elegant** - Agents get TOON automatically (pipes), humans get pretty output (terminals). No flags needed for the common case. Explicit flags (`--toon`, `--pretty`, `--json`) for edge cases.
 
-- Core decision made: TOON as default, JSON as fallback
-- Implementation details need formalizing
+3. **Empty arrays should be explicit** - Use `blocked_by[0]{id,title,status}:` rather than omitting. Consistency wins over terseness.
+
+4. **Errors stay simple** - Plain text to stderr, non-zero exit codes. Standard Unix convention. No structured error format needed.
+
+5. **Minimalist human output** - Simple aligned tables, no borders. Optional subtle colors with ASCII fallback.
+
+### Decisions Made
+
+| Question | Decision |
+|----------|----------|
+| TOON structure | Multi-section approach for complex data |
+| Format selection | TTY auto-detection with override flags |
+| Nested data | Separate sections per array/relationship |
+| Error output | Plain text to stderr |
+| Human output | Simple aligned tables, minimalist |
+
+### Implementation Notes
+
+- Related entities in sections include context (title, status), not just IDs
+- Consider `tablewriter` or `lipgloss` for human-readable formatting
+- TOON parsing library may need to be written or adapted for Go
 
 ### Next Steps
 
-- [ ] Work through each question above
+- [ ] Proceed to specification phase
+- [ ] Define exact TOON output for each command
+- [ ] Document TOON parsing requirements
