@@ -282,49 +282,21 @@ tick-e5f6  ○  Logout endpoint
 
 ### Journey
 
-Discussed Go libraries for terminal output:
-- **tablewriter** - Classic, simple table formatting
-- **lipgloss** - Modern styling from Charm team
-- **pterm** - Batteries included (tables, colors, spinners)
+Briefly discussed Go libraries for terminal output (tablewriter, lipgloss, pterm). Heavy TUI frameworks (bubbletea, tview) are overkill for tick.
 
-For tick's minimalist philosophy, heavy TUI frameworks (bubbletea, tview) are overkill.
+User preference: "Minimalist and clean"
 
-User preference: "Minimalist and clean" - no borders, no heavy styling.
-
-Subtle color for status indicators could be nice if terminal supports it, but not required. ASCII fallback for compatibility.
+Realized the specific styling choice (bordered tables, icons, colors) is implementation detail - out of scope for this discussion.
 
 ### Decision
 
-**Option A: Simple aligned table**
+**Design philosophy: Minimalist and clean**
 
-- Clean column-aligned output without borders
-- Optional subtle colors for status (green=done, yellow=in_progress, dim=open)
-- Graceful fallback to plain ASCII if terminal doesn't support colors
-- Use `tablewriter` or `lipgloss` for implementation (decide during planning)
+- Human-readable output activated via TTY detection or `--pretty` flag
+- Should be clean, scannable, not cluttered
+- Exact styling (borders, colors, icons) deferred to implementation phase
 
-Example `tick list`:
-```
-ID          STATUS       PRI  TITLE
-tick-a1b2   done         1    Setup Sanctum
-tick-c3d4   in_progress  1    Login endpoint
-tick-e5f6   open         2    Logout endpoint
-```
-
-Example `tick show`:
-```
-tick-a1b2: Setup Sanctum
-Status: in_progress  Priority: 1  Type: task
-
-Blocked by:
-  tick-c3d4  done  Database migrations
-  tick-g7h8  open  Config setup
-
-Description:
-  Full task description here.
-  Can be multiple lines.
-```
-
-**Rationale**: Matches tick's minimalist philosophy. Clean, scannable, works everywhere.
+**Rationale**: This discussion establishes that human-readable output exists and should follow minimalist principles. Implementation details belong in planning/implementation.
 
 ---
 
@@ -340,7 +312,7 @@ Description:
 
 4. **Errors stay simple** - Plain text to stderr, non-zero exit codes. Standard Unix convention. No structured error format needed.
 
-5. **Minimalist human output** - Simple aligned tables, no borders. Optional subtle colors with ASCII fallback.
+5. **Minimalist human output** - Design philosophy is "minimalist and clean". Exact styling deferred to implementation.
 
 ### Decisions Made
 
@@ -350,13 +322,13 @@ Description:
 | Format selection | TTY auto-detection with override flags |
 | Nested data | Separate sections per array/relationship |
 | Error output | Plain text to stderr |
-| Human output | Simple aligned tables, minimalist |
+| Human output | Minimalist and clean (styling deferred) |
 
 ### Implementation Notes
 
 - Related entities in sections include context (title, status), not just IDs
-- Consider `tablewriter` or `lipgloss` for human-readable formatting
 - TOON parsing library may need to be written or adapted for Go
+- Human-readable styling choices (library, colors, borders) to be decided during implementation
 
 ### Next Steps
 
