@@ -181,4 +181,42 @@ tick show tick-a1b2 --include-archived
 
 ---
 
+#### Decision: Config File
+
+**Q: Config file - worth the complexity?**
+
+**A:** Yes. Flat key-value format, created during `tick init`.
+
+**Format**: Properties-style (flat `key = value`)
+```
+prefix = tick
+default_priority = 2
+```
+
+**Why this format**:
+- No nesting, no schema, no compatibility concerns
+- Easy to parse: read lines, split on `=`, trim whitespace
+- Missing keys → hardcoded defaults
+- Extensible: new options can be added without breaking existing configs
+
+**File**: `.tick/config`
+
+**Initial options**:
+- `prefix` - ID prefix (default: `tick`)
+
+**Future options** (as needs emerge):
+- `default_priority` - Priority for new tasks
+- `auto_archive_after_days` - Auto-archive threshold
+- Others TBD
+
+**Parsing logic**:
+```
+1. Read .tick/config if exists
+2. Parse key = value pairs
+3. Merge with hardcoded defaults
+4. Use merged config
+```
+
+---
+
 *Research continues...*
