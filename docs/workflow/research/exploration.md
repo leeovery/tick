@@ -101,4 +101,43 @@ The planning skill would get a new `output-tick.md` adapter alongside the existi
 
 ---
 
+#### Decision: Hierarchy vs Dependencies
+
+**Q: Subtasks - flat with parent reference vs nested structure?**
+
+**A:** Flat with `parent` field. Infinite depth possible. Separate from dependencies.
+
+**Two distinct concepts**:
+
+| Concept | Field | Meaning |
+|---------|-------|---------|
+| **Hierarchy** | `parent: string` | "I am part of this larger thing" (decomposition) |
+| **Dependency** | `blocked_by: string[]` | "I can't start until these are done" (sequencing) |
+
+**Example**:
+```
+Epic: Auth System (tick-a1b2)
+├── Task: Setup Sanctum (tick-c3d4, parent=tick-a1b2)
+├── Task: Login endpoint (tick-e5f6, parent=tick-a1b2, blocked_by=[tick-c3d4])
+│     ├── Subtask: Validation (tick-g7h8, parent=tick-e5f6)
+│     └── Subtask: Rate limiting (tick-i9j0, parent=tick-e5f6)
+└── Task: Logout endpoint (tick-k1l2, parent=tick-a1b2, blocked_by=[tick-e5f6])
+```
+
+**Key decisions**:
+1. **Infinite depth** - Tasks can have children, which can have children
+2. **Explicit completion** - Parent doesn't auto-complete when children done. Manual `tick done`.
+3. **Organization, not enforcement** - Hierarchy helps organize work, doesn't constrain it
+
+**Queries are simple**:
+```sql
+-- Get children of a task
+SELECT * FROM tasks WHERE parent = ?;
+
+-- Get dependencies
+SELECT blocked_by FROM dependencies WHERE task_id = ?;
+```
+
+---
+
 *Research continues...*
