@@ -23,11 +23,13 @@ research_files:
 - **Source**: exploration.md (lines 214-223)
 - **Summary**: AGENTS.md concept defining how agents should interact with tick - never read raw files, always use --json, check ready first, update status when starting.
 - **Key questions**: What instructions are essential? Should tick enforce any of these patterns? How to handle agent misbehavior?
+- **Status**: No separate discussion needed
 
 ### Workflow Integration (claude-technical-workflows)
 - **Source**: exploration.md (lines 273-302)
 - **Summary**: Tick as new output format for planning phase, replacing/complementing existing formats (Local Markdown, Beads, Backlog.md, Linear). Planning agent creates tasks, implementation agent queries and executes.
 - **Key questions**: How should the planning skill adapter work? What metadata beyond tasks is needed? How to handle plan versioning?
+- **Status**: No separate discussion needed
 
 ### Distribution & Release Strategy
 - **Source**: exploration.md (lines 545-553)
