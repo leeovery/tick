@@ -1,7 +1,7 @@
 # Discussion: Data Schema Design
 
 **Date**: 2026-01-19
-**Status**: Exploring
+**Status**: Concluded
 
 ## Context
 
@@ -44,10 +44,10 @@ notes?: string
 ## Questions
 
 - [x] Are all proposed fields necessary? Should any be removed or added?
-- [ ] What are the exact constraints and validation rules for each field?
-- [ ] Is the SQLite schema optimal for expected queries?
-- [ ] How should the `ready_tasks` view handle edge cases?
-- [ ] Should `cancelled` tasks behave differently from `done` in queries?
+- [x] What are the exact constraints and validation rules for each field?
+- [x] How should hierarchy work? (organizational vs workflow constraint)
+- [x] Is the SQLite schema optimal for expected queries?
+- [x] Should `cancelled` tasks behave differently from `done` in queries?
 
 ---
 
@@ -113,7 +113,35 @@ closed?: string
 
 ---
 
-## Q2: Hierarchy and `tick ready` Behavior
+## Q2: Field Constraints and Validation
+
+### Decision
+
+| Field | Required | Constraints |
+|-------|----------|-------------|
+| `id` | Yes | `{prefix}-{6-8 char hash}`, unique |
+| `title` | Yes | Non-empty string |
+| `status` | Yes | Enum: `open`, `in_progress`, `done`, `cancelled` |
+| `priority` | Yes | 0-4 integer, default 2 |
+| `description` | No | Free text |
+| `blocked_by` | No | Array of valid task IDs |
+| `parent` | No | Valid task ID |
+| `created` | Yes | ISO 8601 timestamp |
+| `updated` | No | ISO 8601 timestamp |
+| `closed` | No | ISO 8601 timestamp (set when done/cancelled) |
+
+### blocked_by: Array vs Relational
+
+**Two layers, two representations:**
+
+- **JSONL (source of truth)**: Array - keeps one line per task for clean git diffs
+- **SQLite (cache)**: Normalized `dependencies` table - efficient for "ready" query joins
+
+Cache rebuild expands arrays into relational rows. Best of both worlds.
+
+---
+
+## Q3: Hierarchy Behavior
 
 ### Context
 
@@ -156,5 +184,148 @@ Setup Sanctum is done. Login endpoint is unblocked. But Login endpoint has child
 - Pro: Full visibility
 - Con: Cluttered, agent may start parent when children need work first
 
+### Decision
+
+**Hierarchy is organizational, not workflow constraint.**
+
+- Children are decomposition/context for the parent task
+- Parent readiness determined only by explicit `blocked_by`, not by children existing
+- Subtasks use the same schema as tasks (no special entity)
+- Query behavior (what `tick ready` returns) is implementation detail, not schema concern
+
+**Schema implication**: Single task schema with `parent` field. No `type` field needed. No special subtask handling.
+
 ---
 
+## Q4: SQLite Schema
+
+### Context
+
+SQLite is an ephemeral cache - rebuilt from JSONL when stale. Need efficient indexes for common queries.
+
+### Proposed Structure
+
+```sql
+CREATE TABLE tasks (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  priority INTEGER NOT NULL DEFAULT 2,
+  description TEXT,
+  parent TEXT,
+  created TEXT NOT NULL,
+  updated TEXT,
+  closed TEXT
+);
+
+CREATE TABLE dependencies (
+  task_id TEXT NOT NULL,
+  blocked_by TEXT NOT NULL,
+  PRIMARY KEY (task_id, blocked_by)
+);
+
+CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_priority ON tasks(priority);
+CREATE INDEX idx_tasks_parent ON tasks(parent);
+```
+
+### Decision
+
+**Proposed structure is sufficient.**
+
+- `tasks` table mirrors JSONL fields (minus `blocked_by` which is normalized)
+- `dependencies` table enables efficient join for "ready" query
+- Indexes on `status`, `priority`, `parent` cover common filters
+
+No changes needed from research proposal (just remove dropped fields: `type`, `assignee`, `labels`, `notes`).
+
+---
+
+## Q5: Cancelled vs Done Behavior
+
+### Context
+
+Both `cancelled` and `done` are "closed" states. Question: do they behave identically for dependency resolution?
+
+### Scenario
+
+- Task B is `blocked_by: [A]`
+- Task A gets cancelled
+
+Should Task B become ready?
+
+### Options Considered
+
+**Option 1: Yes - cancelled unblocks**
+- Cancelled = closed = dependency satisfied
+- Simple, uniform logic
+- Rationale: if A is cancelled, the work was deemed unnecessary, so the dependency is no longer relevant
+
+**Option 2: No - cancelled leaves dependents blocked**
+- Cancelled means work wasn't done, dependents may need review
+- Safer but adds complexity
+- Requires manual intervention to unblock
+
+### Decision
+
+**Option 1: Cancelled tasks unblock dependents.**
+
+If a task is cancelled, it was no longer required - can't be a blocker. Simple uniform logic: `status IN ('done', 'cancelled')` = dependency satisfied.
+
+---
+
+## Summary
+
+### Key Decisions
+
+1. **Trimmed schema**: 10 fields (from 15). Removed `type`, `assignee`, `labels`, `notes`. Kept `description` and `updated`.
+
+2. **Single task entity**: No separate "epic" or "subtask" types. Hierarchy via `parent` field. A task with children is effectively an epic.
+
+3. **Dual representation for dependencies**: Array in JSONL (git-friendly), normalized table in SQLite (query-friendly).
+
+4. **Hierarchy is organizational**: Children don't block parents. Parent readiness determined only by explicit `blocked_by`.
+
+5. **Cancelled unblocks**: Both `done` and `cancelled` satisfy dependencies. Simple uniform logic.
+
+### Final JSONL Schema
+
+```jsonl
+{"id":"tick-a1b2","title":"Task title","status":"open","priority":2,"created":"2026-01-19T10:00:00Z"}
+{"id":"tick-c3d4","title":"With all fields","status":"in_progress","priority":1,"description":"Details here","blocked_by":["tick-a1b2"],"parent":"tick-e5f6","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T14:00:00Z"}
+{"id":"tick-g7h8","title":"Completed task","status":"done","priority":1,"created":"2026-01-19T10:00:00Z","closed":"2026-01-19T16:00:00Z"}
+```
+
+### Final SQLite Schema
+
+```sql
+CREATE TABLE tasks (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  priority INTEGER NOT NULL DEFAULT 2,
+  description TEXT,
+  parent TEXT,
+  created TEXT NOT NULL,
+  updated TEXT,
+  closed TEXT
+);
+
+CREATE TABLE dependencies (
+  task_id TEXT NOT NULL,
+  blocked_by TEXT NOT NULL,
+  PRIMARY KEY (task_id, blocked_by)
+);
+
+CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_priority ON tasks(priority);
+CREATE INDEX idx_tasks_parent ON tasks(parent);
+```
+
+### Next Steps
+
+Ready for specification. Key areas to specify:
+- Exact JSONL line format and field ordering
+- Cache rebuild logic (hash vs mtime freshness check)
+- `ready_tasks` view SQL
+- Validation error handling
