@@ -25,8 +25,7 @@ The research phase proposed a command structure, but several UX questions remain
 ## Questions
 
 - [x] What should the default output format be for each command type?
-- [ ] Should aliases (`ready`, `blocked`) be true aliases or standalone commands?
-      - Aliases share code but may confuse users about what's happening
+- [x] Should aliases (`ready`, `blocked`) be true aliases or standalone commands?
 - [ ] Is `dep add/remove` the right pattern for dependency management?
       - Alternatives: `block/unblock`, `depends/undepends`, inline on create
 - [ ] How should errors and feedback be communicated?
@@ -100,6 +99,40 @@ Agents get TOON automatically without needing any flags. Simpler agent instructi
 - `--json` → Force JSON
 
 **Rationale**: Agents naturally execute via pipes, so they get TOON without remembering flags. Humans at terminals get readable output. Edge cases covered by explicit flags. This is how Unix has worked for decades - intuitive, not magic.
+
+---
+
+## Q2: Aliases vs Standalone Commands
+
+### Options Considered
+
+**Option A: Shell-level aliases**
+- User sets up aliases in shell config
+- Pro: Zero code in tick
+- Con: Not portable, requires setup
+
+**Option B: Subcommand aliases in tick**
+- `tick ready` internally calls `tick list --ready`
+- Pro: Works everywhere, single source of truth for query logic
+- Con: Two ways to do the same thing
+
+**Option C: Standalone commands**
+- Separate implementation for each command
+- Pro: Can optimize independently
+- Con: Code duplication, divergence risk
+
+**Option D: No aliases**
+- Just use `tick list --ready`
+- Pro: One way to do things
+- Con: More typing for the most common operation
+
+### Decision
+
+**Option B: Subcommand aliases in tick.**
+
+`tick ready` and `tick blocked` are built-in commands that internally delegate to `tick list` with the appropriate flag. No code duplication - they share the list command's query logic.
+
+**Rationale**: `tick ready` is likely the most-used command (agents constantly checking what to work on next). It should be easy to type. But we don't want separate implementations that could diverge. Internal delegation gives us convenience without duplication.
 
 ---
 
