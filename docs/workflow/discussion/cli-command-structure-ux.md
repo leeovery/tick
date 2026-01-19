@@ -1,7 +1,7 @@
 # Discussion: CLI Command Structure & UX
 
 **Date**: 2026-01-19
-**Status**: Exploring
+**Status**: Concluded
 
 ## Context
 
@@ -29,9 +29,7 @@ The research phase proposed a command structure, but several UX questions remain
 - [x] Is `dep add/remove` the right pattern for dependency management?
 - [x] How should errors and feedback be communicated?
 - [x] Should there be bulk operations for planning agents?
-- [ ] Command naming: are the verbs clear and consistent?
-      - `done` vs `complete` vs `close`
-      - `create` vs `add` vs `new`
+- [x] Command naming: are the verbs clear and consistent?
 
 ---
 
@@ -283,3 +281,132 @@ tick create "Login endpoint" --blocked-by tick-c3d4
 
 ---
 
+## Q6: Command Naming
+
+### Verbs Considered
+
+**Creating tasks:**
+- `create` - explicit, self-contained ✓
+- `add` - implies adding to something
+- `new` - less verb-like
+
+**Completing tasks:**
+- `done` - casual, quick, implies success ✓
+- `complete` - more formal
+- `close` - generic, used by issue trackers
+
+**Starting tasks:**
+- `start` - clear, action-oriented ✓
+- `begin` - alternative, same meaning
+- `wip` - jargon-y
+
+**Reopening tasks:**
+- `reopen` - explicit, clear ✓
+- `undo` - implies reversing last action (not quite right)
+
+### Task Closure Discussion
+
+`done` implies "completed successfully." But tasks can end for other reasons (cancelled, rejected, not needed, duplicate, wontfix).
+
+**Options:**
+- Option A: Just `done` for everything - loses "why" information
+- Option B: `done` with `--reason` flag - "done --reason cancelled" feels odd
+- Option C: Separate commands - `done` and `cancel` ✓
+- Option D: Generic `close --as done|cancelled` - verbose for common case
+
+**Decision**: Option C - separate commands.
+
+- `tick done tick-abc` = completed successfully
+- `tick cancel tick-abc` = not completed (covers: cancelled, rejected, not needed, duplicate, wontfix)
+
+No need for more granularity. "Cancelled" covers all the non-success closure reasons.
+
+### Backlog Discussion
+
+"Backlog" is not a status - it's a priority level. The schema already has:
+- Priority 0 = critical
+- Priority 4 = backlog
+
+So `tick create "Someday task" --priority 4` puts it in the backlog. No separate status needed.
+
+### Decision
+
+**Final command set:**
+
+| Command | Action |
+|---------|--------|
+| `create` | Make a new task |
+| `start` | Mark task in-progress |
+| `done` | Mark task completed successfully |
+| `cancel` | Mark task cancelled (not completed) |
+| `reopen` | Reopen a closed task |
+
+**Task statuses:**
+- `open` - not started
+- `in_progress` - being worked on
+- `done` - completed successfully
+- `cancelled` - closed without completion
+
+**Rationale**: Short, clear verbs. `done` and `cancel` are distinct commands because they represent meaningfully different outcomes. Consistency matters - all verbs are simple, action-oriented words.
+
+---
+
+## Summary
+
+### Key Decisions
+
+1. **Output format**: Auto-detect TTY. Humans at terminal get pretty tables, agents via pipe get TOON. Override with `--toon`, `--pretty`, or `--json`.
+
+2. **Aliases**: `tick ready` and `tick blocked` are built-in subcommand aliases that delegate to `tick list`. Single source of truth, convenient shorthand.
+
+3. **Dependencies**: Hybrid approach. `--blocked-by` flag on create (comma-separated for multiple), `tick dep add/rm` for later modifications. Task first, dependency second.
+
+4. **Error handling**: Simple exit codes (0/1), TTY-aware error format (human-friendly vs structured TOON), standard `--quiet`/`--verbose` flags.
+
+5. **Bulk operations**: Sequential creates for now (YAGNI). Can add `tick import` later if needed.
+
+6. **Command naming**: `create`, `start`, `done`, `cancel`, `reopen`. Four statuses: `open`, `in_progress`, `done`, `cancelled`.
+
+### Final Command Reference
+
+```bash
+# Core lifecycle
+tick create "Task title" [--type epic|task|bug|spike] [--priority 0-4] [--blocked-by id,id]
+tick start <id>
+tick done <id>
+tick cancel <id>
+tick reopen <id>
+
+# Queries
+tick list [--ready] [--blocked] [--status X] [--priority X]
+tick ready          # alias for list --ready
+tick blocked        # alias for list --blocked
+tick show <id>
+
+# Dependencies
+tick dep add <task_id> <blocked_by_id>
+tick dep rm <task_id> <blocked_by_id>
+
+# Utilities
+tick init
+tick stats
+tick doctor
+tick archive
+tick rebuild
+```
+
+### Output Format Flags (all commands)
+
+- `--toon` - Force TOON output
+- `--pretty` - Force human-readable output
+- `--json` - Force JSON output
+- `--quiet` / `-q` - Suppress non-essential output
+- `--verbose` / `-v` - More detail
+
+### Next Steps
+
+This discussion is ready for specification. Key areas to specify:
+- Exact TOON format for each command's output
+- Human-readable table layouts
+- Error codes and messages
+- Flag interactions and precedence
