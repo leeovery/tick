@@ -1,7 +1,7 @@
 # Discussion: Config File Design
 
 **Date**: 2026-01-19
-**Status**: Exploring
+**Status**: Concluded
 
 ## Context
 
@@ -26,16 +26,109 @@ From CLI discussion:
 
 ## Questions
 
-- [ ] What config options are actually needed?
-- [ ] What format should the config file use?
-- [ ] Where should config live and when is it created?
-- [ ] How do config values interact with command-line flags?
-- [ ] Should environment variables override config?
-- [ ] How to handle unknown or deprecated config keys?
+- [x] What config options are actually needed?
+- [ ] ~~What format should the config file use?~~ (moot - no config)
+- [ ] ~~Where should config live and when is it created?~~ (moot - no config)
+- [ ] ~~How do config values interact with command-line flags?~~ (moot - no config)
+- [ ] ~~Should environment variables override config?~~ (moot - no config)
+- [ ] ~~How to handle unknown or deprecated config keys?~~ (moot - no config)
 
 ---
 
-*Discussion begins below*
+## Q1: What config options are actually needed?
+
+### Options Considered
+
+**Option A: Minimal config (prefix only)**
+```
+prefix = auth
+```
+Just ID prefix customization.
+
+**Option B: Prefix + defaults**
+```
+prefix = auth
+default_priority = 2
+```
+Add commonly overridden defaults.
+
+**Option C: No config file at all**
+Hardcode everything. `tick-` prefix. Sensible defaults. Add config later if needed.
+
+### Journey
+
+Started with research proposal: flat key=value file with `prefix`, `default_priority`, `auto_archive_after_days`.
+
+Challenged: are these actual needs or hypothetical examples?
+
+**Examined each potential option:**
+
+1. **prefix** - Why change it?
+   - Semantic prefixes (`auth-`, `api-`) - misleading, tasks span concerns
+   - Multi-project disambiguation - each repo has own `.tick/`, no collision
+   - Branding preference - is this real need or hypothetical?
+
+2. **default_priority** - Flag works fine: `tick create "X" --priority 2`
+
+3. **auto_archive_after_days** - Premature. Don't have archiving behavior finalized yet.
+
+**The YAGNI case won:**
+
+- Prior decisions (TTY detection, output flags) already handle format selection
+- No concrete use case for prefix customization
+- Can add config later without breaking anything
+- Existing `tick-*` IDs remain valid even if config added later
+- Zero config code = less to write, test, document
+
+### Decision
+
+**Option C: No config file for v1**
+
+Hardcoded defaults:
+- ID prefix: `tick-`
+- Priority: determined at implementation (likely 2 = medium)
+- All behavior controlled via command-line flags
+
+**Rationale**: YAGNI. No concrete use case. TTY detection + flags handle the customization that matters (output format). Adding config later is non-breaking - existing task IDs stay valid.
+
+**Future**: If users request customization, add config then with known requirements rather than guessing now.
 
 ---
 
+## Summary
+
+### Key Insight
+
+The research proposed config as a solution looking for a problem. When challenged against actual use cases, none survived scrutiny:
+
+- **Output format** - Already handled by TTY detection + flags (prior decision)
+- **ID prefix** - No real need to customize; `tick-` is fine
+- **Defaults** - Flags handle one-off overrides; no pattern of repeated overrides identified
+
+### Decision
+
+**No config file for v1.**
+
+`.tick/` directory contains only:
+- `tasks.jsonl` - Task data (source of truth)
+- `tasks.db` - SQLite cache
+
+No `.tick/config`. All defaults hardcoded. Customization via command-line flags only.
+
+### Why This Is Safe
+
+Adding config later is **non-breaking**:
+- Existing task IDs (`tick-*`) remain valid
+- Absence of config file → use hardcoded defaults (same as v1 behavior)
+- New config options can be introduced incrementally
+
+### Next Steps
+
+None needed for config - topic concluded with "don't build it."
+
+Remaining undiscussed topics from research:
+- Data Schema Design
+- Freshness Check & Dual Write Implementation
+- Agent Integration Patterns
+- Workflow Integration
+- And others (see research analysis)
