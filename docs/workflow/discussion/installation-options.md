@@ -163,17 +163,23 @@ For tick, we want **simpler**:
 
 For a developer CLI tool, ad-hoc signing is sufficient. Users can right-click → Open to bypass the warning on first run. Homebrew handles signing automatically.
 
+**Simplified macOS approach**: Rather than handling binary downloads and code signing for macOS, the install script should delegate to Homebrew on macOS. This gives macOS users the proper experience (signing, updates) while keeping the script simple. If Homebrew isn't installed, the script exits with instructions to install via Homebrew.
+
+The install script is **primarily for Linux/ephemeral environments**. macOS users should use Homebrew directly - the script just does the right thing if someone happens to run it on macOS.
+
 ### Decision
 
-**Install location**: `/usr/local/bin` if writable, else `~/.local/bin` (follow Beads pattern)
+**Linux behavior**:
+- Download latest binary from GitHub releases to `/usr/local/bin` (if writable) or `~/.local/bin`
+- Overwrite existing installation
+- No fallbacks - fail if binary download fails
 
-**Behavior**:
-- Always download latest binary from GitHub releases
-- Overwrite existing installation (no skip logic)
-- On macOS: apply ad-hoc code signing (`codesign --force -s - $binary`)
-- No fallbacks to go install or source build - keep it simple
+**macOS behavior**:
+- If Homebrew installed: run `brew tap .../tick && brew install tick`
+- If no Homebrew: exit with message "Please install via Homebrew: brew tap ... && brew install tick"
+- No direct binary handling on macOS
 
-**Platform support**: macOS (darwin) and Linux, amd64 and arm64
+**Primary audience**: Linux users, ephemeral environments (Claude Code for Web), CI/CD
 
 ---
 
@@ -248,10 +254,12 @@ This keeps tick simple and avoids conflicts with package managers.
 ### Key Decisions
 
 1. **Global installation** - not per-project vendoring
-2. **Primary methods**: Homebrew (macOS), install script (ephemeral/Linux)
-3. **Install script behavior**: Always download latest, overwrite existing
-4. **Install location**: `/usr/local/bin` if writable, else `~/.local/bin`
-5. **macOS code signing**: Ad-hoc signing in install script (free, sufficient for CLI tools)
+2. **Primary methods**: Homebrew (macOS), install script (Linux/ephemeral)
+3. **Install script behavior**:
+   - Linux: download binary, overwrite existing
+   - macOS: delegate to Homebrew (or exit with instructions if no Homebrew)
+4. **Install location** (Linux): `/usr/local/bin` if writable, else `~/.local/bin`
+5. **macOS code signing**: Handled by Homebrew (no direct binary handling on macOS)
 6. **Windows**: Not a priority, can be added later
 7. **Updates**: Handled by package managers, no self-update in tick
 
