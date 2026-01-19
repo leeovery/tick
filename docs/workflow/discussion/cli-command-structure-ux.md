@@ -28,8 +28,7 @@ The research phase proposed a command structure, but several UX questions remain
 - [x] Should aliases (`ready`, `blocked`) be true aliases or standalone commands?
 - [x] Is `dep add/remove` the right pattern for dependency management?
 - [x] How should errors and feedback be communicated?
-- [ ] Should there be bulk operations for planning agents?
-      - Creating many tasks at once, importing from other formats
+- [x] Should there be bulk operations for planning agents?
 - [ ] Command naming: are the verbs clear and consistent?
       - `done` vs `complete` vs `close`
       - `create` vs `add` vs `new`
@@ -240,6 +239,47 @@ Standard flags:
 - **Verbosity**: Standard `--quiet` and `--verbose` flags
 
 **Rationale**: Exit codes signal success/failure; error output provides details. Following the same TTY detection pattern keeps the CLI consistent. Standard verbosity flags match user expectations.
+
+---
+
+## Q5: Bulk Operations for Planning Agents
+
+### Options Considered
+
+**Option A: Sequential creates**
+- Use existing commands one at a time
+- Pro: Simple, no new code
+- Con: Many round-trips for large plans
+
+**Option B: Bulk import from file**
+- `tick import plan.jsonl`
+- Pro: Single operation, atomic
+- Con: Agent must write temp file first
+
+**Option C: Stdin piping**
+- `cat plan.jsonl | tick import -`
+- Pro: No temp file
+- Con: More complex
+
+**Option D: No bulk - sequential is fine**
+- Keep it simple
+- Pro: Simpler codebase
+- Con: May be slow for very large plans
+
+### Decision
+
+**Option A: Sequential creates for now.**
+
+Planning agents use existing commands:
+```bash
+tick create "Epic: Auth" --type epic
+tick create "Setup Sanctum" --parent tick-a1b2
+tick create "Login endpoint" --blocked-by tick-c3d4
+```
+
+**Rationale**: YAGNI. For typical plans (10-50 tasks), sequential creates at <100ms each are fast enough. Once the data formats and command patterns are established and proven, bulk import can be added if needed. Start simple, add complexity only when pain is felt.
+
+**Future consideration**: If bulk import is added later, `tick import` reading JSONL from stdin or file would be the natural pattern.
 
 ---
 
