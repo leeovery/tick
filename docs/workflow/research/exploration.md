@@ -6,6 +6,224 @@
 
 Core thesis: Existing tools (Beads, br, Backlog.md) are either too complex or lack deterministic querying. Tick aims for zero-friction git integration with JSONL as source of truth and SQLite as auto-rebuilding cache.
 
+---
+
+## Foundational Context (from initial design)
+
+### Problem Statement
+
+**Why not Beads?**
+- SQLite + JSONL + Git sync (three layers)
+- Background daemons for auto-sync
+- Git hooks (pre-commit, post-merge, pre-push, post-checkout)
+- Auto-commits that can conflict with deployment pipelines
+- 730-line uninstall script required for full removal
+
+**Why not br (beads_rust)?**
+- Cleaner but still requires manual sync
+- `br sync --flush-only` after changes (easy to forget)
+- `br sync --import-only` after git pull (easy to forget)
+- Forgetting to sync = data inconsistency or loss
+
+**Why not Backlog.md?**
+- Markdown files without structured querying
+- Relies on agents parsing natural language
+- No deterministic "what's ready?" query
+- Agents can miss things in large task lists
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Agent (Claude, etc.)                                   │
+│  - Calls: tick ready --json                             │
+│  - Receives: Deterministic structured data              │
+│  - Never reads raw files                                │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  CLI (tick / tk)                                        │
+│  - Reads: Checks cache freshness                        │
+│  - Rebuilds: If JSONL changed since last index          │
+│  - Queries: SQLite for deterministic results            │
+│  - Writes: Updates JSONL + SQLite together              │
+└────────────────────────┬────────────────────────────────┘
+                         │
+          ┌──────────────┴──────────────┐
+          ▼                             ▼
+┌──────────────────┐          ┌──────────────────┐
+│  tasks.jsonl     │          │  .cache/tick.db  │
+│  (committed)     │  ──────► │  (gitignored)    │
+│  Source of truth │  rebuild │  Ephemeral cache │
+└──────────────────┘          └──────────────────┘
+```
+
+### Proposed Data Structures
+
+**JSONL Format** (`.tick/tasks.jsonl`):
+```jsonl
+{"id":"tick-a1b2","title":"Setup Laravel Sanctum","status":"done","priority":1,"type":"task","created":"2025-01-19T10:00:00Z","closed":"2025-01-19T14:30:00Z"}
+{"id":"tick-c3d4","title":"Implement login endpoint","status":"open","priority":1,"type":"task","blocked_by":["tick-a1b2"],"parent":"tick-e5f6","created":"2025-01-19T10:05:00Z"}
+{"id":"tick-e5f6","title":"Authentication System","status":"open","priority":1,"type":"epic","created":"2025-01-19T09:00:00Z"}
+```
+
+**Task Schema** (proposed):
+```
+id: string              # tick-a1b2c3 (prefix + hash)
+title: string
+status: "open" | "in_progress" | "done"
+priority: 0 | 1 | 2 | 3 | 4  # 0=critical, 4=backlog
+type: "epic" | "task" | "bug" | "spike"
+
+# Optional
+description?: string
+blocked_by?: string[]   # Task IDs this is blocked by
+parent?: string         # Parent task ID (hierarchy)
+assignee?: string
+labels?: string[]
+created: string         # ISO 8601
+updated?: string
+closed?: string
+notes?: string          # Free-form context for agents
+```
+
+**SQLite Schema** (proposed):
+```sql
+-- Metadata for freshness checking
+CREATE TABLE meta (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+-- Main task table
+CREATE TABLE tasks (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  priority INTEGER NOT NULL DEFAULT 2,
+  type TEXT NOT NULL DEFAULT 'task',
+  description TEXT,
+  parent TEXT,
+  assignee TEXT,
+  labels TEXT,  -- JSON array
+  created TEXT NOT NULL,
+  updated TEXT,
+  closed TEXT,
+  notes TEXT
+);
+
+-- Dependencies (many-to-many)
+CREATE TABLE dependencies (
+  task_id TEXT NOT NULL,
+  blocked_by TEXT NOT NULL,
+  PRIMARY KEY (task_id, blocked_by)
+);
+
+-- Indexes for common queries
+CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_priority ON tasks(priority);
+CREATE INDEX idx_tasks_parent ON tasks(parent);
+
+-- View for "ready" tasks (open, not blocked)
+CREATE VIEW ready_tasks AS
+SELECT t.* FROM tasks t
+WHERE t.status = 'open'
+  AND t.id NOT IN (
+    SELECT d.task_id FROM dependencies d
+    JOIN tasks blocker ON d.blocked_by = blocker.id
+    WHERE blocker.status != 'done'
+  )
+ORDER BY t.priority ASC, t.created ASC;
+```
+
+**Directory Structure**:
+```
+.tick/
+├── config              # Project settings (key = value)
+├── tasks.jsonl         # Committed - source of truth
+├── archive.jsonl       # Archived done tasks (optional)
+└── .cache/
+    └── tick.db         # Gitignored - query cache
+```
+
+### Technical Implementation Notes
+
+**Freshness check**:
+```
+On any read operation:
+  1. Get JSONL file hash (or mtime)
+  2. Compare to stored hash in SQLite metadata
+  3. If different: rebuild entire index
+  4. Then: execute query
+```
+
+**Dual write on mutations**:
+```
+tick create "New task"
+  → Append line to tasks.jsonl
+  → Insert row to SQLite
+  → Update hash in SQLite metadata
+```
+
+**Atomic file writes**:
+- Write to temp file
+- fsync
+- Rename to target (atomic on POSIX)
+
+**JSONL update strategy**: Rewrite entire file for updates (simple, works for hundreds of tasks, <10ms for <1MB file).
+
+### Proposed CLI Commands
+
+**Core**:
+- `tick init` - Initialize .tick directory
+- `tick create <title>` - Create new task
+- `tick list` - List tasks with filters
+- `tick show <id>` - Show task detail
+- `tick start <id>` - Mark in_progress
+- `tick done <id>` - Mark complete
+- `tick reopen <id>` - Reopen closed task
+
+**Aliases**:
+- `tick ready` - Alias for `tick list --ready`
+- `tick blocked` - Alias for `tick list --blocked`
+
+**Dependencies**:
+- `tick dep add <id> <blocked_by>`
+- `tick dep remove <id> <blocked_by>`
+
+**Utilities**:
+- `tick stats` - Project statistics
+- `tick doctor` - Check for issues (orphans, cycles)
+- `tick archive` - Move done tasks to archive
+- `tick rebuild` - Force cache rebuild
+
+**Global flags**: `--json`, `--plain`, `--quiet`, `--verbose`, `--include-archived`
+
+**Short alias**: All commands work with `tk` as well as `tick`.
+
+### Success Criteria
+
+1. **Zero sync friction** - No manual sync commands ever
+2. **Deterministic queries** - Same input = same output, always
+3. **Sub-100ms operations** - Fast enough to not notice
+4. **Clean uninstall** - `rm -rf .tick` and it's gone
+5. **Survives cache deletion** - Delete .cache, everything rebuilds
+6. **Git-friendly** - Clean diffs, rare conflicts
+
+### Agent Instructions Concept (AGENTS.md)
+
+For inclusion in projects using tick:
+```
+1. Never read .tick/tasks.jsonl directly - Use CLI commands
+2. Always use --json flag - Parse structured output
+3. Check ready tasks first - tick ready --json
+4. Update status when starting - tick start <id>
+5. Add notes when completing - tick done <id> --notes "What was done"
+```
+
+---
+
 ## Key Architecture Decisions (Already Made)
 
 1. **JSONL as source of truth** - Committed, human-readable, git-friendly diffs
