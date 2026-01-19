@@ -219,4 +219,37 @@ default_priority = 2
 
 ---
 
+#### Decision: Language & Database
+
+**Q: Rust vs Go (or others)?**
+
+**A:** Go with `modernc.org/sqlite` (pure Go SQLite).
+
+**Why Go**:
+- Single static binary (no runtime dependencies)
+- Gentle learning curve (approachable from TypeScript background)
+- Fast development cycle
+- Excellent Claude assistance (lots of training data)
+- Simple cross-compilation (`GOOS=linux go build`)
+
+**Why `modernc.org/sqlite`**:
+- Pure Go - no CGO, no C compiler needed
+- Truly static binary
+- Cross-compiles trivially
+- Fast enough for tick's use case (sub-100ms operations)
+
+**Why SQLite over key-value stores** (bbolt, Badger, etc.):
+- Tick's data is relational (tasks + dependencies = joins)
+- The `tick ready` query is naturally expressed in SQL
+- Key-value stores would require manual index management and query logic in code
+
+**Alternatives considered**:
+| Option | Verdict |
+|--------|---------|
+| Rust | Steeper learning curve, longer time to prototype |
+| Python | Runtime dependency, larger binary |
+| bbolt/Badger | Key-value not ideal for relational queries |
+
+---
+
 *Research continues...*
