@@ -84,4 +84,21 @@ The planning skill would get a new `output-tick.md` adapter alongside the existi
 
 ---
 
+#### Decision: ID Format
+
+**Q: Sequential (`TICK-001`) vs hash-based (`tick-abc123`)?**
+
+**A:** Hash-based with customizable prefix.
+
+**Decision**: `{prefix}-{hash}` format (e.g., `tick-a3f2b7`, `auth-c1d9e4`)
+
+**Rationale**:
+- No merge conflicts - IDs are globally unique without coordination
+- Prefix is customizable at `tick init` time (default: `tick`)
+- Still readable and referenceable in conversation
+
+**Open implementation detail**: Hash length and source (random? content-based?). Short enough to type, long enough to avoid collisions. 6-8 chars seems reasonable for project-scale uniqueness.
+
+---
+
 *Research continues...*
