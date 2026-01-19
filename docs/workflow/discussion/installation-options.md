@@ -147,23 +147,31 @@ Researched how [Beads](https://github.com/steveyegge/beads) handles this. Their 
 - Tries `/usr/local/bin` first (if writable), falls back to `~/.local/bin`
 - Detects platform via `uname -s` (OS) and `uname -m` (arch)
 - Has multiple fallbacks: binary download → go install → source build
+- Applies ad-hoc code signing on macOS after download
 
 For tick, we want **simpler**:
 - Use conventional locations: `/usr/local/bin` if writable, else `~/.local/bin`
 - Platform detection same as Beads (proven pattern)
-- **No update logic**: download latest, skip if already installed
-- Keep it simple - updates are out of scope for the script
+- **No fallbacks**: just binary download, fail if unavailable
+- Keep it simple
 
-The "skip if installed" behavior is important for ephemeral environments where the script runs every session. If tick is already there (perhaps cached), don't waste time re-downloading.
+**Revisited "skip if installed"**: Initially thought to skip if already installed to save time in ephemeral environments. But reconsidered - if someone runs the install script, they probably want the latest version. Simpler to always download and install (overwrite existing).
+
+**macOS code signing research**: Two levels exist:
+- **Ad-hoc signing** (free): `codesign --force -s - /path/to/binary` - required for Apple Silicon, but downloaded binaries still show "developer cannot be verified" warning
+- **Notarization** ($99/year Apple Developer Program): Eliminates Gatekeeper warnings completely
+
+For a developer CLI tool, ad-hoc signing is sufficient. Users can right-click → Open to bypass the warning on first run. Homebrew handles signing automatically.
 
 ### Decision
 
 **Install location**: `/usr/local/bin` if writable, else `~/.local/bin` (follow Beads pattern)
 
 **Behavior**:
-- Download latest binary from GitHub releases
-- Skip if `tick` already exists in PATH
-- No update/upgrade functionality - keep script simple
+- Always download latest binary from GitHub releases
+- Overwrite existing installation (no skip logic)
+- On macOS: apply ad-hoc code signing (`codesign --force -s - $binary`)
+- No fallbacks to go install or source build - keep it simple
 
 **Platform support**: macOS (darwin) and Linux, amd64 and arm64
 
@@ -241,10 +249,11 @@ This keeps tick simple and avoids conflicts with package managers.
 
 1. **Global installation** - not per-project vendoring
 2. **Primary methods**: Homebrew (macOS), install script (ephemeral/Linux)
-3. **Install script behavior**: Download latest, skip if already installed
+3. **Install script behavior**: Always download latest, overwrite existing
 4. **Install location**: `/usr/local/bin` if writable, else `~/.local/bin`
-5. **Windows**: Not a priority, can be added later
-6. **Updates**: Handled by package managers, no self-update in tick
+5. **macOS code signing**: Ad-hoc signing in install script (free, sufficient for CLI tools)
+6. **Windows**: Not a priority, can be added later
+7. **Updates**: Handled by package managers, no self-update in tick
 
 ### Primary Use Cases
 
