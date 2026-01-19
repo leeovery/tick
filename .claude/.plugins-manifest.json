@@ -1,0 +1,31 @@
+{
+  "plugins": {
+    "@leeovery/claude-technical-workflows": {
+      "version": "2.0.24",
+      "files": [
+        "skills/technical-discussion",
+        "skills/technical-implementation",
+        "skills/technical-planning",
+        "skills/technical-research",
+        "skills/technical-review",
+        "skills/technical-specification",
+        "commands/link-dependencies.md",
+        "commands/start-discussion.md",
+        "commands/start-feature.md",
+        "commands/start-implementation.md",
+        "commands/start-planning.md",
+        "commands/start-research.md",
+        "commands/start-specification.md",
+        "commands/workflow:start-discussion.md",
+        "commands/workflow:start-implementation.md",
+        "commands/workflow:start-planning.md",
+        "commands/workflow:start-research.md",
+        "commands/workflow:start-review.md",
+        "commands/workflow:start-specification.md",
+        "commands/workflow:status.md",
+        "commands/workflow:view-plan.md",
+        "agents/chain-verifier.md"
+      ]
+    }
+  }
+}
