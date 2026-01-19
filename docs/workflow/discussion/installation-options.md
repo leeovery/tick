@@ -1,5 +1,7 @@
 # Discussion: Installation Options
 
+**Also covers**: Distribution & Release Strategy
+
 **Date**: 2026-01-19
 **Status**: Concluded
 

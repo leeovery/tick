@@ -33,6 +33,7 @@ research_files:
 - **Source**: exploration.md (lines 545-553)
 - **Summary**: Public GitHub repo, releases via goreleaser or manual, Homebrew via personal tap, dogfooding with claude-technical-workflows.
 - **Key questions**: When is v1.0? What's the versioning strategy? How to handle breaking changes?
+- **Discussed in**: installation-options.md (covers distribution methods, versioning, and updates)
 
 ### Doctor Command & Validation
 - **Source**: exploration.md (lines 538-541)
