@@ -24,9 +24,7 @@ The research phase proposed a command structure, but several UX questions remain
 
 ## Questions
 
-- [ ] What should the default output format be for each command type?
-      - Agent-first means TOON default, but humans need readable output too
-      - How do we balance these needs?
+- [x] What should the default output format be for each command type?
 - [ ] Should aliases (`ready`, `blocked`) be true aliases or standalone commands?
       - Aliases share code but may confuse users about what's happening
 - [ ] Is `dep add/remove` the right pattern for dependency management?
@@ -38,6 +36,70 @@ The research phase proposed a command structure, but several UX questions remain
 - [ ] Command naming: are the verbs clear and consistent?
       - `done` vs `complete` vs `close`
       - `create` vs `add` vs `new`
+
+---
+
+## Q1: Default Output Format
+
+### Options Considered
+
+**Option A: TOON default (agent-first)**
+- Always output TOON, require `--pretty` for human-readable
+- Pro: Explicit agent-first philosophy
+- Con: Humans see cryptic output by default
+
+**Option B: Human-readable default**
+- Pretty tables by default, `--toon` for agents
+- Pro: Intuitive for humans
+- Con: Agents must always remember flag
+
+**Option C: Auto-detect (TTY vs pipe)**
+- Check if stdout is a terminal
+- Terminal → human-readable table
+- Piped/redirected → TOON
+- Pro: Best of both worlds automatically
+- Con: "Magic" behavior could confuse debugging
+
+### How TTY Detection Works
+
+Standard Unix mechanism - program checks if stdout is connected to a terminal:
+
+```go
+import "golang.org/x/term"
+
+if term.IsTerminal(int(os.Stdout.Fd())) {
+    // Human at terminal → pretty output
+} else {
+    // Piped/redirected → TOON
+}
+```
+
+Well-established pattern used by `ls` (colors), `git` (pager), `grep` (colors).
+
+### Why This Works Perfectly for Agents
+
+When an agent runs a command via Bash tool, stdout is a pipe (not TTY):
+
+| Who | How | TTY? | Output |
+|-----|-----|------|--------|
+| Human in terminal | `tick ready` | Yes | Pretty table |
+| Agent via Bash tool | `tick ready` | No | TOON |
+| Human in script | `tick ready --pretty` | No | Pretty table |
+| Anyone wanting JSON | `tick ready --json` | - | JSON |
+
+Agents get TOON automatically without needing any flags. Simpler agent instructions.
+
+### Decision
+
+**Option C: Auto-detect TTY** with explicit override flags.
+
+- No TTY (pipe/redirect) → TOON (default for agents)
+- TTY (terminal) → Human-readable table
+- `--toon` → Force TOON
+- `--pretty` → Force human-readable
+- `--json` → Force JSON
+
+**Rationale**: Agents naturally execute via pipes, so they get TOON without remembering flags. Humans at terminals get readable output. Edge cases covered by explicit flags. This is how Unix has worked for decades - intuitive, not magic.
 
 ---
 
