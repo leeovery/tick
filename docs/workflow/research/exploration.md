@@ -534,4 +534,34 @@ tasks[2]{id,title,status,priority}:
 
 ---
 
-*Research continues...*
+#### Exploration: Edge Cases & Distribution
+
+**Edge cases**:
+- **Cache corruption** → Auto-rebuild from JSONL. Also provide `tick rebuild` for manual force.
+- **Dependency cycles** → `tick doctor` will detect and report
+- **Orphaned tasks** → `tick doctor` will detect (tasks referencing non-existent parents/deps)
+- **Merge conflicts** → Minimized by hash-based IDs. When they occur, Git handles it.
+
+**Distribution**:
+- Public GitHub repository
+- GitHub releases (via goreleaser or manual)
+- Homebrew via existing personal tap
+
+**Validation**:
+- Dogfooding with claude-technical-workflows integration
+- Iterate until v1.0 release
+
+---
+
+## Research Summary
+
+**Decisions made:**
+1. Go with `modernc.org/sqlite` (pure Go, no CGO)
+2. Cobra for CLI framework
+3. Hash-based IDs with customizable prefix
+4. Flat `parent` field for hierarchy, `blocked_by` for dependencies
+5. JSONL for storage, TOON as default output
+6. Flat `key = value` config file
+7. Optional archiving with `--include-archived` flag
+
+**Ready for Discussion phase** - lock down architecture, finalize CLI structure, resolve any remaining ambiguities.
