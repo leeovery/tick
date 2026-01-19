@@ -30,4 +30,26 @@ Core thesis: Existing tools (Beads, br, Backlog.md) are either too complex or la
 
 ---
 
-*Research in progress...*
+#### Primary User & Use Case
+
+**Q: Who is the primary user?**
+
+**A:** AI coding agents (Claude Code specifically), with human oversight. Not a general-purpose task tracker.
+
+**Key insights:**
+
+1. **Agent-first design** - Built for agents to consume, no UI planned. Humans can use it but it's optimized for agent workflows.
+
+2. **Two-agent workflow pattern**:
+   - **Planning agent**: Takes specification → creates tasks, phases, epics with full dependency graph
+   - **Implementation agent**: Queries tick to find next task, gets context needed to execute
+
+3. **Integration context**: Part of a broader "Claude workflow package" with multiple planning phases. Tick replaces existing output formats (beads, linings, markdown systems) that all have issues.
+
+4. **Collaboration tool**: Enables user-agent collaboration on structured work. User provides oversight, agent executes against deterministic task queries.
+
+5. **The real pain**: Current tools either require manual sync (easy to forget → data loss), are too complex (hooks, daemons), or lack deterministic querying (agents parsing markdown can miss things).
+
+---
+
+*Research continues...*
