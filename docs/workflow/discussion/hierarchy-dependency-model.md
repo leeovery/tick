@@ -1,7 +1,7 @@
 # Discussion: Hierarchy & Dependency Model
 
 **Date**: 2026-01-19
-**Status**: Exploring
+**Status**: Concluded
 
 ## Context
 
@@ -33,13 +33,14 @@ From prior discussions:
       - **Decision**: Leaf tasks only (no open children, not blocked)
 - [x] What parent context appears in `tick show`?
       - **Decision**: Parent ID + title (not full description)
-- [ ] Should agents work on parent tasks directly, or only leaf tasks?
-      - Addressed by Q1: agents work leaves; parents appear when children done
-- [ ] How do hierarchy and dependencies interact?
-      - Can a task depend on its own parent/child?
-      - Can a parent be blocked by something its child isn't blocked by?
-- [ ] What about tasks with no children and no blockers - always ready?
-- [ ] Edge cases: cycles, orphans, deep nesting
+- [x] Should agents work on parent tasks directly, or only leaf tasks?
+      - **Decision**: Addressed by Q1 - agents work leaves; parents appear when children done
+- [x] How do hierarchy and dependencies interact?
+      - **Decision**: Child→parent deps disallowed (deadlock); parent→child allowed; cycles detected at write time
+- [x] What about tasks with no children and no blockers - always ready?
+      - **Decision**: Yes, always ready (base case)
+- [x] Edge cases: cycles, orphans, deep nesting
+      - **Decision**: Deep nesting handled naturally; orphans flagged by doctor; parent-done-before-children allowed
 
 ---
 
@@ -188,18 +189,192 @@ The title provides enough context to determine if deeper investigation is needed
 
 ---
 
-*Additional question sections to be added as we explore*
+## How do hierarchy and dependencies interact?
+
+### Context
+
+With the leaf-only `tick ready` rule established, we need to understand how explicit `blocked_by` dependencies interact with the parent/child hierarchy.
+
+### Scenarios Analyzed
+
+**1. Child blocked by its own parent**
+```
+tick-epic (parent)
+└── tick-child (parent=tick-epic, blocked_by=[tick-epic])
+```
+- Parent has open children → not in `tick ready` (leaf-only rule)
+- Child is blocked by parent → not in `tick ready`
+- **Result: Deadlock. Neither task is ever workable.**
+
+**2. Parent blocked by its own child**
+```
+tick-epic (blocked_by=[tick-child])
+└── tick-child (parent=tick-epic)
+```
+- Child is leaf → appears in `tick ready`
+- Agent works child, marks done
+- Parent now has no open children AND blocker is done → appears in `tick ready`
+- **Result: Valid workflow. Explicit "do children before parent."**
+
+**3. Child blocked by sibling**
+```
+tick-epic
+├── tick-child-1
+└── tick-child-2 (blocked_by=[tick-child-1])
+```
+- tick-child-1 is ready, agent works it
+- tick-child-2 becomes ready after tick-child-1 done
+- **Result: Valid. Normal sequencing within an epic.**
+
+**4. Cross-hierarchy dependencies**
+```
+tick-epic-a
+└── tick-child-a (blocked_by=[tick-unrelated])
+
+tick-unrelated (no parent)
+```
+- Dependencies can cross hierarchy boundaries
+- **Result: Valid. Normal dependency behavior.**
+
+**5. General cycles (non-hierarchical)**
+```
+tick-a (blocked_by=[tick-c])
+tick-b (blocked_by=[tick-a])
+tick-c (blocked_by=[tick-b])
+```
+- Classic cycle, no hierarchy involved
+- **Result: Invalid. Caught by cycle detection.**
+
+### Decision
+
+**Validation rules for dependencies:**
+
+| Scenario | Allowed | Reason |
+|----------|---------|--------|
+| Child blocked_by parent | NO | Creates deadlock with leaf-only rule |
+| Parent blocked_by child | YES | Valid "do children first" workflow |
+| Sibling dependencies | YES | Normal sequencing |
+| Cross-hierarchy dependencies | YES | Normal dependency behavior |
+| Circular dependencies (any) | NO | Cycle detection catches these |
+
+**Validation timing:**
+- **At write time**: Validate when adding/modifying `blocked_by`
+- Prevent child→parent dependency immediately (clear error message)
+- Detect cycles immediately (before writing to JSONL)
+
+**Error messages should be clear:**
+```
+Error: Cannot add dependency - tick-child cannot be blocked by its parent tick-epic
+       (would create unworkable task due to leaf-only ready rule)
+
+Error: Cannot add dependency - creates cycle: tick-a → tick-b → tick-c → tick-a
+```
+
+---
+
+## Simple cases: no children, no blockers
+
+### Context
+
+What about the simplest case - a standalone task with no parent, no children, no blockers?
+
+### Decision
+
+**Always ready** (assuming status is `open`).
+
+This is the base case. A task with:
+- `status: open`
+- No `blocked_by` (or all blockers are `done`/`cancelled`)
+- No open children
+
+...appears in `tick ready`. No special handling needed.
+
+---
+
+## Edge cases: deep nesting, orphans
+
+### Context
+
+What happens with unusual hierarchy structures?
+
+### Scenarios
+
+**Deep nesting (5+ levels)**
+```
+tick-epic
+└── tick-story
+    └── tick-task
+        └── tick-subtask
+            └── tick-sub-subtask (leaf)
+```
+- Only tick-sub-subtask appears in `tick ready`
+- As leaves complete, their parents become "leaves" and appear
+- **No special handling needed** - leaf-only rule handles naturally
+
+**Orphaned children (parent deleted/not found)**
+```
+tick-child (parent=tick-deleted)  # tick-deleted doesn't exist
+```
+- Options: treat as root task (no parent) OR surface as error
+- **Decision needed**: Should `tick doctor` flag this? Should it auto-heal?
+
+**Parent completed before children**
+```
+tick-epic (status=done)
+└── tick-child (status=open, parent=tick-epic)
+```
+- Parent is done but child still open
+- Child is still a valid leaf task → appears in `tick ready`
+- **No special handling** - hierarchy is organizational, not constraint
+
+### Decision
+
+**Deep nesting**: Handled naturally by leaf-only rule. No depth limit.
+
+**Orphaned children**:
+- Task remains valid, treated as root-level task (parent reference ignored)
+- `tick doctor` should flag: "tick-child references non-existent parent tick-deleted"
+- No auto-heal - human/agent decides whether to fix or remove parent reference
+
+**Parent done before children**:
+- Valid state. Children remain workable.
+- May indicate planning issue, but not enforced by tool
+- `tick doctor` could optionally warn: "tick-epic is done but has open children"
 
 ---
 
 ## Summary
 
 ### Key Insights
-*[To be captured]*
+
+1. **Hierarchy is organizational, dependencies are workflow.** Parent/child relationships organize work; `blocked_by` controls execution order. Don't conflate them.
+
+2. **Leaf-only `tick ready` provides determinism.** Agents get actual work units, never containers. No ambiguity about "which task do I pick?"
+
+3. **Tasks should be self-contained.** Parent context is available but shouldn't be required. Puts burden on task writing quality.
+
+4. **Validation prevents unworkable states.** Child→parent dependencies create deadlocks with leaf-only rule. Catch at write time, not runtime.
+
+5. **Edge cases degrade gracefully.** Orphaned parents, deep nesting, unusual states - the tool handles them without crashing, `tick doctor` flags issues.
+
+### Key Decisions
+
+| Question | Decision |
+|----------|----------|
+| What does `tick ready` return? | Leaf tasks only (open, unblocked, no open children) |
+| Parent context in `tick show`? | ID + title (agent can look up full description if needed) |
+| Child blocked_by parent? | Disallowed (creates deadlock) |
+| Parent blocked_by child? | Allowed (valid "do children first" workflow) |
+| Cycles? | Detected and rejected at write time |
+| Orphaned children? | Treated as root tasks, flagged by `tick doctor` |
+| Deep nesting? | No limit, leaf-only rule handles naturally |
 
 ### Current State
-- Exploring the core question: what does `tick ready` return?
+
+All core questions resolved. Ready for specification.
 
 ### Next Steps
-- [ ] Resolve the `tick ready` behavior question
-- [ ] Work through edge cases
+
+- [ ] Specify the `tick ready` query (SQL for ready_tasks view)
+- [ ] Specify validation rules for `blocked_by` mutations
+- [ ] Specify `tick doctor` checks for hierarchy issues
