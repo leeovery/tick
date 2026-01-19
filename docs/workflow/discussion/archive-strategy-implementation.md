@@ -1,7 +1,7 @@
 # Discussion: Archive Strategy Implementation
 
 **Date**: 2026-01-19
-**Status**: Exploring
+**Status**: Concluded
 
 ## Context
 
@@ -20,19 +20,10 @@ Key constraints:
 ## Questions
 
 - [x] Should archiving be manual-only or support automatic triggers?
-- [ ] How should the SQLite cache handle archived tasks?
-      - Separate database per file?
-      - Single database with archive flag?
-      - No indexing of archive (scan on demand)?
-- [ ] Is an unarchive command needed?
-      - What if a task was archived by mistake?
-      - What if an archived task needs to be reopened?
-- [ ] What metadata should track archive operations?
-      - Timestamp of archival?
-      - Who/what triggered it?
-- [ ] How do dependencies interact with archiving?
-      - Can a task with archived dependents be archived?
-      - What about active tasks blocked by archived tasks?
+- [x] How should the SQLite cache handle archived tasks?
+- [~] Is an unarchive command needed? *(deferred - no archiving in v1)*
+- [~] What metadata should track archive operations? *(deferred)*
+- [~] How do dependencies interact with archiving? *(deferred)*
 
 ---
 
@@ -92,5 +83,85 @@ const (
 
 **Rationale**: 500 done tasks is substantial history - most projects won't hit it quickly. 2MB is well before noticeable performance impact. Advisory-only preserves predictability while preventing neglect.
 
+**Note**: This decision was later superseded - see cache question below for the pivot to deferring archiving entirely.
+
 ---
 
+## How should the SQLite cache handle archived tasks?
+
+### Context
+With archiving, we'd have two JSONL files (`tasks.jsonl` and `archive.jsonl`). How the cache handles this split affects complexity significantly.
+
+### Options Considered
+
+**Option A: Single database, archive flag on tasks**
+- Both files indexed into one `tasks` table with `archived BOOLEAN`
+- Queries filter by `WHERE NOT archived` by default
+- Pros: Simple queries, one cache to maintain
+- Cons: Defeats the purpose - must parse both files on every sync
+
+**Option B: Separate databases per file**
+- `cache.db` for tasks.jsonl, `archive-cache.db` for archive.jsonl
+- `--include-archived` queries both and merges
+- Pros: Cache stays lean by default
+- Cons: Complex cache management, SQLite ATTACH for cross-DB queries, freshness tracking for two caches
+
+**Option C: No archive indexing (scan on demand)**
+- Only `tasks.jsonl` is cached
+- `--include-archived` does live JSONL scan of archive
+- Pros: Simplest, archive rarely queried
+- Cons: Humans can't query archive without agent interpreting JSONL
+
+### Journey
+
+Started exploring Option A vs B vs C. Each had significant drawbacks:
+
+- **Option A** complicates the common path (syncing both files every time)
+- **Option B** adds cache management complexity, freshness tracking, cross-database queries
+- **Option C** leaves humans unable to query archive without an agent
+
+The B+C hybrid (build archive cache on-demand) introduced more questions: keep it around and track staleness? Delete after query? What happens on subsequent commands without the flag?
+
+**The pivot**: Stepped back and questioned the premise. Do we actually need archiving?
+
+Reality check:
+- SQLite handles tens of thousands of rows trivially
+- JSONL parses at 100MB/s - even 5MB is <100ms
+- Most projects won't hit 500 done tasks
+- Those that do still won't have performance issues
+
+We were over-engineering for a hypothetical problem.
+
+### Decision
+
+**Defer archiving entirely - not needed for v1.**
+
+- One file: `tasks.jsonl`
+- One cache: `cache.db`
+- No archive commands, no `--include-archived` flag, no advisory warnings about archiving
+- Clean, simple mental model
+
+If real performance issues emerge from actual usage, revisit with concrete data to design against. The `advisories` array concept remains valuable for other purposes (validation warnings, deprecation notices).
+
+**Rationale**: Solve real problems, not hypothetical ones. YAGNI.
+
+---
+
+## Summary
+
+### Key Insights
+
+1. Agent-first design favors predictability over automatic optimization
+2. Performance concerns should be validated with real data before designing solutions
+3. Simpler is better - one file, one cache, no edge cases
+
+### Current State
+
+- Archiving deferred to post-v1
+- No immediate action needed
+- Advisory system concept preserved for other uses
+
+### Next Steps
+
+- [ ] Revisit if users report actual performance issues with large task files
+- [ ] Consider archiving for v2 based on real-world feedback
