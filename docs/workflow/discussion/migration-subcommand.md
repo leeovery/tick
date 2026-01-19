@@ -1,7 +1,7 @@
 # Discussion: Migration Subcommand
 
 **Date**: 2026-01-19
-**Status**: Exploring
+**Status**: Concluded
 
 ## Context
 
@@ -22,7 +22,8 @@ This discussion focuses on the high-level use case and design - implementation d
 - [x] Should migration be one-time or ongoing sync?
 - [x] How should we handle conflicts/duplicates?
 - [x] What about error handling?
-- [ ] Any other considerations?
+- [x] What about output/feedback?
+- [x] How should authentication work for providers?
 
 ---
 
@@ -180,4 +181,81 @@ Prompt or flag: **All tasks** vs **Pending only**
 This handles both use cases:
 - Full history preservation (all tasks including done)
 - Clean slate with just active work (pending only)
+
+---
+
+## What about output/feedback?
+
+### Journey
+
+Discussed several options:
+1. Progress bar / spinner
+2. Verbose mode vs simple mode
+3. Just print tasks as imported
+
+Considered whether progress bars add complexity. Go has libraries (`schollz/progressbar`, `cheggaaa/pb`) that make it easy, but simplicity won out.
+
+Initial thought was spinner + summary (default) with verbose mode showing each task. User decided to simplify further: just show everything by default, no modes needed.
+
+### Decision
+
+**Default output**: Print each task as imported, then summary at end. No verbose flag needed.
+
+```
+Importing from beads...
+  ✓ Task: Implement login flow
+  ✓ Task: Fix database connection
+  ✓ Task: Add unit tests
+  ✗ Task: Broken entry (skipped: missing title)
+
+Done: 3 imported, 1 failed
+```
+
+Simple, clear, shows what's happening without complexity.
+
+---
+
+## How should authentication work for providers?
+
+### Journey
+
+Some providers (JIRA, Linear) need API tokens. Discussed where this responsibility sits.
+
+### Decision
+
+**Authentication is delegated to the plugin**. When `tick migrate --from <provider>` runs, the provider plugin handles its own credential needs (prompting, env vars, config files - whatever makes sense for that provider).
+
+Tick's core doesn't manage credentials. For beads (local/file-based), this isn't even relevant.
+
+---
+
+## Summary
+
+### Key Insights
+
+1. Keep it simple - avoid over-engineering for hypothetical future needs
+2. Plugin architecture allows extensibility without complexity in core
+3. User is responsible for managing their own data (duplicates, etc.)
+
+### Decisions Made
+
+| Question | Decision | Confidence |
+|----------|----------|------------|
+| Use case | Active project migration | High |
+| Command | `tick migrate --from beads` | High |
+| Architecture | Plugin/strategy pattern | High |
+| Data mapping | Title required, map all available | High |
+| Sync | One-time append, no sync | High |
+| Conflicts | None - duplicates are user's problem | High |
+| Errors | Continue, report at end | High |
+| What to migrate | User choice: all or pending only | High |
+| Output | Print each task + summary | High |
+| Auth | Delegated to plugin | High |
+
+### Next Steps
+
+- [ ] Create specification from this discussion
+- [ ] Design the normalized task format (contract)
+- [ ] Implement beads provider
+- [ ] Build core migration command
 
