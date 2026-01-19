@@ -140,4 +140,45 @@ SELECT blocked_by FROM dependencies WHERE task_id = ?;
 
 ---
 
+#### Decision: Archive Strategy
+
+**Q: Separate file for done tasks vs keep in main?**
+
+**A:** Keep in main by default. Optional `tick archive` command for manual archiving.
+
+**Behavior**:
+
+| State | Files | What's indexed |
+|-------|-------|----------------|
+| **Default** | `tasks.jsonl` only | All tasks (including done) |
+| **After archive** | `tasks.jsonl` + `archive.jsonl` | Only `tasks.jsonl` by default |
+| **With flag** | Both files | Both files (`--include-archived`) |
+
+**Commands**:
+```bash
+# Archive all done tasks
+tick archive
+
+# Search including archived
+tick list --include-archived
+tick show tick-a1b2 --include-archived
+```
+
+**Rationale**:
+- Simple by default (one file, everything visible)
+- Archiving is opt-in when file gets large
+- Archived tasks don't slow down daily queries
+- But history is searchable when needed
+
+**File structure after archive**:
+```
+.tick/
+├── tasks.jsonl      # Active tasks
+├── archive.jsonl    # Archived (done) tasks
+└── .cache/
+    └── tick.db      # Only indexes tasks.jsonl by default
+```
+
+---
+
 *Research continues...*
