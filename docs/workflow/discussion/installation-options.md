@@ -1,7 +1,7 @@
 # Discussion: Installation Options
 
 **Date**: 2026-01-19
-**Status**: Exploring
+**Status**: Concluded
 
 ## Context
 
@@ -30,10 +30,10 @@ Tick is a Go CLI tool that needs to be installable across various environments. 
       - What environments must it handle?
       - How to detect platform/architecture?
       - Ephemeral environment considerations?
-- [ ] Should we support Windows?
+- [x] Should we support Windows?
       - Is it a target environment?
       - What would be required?
-- [ ] How do we handle versioning and updates?
+- [x] How do we handle versioning and updates?
       - Self-update capability?
       - Version pinning for agents?
 
@@ -167,3 +167,97 @@ The "skip if installed" behavior is important for ephemeral environments where t
 
 **Platform support**: macOS (darwin) and Linux, amd64 and arm64
 
+---
+
+## Should we support Windows?
+
+### Context
+
+Windows is a significant platform, but adds complexity. Install script pattern doesn't work (no bash by default). Would need different distribution approach.
+
+### Journey
+
+Considered whether Windows is a target audience:
+- Tick is agent-first, primarily for Claude Code environments
+- Agents typically run in Linux containers
+- No Windows machine available for testing
+- Go cross-compiles to Windows easily, so binaries could be provided
+- But install script won't work - would need manual download or separate installer
+
+### Decision
+
+**Not a priority**. Focus on:
+1. macOS via Homebrew (primary development machine)
+2. Linux via install script (ephemeral environments like Claude Code for Web)
+
+Windows support can be added later by someone who wants it and can test it. Go's cross-compilation means the binaries will be there in releases anyway - just no automated install path.
+
+---
+
+## How do we handle versioning and updates?
+
+### Context
+
+How do users get newer versions of tick? Should tick have self-update capability?
+
+### Options Considered
+
+**Self-update command** (e.g., `tick upgrade`)
+- Pros: Convenient, single command
+- Cons: Complexity, security concerns, may conflict with package managers
+
+**Package manager handles it**
+- Homebrew: `brew upgrade tick`
+- go install: `go install ...@latest`
+- Install script: re-run to get latest
+
+**No update mechanism**
+- User manually downloads new version
+
+### Journey
+
+The question is whether tick needs to know how to update itself. Arguments against:
+- Homebrew already handles updates well
+- `go install` users can just run it again
+- Self-update adds complexity and potential security issues
+- Could conflict with how the user installed it (Homebrew user runs `tick upgrade`, now Homebrew is out of sync)
+
+For ephemeral environments, updates aren't really a concept - each session starts fresh and gets whatever version the install script downloads.
+
+### Decision
+
+**No self-update capability**. Updates handled by:
+- **Homebrew**: `brew upgrade tick`
+- **go install**: `go install github.com/.../tick@latest`
+- **Install script**: Re-run the script (or just use latest in fresh sessions)
+
+This keeps tick simple and avoids conflicts with package managers.
+
+---
+
+## Summary
+
+### Key Decisions
+
+1. **Global installation** - not per-project vendoring
+2. **Primary methods**: Homebrew (macOS), install script (ephemeral/Linux)
+3. **Install script behavior**: Download latest, skip if already installed
+4. **Install location**: `/usr/local/bin` if writable, else `~/.local/bin`
+5. **Windows**: Not a priority, can be added later
+6. **Updates**: Handled by package managers, no self-update in tick
+
+### Primary Use Cases
+
+| Environment | Installation Method |
+|-------------|-------------------|
+| macOS (developer machine) | Homebrew |
+| Claude Code for Web | Install script at session start |
+| Linux server | Install script or go install |
+| CI/CD | Install script |
+
+### Next Steps
+
+- [ ] Implement install script in `scripts/install.sh`
+- [ ] Set up Homebrew tap formula
+- [ ] Configure goreleaser for multi-platform releases
+- [ ] Document installation in README
