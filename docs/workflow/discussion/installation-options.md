@@ -23,10 +23,10 @@ Tick is a Go CLI tool that needs to be installable across various environments. 
 ## Questions
 
 - [x] Global or per-project installation?
-- [ ] What installation methods should we support?
+- [x] What installation methods should we support?
       - Homebrew, direct binary, install script, go install?
       - Which are essential vs nice-to-have?
-- [ ] How should the install script work?
+- [x] How should the install script work?
       - What environments must it handle?
       - How to detect platform/architecture?
       - Ephemeral environment considerations?
@@ -109,5 +109,61 @@ Research proposed Homebrew + GitHub releases. But testing in Claude Code for Web
 
 For ephemeral environments: install script runs at session start, needs to be fast and idempotent.
 
-*(Discussion continues...)*
+### Decision
+
+Support all four methods, prioritized:
+1. **Install script** - primary method, documented first
+2. **Homebrew** - alternative for those who prefer it (via personal tap)
+3. **GitHub releases** - manual download option
+4. **go install** - for Go developers
+
+---
+
+## How should the install script work?
+
+### Context
+
+The install script is the primary installation method. Needs to work across macOS and Linux, be fast for ephemeral environments, and simple to maintain.
+
+### Options Considered
+
+**Install location**
+- `/usr/local/bin` - traditional, but may need sudo
+- `~/.local/bin` - user-writable, XDG-compliant
+- Custom `~/.tick/bin` - isolated but requires PATH modification
+
+**Version handling**
+- Always download latest
+- Check version and update if outdated
+- Skip entirely if already installed
+
+**Fallback strategy**
+- Binary only (fail if unavailable)
+- Binary → go install → source build (like Beads)
+
+### Journey
+
+Researched how [Beads](https://github.com/steveyegge/beads) handles this. Their install script:
+- Tries `/usr/local/bin` first (if writable), falls back to `~/.local/bin`
+- Detects platform via `uname -s` (OS) and `uname -m` (arch)
+- Has multiple fallbacks: binary download → go install → source build
+
+For tick, we want **simpler**:
+- Use conventional locations: `/usr/local/bin` if writable, else `~/.local/bin`
+- Platform detection same as Beads (proven pattern)
+- **No update logic**: download latest, skip if already installed
+- Keep it simple - updates are out of scope for the script
+
+The "skip if installed" behavior is important for ephemeral environments where the script runs every session. If tick is already there (perhaps cached), don't waste time re-downloading.
+
+### Decision
+
+**Install location**: `/usr/local/bin` if writable, else `~/.local/bin` (follow Beads pattern)
+
+**Behavior**:
+- Download latest binary from GitHub releases
+- Skip if `tick` already exists in PATH
+- No update/upgrade functionality - keep script simple
+
+**Platform support**: macOS (darwin) and Linux, amd64 and arm64
 
