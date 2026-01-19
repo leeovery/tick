@@ -512,4 +512,26 @@ tasks[2]{id,title,status,priority}:
 
 ---
 
+#### Exploration: CLI Framework
+
+**Q: What Go CLI framework should we use?**
+
+**Options considered**:
+| Framework | Notes |
+|-----------|-------|
+| **Cobra** | Most popular, used by K8s/Docker/GitHub CLI, subcommand-focused |
+| urfave/cli | Simpler API, also subcommand-focused |
+| Kong | Newer, struct-tag based |
+| Standard `flag` | No dependencies, but no subcommand support |
+
+**Decision**: Cobra
+
+**Rationale**:
+- Perfect fit for subcommand pattern (`tick create`, `tick list`, `tick dep add`)
+- Shell completion built-in
+- Huge community, easy to find examples
+- Compile-time dependency only - binary is still self-contained
+
+---
+
 *Research continues...*
