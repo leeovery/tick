@@ -27,8 +27,7 @@ The research phase proposed a command structure, but several UX questions remain
 - [x] What should the default output format be for each command type?
 - [x] Should aliases (`ready`, `blocked`) be true aliases or standalone commands?
 - [x] Is `dep add/remove` the right pattern for dependency management?
-- [ ] How should errors and feedback be communicated?
-      - Exit codes, error message format, verbosity levels
+- [x] How should errors and feedback be communicated?
 - [ ] Should there be bulk operations for planning agents?
       - Creating many tasks at once, importing from other formats
 - [ ] Command naming: are the verbs clear and consistent?
@@ -190,6 +189,57 @@ tick dep rm tick-c3d4 tick-a1b2     # remove that dependency
 **Rationale**: Planning agents typically set dependencies at creation time - `--blocked-by` is natural there. Implementation agents may need to adjust dependencies as work progresses - `dep add/rm` handles that. Argument order (task first, dependency second) matches the flag pattern and reads naturally.
 
 **Note on `dep`**: While `dep` looks truncated, `tick dep add` reads clearly in context. Alternatives (`link`, `needs`, `require`) were considered but didn't improve clarity.
+
+---
+
+## Q4: Error Handling & Feedback
+
+### Exit Codes
+
+**Options:**
+- Simple: `0` = success, `1` = error
+- Granular: Different codes for different error types (not found, invalid args, cycle detected, etc.)
+
+**Decision**: Keep it simple. `0` for success, `1` for any error. Agents parse the error output for specifics - they don't need to memorize exit code meanings.
+
+### Error Format
+
+Errors go to stderr. Format follows the same TTY detection as regular output:
+
+| Scenario | Stderr Format |
+|----------|---------------|
+| Human at terminal | Friendly message, possibly suggestions |
+| Agent via pipe | Structured (TOON) with error code, message, context |
+| With `--json` flag | JSON error object |
+
+**Human example:**
+```
+Error: Task 'tick-xyz123' not found
+
+Did you mean?
+  tick-xyz124  Setup authentication
+```
+
+**Agent example (TOON):**
+```
+error{code,message,task_id}:
+  not_found,Task 'tick-xyz123' not found,tick-xyz123
+```
+
+### Verbosity Levels
+
+Standard flags:
+- Default: Essential output only
+- `--quiet` / `-q`: Suppress non-essential output (success messages, etc.)
+- `--verbose` / `-v`: More detail (useful for debugging)
+
+### Decision
+
+- **Exit codes**: Simple `0`/`1`
+- **Error format**: TTY-aware (human-readable vs structured), same pattern as regular output
+- **Verbosity**: Standard `--quiet` and `--verbose` flags
+
+**Rationale**: Exit codes signal success/failure; error output provides details. Following the same TTY detection pattern keeps the CLI consistent. Standard verbosity flags match user expectations.
 
 ---
 
