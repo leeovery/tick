@@ -1,7 +1,7 @@
 # Discussion: ID Format Implementation
 
 **Date**: 2026-01-19
-**Status**: Exploring
+**Status**: Concluded
 
 ## Context
 
@@ -20,18 +20,16 @@ Tick needs unique, stable task identifiers. The research phase decided on hash-b
 
 ## Questions
 
-- [ ] What should be the hash length?
-      - Research suggested 6-8 chars
-      - Trade-off: typability vs collision risk
-- [ ] Random or content-based hash?
-      - Random: simple, guaranteed unique
-      - Content-based: deterministic, reproducible
-- [ ] How should collisions be handled?
-      - Detection strategy
-      - Resolution strategy
-- [ ] What character set for the hash?
-      - Hex (0-9, a-f) vs base36 (0-9, a-z) vs other
-- [ ] Should IDs be case-sensitive?
+- [x] What should be the hash length?
+      - **Decision**: 6 hex characters
+- [x] Random or content-based hash?
+      - **Decision**: Random via crypto/rand (stdlib, no deps)
+- [x] How should collisions be handled?
+      - **Decision**: Retry up to 5 times, error if exhausted (suggests archive)
+- [x] What character set for the hash?
+      - **Decision**: Hex (0-9, a-f) - decided during hash length discussion
+- [x] Should IDs be case-sensitive?
+      - **Decision**: Case-insensitive, normalize to lowercase
 
 ---
 
@@ -56,11 +54,19 @@ IDs need to be short enough to type/reference in conversation but long enough to
 
 ### Journey
 
-*(To be captured during discussion)*
+Explored shorter options (3-4 chars) for better ergonomics. 3 chars too risky (26% collision at 500 tasks). 4 chars viable only with base36 encoding.
+
+Considered base36 (a-z, 0-9) vs hex (0-9, a-f):
+- 4 base36 = 1.68M combinations
+- 6 hex = 16.7M combinations
+
+Decided hex simpler (no ambiguous chars like 0/O, 1/l to worry about in base36) and 6 chars still very typable.
 
 ### Decision
 
-*(Pending)*
+**6 hex characters**. ~16.7M combinations, negligible collision risk at project scale. Collision detection on creation as safety net.
+
+Format: `{prefix}-{6 hex chars}` → e.g., `tick-a3f2b7`
 
 ---
 
@@ -85,43 +91,124 @@ The hash source affects determinism and uniqueness guarantees.
 
 ### Journey
 
-*(To be captured during discussion)*
+Content-based rejected - awkward "what if title changes" problem. Idempotent task creation not a real need; agents shouldn't create duplicates anyway.
+
+Timestamp-based rejected - leaks creation time, adds ordering semantics we don't want.
+
+Random is simplest and cleanest. Considered nanoid libraries:
+- `matoous/go-nanoid` - popular, stable
+- `jaevor/go-nanoid` - buffered/efficient
+- `sixafter/nanoid` - recent 2025, optimized
+
+But for hex-only + fixed length, stdlib `crypto/rand` is 3 lines with no dependency:
+```go
+b := make([]byte, 3)  // 3 bytes = 6 hex chars
+crypto/rand.Read(b)
+id := fmt.Sprintf("%x", b)
+```
+
+Decided simpler to avoid the dependency.
 
 ### Decision
 
-*(Pending)*
+**Random via stdlib `crypto/rand`**. No external dependencies. Generate 3 random bytes, encode as hex = 6 chars.
 
 ---
 
 ## How should collisions be handled?
 
 ### Context
-Even with low probability, collisions need a strategy.
+Even with low probability (~0.003% at 1000 tasks), collisions need a strategy.
 
 ### Options Considered
 
-*(To be explored)*
+**Retry silently**
+- Generate new ID on collision, loop until unique
+- User/agent never sees the retry
+- Needs max attempts to avoid infinite loop
+
+**Error immediately**
+- Fail creation, let caller retry
+- Exposes implementation detail unnecessarily
+
+**Append suffix**
+- `tick-a3f2b7-2` on collision
+- Ugly, variable-length IDs
 
 ### Journey
 
-*(To be captured during discussion)*
+Retry is clearly the right approach - no reason to expose collision to user/agent. The question was max attempts.
+
+Probability of consecutive collisions is multiplicative. If P(collision) = 0.003%, then:
+- 2 consecutive: 0.00000009%
+- 3 consecutive: effectively impossible
+
+Started at 3 max attempts. Bumped to 5 for extra robustness - costs nothing and provides margin.
+
+If 5 consecutive collisions occur, something is seriously wrong (ID space exhaustion). Error message should guide user: "too many tasks, consider `tick archive`".
 
 ### Decision
 
-*(Pending)*
+**Retry up to 5 times, silent to caller**. On exhaustion, error with actionable message suggesting archive command.
+
+```
+for attempts := 0; attempts < 5; attempts++ {
+    id := generateID()
+    if !exists(id) {
+        return id
+    }
+}
+return error("failed to generate unique ID after 5 attempts - consider archiving completed tasks")
+```
+
+---
+
+## What character set for the hash?
+
+### Decision
+
+**Hex (0-9, a-f)**. Decided during hash length discussion. Simpler than base36 - no ambiguous characters (0/O, 1/l), and 6 hex chars provides sufficient space (16.7M combinations).
+
+---
+
+## Should IDs be case-sensitive?
+
+### Context
+IDs are generated lowercase (`%x` format), but users might encounter uppercase versions (copy-paste, manual typing).
+
+### Options Considered
+
+**Case-sensitive**
+- Simpler implementation (exact match)
+- User typo or uppercase = "not found"
+
+**Case-insensitive**
+- Normalize to lowercase on lookup
+- More forgiving of input variations
+
+### Decision
+
+**Case-insensitive**. Normalize input to lowercase before lookup. Minimal cost, better UX when users copy-paste or type IDs.
 
 ---
 
 ## Summary
 
 ### Key Insights
-*(To emerge from discussion)*
+1. Simpler is better - stdlib over dependencies, hex over base36
+2. Collision handling should be invisible to users with actionable error if it fails
+3. Small ergonomic choices (case-insensitivity) reduce friction
 
 ### Current State
-- Format decided: `{prefix}-{hash}`
-- Implementation details: under discussion
+All questions resolved:
+- Format: `{prefix}-{6 hex chars}` (e.g., `tick-a3f2b7`)
+- Generation: `crypto/rand` (stdlib, no deps)
+- Collision: Retry up to 5x, error with archive suggestion
+- Matching: Case-insensitive
 
 ### Next Steps
-- [ ] Resolve hash length
-- [ ] Decide random vs content-based
-- [ ] Define collision handling
+- [x] Resolve hash length → 6 hex
+- [x] Decide random vs content-based → random (crypto/rand)
+- [x] Define collision handling → retry 5x
+- [x] Character set → hex
+- [x] Case sensitivity → case-insensitive
