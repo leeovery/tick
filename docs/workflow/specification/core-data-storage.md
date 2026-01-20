@@ -76,3 +76,62 @@ Task IDs follow the pattern: `{prefix}-{6 hex chars}`
 - IDs are case-insensitive for matching
 - Normalize to lowercase on input (user can type `TICK-A3F2B7`, stored as `tick-a3f2b7`)
 - Always output lowercase
+
+### File Locations & Formats
+
+#### Directory Structure
+
+```
+.tick/
+├── tasks.jsonl      # Source of truth (git tracked)
+├── cache.db         # SQLite cache (gitignored)
+└── lock             # Lock file for concurrent access
+```
+
+#### JSONL Format
+
+One JSON object per line, no trailing commas, no array wrapper:
+
+```jsonl
+{"id":"tick-a1b2","title":"Task title","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-c3d4","title":"With all fields","status":"in_progress","priority":1,"description":"Details here","blocked_by":["tick-a1b2"],"parent":"tick-e5f6","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T14:00:00Z"}
+{"id":"tick-g7h8","title":"Completed task","status":"done","priority":1,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T16:00:00Z","closed":"2026-01-19T16:00:00Z"}
+```
+
+- Optional fields omitted when empty/null (not serialized as `null`)
+- `updated` always present (set to `created` value initially)
+
+#### SQLite Schema
+
+```sql
+CREATE TABLE tasks (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  priority INTEGER NOT NULL DEFAULT 2,
+  description TEXT,
+  parent TEXT,
+  created TEXT NOT NULL,
+  updated TEXT NOT NULL,
+  closed TEXT
+);
+
+CREATE TABLE dependencies (
+  task_id TEXT NOT NULL,
+  blocked_by TEXT NOT NULL,
+  PRIMARY KEY (task_id, blocked_by)
+);
+
+CREATE TABLE metadata (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_priority ON tasks(priority);
+CREATE INDEX idx_tasks_parent ON tasks(parent);
+```
+
+- `tasks` table mirrors JSONL fields (minus `blocked_by` which is normalized)
+- `dependencies` table enables efficient joins for "ready" queries
+- `metadata` table stores the JSONL content hash for freshness detection
