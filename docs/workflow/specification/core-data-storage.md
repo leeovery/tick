@@ -159,3 +159,50 @@ Rebuild SQLite from JSONL when:
 4. **Explicit command** - `tick rebuild` forces rebuild
 
 The freshness check is the gatekeeper. Everything else is error recovery.
+
+### Write Operations
+
+#### Mutation Flow
+
+All mutations (create, update, delete) follow this sequence:
+
+1. Acquire exclusive lock on `.tick/lock` file
+2. Read `tasks.jsonl`, compute hash, check freshness (rebuild if stale)
+3. Apply mutation in memory
+4. Write complete new content to temp file
+5. `fsync` temp file (flush to disk)
+6. `os.Rename(temp, tasks.jsonl)` - atomic on POSIX
+7. Update SQLite in single transaction: apply mutation + store new hash
+8. Release lock
+
+#### Atomic Rewrite Pattern
+
+Always use full file rewrite for all operations (no append-only mode):
+
+- **Why**: Atomic rename guarantees complete file or no change; append can leave incomplete lines
+- **How**: Write to temp file → fsync → rename
+- **Performance**: ~500 tasks × ~200 bytes = 100KB; trivially fast
+
+#### Partial Failure Handling
+
+**JSONL-first, SQLite is expendable**:
+
+- If JSONL write succeeds but SQLite fails: log warning, continue
+- Next read will detect hash mismatch and rebuild SQLite automatically
+- Trade-off accepted: SQLite failure costs one rebuild on next read
+
+The hash update is part of the same SQLite transaction as the data update:
+```sql
+BEGIN;
+INSERT INTO tasks (...) VALUES (...);
+UPDATE metadata SET jsonl_hash = 'new_hash';
+COMMIT;
+```
+
+#### File Locking
+
+Use `github.com/gofrs/flock` for file locking:
+
+- **Write operations**: Exclusive lock (blocks other readers and writers)
+- **Lock file**: `.tick/lock` (separate from data files)
+- Prevents concurrent access corruption (learned from Taskwarrior issues)
