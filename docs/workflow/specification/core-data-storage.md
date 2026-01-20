@@ -48,3 +48,31 @@ Each task has 10 fields:
 - **Parent/child is organizational** - A parent groups related tasks but does not block them
 - **blocked_by controls workflow** - A task cannot be worked until its blockers are resolved
 - **Cancelled tasks unblock dependents** - When a task is cancelled, tasks blocked by it become unblocked
+
+### ID Generation
+
+#### Format
+
+Task IDs follow the pattern: `{prefix}-{6 hex chars}`
+
+- **Prefix**: `tick` (hardcoded, no configuration)
+- **Random part**: 6 lowercase hexadecimal characters (e.g., `a3f2b7`)
+- **Example**: `tick-a3f2b7`
+
+#### Generation
+
+- Use `crypto/rand` from Go stdlib (3 random bytes → 6 hex characters)
+- Provides 16.7 million possible IDs (2^24)
+- Cryptographically secure, no seeding required
+
+#### Collision Handling
+
+- On collision: retry silently up to 5 times
+- If still colliding after 5 retries: return error
+- Collisions are practically impossible at expected scale (hundreds to low thousands of tasks)
+
+#### Case Sensitivity
+
+- IDs are case-insensitive for matching
+- Normalize to lowercase on input (user can type `TICK-A3F2B7`, stored as `tick-a3f2b7`)
+- Always output lowercase
