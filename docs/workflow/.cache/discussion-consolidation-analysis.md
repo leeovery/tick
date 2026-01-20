@@ -1,6 +1,6 @@
 ---
 checksum: 43cdc9b4e58540e7971028124df6456e
-generated: 2026-01-20T20:57:00Z
+generated: 2026-01-20T21:05:00Z
 discussion_files:
   - archive-strategy-implementation.md
   - cli-command-structure-ux.md
@@ -20,47 +20,57 @@ discussion_files:
 
 ## Recommended Groupings
 
-### Core Data Layer
-- **data-schema-design**: Defines the JSONL/SQLite schemas, field constraints, and how blocked_by/parent relationships are stored
-- **freshness-dual-write**: Implements the storage layer - hash-based freshness, atomic writes, file locking, cache rebuild
-- **id-format-implementation**: Specifies ID generation (tick-{6 hex}, crypto/rand, collision handling)
+### Core Data & Storage
+- **data-schema-design**: Defines the 10-field JSONL schema (id, title, status, priority, description, blocked_by, parent, created, updated, closed), SQLite cache schema, field constraints. References cli-command-structure-ux for status values, toon-output-format for output structure.
+- **id-format-implementation**: Specifies ID generation - `tick-{6 hex chars}`, crypto/rand (stdlib), retry up to 5x for collisions, case-insensitive matching.
+- **freshness-dual-write**: Implements storage synchronization - SHA256 hash-based freshness, JSONL-first with expendable SQLite cache, atomic rewrite (temp + fsync + rename), file locking via gofrs/flock.
 
-**Coupling**: These three are inseparable. The schema defines what's stored, freshness/dual-write defines how it's persisted and synced, and ID format is fundamental to the schema. All three must be understood together to implement the storage layer.
+**Coupling**: These three form the data foundation. The schema defines what's stored, ID format is part of that schema, and freshness/dual-write defines how data moves between JSONL and SQLite. Implementation would build these together as the storage engine.
 
-### CLI Interface
-- **cli-command-structure-ux**: Defines commands (create, start, done, cancel, reopen, list, show, dep add/rm), flags (--toon, --pretty, --json, --quiet, --verbose), TTY detection, error handling
-- **toon-output-format**: Specifies TOON multi-section output structure for each command type, format selection logic
-- **tui**: Defines human-readable output (simple aligned columns, no TUI library, no interactivity)
+### CLI Interface & Output
+- **cli-command-structure-ux**: Defines all commands (create, start, done, cancel, reopen, list, show, dep add/rm, ready, blocked), TTY auto-detection for output format, flags (--toon, --pretty, --json, --quiet, --verbose), simple exit codes (0/1), error format.
+- **toon-output-format**: Specifies TOON multi-section structure for complex data, format selection logic (inherits TTY detection from CLI discussion), empty arrays with zero count, plain text errors to stderr.
+- **tui**: Defines human-readable output - raw fmt.Print (no TUI library), simple aligned columns, no colors/borders/interactivity.
 
-**Coupling**: All three define how the CLI behaves and presents information. Commands (cli-command-structure-ux) produce output in either TOON (toon-output-format) or human-readable (tui) format based on TTY detection. The output format decisions directly implement the command design.
+**Coupling**: All three define how users interact with tick. The CLI discussion establishes TTY detection which TOON and TUI both build upon. TOON handles machine output, TUI handles human output. Together they specify the complete interface layer.
 
-### Task Workflow
-- **hierarchy-dependency-model**: Defines parent/child relationships, blocked_by semantics, leaf-only tick ready rule, validation rules (child cannot be blocked_by parent)
-- **doctor-command-validation**: Specifies validations (cycles, orphans, deadlocks, duplicates) and the tick doctor/rebuild commands
+### Task Workflow & Validation
+- **hierarchy-dependency-model**: Defines semantic rules - parent/child is organizational (not workflow constraint), blocked_by controls execution order, leaf-only `tick ready` rule (open + unblocked + no open children), child→parent deps disallowed (deadlock), parent→child allowed, cycles rejected at write time.
+- **doctor-command-validation**: Specifies validation checks - 9 errors (cache staleness, JSONL syntax, duplicate IDs, ID format violations, orphaned references, self-refs, cycles, child→parent deadlock) + 1 warning (parent done while children open). Report-only behavior, separate `tick rebuild` command, human-readable output only.
 
-**Coupling**: Doctor validates the hierarchy and dependency rules defined in hierarchy-dependency-model. The doctor checks for deadlocks (child blocked_by parent), orphaned references, and cycles - all rules established in the hierarchy discussion.
+**Coupling**: Doctor validates the rules established in hierarchy-dependency-model. The deadlock check (child blocked_by parent) comes directly from the hierarchy discussion. Orphan detection, cycle detection, and other validations enforce the workflow rules. These should be specified together.
 
 ## Independent Discussions
 
-- **archive-strategy-implementation**: Deferred to post-v1. No archive commands needed. YAGNI decision - one file, one cache, no complexity.
+- **archive-strategy-implementation**: Deferred to post-v1. Decision: "No archiving - YAGNI." One file (tasks.jsonl), one cache (cache.db). Advisory system concept preserved for future use.
 
-- **config-file-design**: Deferred to post-v1. No config file - all defaults hardcoded, customization via CLI flags only.
+- **config-file-design**: Deferred to post-v1. Decision: "No config file - YAGNI." All defaults hardcoded (tick- prefix, priority 2). Customization via CLI flags only.
 
-- **installation-options**: Distribution strategy (Homebrew for macOS, install script for Linux/ephemeral). Separate concern from core functionality.
+- **installation-options**: Distribution strategy independent of core functionality. Homebrew for macOS, install script for Linux/ephemeral environments, no Windows priority, no self-update. Can be specified separately.
 
-- **migration-subcommand**: `tick migrate --from beads` command with plugin architecture. Import functionality is separate from core task management.
+- **migration-subcommand**: Import feature (`tick migrate --from beads`) with plugin/strategy pattern. One-time append, no sync/deduplication. Cleanly separable from core task management.
 
 ## Analysis Notes
 
-The 12 discussions naturally cluster into:
-- **3 tightly coupled groups** (core-data-layer, cli-interface, task-workflow) where decisions are interdependent
-- **4 standalone discussions** where decisions are independent or deferred
+**Cross-references identified:**
+- data-schema-design → cli-command-structure-ux (status values)
+- data-schema-design → toon-output-format (output structure)
+- hierarchy-dependency-model → data-schema-design (blocked_by, parent fields)
+- hierarchy-dependency-model → cli-command-structure-ux (tick ready behavior)
+- doctor-command-validation → hierarchy-dependency-model (deadlock rule)
+- doctor-command-validation → id-format-implementation (ID validation)
+- toon-output-format → cli-command-structure-ux (TTY detection decided there)
+- tui → toon-output-format (shares TTY detection)
+- config-file-design → cli-command-structure-ux (deferred because flags handle it)
 
-The deferred decisions (archive, config) explicitly state "not for v1" and can be excluded from v1 specifications entirely.
+**Implementation order suggested:**
+1. Core Data & Storage (foundation)
+2. CLI Interface & Output (user interaction)
+3. Task Workflow & Validation (business rules)
+4. Independent features (distribution, migration)
 
-The distribution (installation-options) and import (migration-subcommand) are valuable features but are cleanly separable from core functionality.
+**Deferred items (not for v1):**
+- Archive strategy
+- Config file
 
-A specification could reasonably:
-1. Cover all 12 as a unified "tick v1" spec
-2. Split into 3 grouped specs + 4 individual specs
-3. Focus on the 3 core groups for v1 and defer distribution/migration
+These explicitly concluded with "don't build it" and can be excluded from v1 specification entirely.
