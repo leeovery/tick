@@ -206,3 +206,21 @@ Use `github.com/gofrs/flock` for file locking:
 - **Write operations**: Exclusive lock (blocks other readers and writers)
 - **Lock file**: `.tick/lock` (separate from data files)
 - Prevents concurrent access corruption (learned from Taskwarrior issues)
+
+### Read Operations
+
+#### Query Flow
+
+All read operations (list, show, ready, etc.) follow this sequence:
+
+1. Acquire shared lock on `.tick/lock` file (allows concurrent reads)
+2. Read `tasks.jsonl`, compute hash, check freshness
+3. If stale: rebuild SQLite from JSONL data already in memory
+4. Query SQLite for requested data
+5. Release lock
+
+#### Shared Locking
+
+- **Read operations**: Shared lock (allows other readers, blocks writers)
+- Multiple concurrent reads are safe
+- A pending write will wait for all readers to finish
