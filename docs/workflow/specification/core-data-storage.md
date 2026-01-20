@@ -135,3 +135,27 @@ CREATE INDEX idx_tasks_parent ON tasks(parent);
 - `tasks` table mirrors JSONL fields (minus `blocked_by` which is normalized)
 - `dependencies` table enables efficient joins for "ready" queries
 - `metadata` table stores the JSONL content hash for freshness detection
+
+### Synchronization
+
+#### Freshness Detection
+
+SHA256 hash-based comparison:
+
+1. On every operation, read `tasks.jsonl` into memory
+2. Compute SHA256 hash of file contents
+3. Compare with hash stored in SQLite `metadata` table (key: `jsonl_hash`)
+4. If mismatch: rebuild SQLite from JSONL data already in memory (no double-read)
+
+**Trade-off accepted**: Always read full file on every operation. Acceptable for expected file sizes (<1MB, <10ms).
+
+#### Cache Rebuild Triggers
+
+Rebuild SQLite from JSONL when:
+
+1. **Hash mismatch** - Primary case; JSONL was modified externally (e.g., git pull, manual edit)
+2. **SQLite file missing** - Hash lookup fails; rebuild from scratch
+3. **SQLite query errors** - Delete corrupted cache and rebuild
+4. **Explicit command** - `tick rebuild` forces rebuild
+
+The freshness check is the gatekeeper. Everything else is error recovery.
