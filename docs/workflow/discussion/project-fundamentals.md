@@ -36,7 +36,7 @@ Without this foundation, implementation risks being directionless. Developers wo
       - How do implementation agents pick up and complete work?
       - What's the human's role?
 
-- [ ] What commands are essential for MVP (v1)?
+- [x] What commands are essential for MVP (v1)?
       - Which commands from the CLI discussion are must-have?
       - Which can be deferred to future versions?
       - What's the minimum set that delivers value?
@@ -193,19 +193,27 @@ The workflow above is a *typical* use case, not something Tick enforces.
 
 ### Context
 
-The CLI discussion covers many commands: create, start, done, cancel, reopen, list, show, dep add/rm, ready, blocked, doctor, rebuild, migrate, init. Not all may be needed for v1.
-
-### Options Considered
-
-*(To be explored during discussion)*
+The CLI discussion covers many commands: create, start, done, cancel, reopen, list, show, dep add/rm, ready, blocked, doctor, rebuild, migrate, init.
 
 ### Journey
 
-*(To be filled during discussion)*
+Initially attempted to split commands into "essential" vs "deferrable" categories. This was misguided - the CLI discussion already concluded with a considered command set. All commands were discussed for good reasons and are applicable to v1.
+
+The fundamentals discussion should reference existing decisions, not re-litigate them.
 
 ### Decision
 
-*(Pending)*
+**All commands from the [cli-command-structure-ux](cli-command-structure-ux.md) discussion are in scope for v1.**
+
+The MVP scope is defined by the concluded discussions:
+- **Commands:** [cli-command-structure-ux](cli-command-structure-ux.md)
+- **Data layer:** [core-data-storage spec](../specification/core-data-storage.md)
+- **Output format:** [toon-output-format](toon-output-format.md)
+- **Task relationships:** [hierarchy-dependency-model](hierarchy-dependency-model.md)
+- **Validation:** [doctor-command-validation](doctor-command-validation.md)
+- **Human output:** [tui](tui.md)
+
+No additional features are needed. No discussed features should be cut.
 
 ---
 
