@@ -41,7 +41,7 @@ Without this foundation, implementation risks being directionless. Developers wo
       - Which can be deferred to future versions?
       - What's the minimum set that delivers value?
 
-- [ ] What are the explicit non-goals?
+- [x] What are the explicit non-goals?
       - What are we deliberately NOT building?
       - Consolidate scattered deferral decisions
       - Why are these out of scope?
@@ -223,17 +223,36 @@ No additional features are needed. No discussed features should be cut.
 
 Several discussions concluded with "defer" decisions (archive strategy, config file). These should be consolidated into explicit non-goals so the scope is clear.
 
-### Options Considered
-
-*(To be explored during discussion)*
-
 ### Journey
 
-*(To be filled during discussion)*
+Consolidated deferral decisions from existing discussions and confirmed additional non-goals:
+
+**From existing discussions:**
+- Archive strategy → deferred (YAGNI) per [archive-strategy-implementation](archive-strategy-implementation.md)
+- Config file → deferred (YAGNI) per [config-file-design](config-file-design.md)
+- Windows installation → not priority per [installation-options](installation-options.md)
+
+**Additional non-goals confirmed:**
+- Multi-agent coordination - not in scope
+- Real-time sync between machines - definitely not
+- GUI/web interface - no
+- Plugin/extension system - no
 
 ### Decision
 
-*(Pending)*
+**Explicit non-goals for v1:**
+
+| Non-goal | Rationale |
+|----------|-----------|
+| **Archive strategy** | YAGNI - single file sufficient for v1. Revisit if files get large. |
+| **Config file** | YAGNI - hardcoded defaults are fine. No user customization needed yet. |
+| **Windows support** | Not a priority - macOS and Linux first. |
+| **Multi-agent coordination** | Out of scope - Tick is single-agent focused. Multiple agents on same project is not a use case we're solving. |
+| **Real-time sync** | Definitely not - git is the sync mechanism. No live collaboration features. |
+| **GUI/web interface** | No - CLI only. Agent-first means no visual UI needed. |
+| **Plugin/extension system** | No - keep it simple. No hooks, no customization points. |
+
+**Guiding principle:** When in doubt, leave it out. Minimal simplicity is a core value.
 
 ---
 
