@@ -30,7 +30,7 @@ Without this foundation, implementation risks being directionless. Developers wo
       - What problem does it solve?
       - Why does it need to exist?
 
-- [ ] What is the primary workflow?
+- [x] What is the primary workflow?
       - End-to-end journey from `tick init` to project completion
       - How do planning agents populate tasks?
       - How do implementation agents pick up and complete work?
@@ -123,17 +123,69 @@ Confirmed that **minimal simplicity is a core value** - fewer features done well
 
 Understanding the end-to-end workflow is essential for knowing which features matter. The existing discussions assume a two-agent pattern (planning + implementation) but don't explicitly document it.
 
-### Options Considered
-
-*(To be explored during discussion)*
-
 ### Journey
 
-*(To be filled during discussion)*
+Mapped out a typical workflow:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. PROJECT SETUP                                                │
+│    Human runs: tick init                                        │
+│    Result: .tick/ directory created                             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. PLANNING PHASE                                               │
+│    Planning agent (or human) creates tasks:                     │
+│    - tick create "Setup authentication" --priority 1            │
+│    - tick create "Login endpoint" --blocked-by tick-a1b2        │
+│    - tick create "Logout endpoint" --blocked-by tick-c3d4       │
+│    Result: tasks.jsonl populated with work items                │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. IMPLEMENTATION LOOP                                          │
+│    Implementation agent (or human):                             │
+│    a) tick ready        → "What can I work on?"                 │
+│    b) tick start <id>   → "I'm working on this"                 │
+│    c) [does the work]                                           │
+│    d) tick done <id>    → "I finished this"                     │
+│    e) Repeat until tick ready returns nothing                   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. PROJECT COMPLETE                                             │
+│    All tasks done. tasks.jsonl shows history.                   │
+│    .tick/ can be deleted or kept for reference.                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key insight: Tick is workflow-agnostic.** It's a tracker, not a workflow engine.
+
+- Tick doesn't care *who* creates tasks (human, planning agent, implementation agent mid-work)
+- Tick doesn't care *who* works tasks (human or agent)
+- Tick doesn't enforce *when* things happen
+- Tick just answers: "What's ready?" and tracks state changes
+
+The workflow above is a *typical* use case, not something Tick enforces.
+
+**Human's role:** Flexible. The tool is designed for agent-driven implementation (hands-off, semi-automated), but humans can do the work too. Primary human activities:
+- Reviewing code / ensuring correctness
+- Observing and intervening where necessary
+- Pre-planning: ensuring plans are well-formed so agents can execute
+
+**Mid-project planning:** Allowed. Tasks can be created at any time. This is outside Tick's concern - it just tracks whatever tasks exist.
+
+**Success depends on good pre-planning** - if plans are well-formed with proper dependencies, the agent can work autonomously. Tick enables this but doesn't enforce it.
 
 ### Decision
 
-*(Pending)*
+**Primary workflow:** Init → Plan → Implement Loop → Complete
+
+**Core principle:** Tick is a simple tracker. It doesn't orchestrate workflows, enforce processes, or care about who does what. It answers one question reliably: "What's ready to work on?"
 
 ---
 
