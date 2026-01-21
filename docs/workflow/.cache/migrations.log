@@ -1,0 +1,12 @@
+docs/workflow/discussion/archive-strategy-implementation.md: 001
+docs/workflow/discussion/cli-command-structure-ux.md: 001
+docs/workflow/discussion/config-file-design.md: 001
+docs/workflow/discussion/data-schema-design.md: 001
+docs/workflow/discussion/doctor-command-validation.md: 001
+docs/workflow/discussion/freshness-dual-write.md: 001
+docs/workflow/discussion/hierarchy-dependency-model.md: 001
+docs/workflow/discussion/id-format-implementation.md: 001
+docs/workflow/discussion/installation-options.md: 001
+docs/workflow/discussion/migration-subcommand.md: 001
+docs/workflow/discussion/toon-output-format.md: 001
+docs/workflow/discussion/tui.md: 001

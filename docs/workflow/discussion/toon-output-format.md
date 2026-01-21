@@ -1,7 +1,10 @@
-# Discussion: TOON Output Format Implementation
+---
+topic: toon-output-format
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: TOON Output Format Implementation
 
 ## Context
 

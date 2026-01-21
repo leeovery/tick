@@ -1,7 +1,10 @@
-# Discussion: Archive Strategy Implementation
+---
+topic: archive-strategy-implementation
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: Archive Strategy Implementation
 
 ## Context
 
