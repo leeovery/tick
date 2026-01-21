@@ -1,7 +1,10 @@
-# Discussion: Hierarchy & Dependency Model
+---
+topic: hierarchy-dependency-model
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: Hierarchy & Dependency Model
 
 ## Context
 

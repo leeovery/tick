@@ -1,7 +1,10 @@
-# Discussion: TUI (Terminal User Interface for Humans)
+---
+topic: tui
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: TUI (Terminal User Interface for Humans)
 
 ## Context
 
@@ -191,4 +194,3 @@ Pure CLI commands. Drill into tasks via `tick show <id>`.
 - Column alignment via `fmt.Printf` with width specifiers
 - No external dependencies for human output
 - Tab completion via Cobra (shell-level, not app-level)
-

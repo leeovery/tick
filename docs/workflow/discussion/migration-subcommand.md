@@ -1,7 +1,10 @@
-# Discussion: Migration Subcommand
+---
+topic: migration-subcommand
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: Migration Subcommand
 
 ## Context
 
@@ -258,4 +261,3 @@ Tick's core doesn't manage credentials. For beads (local/file-based), this isn't
 - [ ] Design the normalized task format (contract)
 - [ ] Implement beads provider
 - [ ] Build core migration command
-

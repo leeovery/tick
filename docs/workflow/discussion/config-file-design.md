@@ -1,7 +1,10 @@
-# Discussion: Config File Design
+---
+topic: config-file-design
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: Config File Design
 
 ## Context
 

@@ -1,7 +1,10 @@
-# Discussion: Data Schema Design
+---
+topic: data-schema-design
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: Data Schema Design
 
 ## Context
 

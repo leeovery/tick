@@ -1,9 +1,10 @@
+---
+topic: installation-options
+status: concluded
+date: 2026-01-19
+---
+
 # Discussion: Installation Options
-
-**Also covers**: Distribution & Release Strategy
-
-**Date**: 2026-01-19
-**Status**: Concluded
 
 ## Context
 

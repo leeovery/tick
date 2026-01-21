@@ -1,7 +1,10 @@
-# Discussion: Freshness Check & Dual Write Implementation
+---
+topic: freshness-dual-write
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: Freshness Check & Dual Write Implementation
 
 ## Context
 
@@ -327,4 +330,3 @@ All questions resolved:
 - [ ] Proceed to specification phase
 - [ ] Define exact file formats (JSONL schema, SQLite schema, metadata table)
 - [ ] Define error handling behavior (what messages, what exit codes)
-

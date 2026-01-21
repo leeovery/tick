@@ -1,7 +1,10 @@
-# Discussion: CLI Command Structure & UX
+---
+topic: cli-command-structure-ux
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: CLI Command Structure & UX
 
 ## Context
 

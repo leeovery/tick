@@ -1,7 +1,10 @@
-# Discussion: Doctor Command & Validation
+---
+topic: doctor-command-validation
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: Doctor Command & Validation
 
 ## Context
 

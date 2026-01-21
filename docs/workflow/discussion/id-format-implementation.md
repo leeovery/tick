@@ -1,7 +1,10 @@
-# Discussion: ID Format Implementation
+---
+topic: id-format-implementation
+status: concluded
+date: 2026-01-19
+---
 
-**Date**: 2026-01-19
-**Status**: Concluded
+# Discussion: ID Format Implementation
 
 ## Context
 
