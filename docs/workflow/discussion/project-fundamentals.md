@@ -46,7 +46,7 @@ Without this foundation, implementation risks being directionless. Developers wo
       - Consolidate scattered deferral decisions
       - Why are these out of scope?
 
-- [ ] How does Tick integrate with claude-technical-workflows?
+- [x] How does Tick integrate with claude-technical-workflows?
       - What's the adapter interface?
       - How does a planning agent output to tick?
       - How does an implementation agent query for work?
@@ -262,17 +262,23 @@ Consolidated deferral decisions from existing discussions and confirmed addition
 
 Tick is meant to replace/complement existing output formats (Beads, Backlog.md, Local Markdown) in the planning phase. The integration contract needs definition.
 
-### Options Considered
-
-*(To be explored during discussion)*
-
 ### Journey
 
-*(To be filled during discussion)*
+Asked whether Tick needs to define an integration contract or provide specific features for claude-technical-workflows integration.
 
 ### Decision
 
-*(Pending)*
+**Integration is outside Tick's scope.**
+
+Tick provides a CLI. How other tools (claude-technical-workflows, custom scripts, etc.) use that CLI is their concern. Tick doesn't need to know about workflow systems.
+
+This is consistent with "Tick is just a tracker" - it provides:
+- `tick create` for adding tasks
+- `tick dep add` for dependencies
+- `tick ready` for querying what's workable
+- `tick start/done` for state changes
+
+Any planning tool can call these commands. Any implementation agent can query and update state. Tick doesn't care who calls it or why.
 
 ---
 
