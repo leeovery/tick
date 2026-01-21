@@ -30,6 +30,14 @@ Follow these steps EXACTLY as written. Do not skip steps or combine them. Presen
 
 ---
 
+## Step 0: Run Migrations
+
+**This step is mandatory. You must complete it before proceeding.**
+
+Invoke the `/migrate` command and assess its output before proceeding to Step 1.
+
+---
+
 ## Step 1: Run Discovery Script
 
 Run the discovery script to gather current state:
@@ -78,9 +86,9 @@ The specification phase requires a completed discussion. Please run /start-discu
 ```
 No concluded discussions found.
 
-The following discussions are still exploring:
-  - {topic-1} (exploring)
-  - {topic-2} (exploring)
+The following discussions are still in progress:
+  - {topic-1} (in-progress)
+  - {topic-2} (in-progress)
 
 Please complete the discussion phase before creating specifications. Run /start-discussion to continue a discussion.
 ```
@@ -106,7 +114,7 @@ Discussions:
   ✓ {topic-1} - concluded - ready
   ✓ {topic-2} - concluded - ready
   ○ {topic-3} - concluded - has individual spec
-  · {topic-4} - exploring - not ready
+  · {topic-4} - in-progress - not ready
 
 Specifications:
   • {spec-1} (active) - sources: {topic-1}
@@ -118,7 +126,7 @@ Specifications:
 **Legend:**
 - `✓` = concluded, no spec yet (ready to specify)
 - `○` = concluded, has individual spec (can be combined or continued)
-- `·` = not concluded (not ready)
+- `·` = in-progress (not ready)
 
 #### Routing Based on State
 
@@ -333,7 +341,7 @@ Coupling: {explanation}
 
 How would you like to proceed?
 
-1. **Combine as recommended** - I'll ask which grouping to start with
+1. **Proceed as recommended** - I'll ask which to start with
 2. **Combine differently** - Tell me your preferred groupings
 3. **Single specification** - Consolidate ALL into one unified spec
 4. **Individual specifications** - Create 1:1 specs (I'll ask which to start)
@@ -351,15 +359,22 @@ How would you like to proceed?
 
 Based on user's choice from Step 7:
 
-#### If "Combine as recommended"
+#### If "Proceed as recommended"
 
 ```
-Which grouping would you like to start with?
+Which would you like to start with?
 
+Grouped:
 1. {Grouping Name A} - {N} discussions
 2. {Grouping Name B} - {N} discussions (specification exists)
 3. {Grouping Name C} - {N} discussions
+
+Independent:
+4. {topic-f} - standalone
+5. {topic-g} - standalone
 ```
+
+List ALL items from the analysis: grouped specifications first, then independent discussions. Number them consecutively.
 
 **STOP.** Wait for user to pick a number, then proceed to **Step 9**.
 
@@ -506,7 +521,7 @@ Before invoking the specification skill:
 2. Any constraints or changes since the discussion(s) concluded?
 3. Are there existing partial implementations or related documentation I should review?
 
-(Press enter to skip if none)
+(Say 'none' or 'continue' if nothing to add)
 ```
 
 **STOP.** Wait for user response.
