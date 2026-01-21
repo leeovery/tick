@@ -3,6 +3,7 @@
 **Status**: Complete
 **Type**: feature
 **Last Updated**: 2026-01-21
+**Sources**: data-schema-design, freshness-dual-write, id-format-implementation, hierarchy-dependency-model
 
 ---
 
@@ -224,6 +225,81 @@ All read operations (list, show, ready, etc.) follow this sequence:
 - **Read operations**: Shared lock (allows other readers, blocks writers)
 - Multiple concurrent reads are safe
 - A pending write will wait for all readers to finish
+
+### Hierarchy & Dependency Model
+
+Tick has two distinct relationship types:
+
+- **Hierarchy** (`parent` field): "This task is part of a larger thing" - organizational grouping
+- **Dependencies** (`blocked_by` array): "This task can't start until these are done" - workflow sequencing
+
+#### Ready Query Logic
+
+A task is "ready" (workable) only when ALL conditions are met:
+
+1. Status is `open`
+2. All `blocked_by` tasks are closed (`done` or `cancelled`)
+3. Has no open children (no tasks where `parent` = this task AND status is `open` or `in_progress`)
+
+**The leaf-only rule:**
+
+| Condition | Appears in ready? |
+|-----------|-------------------|
+| No children (leaf task) | Yes, when unblocked |
+| Has open children | No - children are the work |
+| All children closed | Yes - becomes a leaf |
+
+**Example:**
+```
+Auth System (tick-a1b2) - has children → NOT ready
+├── Setup Sanctum (tick-c3d4) - done → NOT ready
+├── Login endpoint (tick-e5f6) - open, unblocked, no children → READY
+└── Logout endpoint (tick-k1l2, blocked_by tick-e5f6) - blocked → NOT ready
+```
+
+When Login and Logout are done, Auth System appears in ready (now a "leaf" with no open children). Agent can verify the epic is complete and mark it done.
+
+#### Dependency Validation Rules
+
+| Scenario | Allowed | Reason |
+|----------|---------|--------|
+| Child blocked_by parent | **No** | Creates deadlock with leaf-only rule |
+| Parent blocked_by child | Yes | Valid "do children first" workflow |
+| Sibling dependencies | Yes | Normal sequencing within an epic |
+| Cross-hierarchy dependencies | Yes | Normal dependency behavior |
+| Circular dependencies | **No** | Cycle detection catches these |
+
+**Validation timing**: Validate when adding/modifying `blocked_by` - reject invalid dependencies at write time, before persisting to JSONL.
+
+**Error messages:**
+```
+Error: Cannot add dependency - tick-child cannot be blocked by its parent tick-epic
+       (would create unworkable task due to leaf-only ready rule)
+
+Error: Cannot add dependency - creates cycle: tick-a → tick-b → tick-c → tick-a
+```
+
+#### Parent Context in Output
+
+When displaying a task that has a parent (e.g., `tick show`):
+
+- Include parent ID + title (not full description)
+- Agent can `tick show <parent_id>` for full context if needed
+- Tasks should be self-contained; parent context is a safety net, not required
+
+#### Edge Cases
+
+**Deep nesting**: No depth limit. The leaf-only rule handles naturally - only the deepest incomplete tasks appear in ready.
+
+**Orphaned children** (parent reference points to non-existent task):
+- Task remains valid, treated as root-level task
+- `tick doctor` flags: "tick-child references non-existent parent tick-deleted"
+- No auto-fix - human/agent decides whether to remove parent reference
+
+**Parent done before children**:
+- Valid state - children remain workable
+- May indicate planning issue, but not enforced by tool
+- `tick doctor` warns: "tick-epic is done but has open children"
 
 ## Dependencies
 

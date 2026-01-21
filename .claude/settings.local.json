@@ -6,7 +6,8 @@
       "Skill(technical-discussion)",
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd TUI discussion - concluded with minimal approach\n\nDecisions:\n- No TUI library, raw fmt.Print output\n- Simple aligned columns, no colors/borders\n- No interactivity, pure CLI commands\n\nRationale: Human output is secondary \\(agents auto-get TOON via\nTTY detection\\). Zero dependencies for secondary features.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Skill(migrate)"
+      "Skill(migrate)",
+      "Skill(technical-specification)"
     ]
   }
 }

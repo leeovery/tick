@@ -1,6 +1,6 @@
 ---
-checksum: 43cdc9b4e58540e7971028124df6456e
-generated: 2026-01-20T21:05:00Z
+checksum: 578ed29f8db05f82a23043afeadd3324
+generated: 2026-01-21T18:20:00Z
 discussion_files:
   - archive-strategy-implementation.md
   - cli-command-structure-ux.md
@@ -20,57 +20,51 @@ discussion_files:
 
 ## Recommended Groupings
 
-### Core Data & Storage
-- **data-schema-design**: Defines the 10-field JSONL schema (id, title, status, priority, description, blocked_by, parent, created, updated, closed), SQLite cache schema, field constraints. References cli-command-structure-ux for status values, toon-output-format for output structure.
-- **id-format-implementation**: Specifies ID generation - `tick-{6 hex chars}`, crypto/rand (stdlib), retry up to 5x for collisions, case-insensitive matching.
-- **freshness-dual-write**: Implements storage synchronization - SHA256 hash-based freshness, JSONL-first with expendable SQLite cache, atomic rewrite (temp + fsync + rename), file locking via gofrs/flock.
+### Core Data Storage
+- **data-schema-design**: Defines JSONL/SQLite schemas, field constraints, task entity structure
+- **freshness-dual-write**: Defines sync mechanism between JSONL and SQLite, atomic write patterns, hash-based freshness
+- **id-format-implementation**: Defines ID format (tick-{6hex}), generation via crypto/rand, collision handling
+- **hierarchy-dependency-model**: Defines how blocked_by and parent work together, leaf-only ready query, validation rules
 
-**Coupling**: These three form the data foundation. The schema defines what's stored, ID format is part of that schema, and freshness/dual-write defines how data moves between JSONL and SQLite. Implementation would build these together as the storage engine.
+**Coupling**: These are inseparable. Schema defines fields that ID format generates, freshness depends on schema structure, hierarchy/dependency model defines query behavior over that schema. All touch the same data structures.
 
-### CLI Interface & Output
-- **cli-command-structure-ux**: Defines all commands (create, start, done, cancel, reopen, list, show, dep add/rm, ready, blocked), TTY auto-detection for output format, flags (--toon, --pretty, --json, --quiet, --verbose), simple exit codes (0/1), error format.
-- **toon-output-format**: Specifies TOON multi-section structure for complex data, format selection logic (inherits TTY detection from CLI discussion), empty arrays with zero count, plain text errors to stderr.
-- **tui**: Defines human-readable output - raw fmt.Print (no TUI library), simple aligned columns, no colors/borders/interactivity.
+**Note**: An existing `core-data-storage` specification exists and may already cover some of this content.
 
-**Coupling**: All three define how users interact with tick. The CLI discussion establishes TTY detection which TOON and TUI both build upon. TOON handles machine output, TUI handles human output. Together they specify the complete interface layer.
+### CLI Commands & Output
+- **cli-command-structure-ux**: Command structure, flags, error handling, TTY detection for format selection
+- **toon-output-format**: TOON format specifics, multi-section approach for complex data, empty array handling
+- **tui**: Human-readable output styling - simple aligned columns, no TUI library
 
-### Task Workflow & Validation
-- **hierarchy-dependency-model**: Defines semantic rules - parent/child is organizational (not workflow constraint), blocked_by controls execution order, leaf-only `tick ready` rule (open + unblocked + no open children), child→parent deps disallowed (deadlock), parent→child allowed, cycles rejected at write time.
-- **doctor-command-validation**: Specifies validation checks - 9 errors (cache staleness, JSONL syntax, duplicate IDs, ID format violations, orphaned references, self-refs, cycles, child→parent deadlock) + 1 warning (parent done while children open). Report-only behavior, separate `tick rebuild` command, human-readable output only.
+**Coupling**: TOON and TUI formats are output modes controlled by CLI decisions. All three define what commands do and what they output.
 
-**Coupling**: Doctor validates the rules established in hierarchy-dependency-model. The deadlock check (child blocked_by parent) comes directly from the hierarchy discussion. Orphan detection, cycle detection, and other validations enforce the workflow rules. These should be specified together.
+### Diagnostics
+- **doctor-command-validation**: 9 error checks + 1 warning, report-only behavior, human-readable output only
 
-## Independent Discussions
+**Coupling**: References validation rules from hierarchy-dependency-model and id-format-implementation. Could stand alone or merge into CLI spec.
 
-- **archive-strategy-implementation**: Deferred to post-v1. Decision: "No archiving - YAGNI." One file (tasks.jsonl), one cache (cache.db). Advisory system concept preserved for future use.
+### Migration
+- **migration-subcommand**: Plugin architecture for importing from other tools, beads as initial provider
 
-- **config-file-design**: Deferred to post-v1. Decision: "No config file - YAGNI." All defaults hardcoded (tick- prefix, priority 2). Customization via CLI flags only.
+**Coupling**: Standalone utility. References task schema but otherwise independent.
 
-- **installation-options**: Distribution strategy independent of core functionality. Homebrew for macOS, install script for Linux/ephemeral environments, no Windows priority, no self-update. Can be specified separately.
+### Installation
+- **installation-options**: Homebrew (macOS), install script (Linux/ephemeral), global installation
 
-- **migration-subcommand**: Import feature (`tick migrate --from beads`) with plugin/strategy pattern. One-time append, no sync/deduplication. Cleanly separable from core task management.
+**Coupling**: Standalone topic about distribution. No coupling to other discussions.
+
+## Deferred Decisions (No Specification Needed)
+- **archive-strategy-implementation**: Concluded with "defer archiving entirely - not needed for v1"
+- **config-file-design**: Concluded with "no config file for v1"
+
+These discussions reached YAGNI conclusions - no implementation required, thus no specification needed.
 
 ## Analysis Notes
 
-**Cross-references identified:**
-- data-schema-design → cli-command-structure-ux (status values)
-- data-schema-design → toon-output-format (output structure)
-- hierarchy-dependency-model → data-schema-design (blocked_by, parent fields)
-- hierarchy-dependency-model → cli-command-structure-ux (tick ready behavior)
-- doctor-command-validation → hierarchy-dependency-model (deadlock rule)
-- doctor-command-validation → id-format-implementation (ID validation)
-- toon-output-format → cli-command-structure-ux (TTY detection decided there)
-- tui → toon-output-format (shares TTY detection)
-- config-file-design → cli-command-structure-ux (deferred because flags handle it)
+The 12 discussions naturally cluster into:
+1. **Core data layer** (4) - tightly coupled, should be one specification
+2. **CLI interface** (3) - tightly coupled, should be one specification
+3. **Utilities** (2) - doctor and migration can stand alone
+4. **Distribution** (1) - installation is independent
+5. **YAGNI** (2) - no specs needed, just documented decisions
 
-**Implementation order suggested:**
-1. Core Data & Storage (foundation)
-2. CLI Interface & Output (user interaction)
-3. Task Workflow & Validation (business rules)
-4. Independent features (distribution, migration)
-
-**Deferred items (not for v1):**
-- Archive strategy
-- Config file
-
-These explicitly concluded with "don't build it" and can be excluded from v1 specification entirely.
+The existing core-data-storage specification should be reviewed - it may already contain content from the core data layer discussions. If so, this grouping would "continue" that spec rather than create a new one.
