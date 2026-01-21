@@ -24,7 +24,7 @@ Without this foundation, implementation risks being directionless. Developers wo
 
 ## Questions
 
-- [ ] What is Tick? (Vision statement)
+- [x] What is Tick? (Vision statement)
       - One paragraph, definitive, not exploratory
       - Who is the primary user?
       - What problem does it solve?
@@ -82,11 +82,38 @@ Tick serves both agents and humans equally, with different output modes for each
 
 ### Journey
 
-*(To be filled during discussion)*
+Started by examining the existing alternatives and their pain points:
+
+| Tool | Problem |
+|------|---------|
+| **Beads** | Too complex - daemons, hooks, 730-line uninstall, auto-commits conflicting with pipelines. User "doesn't like how it's put together." |
+| **br (beads_rust)** | Promising but requires manual sync (`br sync --flush-only`, `br sync --import-only`) - easy to forget → data loss. Manual sync is a dealbreaker. |
+| **Backlog.md** | No deterministic querying - agents parse markdown, can miss things. Token-expensive to analyze. Plans get large. |
+
+The common thread: **agents need a deterministic "what should I work on next?" query, but existing tools either add complexity or require manual steps that break the workflow.**
+
+Confirmed that **Option B (Agent-first, human-usable)** matches intent. Agents are the primary user, but humans can and will use it directly for oversight. The TTY auto-detection in CLI discussions already reflected this implicitly.
+
+Confirmed that **minimal simplicity is a core value** - fewer features done well over more features.
 
 ### Decision
 
-*(Pending)*
+**Vision Statement:**
+
+> **Tick** is a minimal, deterministic task tracker designed for AI coding agents.
+>
+> Agents need to know "what should I work on next?" without ambiguity. Existing tools either require manual sync steps (easy to forget, causing data loss), add complexity through daemons and hooks (hard to manage, harder to uninstall), or rely on markdown parsing (non-deterministic, token-expensive at scale).
+>
+> Tick solves this with a simple model: JSONL as the git-committed source of truth, SQLite as an auto-rebuilding local cache, and a CLI that always returns deterministic results. No sync commands. No daemons. No hooks. Just `tick ready` to get the next task.
+>
+> **Primary user:** AI coding agents (Claude Code and similar), with humans able to use it directly for oversight and manual intervention.
+
+**Tagline:** "A minimal, deterministic task tracker for AI coding agents"
+
+**Core values:**
+- Minimal simplicity - fewer features done well
+- Deterministic queries - same input, same output, always
+- Zero sync friction - no manual sync commands ever
 
 ---
 
