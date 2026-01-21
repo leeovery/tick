@@ -240,7 +240,14 @@ None. This is the foundational data layer that other specifications depend on.
 | `github.com/gofrs/flock` | File locking for concurrent access safety |
 | `github.com/mattn/go-sqlite3` | SQLite driver for Go |
 
+### Optional Libraries
+
+| Library | Purpose |
+|---------|---------|
+| `github.com/natefinch/atomic` | Atomic file writes (alternative to hand-rolling with `os.Rename`) |
+
 ### Notes
 
 - All other dependencies are Go stdlib (`crypto/rand`, `os`, `encoding/json`, `crypto/sha256`)
 - This specification can be implemented independently before CLI or workflow features
+- Optional libraries will be assessed at implementation for reliability, maintenance, and community support
