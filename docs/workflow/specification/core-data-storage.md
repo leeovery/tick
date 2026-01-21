@@ -224,3 +224,23 @@ All read operations (list, show, ready, etc.) follow this sequence:
 - **Read operations**: Shared lock (allows other readers, blocks writers)
 - Multiple concurrent reads are safe
 - A pending write will wait for all readers to finish
+
+## Dependencies
+
+Prerequisites that must exist before implementation can begin:
+
+### Required
+
+None. This is the foundational data layer that other specifications depend on.
+
+### External Libraries
+
+| Library | Purpose |
+|---------|---------|
+| `github.com/gofrs/flock` | File locking for concurrent access safety |
+| `github.com/mattn/go-sqlite3` | SQLite driver for Go |
+
+### Notes
+
+- All other dependencies are Go stdlib (`crypto/rand`, `os`, `encoding/json`, `crypto/sha256`)
+- This specification can be implemented independently before CLI or workflow features
