@@ -1,6 +1,6 @@
 ---
-checksum: 578ed29f8db05f82a23043afeadd3324
-generated: 2026-01-21T18:20:00Z
+checksum: dd54e6a7a394be1da582c61174585f17
+generated: 2026-01-22T11:50:00Z
 discussion_files:
   - archive-strategy-implementation.md
   - cli-command-structure-ux.md
@@ -12,6 +12,7 @@ discussion_files:
   - id-format-implementation.md
   - installation-options.md
   - migration-subcommand.md
+  - project-fundamentals.md
   - toon-output-format.md
   - tui.md
 ---
@@ -20,51 +21,44 @@ discussion_files:
 
 ## Recommended Groupings
 
-### Core Data Storage
-- **data-schema-design**: Defines JSONL/SQLite schemas, field constraints, task entity structure
-- **freshness-dual-write**: Defines sync mechanism between JSONL and SQLite, atomic write patterns, hash-based freshness
-- **id-format-implementation**: Defines ID format (tick-{6hex}), generation via crypto/rand, collision handling
-- **hierarchy-dependency-model**: Defines how blocked_by and parent work together, leaf-only ready query, validation rules
+### tick-core (specification exists - expanding)
+- **project-fundamentals**: Vision, MVP scope, non-goals, success criteria - the "north star"
+- **data-schema-design**: Task schema, field constraints, hierarchy semantics (already in spec)
+- **freshness-dual-write**: Hash-based sync, atomic writes, file locking (already in spec)
+- **id-format-implementation**: ID format, generation, collision handling (already in spec)
+- **hierarchy-dependency-model**: Ready query logic, dependency validation (already in spec)
+- **cli-command-structure-ux**: Commands, flags, TTY detection, error handling
+- **toon-output-format**: TOON structure, multi-section approach, format selection
+- **tui**: Human-readable output styling, no interactivity
 
-**Coupling**: These are inseparable. Schema defines fields that ID format generates, freshness depends on schema structure, hierarchy/dependency model defines query behavior over that schema. All touch the same data structures.
+**Coupling**: Unified specification covering the complete v1 tick experience - from vision through data model to CLI commands and output formats. The data model is meaningless without commands; output formats are how the model becomes visible.
 
-**Note**: An existing `core-data-storage` specification exists and may already cover some of this content.
+### doctor-validation
+- **doctor-command-validation**: 9 error conditions + 1 warning, report-only behavior, human-readable output, separate `tick rebuild` command
 
-### CLI Commands & Output
-- **cli-command-structure-ux**: Command structure, flags, error handling, TTY detection for format selection
-- **toon-output-format**: TOON format specifics, multi-section approach for complex data, empty array handling
-- **tui**: Human-readable output styling - simple aligned columns, no TUI library
+**Coupling**: Standalone diagnostic feature. Distinct purpose (health checks vs normal operations).
 
-**Coupling**: TOON and TUI formats are output modes controlled by CLI decisions. All three define what commands do and what they output.
+### installation
+- **installation-options**: Install methods (script primary, Homebrew for macOS), platform support, global installation, no self-update
 
-### Diagnostics
-- **doctor-command-validation**: 9 error checks + 1 warning, report-only behavior, human-readable output only
+**Coupling**: Completely standalone. Distribution/deployment concern.
 
-**Coupling**: References validation rules from hierarchy-dependency-model and id-format-implementation. Could stand alone or merge into CLI spec.
+### migration
+- **migration-subcommand**: `tick migrate --from <provider>` command, plugin architecture, beads as initial provider, one-time import
 
-### Migration
-- **migration-subcommand**: Plugin architecture for importing from other tools, beads as initial provider
+**Coupling**: Standalone data import feature with self-contained plugin architecture.
 
-**Coupling**: Standalone utility. References task schema but otherwise independent.
+## Deferred Discussions (No Specification Needed)
 
-### Installation
-- **installation-options**: Homebrew (macOS), install script (Linux/ephemeral), global installation
-
-**Coupling**: Standalone topic about distribution. No coupling to other discussions.
-
-## Deferred Decisions (No Specification Needed)
-- **archive-strategy-implementation**: Concluded with "defer archiving entirely - not needed for v1"
-- **config-file-design**: Concluded with "no config file for v1"
-
-These discussions reached YAGNI conclusions - no implementation required, thus no specification needed.
+- **config-file-design**: Concluded "no config for v1" - YAGNI
+- **archive-strategy-implementation**: Concluded "no archiving for v1" - YAGNI
 
 ## Analysis Notes
 
-The 12 discussions naturally cluster into:
-1. **Core data layer** (4) - tightly coupled, should be one specification
-2. **CLI interface** (3) - tightly coupled, should be one specification
-3. **Utilities** (2) - doctor and migration can stand alone
-4. **Distribution** (1) - installation is independent
-5. **YAGNI** (2) - no specs needed, just documented decisions
+The tick-core grouping combines what was previously two separate groupings (core-data-storage + cli-output) into a unified specification. This reflects the reality that:
+- The data spec already defined query semantics (what "ready" means)
+- CLI commands are how those semantics are exposed
+- Output formats are how the data becomes visible
+- Separating them created an artificial boundary
 
-The existing core-data-storage specification should be reviewed - it may already contain content from the core data layer discussions. If so, this grouping would "continue" that spec rather than create a new one.
+The remaining standalone specifications (doctor, installation, migration) are genuinely independent features that don't couple tightly with the core.

@@ -1,13 +1,88 @@
-# Specification: Core Data & Storage
+# Specification: Tick Core
 
 **Status**: Complete
 **Type**: feature
-**Last Updated**: 2026-01-21
-**Sources**: data-schema-design, freshness-dual-write, id-format-implementation, hierarchy-dependency-model
+**Last Updated**: 2026-01-22
+**Sources**: project-fundamentals, data-schema-design, freshness-dual-write, id-format-implementation, hierarchy-dependency-model, cli-command-structure-ux, toon-output-format, tui
 
 ---
 
 ## Specification
+
+### Vision & Scope
+
+#### What is Tick?
+
+**Tick** is a minimal, deterministic task tracker designed for AI coding agents.
+
+Agents need to know "what should I work on next?" without ambiguity. Existing tools either require manual sync steps (easy to forget, causing data loss), add complexity through daemons and hooks (hard to manage, harder to uninstall), or rely on markdown parsing (non-deterministic, token-expensive at scale).
+
+Tick solves this with a simple model: JSONL as the git-committed source of truth, SQLite as an auto-rebuilding local cache, and a CLI that always returns deterministic results. No sync commands. No daemons. No hooks. Just `tick ready` to get the next task.
+
+**Tagline**: "A minimal, deterministic task tracker for AI coding agents"
+
+#### Primary User
+
+AI coding agents (Claude Code and similar), with humans able to use it directly for oversight and manual intervention.
+
+#### Core Values
+
+- **Minimal simplicity** - Fewer features done well
+- **Deterministic queries** - Same input, same output, always
+- **Zero sync friction** - No manual sync commands ever
+
+#### Primary Workflow
+
+```
+1. PROJECT SETUP
+   Human runs: tick init
+   Result: .tick/ directory created
+
+2. PLANNING PHASE
+   Planning agent (or human) creates tasks:
+   - tick create "Setup authentication" --priority 1
+   - tick create "Login endpoint" --blocked-by tick-a1b2
+   Result: tasks.jsonl populated with work items
+
+3. IMPLEMENTATION LOOP
+   Implementation agent (or human):
+   a) tick ready        → "What can I work on?"
+   b) tick start <id>   → "I'm working on this"
+   c) [does the work]
+   d) tick done <id>    → "I finished this"
+   e) Repeat until tick ready returns nothing
+
+4. PROJECT COMPLETE
+   All tasks done. .tick/ can be deleted or kept for reference.
+```
+
+**Key principle**: Tick is workflow-agnostic. It's a tracker, not a workflow engine. It doesn't care who creates tasks, who works them, or when. It just answers: "What's ready?"
+
+#### Explicit Non-Goals
+
+| Non-goal | Rationale |
+|----------|-----------|
+| Archive strategy | YAGNI - single file sufficient for v1 |
+| Config file | YAGNI - hardcoded defaults are fine |
+| Windows support | Not a priority - macOS and Linux first |
+| Multi-agent coordination | Out of scope - single-agent focused |
+| Real-time sync | Git is the sync mechanism |
+| GUI/web interface | CLI only - agent-first means no visual UI |
+| Plugin/extension system | Keep it simple - no hooks, no customization |
+
+#### Success Criteria for v1
+
+| Criterion | Description |
+|-----------|-------------|
+| All commands implemented | Every command works as specified |
+| Fully tested | Comprehensive test coverage |
+| Zero sync friction | No manual sync commands ever needed |
+| Deterministic queries | Same input = same output, always |
+| Sub-100ms operations | Fast enough to not notice |
+| Clean uninstall | `rm -rf .tick` removes everything |
+| Survives cache deletion | Delete .cache, everything auto-rebuilds |
+| Git-friendly | Clean diffs, rare merge conflicts |
+| Dogfooded | Used on real projects |
 
 ### Overview
 
@@ -300,6 +375,191 @@ When displaying a task that has a parent (e.g., `tick show`):
 - Valid state - children remain workable
 - May indicate planning issue, but not enforced by tool
 - `tick doctor` warns: "tick-epic is done but has open children"
+
+### CLI Commands
+
+#### Command Reference
+
+| Command | Action |
+|---------|--------|
+| `tick init` | Initialize .tick/ directory in current project |
+| `tick create "<title>"` | Create a new task |
+| `tick start <id>` | Mark task as in-progress |
+| `tick done <id>` | Mark task as completed successfully |
+| `tick cancel <id>` | Mark task as cancelled (not completed) |
+| `tick reopen <id>` | Reopen a closed task |
+| `tick list` | List tasks with optional filters |
+| `tick show <id>` | Show detailed task information |
+| `tick ready` | Alias for `list --ready` - show workable tasks |
+| `tick blocked` | Alias for `list --blocked` - show blocked tasks |
+| `tick dep add <task_id> <blocked_by_id>` | Add dependency (task depends on blocked_by) |
+| `tick dep rm <task_id> <blocked_by_id>` | Remove dependency |
+| `tick stats` | Show task statistics |
+| `tick doctor` | Run diagnostics and validation |
+| `tick rebuild` | Force rebuild SQLite cache from JSONL |
+
+#### Create Command Options
+
+```bash
+tick create "<title>" [options]
+
+Options:
+  --priority <0-4>           Priority level (default: 2)
+  --blocked-by <id,id,...>   Comma-separated dependency IDs
+  --parent <id>              Parent task ID
+  --description "<text>"     Extended description
+```
+
+#### List Command Options
+
+```bash
+tick list [options]
+
+Options:
+  --ready       Show only ready tasks (unblocked, no open children)
+  --blocked     Show only blocked tasks
+  --status <s>  Filter by status (open, in_progress, done, cancelled)
+  --priority <p> Filter by priority (0-4)
+```
+
+#### Dependency Management
+
+**At creation time:**
+```bash
+tick create "Login endpoint" --blocked-by tick-a1b2
+tick create "Complex task" --blocked-by tick-a1b2,tick-x9y8
+```
+
+**Later modifications:**
+```bash
+tick dep add tick-c3d4 tick-a1b2    # c3d4 now depends on a1b2
+tick dep rm tick-c3d4 tick-a1b2     # remove that dependency
+```
+
+**Argument order**: Task first, dependency second. Matches the `--blocked-by` flag pattern and reads naturally: "Add to c3d4 a dependency on a1b2."
+
+#### Task Statuses
+
+| Status | Meaning |
+|--------|---------|
+| `open` | Not started |
+| `in_progress` | Being worked on |
+| `done` | Completed successfully |
+| `cancelled` | Closed without completion |
+
+#### Error Handling
+
+**Exit codes:**
+- `0` = success
+- `1` = any error
+
+Agents parse error output for specifics; they don't need to memorize exit code meanings.
+
+**Error output:**
+- All errors go to stderr
+- Plain text format (human-readable)
+- Non-zero exit code signals failure
+
+**Example:**
+```
+$ tick show tick-xyz
+Error: Task 'tick-xyz' not found
+$ echo $?
+1
+```
+
+#### Verbosity Flags
+
+| Flag | Effect |
+|------|--------|
+| `--quiet` / `-q` | Suppress non-essential output |
+| `--verbose` / `-v` | More detail (useful for debugging) |
+
+### Output Formats
+
+#### Format Selection (TTY Detection)
+
+Output format is determined automatically based on whether stdout is a terminal:
+
+| Condition | Output Format |
+|-----------|---------------|
+| No TTY (pipe/redirect) | TOON (default for agents) |
+| TTY (terminal) | Human-readable table |
+| `--toon` flag | Force TOON |
+| `--pretty` flag | Force human-readable |
+| `--json` flag | Force JSON |
+
+**Why this works**: When agents run commands via Bash tool, stdout is a pipe (not TTY). Agents get TOON automatically without flags. Humans at terminals get readable output naturally.
+
+This is a well-established Unix pattern used by `ls` (colors), `git` (pager), `grep` (colors).
+
+#### TOON Format (Agent Output)
+
+TOON (Token-Oriented Object Notation) is optimized for AI agent consumption - 30-60% token savings over JSON while improving parsing accuracy.
+
+**Structure**: Multi-section approach for complex data. Each section has its own schema header.
+
+**Example - `tick list` output:**
+```
+tasks[2]{id,title,status,priority}:
+  tick-a1b2,Setup Sanctum,done,1
+  tick-c3d4,Login endpoint,open,1
+```
+
+**Example - `tick show` output:**
+```
+task{id,title,status,priority,parent,created,updated}:
+  tick-a1b2,Setup Sanctum,in_progress,1,tick-e5f6,2026-01-19T10:00:00Z,2026-01-19T14:30:00Z
+
+blocked_by[2]{id,title,status}:
+  tick-c3d4,Database migrations,done
+  tick-g7h8,Config setup,in_progress
+
+children[0]{id,title,status}:
+
+description:
+  Full task description here.
+  Can be multiple lines.
+```
+
+**Principles:**
+1. Each section has its own schema header - self-documenting
+2. Related entities include context (title, status), not just IDs
+3. Long text fields get their own unstructured sections
+4. Empty arrays shown with zero count: `blocked_by[0]{id,title,status}:`
+5. Sections omitted only if the field doesn't exist (vs empty)
+
+#### Human-Readable Format (Terminal Output)
+
+Simple aligned columns. No borders, no colors, no icons. Raw `fmt.Print` output.
+
+**List output:**
+```
+ID          STATUS       PRI  TITLE
+tick-a1b2   done         1    Setup Sanctum
+tick-c3d4   in_progress  1    Login endpoint
+```
+
+**Show output:**
+```
+ID:       tick-c3d4
+Title:    Login endpoint
+Status:   in_progress
+Priority: 1
+Created:  2026-01-19T10:00:00Z
+
+Blocked by:
+  tick-a1b2  Setup Sanctum (done)
+
+Description:
+  Implement the login endpoint with validation...
+```
+
+**Design philosophy**: Minimalist and clean. Human output is secondary to agent output - no TUI libraries, no interactivity.
+
+#### JSON Format
+
+Available via `--json` flag for compatibility and debugging. Standard JSON output.
 
 ## Dependencies
 
