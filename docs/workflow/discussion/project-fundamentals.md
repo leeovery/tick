@@ -1,7 +1,7 @@
 ---
 topic: project-fundamentals
-status: in-progress
-date: 2026-01-21
+status: concluded
+date: 2026-01-22
 ---
 
 # Discussion: Project Fundamentals & MVP Definition
@@ -52,7 +52,7 @@ Without this foundation, implementation risks being directionless. Developers wo
       - How does an implementation agent query for work?
       - What metadata is needed beyond tasks?
 
-- [ ] What are the success criteria for v1?
+- [x] What are the success criteria for v1?
       - How do we know v1 is "done"?
       - What must work?
       - What quality bar must be met?
@@ -288,17 +288,27 @@ Any planning tool can call these commands. Any implementation agent can query an
 
 Without clear success criteria, it's impossible to know when v1 is complete. This should be concrete and testable.
 
-### Options Considered
-
-*(To be explored during discussion)*
-
 ### Journey
 
-*(To be filled during discussion)*
+Started with criteria from exploration.md, confirmed and expanded with additional requirements.
 
 ### Decision
 
-*(Pending)*
+**v1 is done when:**
+
+| Criterion | Description |
+|-----------|-------------|
+| **All commands implemented** | Every command from the CLI discussion works as specified |
+| **Fully tested** | Comprehensive test coverage - this is a minimum |
+| **Zero sync friction** | No manual sync commands ever needed |
+| **Deterministic queries** | Same input = same output, always |
+| **Sub-100ms operations** | Fast enough to not notice |
+| **Clean uninstall** | `rm -rf .tick` removes everything |
+| **Survives cache deletion** | Delete .cache, everything auto-rebuilds |
+| **Git-friendly** | Clean diffs, rare merge conflicts |
+| **Dogfooded** | Used on real projects to validate it works in practice |
+
+**Quality bar:** Working, tested, fast, simple. No edge cases left unhandled.
 
 ---
 
@@ -306,15 +316,35 @@ Without clear success criteria, it's impossible to know when v1 is complete. Thi
 
 ### Key Insights
 
-*(To be filled as discussion progresses)*
+1. **Tick is a minimal, deterministic task tracker for AI coding agents** - not a workflow engine, not a project management tool
+2. **Agent-first, human-usable** - optimized for agents, but humans can use it directly
+3. **Workflow-agnostic** - Tick tracks tasks and answers "what's ready?" but doesn't care who creates tasks, who works them, or when
+4. **Minimal simplicity is a core value** - fewer features done well, YAGNI applied ruthlessly
+5. **Integration is not Tick's concern** - it provides a CLI, other tools adapt to use it
+6. **MVP scope is already defined** - the concluded discussions define what v1 includes
 
-### Current State
+### Decisions Made
 
-- Discussion started: 2026-01-21
-- All questions pending
+| Question | Decision |
+|----------|----------|
+| Vision | "A minimal, deterministic task tracker for AI coding agents" |
+| Audience | Agent-first, human-usable |
+| Workflow | Init → Plan → Implement Loop → Complete (typical, not enforced) |
+| MVP scope | All commands from CLI discussion; scope defined by concluded discussions |
+| Non-goals | Archive, config, Windows, multi-agent, real-time sync, GUI, plugins |
+| Integration | Outside Tick's scope - just provides CLI |
+| Success criteria | All commands implemented + tested + fast + dogfooded on real projects |
+
+### Purpose of This Document
+
+This discussion serves as the **north star** connecting all detailed specifications. When implementing, refer back to:
+- **Why** we're building this → Vision statement
+- **What** we're building → MVP scope (references other discussions)
+- **What we're not building** → Non-goals
+- **When we're done** → Success criteria
 
 ### Next Steps
 
-- [ ] Work through each question with user input
-- [ ] Document decisions and rationale
-- [ ] Create foundation for subsequent specifications
+- [x] All questions answered
+- [ ] Create specifications that reference this foundation
+- [ ] Begin implementation with clear direction
