@@ -389,6 +389,7 @@ When displaying a task that has a parent (e.g., `tick show`):
 |---------|--------|
 | `tick init` | Initialize .tick/ directory in current project |
 | `tick create "<title>"` | Create a new task |
+| `tick update <id>` | Update task fields |
 | `tick start <id>` | Mark task as in-progress |
 | `tick done <id>` | Mark task as completed successfully |
 | `tick cancel <id>` | Mark task as cancelled (not completed) |
@@ -403,6 +404,17 @@ When displaying a task that has a parent (e.g., `tick show`):
 | `tick doctor` | Run diagnostics and validation |
 | `tick rebuild` | Force rebuild SQLite cache from JSONL |
 
+#### Init Command
+
+`tick init` creates the `.tick/` directory structure:
+- Creates `.tick/` directory
+- Creates empty `tasks.jsonl` file
+- SQLite cache is created on first operation (not at init)
+
+**If `.tick/` already exists**: Error with message "Tick already initialized in this directory"
+
+**Output**: Confirmation message showing path initialized.
+
 #### Create Command Options
 
 ```bash
@@ -411,9 +423,29 @@ tick create "<title>" [options]
 Options:
   --priority <0-4>           Priority level (default: 2)
   --blocked-by <id,id,...>   Comma-separated dependency IDs
+  --blocks <id,id,...>       Tasks this task blocks (updates their blocked_by)
   --parent <id>              Parent task ID
   --description "<text>"     Extended description
 ```
+
+#### Update Command
+
+```bash
+tick update <id> [options]
+
+Options:
+  --title "<text>"           New title
+  --description "<text>"     New description (use "" to clear)
+  --priority <0-4>           New priority level
+  --parent <id>              New parent task (use "" to clear)
+  --blocks <id,id,...>       Tasks this task blocks (updates their blocked_by)
+```
+
+At least one option required. Cannot change `id`, `status`, `created`, or `blocked_by` (use dedicated commands for those).
+
+**Note on `--blocks`**: This is the inverse of `--blocked-by`. Setting `--blocks tick-abc` on task T adds T to tick-abc's `blocked_by` array. The data model remains unchanged - only `blocked_by` is stored.
+
+**Output**: Full task details (same format as `tick show`), TTY-aware.
 
 #### List Command Options
 
@@ -452,6 +484,19 @@ tick dep rm tick-c3d4 tick-a1b2     # remove that dependency
 | `done` | Completed successfully |
 | `cancelled` | Closed without completion |
 
+#### Status Transitions
+
+| Command | From Status | To Status |
+|---------|-------------|-----------|
+| `start` | `open` | `in_progress` |
+| `done` | `open`, `in_progress` | `done` |
+| `cancel` | `open`, `in_progress` | `cancelled` |
+| `reopen` | `done`, `cancelled` | `open` |
+
+Invalid transitions return an error (e.g., `tick start` on a `done` task).
+
+Note: `reopen` also clears the `closed` timestamp.
+
 #### Error Handling
 
 **Exit codes:**
@@ -488,6 +533,27 @@ $ echo $?
 - After manual JSONL edits (though freshness check should handle this automatically)
 
 Output: Confirmation message showing tasks rebuilt.
+
+#### Mutation Command Output
+
+**`tick create`**: Outputs full task details (same format as `tick show`), TTY-aware.
+- With `--quiet`: Outputs only the task ID
+
+**`tick update`**: Outputs full task details (same format as `tick show`), TTY-aware.
+- With `--quiet`: Outputs only the task ID
+
+**`tick start/done/cancel/reopen`**: Outputs task ID and status transition
+```
+tick-a3f2b7: open → in_progress
+```
+- With `--quiet`: No output
+
+**`tick dep add/rm`**: Outputs confirmation
+```
+Dependency added: tick-c3d4 blocked by tick-a1b2
+Dependency removed: tick-c3d4 no longer blocked by tick-a1b2
+```
+- With `--quiet`: No output
 
 ### Output Formats
 

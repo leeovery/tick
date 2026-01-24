@@ -40,10 +40,10 @@ The spec says "Only valid transitions enforced by commands" but doesn't define w
 
 An implementer would have to guess.
 
-**Proposed Addition**: Status transition table or per-command transition rules
+**Proposed Addition**: Status transition table
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added transition table after Task Statuses section. Allows skipping start (can done an open task directly).
 
 ---
 
@@ -58,10 +58,10 @@ An implementer would have to guess.
 - What files are created? Just the directory, or also tasks.jsonl?
 - What output does it produce on success?
 
-**Proposed Addition**: Describe init behavior including existing directory handling
+**Proposed Addition**: Init Command section with behavior details
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added after Command Reference table.
 
 ---
 
@@ -78,10 +78,10 @@ Output formats are specified for list, show, stats. But what about:
 
 An agent needs to know what to expect from these commands.
 
-**Proposed Addition**: Output specification for mutation commands
+**Proposed Addition**: Mutation Command Output section
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added after Rebuild Command section. Covers create, update, start/done/cancel/reopen, dep add/rm with --quiet behavior.
 
 ---
 
@@ -96,7 +96,26 @@ An agent needs to know what to expect from these commands.
 - Does it set status to `in_progress` (resume where you left off)?
 - Does it clear the `closed` timestamp?
 
-**Proposed Addition**: Clarify reopen behavior
+**Proposed Addition**: Note that reopen clears closed timestamp
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added note after Status Transitions table. Also added --blocks option to create/update during this discussion (inverse of --blocked-by).
+
+---
+
+### 6. No Update Command for Task Fields
+
+**Category**: Gap (Critical)
+**Affects**: CLI Commands section
+
+**Details**:
+There is NO command to modify task fields after creation. The only modifications possible are:
+- Status changes (`start`, `done`, `cancel`, `reopen`)
+- Dependencies (`dep add/rm`)
+
+There's no way to change `title`, `description`, `priority`, or `parent` after a task is created. This is a significant gap - users would need to cancel and recreate tasks to fix typos or adjust priorities.
+
+**Proposed Addition**: Add `tick update` command
+
+**Resolution**: Approved
+**Notes**: Discovered during #4 discussion. Added to Command Reference and full Update Command section with options.
