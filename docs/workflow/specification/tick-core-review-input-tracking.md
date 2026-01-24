@@ -22,8 +22,8 @@ This appears to be intentionally resolved by the project-fundamentals non-goals 
 
 **Proposed Addition**: None - spec is correct. The discussion predates the config deferral decision.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Skipped
+**Notes**: Spec is correct. Discussion predates config-deferral decision.
 
 ---
 
@@ -40,8 +40,8 @@ The spec's approach (`.tick/cache.db`) is cleaner - all tick files live under `.
 
 **Proposed Addition**: None - spec appears to have the correct/intended path.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Skipped
+**Notes**: Spec is correct. `.tick/` container is cleaner, matches "clean uninstall" criterion.
 
 ---
 
@@ -54,10 +54,10 @@ The spec's approach (`.tick/cache.db`) is cleaner - all tick files live under `.
 **Details**:
 The `tick stats` command is listed in the command reference but has no specification of what it outputs. What statistics does it show? What format?
 
-**Proposed Addition**: TBD after discussion
+**Proposed Addition**: Added stats output specification with TOON and human-readable examples
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: User decided to keep stats in v1. Added output examples for both formats showing: total, counts by status, ready/blocked counts, counts by priority.
 
 ---
 
@@ -78,10 +78,10 @@ The spec says: "All errors go to stderr. Plain text format (human-readable)."
 
 These seem to conflict. Should errors be TOON-formatted for agents, or always plain text?
 
-**Proposed Addition**: TBD after discussion
+**Proposed Addition**: None - spec is correct
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Skipped
+**Notes**: Confirmed plain text errors always. The cli-command-structure-ux TOON error suggestion was superseded by toon-output-format decision.
 
 ---
 
@@ -97,10 +97,10 @@ The command reference lists `tick rebuild` and the spec mentions it "forces rebu
 - Does it have any flags?
 - What output does it produce?
 
-**Proposed Addition**: TBD after discussion
+**Proposed Addition**: Added Rebuild Command section with description and use cases
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added after Verbosity Flags section.
 
 ---
 
@@ -119,10 +119,10 @@ The spec only says `tick doctor | Run diagnostics and validation` without listin
 
 Note: There's a separate `doctor-command-validation` discussion that's NOT a source for this spec.
 
-**Proposed Addition**: TBD - may be out of scope if doctor is covered elsewhere
+**Proposed Addition**: None - defer to doctor-command-validation discussion
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Skipped
+**Notes**: Separate discussion exists for doctor command. Current command reference ("Run diagnostics and validation") is sufficient for this spec.
 
 ---
 
@@ -143,10 +143,10 @@ Error: Cannot add dependency - creates cycle: tick-a → tick-b → tick-c → t
 
 The spec has the validation rules table but not these specific message formats.
 
-**Proposed Addition**: Could add these as example error messages
+**Proposed Addition**: None - already present
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Skipped
+**Notes**: Error messages already exist in the spec at lines 349-355 in the Dependency Validation Rules section.
 
 ---
 
@@ -164,10 +164,10 @@ The spec says "If still colliding after 5 retries: return error" but doesn't spe
 
 Note: Archive is a non-goal, so the message may need adjustment.
 
-**Proposed Addition**: Could add error message guidance
+**Proposed Addition**: Added collision error message (without archive reference)
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added after collision handling bullet points.
 
 ---
 
@@ -190,7 +190,10 @@ And mentions: "metadata table stores the JSONL content hash for freshness detect
 
 But doesn't explicitly state the key used. The freshness discussion says: "key: `jsonl_hash`"
 
-**Proposed Addition**: Could clarify the metadata key
+**Proposed Addition**: Added key name to metadata table description
+
+**Resolution**: Approved
+**Notes**: Updated inline description to include "(key: `jsonl_hash`)"
 
 **Resolution**: Pending
 **Notes**:

@@ -2,7 +2,7 @@
 
 **Status**: Complete
 **Type**: feature
-**Last Updated**: 2026-01-22
+**Last Updated**: 2026-01-24
 **Sources**: project-fundamentals, data-schema-design, freshness-dual-write, id-format-implementation, hierarchy-dependency-model, cli-command-structure-ux, toon-output-format, tui
 
 ---
@@ -147,6 +147,11 @@ Task IDs follow the pattern: `{prefix}-{6 hex chars}`
 - If still colliding after 5 retries: return error
 - Collisions are practically impossible at expected scale (hundreds to low thousands of tasks)
 
+**Collision error message:**
+```
+Error: Failed to generate unique ID after 5 attempts - task list may be too large
+```
+
 #### Case Sensitivity
 
 - IDs are case-insensitive for matching
@@ -210,7 +215,7 @@ CREATE INDEX idx_tasks_parent ON tasks(parent);
 
 - `tasks` table mirrors JSONL fields (minus `blocked_by` which is normalized)
 - `dependencies` table enables efficient joins for "ready" queries
-- `metadata` table stores the JSONL content hash for freshness detection
+- `metadata` table stores the JSONL content hash for freshness detection (key: `jsonl_hash`)
 
 ### Synchronization
 
@@ -475,6 +480,15 @@ $ echo $?
 | `--quiet` / `-q` | Suppress non-essential output |
 | `--verbose` / `-v` | More detail (useful for debugging) |
 
+#### Rebuild Command
+
+`tick rebuild` forces a complete rebuild of the SQLite cache from JSONL, bypassing the freshness check. Use when:
+- SQLite appears corrupted
+- Debugging cache issues
+- After manual JSONL edits (though freshness check should handle this automatically)
+
+Output: Confirmation message showing tasks rebuilt.
+
 ### Output Formats
 
 #### Format Selection (TTY Detection)
@@ -522,6 +536,19 @@ description:
   Can be multiple lines.
 ```
 
+**Example - `tick stats` output:**
+```
+stats{total,open,in_progress,done,cancelled,ready,blocked}:
+  47,12,3,28,4,8,4
+
+by_priority[5]{priority,count}:
+  0,2
+  1,8
+  2,25
+  3,7
+  4,5
+```
+
 **Principles:**
 1. Each section has its own schema header - self-documenting
 2. Related entities include context (title, status), not just IDs
@@ -553,6 +580,28 @@ Blocked by:
 
 Description:
   Implement the login endpoint with validation...
+```
+
+**Stats output:**
+```
+Total:       47
+
+Status:
+  Open:        12
+  In Progress:  3
+  Done:        28
+  Cancelled:    4
+
+Workflow:
+  Ready:        8
+  Blocked:      4
+
+Priority:
+  P0 (critical):  2
+  P1 (high):      8
+  P2 (medium):   25
+  P3 (low):       7
+  P4 (backlog):   5
 ```
 
 **Design philosophy**: Minimalist and clean. Human output is secondary to agent output - no TUI libraries, no interactivity.
