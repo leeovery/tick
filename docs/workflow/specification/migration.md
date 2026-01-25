@@ -1,11 +1,13 @@
-# Specification: Migration
-
-**Status**: Complete
-**Type**: feature
-**Last Updated**: 2026-01-25
-**Sources**: migration-subcommand
-
 ---
+topic: migration
+status: concluded
+type: feature
+date: 2026-01-25
+sources:
+  - migration-subcommand
+---
+
+# Specification: Migration
 
 ## Specification
 

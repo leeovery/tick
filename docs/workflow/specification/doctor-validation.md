@@ -1,10 +1,11 @@
-# Specification: Doctor Validation
-
-**Status**: Complete
-**Type**: feature
-**Last Updated**: 2026-01-24
-
 ---
+topic: doctor-validation
+status: concluded
+type: feature
+date: 2026-01-24
+---
+
+# Specification: Doctor Validation
 
 ## Overview
 
