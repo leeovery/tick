@@ -1,11 +1,20 @@
-# Specification: Tick Core
-
-**Status**: Complete
-**Type**: feature
-**Last Updated**: 2026-01-24
-**Sources**: project-fundamentals, data-schema-design, freshness-dual-write, id-format-implementation, hierarchy-dependency-model, cli-command-structure-ux, toon-output-format, tui
-
 ---
+topic: tick-core
+status: concluded
+type: feature
+date: 2026-01-24
+sources:
+  - project-fundamentals
+  - data-schema-design
+  - freshness-dual-write
+  - id-format-implementation
+  - hierarchy-dependency-model
+  - cli-command-structure-ux
+  - toon-output-format
+  - tui
+---
+
+# Specification: Tick Core
 
 ## Specification
 
@@ -118,6 +127,26 @@ Each task has 10 fields:
 - **priority**: Integer 0-4 only; invalid values rejected
 - **blocked_by**: Must reference existing task IDs; self-references rejected; cycles rejected at write time
 - **parent**: Must reference existing task ID; self-references rejected
+
+#### Title and Description Limits
+
+- **title**:
+  - Required, non-empty
+  - Maximum 500 characters
+  - No newlines (single line only)
+  - Leading/trailing whitespace trimmed
+
+- **description**:
+  - Optional
+  - No maximum length
+  - Newlines and markdown allowed
+
+#### Timestamp Format
+
+All timestamps (`created`, `updated`, `closed`) use ISO 8601 format in UTC:
+- Format: `YYYY-MM-DDTHH:MM:SSZ`
+- Example: `2026-01-19T10:00:00Z`
+- Always UTC (Z suffix), never local time with offset
 
 #### Hierarchy Semantics
 
@@ -287,6 +316,18 @@ Use `github.com/gofrs/flock` for file locking:
 - **Write operations**: Exclusive lock (blocks other readers and writers)
 - **Lock file**: `.tick/lock` (separate from data files)
 - Prevents concurrent access corruption (learned from Taskwarrior issues)
+
+#### Lock Timeout
+
+- **Timeout**: 5 seconds default
+- **On timeout**: Return error, do not proceed with operation
+
+**Lock error message:**
+```
+Error: Could not acquire lock on .tick/lock - another process may be using tick
+```
+
+If lock is held for extended periods (e.g., crashed process), user can manually delete `.tick/lock` file.
 
 ### Read Operations
 
@@ -459,6 +500,16 @@ Options:
   --priority <p> Filter by priority (0-4)
 ```
 
+#### Blocked Query Logic
+
+A task appears in `tick blocked` when:
+- Status is `open`
+- AND either:
+  - Has at least one `blocked_by` task that is not closed (`done` or `cancelled`), OR
+  - Has at least one open child (status `open` or `in_progress`)
+
+In other words: `blocked` = open tasks that are not `ready`.
+
 #### Dependency Management
 
 **At creation time:**
@@ -622,6 +673,12 @@ by_priority[5]{priority,count}:
 4. Empty arrays shown with zero count: `blocked_by[0]{id,title,status}:`
 5. Sections omitted only if the field doesn't exist (vs empty)
 
+**Empty results:**
+```
+tasks[0]{id,title,status,priority}:
+```
+Zero count with schema header, no data rows.
+
 #### Human-Readable Format (Terminal Output)
 
 Simple aligned columns. No borders, no colors, no icons. Raw `fmt.Print` output.
@@ -672,6 +729,12 @@ Priority:
 
 **Design philosophy**: Minimalist and clean. Human output is secondary to agent output - no TUI libraries, no interactivity.
 
+**Empty results:**
+```
+No tasks found.
+```
+Simple message, no headers.
+
 #### JSON Format
 
 Available via `--json` flag for compatibility and debugging. Standard JSON output.
@@ -690,6 +753,7 @@ None. This is the foundational data layer that other specifications depend on.
 |---------|---------|
 | `github.com/gofrs/flock` | File locking for concurrent access safety |
 | `github.com/mattn/go-sqlite3` | SQLite driver for Go |
+| `github.com/toon-format/toon-go` | TOON encoding/decoding for agent output (handles escaping per TOON spec §7.1) |
 
 ### Optional Libraries
 
