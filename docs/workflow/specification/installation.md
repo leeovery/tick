@@ -53,6 +53,18 @@ Platforms:
 - `linux-amd64`
 - `linux-arm64`
 
+### Release Asset Naming
+
+goreleaser convention: `{binary}_{version}_{os}_{arch}.tar.gz`
+
+Assets per release:
+- `tick_X.Y.Z_darwin_amd64.tar.gz`
+- `tick_X.Y.Z_darwin_arm64.tar.gz`
+- `tick_X.Y.Z_linux_amd64.tar.gz`
+- `tick_X.Y.Z_linux_arm64.tar.gz`
+
+Each archive contains the `tick` binary.
+
 ### 4. go install
 
 `go install github.com/{repo}@latest`
@@ -93,6 +105,14 @@ macOS does not handle direct binary downloads. This avoids code signing complexi
 - **Idempotent**: Safe to run multiple times
 - **Fast**: Important for ephemeral environments where script runs at session start
 - **Overwrite by default**: If user runs install script, they want latest version
+
+### Architecture Mapping
+
+| `uname -m` | Asset arch |
+|------------|------------|
+| `x86_64` | `amd64` |
+| `aarch64` | `arm64` |
+| `arm64` | `arm64` |
 
 ## Updates
 
