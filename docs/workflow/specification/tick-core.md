@@ -4,14 +4,22 @@ status: concluded
 type: feature
 date: 2026-01-25
 sources:
-  - project-fundamentals
-  - data-schema-design
-  - freshness-dual-write
-  - id-format-implementation
-  - hierarchy-dependency-model
-  - cli-command-structure-ux
-  - toon-output-format
-  - tui
+  - name: project-fundamentals
+    status: incorporated
+  - name: data-schema-design
+    status: incorporated
+  - name: freshness-dual-write
+    status: incorporated
+  - name: id-format-implementation
+    status: incorporated
+  - name: hierarchy-dependency-model
+    status: incorporated
+  - name: cli-command-structure-ux
+    status: incorporated
+  - name: toon-output-format
+    status: incorporated
+  - name: tui
+    status: incorporated
 ---
 
 # Specification: Tick Core

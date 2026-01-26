@@ -3,6 +3,7 @@ topic: installation
 status: concluded
 type: feature
 date: 2026-01-25
+sources: []
 ---
 
 # Specification: Installation

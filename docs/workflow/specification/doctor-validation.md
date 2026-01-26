@@ -3,6 +3,7 @@ topic: doctor-validation
 status: concluded
 type: feature
 date: 2026-01-24
+sources: []
 ---
 
 # Specification: Doctor Validation

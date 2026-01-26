@@ -4,7 +4,8 @@ status: concluded
 type: feature
 date: 2026-01-25
 sources:
-  - migration-subcommand
+  - name: migration-subcommand
+    status: incorporated
 ---
 
 # Specification: Migration
