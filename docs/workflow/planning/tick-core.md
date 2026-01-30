@@ -8,7 +8,7 @@ created: 2026-01-27
 updated: 2026-01-30
 planning:
   phase: 1
-  task: 6
+  task: 7
 ---
 
 # Plan: Tick Core
@@ -59,7 +59,7 @@ approved_at: 2026-01-30
 | tick-core-1-4 | Storage engine with file locking      | lock timeout, concurrent reads, stale cache during write              | authored |
 | tick-core-1-5 | CLI framework & tick init             | already initialized, no parent directory                              | authored |
 | tick-core-1-6 | tick create command                   | missing title, empty title, all optional fields                       | authored |
-| tick-core-1-7 | tick list & tick show commands        | no tasks (empty list), task ID not found                              | pending  |
+| tick-core-1-7 | tick list & tick show commands        | no tasks (empty list), task ID not found                              | authored |
 
 ---
 
