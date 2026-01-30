@@ -8,7 +8,7 @@ created: 2026-01-27
 updated: 2026-01-30
 planning:
   phase: 1
-  task: 1
+  task: 2
 ---
 
 # Plan: Tick Core
@@ -51,15 +51,15 @@ approved_at: 2026-01-30
 - [ ] Concurrent access protected by file locking
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
-| tick-core-1-1 | Task model & ID generation | ID collision retry, title limits, priority range, whitespace trimming | authored |
-| tick-core-1-2 | JSONL storage with atomic writes | empty file, malformed lines, optional fields omitted | pending |
-| tick-core-1-3 | SQLite cache with freshness detection | missing cache.db, corrupted cache, hash in metadata table | pending |
-| tick-core-1-4 | Storage engine with file locking | lock timeout, concurrent reads, stale cache during write | pending |
-| tick-core-1-5 | CLI framework & tick init | already initialized, no parent directory | pending |
-| tick-core-1-6 | tick create command | missing title, empty title, all optional fields | pending |
-| tick-core-1-7 | tick list & tick show commands | no tasks (empty list), task ID not found | pending |
+| ID            | Name                                  | Edge Cases                                                            | Status   |
+|---------------|---------------------------------------|-----------------------------------------------------------------------|----------|
+| tick-core-1-1 | Task model & ID generation            | ID collision retry, title limits, priority range, whitespace trimming | authored |
+| tick-core-1-2 | JSONL storage with atomic writes      | empty file, malformed lines, optional fields omitted                  | authored |
+| tick-core-1-3 | SQLite cache with freshness detection | missing cache.db, corrupted cache, hash in metadata table             | pending  |
+| tick-core-1-4 | Storage engine with file locking      | lock timeout, concurrent reads, stale cache during write              | pending  |
+| tick-core-1-5 | CLI framework & tick init             | already initialized, no parent directory                              | pending  |
+| tick-core-1-6 | tick create command                   | missing title, empty title, all optional fields                       | pending  |
+| tick-core-1-7 | tick list & tick show commands        | no tasks (empty list), task ID not found                              | pending  |
 
 ---
 
