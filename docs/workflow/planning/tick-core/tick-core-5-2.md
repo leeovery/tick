@@ -39,7 +39,7 @@ Implement `tick rebuild` — force a complete SQLite cache rebuild from JSONL, b
 - Valid cache overwritten: rebuild replaces regardless of freshness
 - Empty JSONL: rebuild creates empty cache with correct schema, 0 tasks
 - Concurrent access: exclusive lock prevents reads during rebuild
-- Malformed JSONL lines: skip with warning (same as normal cache build)
+- Malformed JSONL lines: skip with warning to stderr (behavior defined by JSONL reader from tick-core-1-2 — implementer decides error handling strategy there)
 
 ## Acceptance Criteria
 

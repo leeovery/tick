@@ -52,8 +52,8 @@ tick-core-5-2 mentions "skip with warning (same as normal cache build)" for malf
 
 **Proposed Fix**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Updated tick-core-5-2 edge case to remove unsupported claim
 
 ---
 
