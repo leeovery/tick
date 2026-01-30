@@ -1,6 +1,6 @@
 ---
 topic: tick-core
-status: planning
+status: concluded
 format: local-markdown
 specification: ../specification/tick-core.md
 spec_commit: b74fff5d638e8cb3a13a21b7c01b83bb1821f7ce
@@ -190,3 +190,4 @@ None. This is the foundational data layer that other specifications depend on.
 | 2026-01-27 | Created from specification |
 | 2026-01-30 | Migrated to updated plan format (Plan Index + task files) |
 | 2026-01-30 | Phase 5: removed doctor (separate spec), renamed to Stats & Cache Management |
+| 2026-01-30 | Plan review complete, status concluded |
