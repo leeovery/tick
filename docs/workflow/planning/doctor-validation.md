@@ -8,7 +8,7 @@ created: 2026-01-30
 updated: 2026-01-30
 planning:
   phase: 1
-  task: 2
+  task: 3
 ---
 
 # Plan: Doctor Validation
@@ -51,7 +51,7 @@ approved_at: 2026-01-30
 | ID | Name | Edge Cases | Status |
 |----|------|------------|--------|
 | doctor-validation-1-1 | Check Interface & Diagnostic Runner | zero checks registered, all checks pass, all checks fail, mixed pass/fail | authored |
-| doctor-validation-1-2 | Output Formatter & Exit Code Logic | zero issues (summary says no issues), single issue, multiple issues from one check, suggestion text present vs absent | pending |
+| doctor-validation-1-2 | Output Formatter & Exit Code Logic | zero issues (summary says no issues), single issue, multiple issues from one check, suggestion text present vs absent | authored |
 | doctor-validation-1-3 | Cache Staleness Check | missing cache.db (report stale), missing tasks.jsonl, empty tasks.jsonl with matching hash, hash mismatch | pending |
 | doctor-validation-1-4 | tick doctor Command Wiring | .tick directory not found, doctor never modifies data (read-only verification) | pending |
 
