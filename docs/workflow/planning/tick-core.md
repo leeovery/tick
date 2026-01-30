@@ -8,7 +8,7 @@ created: 2026-01-27
 updated: 2026-01-30
 planning:
   phase: 2
-  task: 1
+  task: 2
 ---
 
 # Plan: Tick Core
@@ -83,7 +83,7 @@ approved_at: 2026-01-30
 | ID            | Name                                      | Edge Cases                                                                                                                                                                                                                      | Status  |
 |---------------|-------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
 | tick-core-2-1 | Status transition validation logic        | all 4 valid transitions, all invalid transitions (start on done/cancelled/in_progress, done on done/cancelled, cancel on done/cancelled, reopen on open/in_progress), closed timestamp set/cleared, updated timestamp refreshed  | authored |
-| tick-core-2-2 | tick start, done, cancel, reopen commands | output format, --quiet suppresses output, task ID not found, case-insensitive ID, exit code 1 on error                                                                                                                          | pending |
+| tick-core-2-2 | tick start, done, cancel, reopen commands | output format, --quiet suppresses output, task ID not found, case-insensitive ID, exit code 1 on error                                                                                                                          | authored |
 | tick-core-2-3 | tick update command                       | --title/--description/--priority flags, no flags error, cannot change status/id/created/blocked_by, clear description with empty string, title validation, priority validation, updated timestamp, task not found, --quiet       | pending |
 
 ---
