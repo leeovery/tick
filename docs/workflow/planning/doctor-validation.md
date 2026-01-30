@@ -7,8 +7,8 @@ spec_commit: 29e62a8301438296c5b05db3e8f36c75ad5c20e1
 created: 2026-01-30
 updated: 2026-01-30
 planning:
-  phase: 1
-  task: 4
+  phase: 2
+  task: ~
 ---
 
 # Plan: Doctor Validation
@@ -53,7 +53,7 @@ approved_at: 2026-01-30
 | doctor-validation-1-1 | Check Interface & Diagnostic Runner | zero checks registered, all checks pass, all checks fail, mixed pass/fail | authored |
 | doctor-validation-1-2 | Output Formatter & Exit Code Logic | zero issues (summary says no issues), single issue, multiple issues from one check, suggestion text present vs absent | authored |
 | doctor-validation-1-3 | Cache Staleness Check | missing cache.db (report stale), missing tasks.jsonl, empty tasks.jsonl with matching hash, hash mismatch | authored |
-| doctor-validation-1-4 | tick doctor Command Wiring | .tick directory not found, doctor never modifies data (read-only verification) | pending |
+| doctor-validation-1-4 | tick doctor Command Wiring | .tick directory not found, doctor never modifies data (read-only verification) | authored |
 
 ### Phase 2: Data Integrity Checks
 status: approved
