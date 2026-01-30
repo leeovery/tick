@@ -31,7 +31,8 @@ planning:
 ## Phases
 
 ### Phase 1: Walking Skeleton — Doctor Framework & Cache Check
-status: draft
+status: approved
+approved_at: 2026-01-30
 
 **Goal**: Prove the diagnostic runner end-to-end with a single real check (cache staleness). Establishes the check registration pattern, output formatting, exit codes, and suggestion mechanism.
 **Why this order**: Foundation. Every subsequent phase adds checks to this framework. Must validate the runner pattern, output format, and exit code logic before adding more checks.
@@ -47,7 +48,8 @@ status: draft
 - [ ] Doctor never modifies data
 
 ### Phase 2: Data Integrity Checks
-status: draft
+status: approved
+approved_at: 2026-01-30
 
 **Goal**: Validate JSONL file integrity — syntax, ID uniqueness, and ID format. These checks operate on raw file content without relationship semantics.
 **Why this order**: Builds on Phase 1's framework. Data-level checks are simpler than relationship checks and validate preconditions (parseable data, valid IDs) that relationship checks implicitly depend on.
@@ -61,7 +63,8 @@ status: draft
 - [ ] Errors from all checks contribute to summary count and exit code
 
 ### Phase 3: Relationship & Hierarchy Checks
-status: draft
+status: approved
+approved_at: 2026-01-30
 
 **Goal**: Validate all task relationship constraints — orphaned references, dependency integrity, and hierarchy warnings. Completes the full doctor check suite.
 **Why this order**: Requires the framework (Phase 1) and benefits from data integrity checks existing (Phase 2). Relationship checks are the most complex validation logic and form a cohesive group.
