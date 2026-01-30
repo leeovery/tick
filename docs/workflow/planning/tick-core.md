@@ -8,7 +8,7 @@ created: 2026-01-27
 updated: 2026-01-30
 planning:
   phase: 5
-  task: ~
+  task: 2
 ---
 
 # Plan: Tick Core
@@ -160,8 +160,8 @@ approved_at: 2026-01-30
 #### Tasks
 | ID            | Name                | Edge Cases                                                                                        | Status  |
 |---------------|---------------------|---------------------------------------------------------------------------------------------------|---------|
-| tick-core-5-1 | tick stats command   | zero counts, all statuses present, priority breakdown P0-P4, ready/blocked counts, empty project  | pending |
-| tick-core-5-2 | tick rebuild command | missing cache.db, valid cache overwritten, concurrent access during rebuild, confirmation output   | pending |
+| tick-core-5-1 | tick stats command   | zero counts, all statuses present, priority breakdown P0-P4, ready/blocked counts, empty project  | authored |
+| tick-core-5-2 | tick rebuild command | missing cache.db, valid cache overwritten, concurrent access during rebuild, confirmation output   | authored |
 
 ---
 
