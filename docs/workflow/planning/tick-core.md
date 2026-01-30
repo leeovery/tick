@@ -7,8 +7,8 @@ spec_commit: b74fff5d638e8cb3a13a21b7c01b83bb1821f7ce
 created: 2026-01-27
 updated: 2026-01-30
 planning:
-  phase: 3
-  task: 5
+  phase: 4
+  task: ~
 ---
 
 # Plan: Tick Core
@@ -135,8 +135,14 @@ approved_at: 2026-01-30
 - [ ] Empty results handled correctly per format
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| ID            | Name                                                   | Edge Cases                                                                                                       | Status  |
+|---------------|--------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|---------|
+| tick-core-4-1 | Formatter abstraction & TTY-based format selection     | TTY vs non-TTY auto-detection, flag overrides, conflicting flags, verbose propagation                             | pending |
+| tick-core-4-2 | TOON formatter — list, show, stats output              | zero count empty results, multi-section show, field escaping, omitted vs empty sections, multiline description    | pending |
+| tick-core-4-3 | Human-readable formatter — list, show, stats output    | column alignment, long titles, empty results, omitted sections, stats zero counts, priority labels                | pending |
+| tick-core-4-4 | JSON formatter — list, show, stats output              | null vs omitted fields, empty arrays vs absent keys, snake_case keys, empty list as []                            | pending |
+| tick-core-4-5 | Integrate formatters into all commands                 | create/update full task output, transition output, dep confirmation, --quiet overrides format, empty across formats | pending |
+| tick-core-4-6 | Verbose output & edge case hardening                   | --verbose debug detail to stderr, verbose + quiet interaction, no verbose leakage into pipes                      | pending |
 
 ---
 
