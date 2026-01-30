@@ -8,7 +8,7 @@ created: 2026-01-30
 updated: 2026-01-30
 planning:
   phase: 1
-  task: ~
+  task: 1
 ---
 
 # Plan: Doctor Validation
