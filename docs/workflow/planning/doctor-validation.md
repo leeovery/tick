@@ -8,7 +8,7 @@ created: 2026-01-30
 updated: 2026-01-30
 planning:
   phase: 2
-  task: ~
+  task: 1
 ---
 
 # Plan: Doctor Validation
@@ -69,6 +69,14 @@ approved_at: 2026-01-30
 - [ ] Multiple errors of the same type each reported individually with specifics
 - [ ] All checks run even if earlier checks find errors
 - [ ] Errors from all checks contribute to summary count and exit code
+
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| doctor-validation-2-1 | JSONL Syntax Check | empty file, blank/whitespace-only lines, all lines valid, all lines malformed, single malformed line among many valid, trailing newline producing empty last line, missing tasks.jsonl | pending |
+| doctor-validation-2-2 | ID Format Check | empty ID field, missing ID field, uppercase hex chars, extra chars beyond 6 hex, wrong prefix, numeric-only random part, mixed valid and invalid IDs | pending |
+| doctor-validation-2-3 | Duplicate ID Check | exact-case duplicates, mixed-case duplicates (tick-ABC123 vs tick-abc123), more than two duplicates of same ID, multiple distinct duplicate groups, no duplicates, single task | pending |
+| doctor-validation-2-4 | Data Integrity Check Registration | all new checks pass alongside passing cache check, all new checks fail alongside passing cache check, mixed results across all four checks, empty tasks.jsonl | pending |
 
 ### Phase 3: Relationship & Hierarchy Checks
 status: approved
