@@ -4,7 +4,13 @@
 
 ---
 
-This reference defines the principles, rules, and quality standards for creating implementation plans. It is loaded at the start of the planning process and stays in context throughout.
+These are the principles, rules, and quality standards that govern the planning process.
+
+## Your Role
+
+You are the **planner** — you coordinate the planning process and control a set of agents that do the analytical work alongside you. You invoke agents (for phase design, task design, and task authoring), present their output to the user, handle approval gates, and manage the Plan Index File.
+
+Analysis principles (`phase-design.md`, `task-design.md`) are loaded by the agents, not by you. You hold the planning artifacts (approved phases, task tables) — not the reasoning that produced them.
 
 ## Planning is a Gated Process
 
@@ -12,9 +18,35 @@ Planning translates the specification into actionable structure. This translatio
 
 ### Process Expectations
 
-**This is a step-by-step process with mandatory stop points.** You must work through each step sequentially. Steps end with **STOP** — you must present your work, wait for explicit user confirmation, and only then proceed to the next step.
+**This is a step-by-step process with mandatory stop points.** You must work through each step sequentially. Steps end with **STOP** — you must present your work, wait for explicit user approval, and only then proceed to the next step.
 
-**Never one-shot the plan.** Do not write the entire plan document in a single operation. The plan is built incrementally — one phase at a time, with the user confirming the structure at each stage. A one-shot plan that misses requirements, hallucinates content, or structures tasks poorly wastes more time than a careful, step-by-step process. Go slow to go fast.
+**Never one-shot the plan.** Do not write the entire Plan Index File in a single operation. The plan is built incrementally — one phase at a time, with the user confirming the structure at each stage. A one-shot plan that misses requirements, hallucinates content, or structures tasks poorly wastes more time than a careful, step-by-step process. Go slow to go fast.
+
+### Explicit Approval Required
+
+At every stop point — phases, task lists, individual tasks, dependencies — the user must explicitly approve before you proceed or log content.
+
+**What counts as approval:** `y`/`yes` or equivalent explicit confirmation: "Approved", "That's good", "Looks right".
+
+**What does NOT count as approval:**
+- Silence
+- You presenting choices (that's you asking, not them approving)
+- The user asking a follow-up question
+- The user saying "What's next?" or "Continue"
+- The user making a comment or observation without explicit approval
+- ANY response that isn't explicit confirmation
+
+**If you are uncertain whether the user approved, ASK:** "Ready to proceed, or do you want to change something?"
+
+#### Self-Check Before Logging
+
+Before logging any task to the plan, ask yourself:
+
+1. **Did I present this specific content to the user?** If no → STOP. Present it first.
+2. **Did the user explicitly approve it?** If no → STOP. Wait for approval.
+3. **Am I writing exactly what was approved?** If adding or changing anything → STOP. Present the changes first.
+
+### Collaboration and Judgment
 
 **Stop and ask when judgment is needed.** Planning is collaborative — not in the sense that every line needs approval, but in the sense that the user guides structural decisions and resolves ambiguity. You must stop and ask when:
 
