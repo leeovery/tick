@@ -8,7 +8,7 @@ created: 2026-01-27
 updated: 2026-01-30
 planning:
   phase: 4
-  task: 5
+  task: 6
 ---
 
 # Plan: Tick Core
@@ -142,7 +142,7 @@ approved_at: 2026-01-30
 | tick-core-4-3 | Human-readable formatter — list, show, stats output    | column alignment, long titles, empty results, omitted sections, stats zero counts, priority labels                | authored |
 | tick-core-4-4 | JSON formatter — list, show, stats output              | null vs omitted fields, empty arrays vs absent keys, snake_case keys, empty list as []                            | authored |
 | tick-core-4-5 | Integrate formatters into all commands                 | create/update full task output, transition output, dep confirmation, --quiet overrides format, empty across formats | authored |
-| tick-core-4-6 | Verbose output & edge case hardening                   | --verbose debug detail to stderr, verbose + quiet interaction, no verbose leakage into pipes                      | pending |
+| tick-core-4-6 | Verbose output & edge case hardening                   | --verbose debug detail to stderr, verbose + quiet interaction, no verbose leakage into pipes                      | authored |
 
 ---
 
