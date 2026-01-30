@@ -8,7 +8,7 @@ created: 2026-01-27
 updated: 2026-01-30
 planning:
   phase: 4
-  task: 1
+  task: 2
 ---
 
 # Plan: Tick Core
@@ -138,7 +138,7 @@ approved_at: 2026-01-30
 | ID            | Name                                                   | Edge Cases                                                                                                       | Status  |
 |---------------|--------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|---------|
 | tick-core-4-1 | Formatter abstraction & TTY-based format selection     | TTY vs non-TTY auto-detection, flag overrides, conflicting flags, verbose propagation                             | authored |
-| tick-core-4-2 | TOON formatter — list, show, stats output              | zero count empty results, multi-section show, field escaping, omitted vs empty sections, multiline description    | pending |
+| tick-core-4-2 | TOON formatter — list, show, stats output              | zero count empty results, multi-section show, field escaping, omitted vs empty sections, multiline description    | authored |
 | tick-core-4-3 | Human-readable formatter — list, show, stats output    | column alignment, long titles, empty results, omitted sections, stats zero counts, priority labels                | pending |
 | tick-core-4-4 | JSON formatter — list, show, stats output              | null vs omitted fields, empty arrays vs absent keys, snake_case keys, empty list as []                            | pending |
 | tick-core-4-5 | Integrate formatters into all commands                 | create/update full task output, transition output, dep confirmation, --quiet overrides format, empty across formats | pending |
