@@ -8,7 +8,7 @@ created: 2026-01-27
 updated: 2026-01-30
 planning:
   phase: 3
-  task: ~
+  task: 1
 ---
 
 # Plan: Tick Core
@@ -109,7 +109,7 @@ approved_at: 2026-01-30
 #### Tasks
 | ID            | Name                                                              | Edge Cases                                                                                                                                                                                         | Status  |
 |---------------|-------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| tick-core-3-1 | Dependency validation — cycle detection & child-blocked-by-parent | direct cycle, 2-node cycle (A→B→A), 3+ node cycle with path in error, child blocked by own parent, cross-hierarchy deps allowed, parent blocked by child allowed                                   | pending |
+| tick-core-3-1 | Dependency validation — cycle detection & child-blocked-by-parent | direct cycle, 2-node cycle (A→B→A), 3+ node cycle with path in error, child blocked by own parent, cross-hierarchy deps allowed, parent blocked by child allowed                                   | authored |
 | tick-core-3-2 | tick dep add & tick dep rm commands                               | non-existent IDs, duplicate dep, removing non-existent dep, self-reference, cycle introduced by add, child-blocked-by-parent by add, case-insensitive IDs, --quiet                                 | pending |
 | tick-core-3-3 | Ready query & tick ready command                                  | open unblocked no-children (ready), open blocker (not ready), all blockers done/cancelled (ready), parent with open children (not ready), deep nesting, in_progress/done/cancelled excluded, empty  | pending |
 | tick-core-3-4 | Blocked query, tick blocked & cancel-unblocks-dependents          | blocked by open/in_progress dep, parent with open children, cancel unblocks dependents, multiple dependents unblocked, empty result                                                                | pending |
