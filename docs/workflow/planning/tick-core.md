@@ -7,8 +7,8 @@ spec_commit: b74fff5d638e8cb3a13a21b7c01b83bb1821f7ce
 created: 2026-01-27
 updated: 2026-01-30
 planning:
-  phase: 4
-  task: 6
+  phase: 5
+  task: ~
 ---
 
 # Plan: Tick Core
@@ -146,22 +146,22 @@ approved_at: 2026-01-30
 
 ---
 
-### Phase 5: Diagnostics & Stats
+### Phase 5: Stats & Cache Management
 status: approved
 approved_at: 2026-01-30
 
-**Goal**: Health checking, statistics, and cache management tools for debugging and project oversight.
-**Why this order**: Requires all features in place to diagnose and report on them.
+**Goal**: Statistics and cache management tools for project oversight and debugging. (Doctor/validation deferred to separate `doctor-validation` specification.)
+**Why this order**: Requires all features in place to report on them.
 
 **Acceptance**:
 - [ ] `tick stats` shows counts by status, priority, ready/blocked
-- [ ] `tick doctor` detects orphaned children, done parents with open children, non-existent references, and other integrity issues
 - [ ] `tick rebuild` forces full SQLite rebuild from JSONL
-- [ ] Doctor output is actionable (describes what's wrong and what to check)
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| ID            | Name                | Edge Cases                                                                                        | Status  |
+|---------------|---------------------|---------------------------------------------------------------------------------------------------|---------|
+| tick-core-5-1 | tick stats command   | zero counts, all statuses present, priority breakdown P0-P4, ready/blocked counts, empty project  | pending |
+| tick-core-5-2 | tick rebuild command | missing cache.db, valid cache overwritten, concurrent access during rebuild, confirmation output   | pending |
 
 ---
 
@@ -189,3 +189,4 @@ None. This is the foundational data layer that other specifications depend on.
 |------|--------|
 | 2026-01-27 | Created from specification |
 | 2026-01-30 | Migrated to updated plan format (Plan Index + task files) |
+| 2026-01-30 | Phase 5: removed doctor (separate spec), renamed to Stats & Cache Management |
