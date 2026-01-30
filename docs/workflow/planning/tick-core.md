@@ -8,7 +8,7 @@ created: 2026-01-27
 updated: 2026-01-30
 planning:
   phase: 3
-  task: 4
+  task: 5
 ---
 
 # Plan: Tick Core
@@ -113,7 +113,7 @@ approved_at: 2026-01-30
 | tick-core-3-2 | tick dep add & tick dep rm commands                               | non-existent IDs, duplicate dep, removing non-existent dep, self-reference, cycle introduced by add, child-blocked-by-parent by add, case-insensitive IDs, --quiet                                 | authored |
 | tick-core-3-3 | Ready query & tick ready command                                  | open unblocked no-children (ready), open blocker (not ready), all blockers done/cancelled (ready), parent with open children (not ready), deep nesting, in_progress/done/cancelled excluded, empty  | authored |
 | tick-core-3-4 | Blocked query, tick blocked & cancel-unblocks-dependents          | blocked by open/in_progress dep, parent with open children, cancel unblocks dependents, multiple dependents unblocked, empty result                                                                | authored |
-| tick-core-3-5 | tick list filter flags — --ready, --blocked, --status, --priority | reuses ready/blocked queries, invalid values error, combining filters, no matches, --quiet IDs only                                                                                                | pending |
+| tick-core-3-5 | tick list filter flags — --ready, --blocked, --status, --priority | reuses ready/blocked queries, invalid values error, combining filters, no matches, --quiet IDs only                                                                                                | authored |
 
 ---
 
