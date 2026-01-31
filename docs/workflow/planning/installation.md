@@ -71,6 +71,14 @@ approved_at: 2026-01-31
 - [ ] `scripts/install.sh` fails cleanly with meaningful error when download fails, unsupported OS is detected, or unsupported architecture is encountered
 - [ ] Install script works correctly when run via `curl -fsSL ... | bash` (no interactive prompts, correct exit codes)
 
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| installation-2-1 | Homebrew Tap Repository and Formula | formula must handle both Intel and Apple Silicon macOS, version in formula URL must strip leading v | pending |
+| installation-2-2 | macOS Install Script: Homebrew Delegation | brew tap or brew install failure should propagate exit code, tick already installed via Homebrew (idempotent re-install) | pending |
+| installation-2-3 | macOS Install Script: No Homebrew Error Path | none | pending |
+| installation-2-4 | Install Script Error Handling Hardening | script piped via curl with server error, partial download, OS value that is neither Linux nor Darwin (e.g. FreeBSD) | pending |
+
 ---
 
 ## External Dependencies
