@@ -22,6 +22,7 @@ Either way: Transform specifications into actionable phases, tasks, and acceptan
 - **Specification content** (required) - The validated decisions and requirements to plan from
 - **Topic name** (optional) - Will derive from specification if not provided
 - **Output format preference** (optional) - Will ask if not specified
+- **Recommended output format** (optional) - A format suggestion for consistency with existing plans
 - **Cross-cutting references** (optional) - Cross-cutting specifications that inform technical decisions in this plan
 
 **Before proceeding**, verify the required input is available and unambiguous. If anything is missing or unclear, **STOP** — do not proceed until resolved.
@@ -36,15 +37,111 @@ Either way: Transform specifications into actionable phases, tasks, and acceptan
 
 ## The Process
 
+This process constructs a plan from a specification. A plan consists of:
+
+- **Plan Index File** — `docs/workflow/planning/{topic}.md`. Contains frontmatter (topic, format, status, progress), phases with acceptance criteria, and task tables tracking status. This is the single source of truth for planning progress.
+- **Authored Tasks** — Detailed task files written to the chosen **Output Format** (selected during planning). The output format determines where and how task detail is stored.
+
 Follow every step in sequence. No steps are optional.
 
 ---
 
-## Step 1: Choose Output Format
+## Step 0: Resume Detection
 
-Present the formats from **[output-formats.md](references/output-formats.md)** to the user as written — including description, pros, cons, and "best for" — so they can make an informed choice. Number each format and ask the user to pick a number.
+Check if a Plan Index File already exists at `docs/workflow/planning/{topic}.md`.
 
-**STOP.** Wait for the user to choose. After they pick, confirm the choice and load the corresponding `output-{format}.md` adapter from **[output-formats/](references/output-formats/)**.
+#### If no Plan Index File exists
+
+→ Proceed to **Step 1**.
+
+#### If Plan Index File exists
+
+If `status: concluded`, update it to `status: planning`.
+
+Note the current phase and task position from the `planning:` block.
+
+Load **[spec-change-detection.md](references/spec-change-detection.md)** to check whether the specification has changed since planning started. Then present the user with an informed choice:
+
+> "Found existing plan for **{topic}** (previously reached phase {N}, task {M}).
+>
+> {spec change summary from spec-change-detection.md}
+>
+> - **`continue`** — Walk through the plan from the start. You can review, amend, or navigate at any point — including straight to the leading edge.
+> - **`restart`** — Erase all planning work for this topic and start fresh. This deletes the Plan Index File and any Authored Tasks. Other topics are unaffected."
+
+**STOP.** Wait for user response.
+
+#### If `continue`
+
+If the specification changed, update `spec_commit` in the Plan Index File frontmatter to the current commit hash.
+
+→ Proceed to **Step 1**.
+
+#### If `restart`
+
+1. Read **[output-formats.md](references/output-formats.md)**, find the entry matching the `format:` field in the Plan Index File, and load the linked adapter
+2. Follow the adapter's cleanup instructions to remove Authored Tasks for this topic
+3. Delete the Plan Index File
+4. Commit: `planning({topic}): restart planning`
+
+→ Proceed to **Step 1**.
+
+---
+
+## Step 1: Initialize Plan
+
+#### If Plan Index File already exists
+
+Read **[output-formats.md](references/output-formats.md)**, find the entry matching the `format:` field, and load the linked adapter.
+
+→ Proceed to **Step 2**.
+
+#### If no Plan Index File exists
+
+First, choose the Output Format.
+
+**If a recommended output format was provided** (non-empty, not "none"):
+
+Present the recommendation:
+
+> "Existing plans use **{format}**. Use the same format for consistency?
+> - **yes** — use {format}
+> - **no** — see all available formats"
+
+**STOP.** Wait for user choice. If declined, fall through to the full list below.
+
+**If no recommendation, or user declined:**
+
+Present the formats from **[output-formats.md](references/output-formats.md)** to the user — including description, pros, cons, and "best for". Number each format and ask the user to pick.
+
+**STOP.** Wait for the user to choose.
+
+Once selected:
+
+1. Read **[output-formats.md](references/output-formats.md)**, find the chosen format entry, and load the linked adapter
+2. Capture the current git commit hash: `git rev-parse HEAD`
+3. Create the Plan Index File at `docs/workflow/planning/{topic}.md` with the following frontmatter and title:
+
+```yaml
+---
+topic: {topic-name}
+status: planning
+format: {chosen-format}
+specification: ../specification/{topic}.md
+cross_cutting_specs:              # Omit if none
+  - ../specification/{spec}.md
+spec_commit: {output of git rev-parse HEAD}
+created: YYYY-MM-DD  # Use today's actual date
+updated: YYYY-MM-DD  # Use today's actual date
+planning:
+  phase: 1
+  task: ~
+---
+
+# Plan: {Topic Name}
+```
+
+3. Commit: `planning({topic}): initialize plan`
 
 → Proceed to **Step 2**.
 
@@ -52,73 +149,56 @@ Present the formats from **[output-formats.md](references/output-formats.md)** t
 
 ## Step 2: Load Planning Principles
 
-Load **[planning-principles.md](references/planning-principles.md)** — this contains the planning principles, rules, and quality standards that apply throughout the process.
+Load **[planning-principles.md](references/planning-principles.md)** and follow its instructions as written.
 
 → Proceed to **Step 3**.
 
 ---
 
-## Step 3: Read Specification Content
+## Step 3: Verify Source Material
 
-Now read the specification content **in full**. Not a scan, not a summary — read every section, every decision, every edge case. The specification must be fully digested before any structural decisions are made. If a document is too large for a single read, read it in sequential chunks until you have consumed the entire file. Never summarise or skip sections to fit within tool limits.
-
-The specification contains validated decisions. Your job is to translate it into an actionable plan, not to review or reinterpret it.
-
-**The specification is your sole input.** Everything you need is in the specification — do not reference other documents or prior source materials. If cross-cutting specifications are provided, read them alongside the specification so their patterns are available during planning.
-
-From the specification, absorb:
-- Key decisions and rationale
-- Architectural choices
-- Edge cases identified
-- Constraints and requirements
-- Whether a Dependencies section exists (you will handle these in Step 7)
-
-Do not present or summarize the specification back to the user — it has already been signed off.
+Load **[steps/verify-source-material.md](references/steps/verify-source-material.md)** and follow its instructions as written.
 
 → Proceed to **Step 4**.
 
 ---
 
-## Step 4: Define Phases
+## Step 4: Plan Construction
 
-Load **[steps/define-phases.md](references/steps/define-phases.md)** and follow its instructions as written.
+Load **[steps/plan-construction.md](references/steps/plan-construction.md)** and follow its instructions as written.
 
----
-
-## Step 5: Define Tasks
-
-Load **[steps/define-tasks.md](references/steps/define-tasks.md)** and follow its instructions as written.
+→ Proceed to **Step 5**.
 
 ---
 
-## Step 6: Author Tasks
-
-Load **[steps/author-tasks.md](references/steps/author-tasks.md)** and follow its instructions as written.
-
----
-
-## Step 7: Resolve External Dependencies
+## Step 5: Resolve External Dependencies
 
 Load **[steps/resolve-dependencies.md](references/steps/resolve-dependencies.md)** and follow its instructions as written.
 
+→ Proceed to **Step 6**.
+
 ---
 
-## Step 8: Plan Review
+## Step 6: Plan Review
 
 Load **[steps/plan-review.md](references/steps/plan-review.md)** and follow its instructions as written.
 
+→ Proceed to **Step 7**.
+
 ---
 
-## Step 9: Conclude the Plan
+## Step 7: Conclude the Plan
 
 After the review is complete:
 
-1. **Update plan status** — Update the plan frontmatter to `status: concluded`
-2. **Final commit** — Commit the concluded plan
-3. **Present completion summary**:
+1. **Update plan status** — Set `status: concluded` in the Plan Index File frontmatter
+3. **Final commit** — Commit the concluded plan
+4. **Present completion summary**:
 
 > "Planning is complete for **{topic}**.
 >
 > The plan contains **{N} phases** with **{M} tasks** total, reviewed for traceability against the specification and structural integrity.
 >
 > Status has been marked as `concluded`. The plan is ready for implementation."
+
+> **CHECKPOINT**: Do not conclude if any tasks in the Plan Index File show `status: pending`. All tasks must be `authored` before concluding.

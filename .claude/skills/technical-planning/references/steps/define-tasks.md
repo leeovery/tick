@@ -4,40 +4,64 @@
 
 ---
 
-Load **[task-design.md](../task-design.md)** — the principles for breaking phases into well-scoped, vertically-sliced tasks.
+This step uses the `planning-task-designer` agent (`.claude/agents/planning-task-designer.md`) to design a task list for a single phase. You invoke the agent, present its output, and handle the approval gate.
 
 ---
 
+## Design the Task List
+
 Orient the user:
 
-> "Taking Phase {N}: {Phase Name} and breaking it into tasks. Here's the overview — once we agree on the list, I'll write each task out in full detail."
+> "Taking Phase {N}: {Phase Name} and breaking it into tasks. I'll delegate this to a specialist agent that will read the full specification and propose a task list."
 
-Take the first (or next) phase and break it into tasks. Present a high-level overview so the user can see the shape of the phase before committing to the detail of each task.
+### Invoke the Agent
 
-Present the task overview using this format:
+Invoke `planning-task-designer` with these file paths:
 
+1. **read-specification.md**: `.claude/skills/technical-planning/references/read-specification.md`
+2. **Specification**: path from the Plan Index File's `specification:` field
+3. **Cross-cutting specs**: paths from the Plan Index File's `cross_cutting_specs:` field (if any)
+4. **task-design.md**: `.claude/skills/technical-planning/references/task-design.md`
+5. **All approved phases**: the complete phase structure from the Plan Index File body
+6. **Target phase number**: the phase being broken into tasks
+
+### Present the Output
+
+The agent returns a task overview and task table. Write the task table directly to the Plan Index File under the phase.
+
+Update the frontmatter `planning:` block:
+```yaml
+planning:
+  phase: {N}
+  task: ~
 ```
-Phase {N}: {Phase Name}
 
-  1. {Task Name} — {One-line summary}
-     Edge cases: {comma-separated list, or "none"}
+Commit: `planning({topic}): draft Phase {N} task list`
 
-  2. {Task Name} — {One-line summary}
-     Edge cases: {comma-separated list, or "none"}
-```
+Present the task overview to the user.
 
-This overview establishes the scope and ordering. The user should be able to see whether the phase is well-structured, whether tasks are in the right order, and whether anything is missing or unnecessary — before investing time in writing out full task detail.
+**STOP.** Ask:
 
-**STOP.** Present the phase task overview and ask:
+> **To proceed:**
+> - **`y`/`yes`** — Approved.
+> - **Or tell me what to change** — reorder, split, merge, add, edit, or remove tasks.
+> - **Or navigate** — a different phase or task, or the leading edge.
 
-> **To proceed, choose one:**
-> - **"Approve"** — Task list is confirmed. I'll begin writing full task detail.
-> - **"Adjust"** — Tell me what to change: reorder, split, merge, add, or remove tasks.
+#### If the user provides feedback
 
-#### If Adjust
+Re-invoke `planning-task-designer` with all original inputs PLUS:
+- **Previous output**: the current task list
+- **User feedback**: what the user wants changed
 
-Incorporate feedback, re-present the updated task overview, and ask again. Repeat until approved.
+Update the Plan Index File with the revised task table, re-present, and ask again. Repeat until approved.
 
-#### If Approved
+#### If approved
 
-→ Proceed to **Step 6**.
+**If the task list is new or was amended:**
+
+1. Advance the `planning:` block to the first task in this phase
+2. Commit: `planning({topic}): approve Phase {N} task list`
+
+**If the task list was already approved and unchanged:** No updates needed.
+
+→ Return to **Plan Construction**.

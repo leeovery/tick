@@ -4,60 +4,63 @@
 
 ---
 
-Load **[task-design.md](../task-design.md)** — the task design principles, template structure, and quality standards for writing task detail.
+This step uses the `planning-task-author` agent (`.claude/agents/planning-task-author.md`) to write full detail for a single task. You invoke the agent, present its output, and handle the approval gate.
 
 ---
 
-Orient the user:
+## Author the Task
 
-> "Task list for Phase {N} is agreed. I'll work through each task one at a time — presenting the full detail, discussing if needed, and logging it to the plan once approved."
+### Invoke the Agent
 
-Work through the agreed task list **one task at a time**.
+Invoke `planning-task-author` with these file paths:
 
-#### Present
+1. **read-specification.md**: `.claude/skills/technical-planning/references/read-specification.md`
+2. **Specification**: path from the Plan Index File's `specification:` field
+3. **Cross-cutting specs**: paths from the Plan Index File's `cross_cutting_specs:` field (if any)
+4. **task-design.md**: `.claude/skills/technical-planning/references/task-design.md`
+5. **All approved phases**: the complete phase structure from the Plan Index File body
+6. **Task list for current phase**: the approved task table
+7. **Target task**: the task name, edge cases, and ID from the table
+8. **Output format adapter**: path to the loaded output format adapter
 
-Write the complete task using the task template — Problem, Solution, Outcome, Do, Acceptance Criteria, Tests, Context.
+### Present the Output
 
-Present it to the user **in the format it will be written to the plan**. The output format adapter determines the exact format. What the user sees is what gets logged — no changes between approval and writing.
+The agent returns complete task detail in the output format's structure. Present it to the user **exactly as it will be written** — what the user sees is what gets logged.
 
 After presenting, ask:
 
 > **Task {M} of {total}: {Task Name}**
 >
-> **To proceed, choose one:**
-> - **"Approve"** — Task is confirmed. I'll log it to the plan verbatim.
-> - **"Adjust"** — Tell me what to change.
+> **To proceed:**
+> - **`y`/`yes`** — Approved. I'll log it to the plan.
+> - **Or tell me what to change.**
+> - **Or navigate** — a different phase or task, or the leading edge.
 
 **STOP.** Wait for the user's response.
 
-#### If adjust
+#### If the user provides feedback
 
-The user may:
-- Request changes to the task content
-- Ask questions about scope, granularity, or approach
-- Flag that something doesn't match the specification
-- Identify missing edge cases or acceptance criteria
+Re-invoke `planning-task-author` with all original inputs PLUS:
+- **Previous output**: the current task detail
+- **User feedback**: what the user wants changed
 
-Incorporate feedback and re-present the updated task **in full**. Then ask the same choice again. Repeat until approved.
+Present the revised task in full. Ask the same choice again. Repeat until approved.
 
-#### If approved
+#### If the user navigates
 
-Log the task to the plan — verbatim, as presented. Do not modify content between approval and writing. The output format adapter determines how tasks are written (appending markdown, creating issues, etc.).
+→ Return to **Plan Construction**.
 
-After logging, confirm:
+#### If approved (`y`/`yes`)
 
-> "Task {M} of {total}: {Task Name} — logged."
+> **CHECKPOINT**: Before logging, verify: (1) You presented this exact content, (2) The user explicitly approved with `y`/`yes` or equivalent — not a question, comment, or "okay" in passing, (3) You are writing exactly what was approved with no modifications.
 
-#### Next task or phase complete
+1. Write the task to the output format (format-specific — see output adapter)
+2. Update the task table in the Plan Index File: set `status: authored`
+3. Advance the `planning:` block in frontmatter to the next pending task (or next phase if this was the last task)
+4. Commit: `planning({topic}): author task {task-id} ({task name})`
 
-**If tasks remain in this phase:** → Return to the top of **Step 6** with the next task. Present it, ask, wait.
+Confirm:
 
-**If all tasks in this phase are logged:**
+> "Task {M} of {total}: {Task Name} — authored."
 
-```
-Phase {N}: {Phase Name} — complete ({M} tasks logged).
-```
-
-→ Return to **Step 5** for the next phase.
-
-**If all phases are complete:** → Proceed to **Step 7**.
+→ Return to **Plan Construction**.
