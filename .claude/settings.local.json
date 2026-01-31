@@ -10,7 +10,8 @@
       "Skill(technical-specification)",
       "Bash(.claude/scripts/discovery-for-specification.sh)",
       "Bash(git commit:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git -C /Users/leeovery/Code/tick rev-parse:*)"
     ]
   }
 }
