@@ -8,7 +8,7 @@ created: 2026-01-31
 updated: 2026-01-31
 planning:
   phase: 1
-  task: 3
+  task: 4
 ---
 
 # Plan: Installation
@@ -51,7 +51,7 @@ approved_at: 2026-01-31
 |----|------|------------|--------|
 | installation-1-1 | Minimal Go Binary | none | authored |
 | installation-1-2 | goreleaser Configuration | archive naming must match spec convention exactly | authored |
-| installation-1-3 | GitHub Actions Release Workflow | workflow should only trigger on semver tags | pending |
+| installation-1-3 | GitHub Actions Release Workflow | workflow should only trigger on semver tags | authored |
 | installation-1-4 | Linux Install Script | `/usr/local/bin` not writable triggers `~/.local/bin` fallback, `~/.local/bin` may not exist, overwrite existing binary, unsupported architecture | pending |
 
 ---
