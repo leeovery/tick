@@ -8,7 +8,7 @@ created: 2026-01-31
 updated: 2026-01-31
 planning:
   phase: 1
-  task: ~
+  task: 1
 ---
 
 # Plan: Migration
@@ -46,6 +46,15 @@ approved_at: 2026-01-31
 - [ ] Each imported task is printed as it is processed (checkmark + title format)
 - [ ] Summary line printed at end showing count of imported tasks
 - [ ] Imported tasks are retrievable via `tick list` after migration completes
+
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| migration-1-1 | Provider Contract & Migration Types | none | pending |
+| migration-1-2 | Beads Provider - Read & Map | missing .beads dir, missing issues.jsonl, empty file, malformed JSON lines, missing title, discarded fields, status mapping, priority mapping | pending |
+| migration-1-3 | Migration Engine - Iterate & Insert | empty provider (zero tasks), insertion failure | pending |
+| migration-1-4 | Migration Output - Per-Task & Summary | zero tasks imported, long titles | pending |
+| migration-1-5 | CLI Command - tick migrate --from | missing --from flag | pending |
 
 ---
 
