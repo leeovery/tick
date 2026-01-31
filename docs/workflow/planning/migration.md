@@ -80,7 +80,7 @@ approved_at: 2026-01-31
 | migration-2-2 | Presenter Failure Output | failure with empty title, failure reason with special characters, zero failures (detail section omitted) | authored |
 | migration-2-3 | Dry-Run Mode | dry-run with zero tasks, dry-run combined with --pending-only | authored |
 | migration-2-4 | Pending-Only Filter | all tasks completed (zero remaining), no completed tasks (filter is no-op), mixed statuses | authored |
-| migration-2-5 | Unknown Provider Available Listing | single provider in registry, multiple providers in registry | pending |
+| migration-2-5 | Unknown Provider Available Listing | single provider in registry, multiple providers in registry | authored |
 
 ---
 
