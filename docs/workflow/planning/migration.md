@@ -7,8 +7,8 @@ spec_commit: d75ee0ec089a456e34c6b10585da4cf18922a0a5
 created: 2026-01-31
 updated: 2026-01-31
 planning:
-  phase: 1
-  task: 4
+  phase: 2
+  task: ~
 ---
 
 # Plan: Migration
@@ -53,8 +53,8 @@ approved_at: 2026-01-31
 | migration-1-1 | Provider Contract & Migration Types | none | authored |
 | migration-1-2 | Beads Provider - Read & Map | missing .beads dir, missing issues.jsonl, empty file, malformed JSON lines, missing title, discarded fields, status mapping, priority mapping | authored |
 | migration-1-3 | Migration Engine - Iterate & Insert | empty provider (zero tasks), insertion failure | authored |
-| migration-1-4 | Migration Output - Per-Task & Summary | zero tasks imported, long titles | pending |
-| migration-1-5 | CLI Command - tick migrate --from | missing --from flag | pending |
+| migration-1-4 | Migration Output - Per-Task & Summary | zero tasks imported, long titles | authored |
+| migration-1-5 | CLI Command - tick migrate --from | missing --from flag | authored |
 
 ---
 
