@@ -46,6 +46,14 @@ approved_at: 2026-01-31
 - [ ] `scripts/install.sh` downloads the correct release asset and installs to `/usr/local/bin` or `~/.local/bin` fallback
 - [ ] `scripts/install.sh` is idempotent (overwrites existing binary without error)
 
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| installation-1-1 | Minimal Go Binary | none | pending |
+| installation-1-2 | goreleaser Configuration | archive naming must match spec convention exactly | pending |
+| installation-1-3 | GitHub Actions Release Workflow | workflow should only trigger on semver tags | pending |
+| installation-1-4 | Linux Install Script | `/usr/local/bin` not writable triggers `~/.local/bin` fallback, `~/.local/bin` may not exist, overwrite existing binary, unsupported architecture | pending |
+
 ---
 
 ### Phase 2: Homebrew Distribution and macOS Install Path
