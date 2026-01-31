@@ -1,6 +1,6 @@
 ---
 topic: installation
-status: planning
+status: concluded
 format: local-markdown
 specification: ../specification/installation.md
 spec_commit: d20af03c956b3e3c4608eb4d5945a67c5a3f6c90
@@ -90,3 +90,4 @@ approved_at: 2026-01-31
 | Date | Change |
 |------|--------|
 | 2026-01-31 | Created from specification |
+| 2026-01-31 | Plan concluded — 2 phases, 8 tasks |
