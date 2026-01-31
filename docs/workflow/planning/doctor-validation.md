@@ -7,8 +7,8 @@ spec_commit: 29e62a8301438296c5b05db3e8f36c75ad5c20e1
 created: 2026-01-30
 updated: 2026-01-30
 planning:
-  phase: 2
-  task: 4
+  phase: 3
+  task: ~
 ---
 
 # Plan: Doctor Validation
@@ -76,7 +76,7 @@ approved_at: 2026-01-30
 | doctor-validation-2-1 | JSONL Syntax Check | empty file, blank/whitespace-only lines, all lines valid, all lines malformed, single malformed line among many valid, trailing newline producing empty last line, missing tasks.jsonl | authored |
 | doctor-validation-2-2 | ID Format Check | empty ID field, missing ID field, uppercase hex chars, extra chars beyond 6 hex, wrong prefix, numeric-only random part, mixed valid and invalid IDs | authored |
 | doctor-validation-2-3 | Duplicate ID Check | exact-case duplicates, mixed-case duplicates (tick-ABC123 vs tick-abc123), more than two duplicates of same ID, multiple distinct duplicate groups, no duplicates, single task | authored |
-| doctor-validation-2-4 | Data Integrity Check Registration | all new checks pass alongside passing cache check, all new checks fail alongside passing cache check, mixed results across all four checks, empty tasks.jsonl | pending |
+| doctor-validation-2-4 | Data Integrity Check Registration | all new checks pass alongside passing cache check, all new checks fail alongside passing cache check, mixed results across all four checks, empty tasks.jsonl | authored |
 
 ### Phase 3: Relationship & Hierarchy Checks
 status: approved
