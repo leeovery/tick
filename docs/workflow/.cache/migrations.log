@@ -22,3 +22,4 @@ docs/workflow/specification/tick-core.md: 004
 docs/workflow/planning/tick-core.md: 003
 docs/workflow/planning/doctor-validation.md: 003
 docs/workflow/planning/installation.md: 003
+docs/workflow/planning/migration.md: 003
