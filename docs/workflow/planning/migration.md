@@ -33,7 +33,8 @@ planning:
 ## Phases
 
 ### Phase 1: Walking Skeleton - End-to-End Beads Migration
-status: draft
+status: approved
+approved_at: 2026-01-31
 
 **Goal**: A working `tick migrate --from beads` command that reads beads task files, normalizes them to tick's schema, inserts them via tick-core, and prints per-task output with a summary line.
 **Why this order**: Must establish the end-to-end flow first — CLI entry point, provider contract, beads provider, normalization, insertion, and output. Every subsequent feature (dry-run, pending-only, error handling) builds on this working pipeline.
@@ -49,7 +50,8 @@ status: draft
 ---
 
 ### Phase 2: Flags, Error Handling, and Edge Cases
-status: draft
+status: approved
+approved_at: 2026-01-31
 
 **Goal**: Add --dry-run mode, --pending-only filter, continue-on-error with failure reporting, and unknown provider error handling to complete the specification.
 **Why this order**: All features in this phase are variations or hardening of the working pipeline established in Phase 1. They require the end-to-end flow to exist before they can be layered on.
