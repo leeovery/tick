@@ -83,7 +83,7 @@ approved_at: 2026-01-31
 
 ## External Dependencies
 
-- tick-core: Buildable Go binary that compiles successfully (unresolved - not yet planned)
+- tick-core: Buildable Go binary that compiles successfully → tick-core-1-5 (resolved)
 
 ## Log
 
