@@ -86,7 +86,7 @@ approved_at: 2026-01-31
 
 ## External Dependencies
 
-- tick-core: Migration inserts tasks into tick's data store. Cannot create tasks without the data layer, schema, and write operations.
+- tick-core: Migration inserts tasks into tick's data store. Cannot create tasks without the data layer, schema, and write operations. → tick-core-1-4 (resolved)
 
 ## Log
 
