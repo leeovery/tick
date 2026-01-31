@@ -12,3 +12,64 @@ planning:
 ---
 
 # Plan: Migration
+
+## Overview
+
+**Goal**: Import task data from other tools via `tick migrate --from <provider>`, starting with beads as the first provider.
+
+**Done when**:
+- `tick migrate --from beads` imports tasks into tick's data store
+- Dry-run and pending-only modes work
+- Errors are handled gracefully with continue-on-error and failure reporting
+- Unknown providers produce helpful error messages
+
+**Key Decisions** (from specification):
+- One-time import, not sync — run once, delete the old system
+- Append-only — adds to existing tick data, never modifies or deletes
+- User responsibility for duplicates from re-running
+- Plugin architecture — providers are self-contained; tick core doesn't manage credentials
+- Continue on error — report failures at end, no rollback
+
+## Phases
+
+### Phase 1: Walking Skeleton - End-to-End Beads Migration
+status: draft
+
+**Goal**: A working `tick migrate --from beads` command that reads beads task files, normalizes them to tick's schema, inserts them via tick-core, and prints per-task output with a summary line.
+**Why this order**: Must establish the end-to-end flow first — CLI entry point, provider contract, beads provider, normalization, insertion, and output. Every subsequent feature (dry-run, pending-only, error handling) builds on this working pipeline.
+
+**Acceptance**:
+- [ ] `tick migrate --from beads` reads beads task files from the filesystem and creates corresponding tasks in tick's data store
+- [ ] Provider contract/interface exists that beads (and future providers) implement
+- [ ] Beads provider maps all available fields to tick equivalents; missing fields use sensible defaults
+- [ ] Each imported task is printed as it is processed (checkmark + title format)
+- [ ] Summary line printed at end showing count of imported tasks
+- [ ] Imported tasks are retrievable via `tick list` after migration completes
+
+---
+
+### Phase 2: Flags, Error Handling, and Edge Cases
+status: draft
+
+**Goal**: Add --dry-run mode, --pending-only filter, continue-on-error with failure reporting, and unknown provider error handling to complete the specification.
+**Why this order**: All features in this phase are variations or hardening of the working pipeline established in Phase 1. They require the end-to-end flow to exist before they can be layered on.
+
+**Acceptance**:
+- [ ] `--dry-run` previews what would be imported without writing to tick's data store
+- [ ] `--pending-only` imports only non-completed tasks from the source
+- [ ] When a task fails to import, migration continues processing remaining tasks and reports failures at end
+- [ ] Failure detail section lists each failed task with its reason
+- [ ] Summary line shows both imported and failed counts (e.g., "Done: 3 imported, 1 failed")
+- [ ] Unknown provider name produces an error listing available providers
+
+---
+
+## External Dependencies
+
+- tick-core: Migration inserts tasks into tick's data store. Cannot create tasks without the data layer, schema, and write operations.
+
+## Log
+
+| Date | Change |
+|------|--------|
+| 2026-01-31 | Created from specification |
