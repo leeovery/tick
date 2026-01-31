@@ -8,7 +8,7 @@ created: 2026-01-30
 updated: 2026-01-30
 planning:
   phase: 3
-  task: 7
+  task: ~
 ---
 
 # Plan: Doctor Validation
@@ -104,7 +104,7 @@ approved_at: 2026-01-30
 | doctor-validation-3-4 | Dependency Cycle Detection Check | missing tasks.jsonl, empty file, simple 2-node cycle, 3+ node cycle, multiple independent cycles, chain that is not a cycle, self-reference not double-reported (handled by task 3-3), task with no dependencies, complex graph with both cycles and valid chains | authored |
 | doctor-validation-3-5 | Child Blocked-By Parent Check | missing tasks.jsonl, empty file, direct child blocked by parent, child blocked by grandparent (not flagged -- only direct parent), multiple children blocked by same parent, child blocked by parent among other valid deps, task with parent but no blocked_by (valid) | authored |
 | doctor-validation-3-6 | Parent Done With Open Children Warning | missing tasks.jsonl, empty file, parent done with one open child, parent done with multiple open children, parent done with all children done, parent done with cancelled children only, parent open with open children (not flagged), parent done with in_progress child, warnings-only produces exit code 0 | authored |
-| doctor-validation-3-7 | Relationship Check Registration | all 10 checks pass (healthy store), mixed errors and warnings, warnings-only exit code 0, errors from relationship checks combine with earlier phase errors in summary count | pending |
+| doctor-validation-3-7 | Relationship Check Registration | all 10 checks pass (healthy store), mixed errors and warnings, warnings-only exit code 0, errors from relationship checks combine with earlier phase errors in summary count | authored |
 
 ---
 
