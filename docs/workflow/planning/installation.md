@@ -31,7 +31,8 @@ planning:
 ## Phases
 
 ### Phase 1: Release Pipeline and Install Script
-status: draft
+status: approved
+approved_at: 2026-01-31
 
 **Goal**: Establish a minimal buildable Go binary, goreleaser configuration, GitHub Actions release workflow, and Linux install script so that pushing a tag produces release assets and the install script can download and install the binary on Linux.
 
@@ -48,7 +49,8 @@ status: draft
 ---
 
 ### Phase 2: Homebrew Distribution and macOS Install Path
-status: draft
+status: approved
+approved_at: 2026-01-31
 
 **Goal**: Add Homebrew tap and formula for macOS distribution, implement macOS behavior in the install script, and harden error handling across all install paths.
 
