@@ -8,7 +8,7 @@ created: 2026-01-31
 updated: 2026-01-31
 planning:
   phase: 1
-  task: ~
+  task: 1
 ---
 
 # Plan: Installation
