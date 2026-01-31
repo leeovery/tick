@@ -8,7 +8,7 @@ created: 2026-01-31
 updated: 2026-01-31
 planning:
   phase: 2
-  task: 2
+  task: 3
 ---
 
 # Plan: Migration
@@ -77,7 +77,7 @@ approved_at: 2026-01-31
 | ID | Name | Edge Cases | Status |
 |----|------|------------|--------|
 | migration-2-1 | Engine Continue-on-Error | all tasks fail insertion, mixed validation and insertion failures | authored |
-| migration-2-2 | Presenter Failure Output | failure with empty title, failure reason with special characters, zero failures (detail section omitted) | pending |
+| migration-2-2 | Presenter Failure Output | failure with empty title, failure reason with special characters, zero failures (detail section omitted) | authored |
 | migration-2-3 | Dry-Run Mode | dry-run with zero tasks, dry-run combined with --pending-only | pending |
 | migration-2-4 | Pending-Only Filter | all tasks completed (zero remaining), no completed tasks (filter is no-op), mixed statuses | pending |
 | migration-2-5 | Unknown Provider Available Listing | single provider in registry, multiple providers in registry | pending |
