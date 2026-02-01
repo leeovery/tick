@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
 )
 
@@ -85,9 +84,9 @@ func (a *App) cmdCreate(workDir string, args []string) error {
 		return err
 	}
 
-	store, err := storage.NewStore(tickDir)
+	store, err := a.openStore(tickDir)
 	if err != nil {
-		return fmt.Errorf("opening store: %w", err)
+		return err
 	}
 	defer store.Close()
 

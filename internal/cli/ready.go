@@ -3,8 +3,6 @@ package cli
 import (
 	"database/sql"
 	"fmt"
-
-	"github.com/leeovery/tick/internal/storage"
 )
 
 // readyQuery is the SQL for tasks that are open, unblocked, and have no open children.
@@ -37,9 +35,9 @@ func (a *App) cmdListFiltered(workDir string, query string) error {
 		return err
 	}
 
-	store, err := storage.NewStore(tickDir)
+	store, err := a.openStore(tickDir)
 	if err != nil {
-		return fmt.Errorf("opening store: %w", err)
+		return err
 	}
 	defer store.Close()
 

@@ -7,15 +7,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/leeovery/tick/internal/storage"
 )
 
 // App is the tick CLI application.
 type App struct {
-	stdout io.Writer
-	stderr io.Writer
-	opts   GlobalOpts
-	isTTY  bool
-	fmtr   Formatter
+	stdout  io.Writer
+	stderr  io.Writer
+	opts    GlobalOpts
+	isTTY   bool
+	fmtr    Formatter
+	verbose *VerboseLogger
 }
 
 // GlobalOpts holds parsed global flags.
@@ -54,6 +57,9 @@ func (a *App) Run(args []string, workDir string) int {
 		return 0
 	}
 
+	// Initialize verbose logger.
+	a.verbose = NewVerboseLogger(a.stderr, a.opts.Verbose)
+
 	// Resolve output format once before dispatch.
 	format, err := ResolveFormat(a.opts.Toon, a.opts.Pretty, a.opts.JSON, a.isTTY)
 	if err != nil {
@@ -61,6 +67,13 @@ func (a *App) Run(args []string, workDir string) int {
 		return 1
 	}
 	a.fmtr = newFormatter(format)
+
+	formatName := [...]string{"toon", "pretty", "json"}[format]
+	if a.opts.Toon || a.opts.Pretty || a.opts.JSON {
+		a.verbose.Log("format=%s (flag override)", formatName)
+	} else {
+		a.verbose.Log("format=%s (auto-detected, tty=%v)", formatName, a.isTTY)
+	}
 	switch subcmd {
 	case "init":
 		err = a.cmdInit(workDir)
@@ -199,4 +212,16 @@ func FindTickDir(startDir string) (string, error) {
 	}
 
 	return "", fmt.Errorf("not a tick project (no .tick directory found)")
+}
+
+// openStore creates a Store for the given tick directory with verbose logging wired in.
+func (a *App) openStore(tickDir string) (*storage.Store, error) {
+	store, err := storage.NewStore(tickDir)
+	if err != nil {
+		return nil, fmt.Errorf("opening store: %w", err)
+	}
+	if a.verbose != nil {
+		store.SetLogger(a.verbose.Log)
+	}
+	return store, nil
 }

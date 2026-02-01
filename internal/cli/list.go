@@ -18,9 +18,9 @@ func (a *App) buildAndFormatTaskDetail(workDir, taskID string) error {
 		return err
 	}
 
-	store, err := storage.NewStore(tickDir)
+	store, err := a.openStore(tickDir)
 	if err != nil {
-		return fmt.Errorf("opening store: %w", err)
+		return err
 	}
 	defer store.Close()
 

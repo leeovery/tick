@@ -15,6 +15,9 @@ import (
 
 const defaultLockTimeout = 5 * time.Second
 
+// LogFunc is a function that receives verbose log messages.
+type LogFunc func(format string, args ...any)
+
 // Store orchestrates JSONL storage, SQLite cache, and file locking.
 type Store struct {
 	tickDir     string
@@ -23,6 +26,7 @@ type Store struct {
 	lockPath    string
 	cache       *Cache
 	lockTimeout time.Duration
+	log         LogFunc
 }
 
 // NewStore creates a new Store for the given .tick directory.
@@ -54,6 +58,17 @@ func NewStore(tickDir string) (*Store, error) {
 	}, nil
 }
 
+// SetLogger sets a function to receive verbose log messages.
+func (s *Store) SetLogger(fn LogFunc) {
+	s.log = fn
+}
+
+func (s *Store) logf(format string, args ...any) {
+	if s.log != nil {
+		s.log(format, args...)
+	}
+}
+
 // Close releases the cache database connection.
 func (s *Store) Close() error {
 	if s.cache != nil {
@@ -63,6 +78,7 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) acquireExclusiveLock() (*flock.Flock, error) {
+	s.logf("acquiring exclusive lock")
 	fl := flock.New(s.lockPath)
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	defer cancel()
@@ -71,10 +87,12 @@ func (s *Store) acquireExclusiveLock() (*flock.Flock, error) {
 	if err != nil || !locked {
 		return nil, fmt.Errorf("could not acquire lock on .tick/lock - another process may be using tick")
 	}
+	s.logf("exclusive lock acquired")
 	return fl, nil
 }
 
 func (s *Store) acquireSharedLock() (*flock.Flock, error) {
+	s.logf("acquiring shared lock")
 	fl := flock.New(s.lockPath)
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	defer cancel()
@@ -83,6 +101,7 @@ func (s *Store) acquireSharedLock() (*flock.Flock, error) {
 	if err != nil || !locked {
 		return nil, fmt.Errorf("could not acquire lock on .tick/lock - another process may be using tick")
 	}
+	s.logf("shared lock acquired")
 	return fl, nil
 }
 
@@ -95,6 +114,13 @@ func (s *Store) readAndEnsureFresh() ([]byte, []task.Task, error) {
 	tasks, err := ReadJSONLBytes(content)
 	if err != nil {
 		return nil, nil, fmt.Errorf("parsing tasks.jsonl: %w", err)
+	}
+
+	fresh, freshErr := s.cache.IsFresh(content)
+	if freshErr == nil && fresh {
+		s.logf("cache fresh (hash match)")
+	} else {
+		s.logf("cache stale, rebuilding (%d tasks)", len(tasks))
 	}
 
 	if err := s.cache.EnsureFresh(content, tasks); err != nil {
@@ -124,6 +150,7 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	}
 
 	// Atomic JSONL write
+	s.logf("atomic write (%d tasks)", len(modified))
 	if err := WriteJSONL(s.jsonlPath, modified); err != nil {
 		return fmt.Errorf("writing tasks.jsonl: %w", err)
 	}
