@@ -4,7 +4,7 @@ plan: ../planning/tick-core.md
 format: local-markdown
 status: in-progress
 current_phase: 5
-current_task: ~
+current_task: tick-core-5-2
 completed_phases:
   - 1
   - 2
@@ -32,6 +32,7 @@ completed_tasks:
   - tick-core-4-4
   - tick-core-4-5
   - tick-core-4-6
+  - tick-core-5-1
 started: 2026-02-01
 updated: 2026-02-01
 completed: ~
@@ -70,3 +71,7 @@ All tasks completed.
 - Task 4.4: JSON formatter - done
 - Task 4.5: Integrate formatters into all commands - done
 - Task 4.6: Verbose output & edge case hardening - done
+
+## Phase 5: Stats & Cache Management (current)
+- Task 5.1: tick stats command - done
+- Task 5.2: tick rebuild command (next)
