@@ -60,6 +60,8 @@ func (a *App) Run(args []string, workDir string) int {
 		err = a.cmdTransition(workDir, cmdArgs, subcmd)
 	case "update":
 		err = a.cmdUpdate(workDir, cmdArgs)
+	case "dep":
+		err = a.cmdDep(workDir, cmdArgs)
 	default:
 		fmt.Fprintf(a.stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
