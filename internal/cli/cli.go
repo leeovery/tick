@@ -50,12 +50,12 @@ func (a *App) Run(args []string, workDir string) int {
 	switch subcmd {
 	case "init":
 		err = a.cmdInit(workDir)
+	case "create":
+		err = a.cmdCreate(workDir, cmdArgs)
 	default:
 		fmt.Fprintf(a.stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
 	}
-
-	_ = cmdArgs // will be used by future commands
 
 	if err != nil {
 		fmt.Fprintf(a.stderr, "Error: %s\n", err)
@@ -65,30 +65,35 @@ func (a *App) Run(args []string, workDir string) int {
 }
 
 func (a *App) parseGlobalFlags(args []string) (subcmd string, remaining []string) {
+	foundSubcmd := false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		switch arg {
-		case "--quiet", "-q":
-			a.opts.Quiet = true
-		case "--verbose", "-v":
-			a.opts.Verbose = true
-		case "--toon":
-			a.opts.Toon = true
-		case "--pretty":
-			a.opts.Pretty = true
-		case "--json":
-			a.opts.JSON = true
-		default:
-			if strings.HasPrefix(arg, "-") {
-				// Unknown flag — pass through to subcommand
-				remaining = append(remaining, args[i:]...)
-				return subcmd, remaining
+		// Only parse global flags before the subcommand
+		if !foundSubcmd {
+			switch arg {
+			case "--quiet", "-q":
+				a.opts.Quiet = true
+				continue
+			case "--verbose", "-v":
+				a.opts.Verbose = true
+				continue
+			case "--toon":
+				a.opts.Toon = true
+				continue
+			case "--pretty":
+				a.opts.Pretty = true
+				continue
+			case "--json":
+				a.opts.JSON = true
+				continue
 			}
-			if subcmd == "" {
-				subcmd = arg
-			} else {
-				remaining = append(remaining, arg)
-			}
+		}
+
+		if !foundSubcmd && !strings.HasPrefix(arg, "-") {
+			subcmd = arg
+			foundSubcmd = true
+		} else if foundSubcmd {
+			remaining = append(remaining, arg)
 		}
 	}
 	return subcmd, remaining
