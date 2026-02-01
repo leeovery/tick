@@ -80,7 +80,9 @@ func (a *App) cmdDepAdd(workDir string, args []string) error {
 	}
 
 	if !a.opts.Quiet {
-		fmt.Fprintf(a.stdout, "Dependency added: %s blocked by %s\n", taskID, blockedByID)
+		return a.fmtr.FormatDepChange(a.stdout, DepChangeData{
+			Action: "added", TaskID: taskID, BlockedBy: blockedByID,
+		})
 	}
 
 	return nil
@@ -145,7 +147,9 @@ func (a *App) cmdDepRm(workDir string, args []string) error {
 	}
 
 	if !a.opts.Quiet {
-		fmt.Fprintf(a.stdout, "Dependency removed: %s no longer blocked by %s\n", taskID, blockedByID)
+		return a.fmtr.FormatDepChange(a.stdout, DepChangeData{
+			Action: "removed", TaskID: taskID, BlockedBy: blockedByID,
+		})
 	}
 
 	return nil

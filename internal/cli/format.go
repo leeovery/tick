@@ -137,6 +137,20 @@ func ResolveFormat(toon, pretty, json, isTTY bool) (Format, error) {
 	}
 }
 
+// newFormatter creates the appropriate Formatter for the given format.
+func newFormatter(f Format) Formatter {
+	switch f {
+	case FormatToon:
+		return &ToonFormatter{}
+	case FormatPretty:
+		return &PrettyFormatter{}
+	case FormatJSON:
+		return &JSONFormatter{}
+	default:
+		return &ToonFormatter{}
+	}
+}
+
 // StubFormatter is a placeholder that produces minimal output.
 // Used during testing and as a fallback before concrete formatters are wired in.
 type StubFormatter struct{}

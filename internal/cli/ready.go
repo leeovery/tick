@@ -72,22 +72,19 @@ func (a *App) cmdListFiltered(workDir string, query string) error {
 		return err
 	}
 
-	if len(tasks) == 0 {
-		fmt.Fprintln(a.stdout, "No tasks found.")
-		return nil
-	}
-
 	if a.opts.Quiet {
+		if len(tasks) == 0 {
+			return nil
+		}
 		for _, t := range tasks {
 			fmt.Fprintln(a.stdout, t.ID)
 		}
 		return nil
 	}
 
-	fmt.Fprintf(a.stdout, "%-12s %-12s %-4s %s\n", "ID", "STATUS", "PRI", "TITLE")
-	for _, t := range tasks {
-		fmt.Fprintf(a.stdout, "%-12s %-12s %-4d %s\n", t.ID, t.Status, t.Priority, t.Title)
+	items := make([]TaskListItem, len(tasks))
+	for i, t := range tasks {
+		items[i] = TaskListItem{ID: t.ID, Title: t.Title, Status: t.Status, Priority: t.Priority}
 	}
-
-	return nil
+	return a.fmtr.FormatTaskList(a.stdout, items)
 }

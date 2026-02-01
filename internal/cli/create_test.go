@@ -262,24 +262,19 @@ func TestCreateCommand(t *testing.T) {
 }
 
 // extractID pulls the tick-XXXXXX ID from command output.
+// Handles multiple output formats: key-value (ID: tick-xxx), TOON (tick-xxx,...), JSON, etc.
 func extractID(t *testing.T, output string) string {
 	t.Helper()
-	// Look for tick-XXXXXX pattern in output
-	for _, word := range strings.Fields(output) {
-		cleaned := strings.Trim(word, "(),[]{}:")
-		if strings.HasPrefix(cleaned, "tick-") && len(cleaned) == 11 {
-			return cleaned
-		}
-	}
-	// Try line by line for ID: tick-XXXXXX format
+	// Look for tick-XXXXXX pattern anywhere in the output.
 	for _, line := range strings.Split(output, "\n") {
-		if strings.Contains(line, "tick-") {
-			parts := strings.Fields(line)
-			for _, p := range parts {
-				cleaned := strings.Trim(p, "(),[]{}:")
-				if strings.HasPrefix(cleaned, "tick-") && len(cleaned) == 11 {
-					return cleaned
-				}
+		// Split by common delimiters: spaces, commas, colons.
+		parts := strings.FieldsFunc(line, func(r rune) bool {
+			return r == ' ' || r == ',' || r == ':' || r == '\t' || r == '"'
+		})
+		for _, p := range parts {
+			cleaned := strings.Trim(p, "(),[]{}:")
+			if strings.HasPrefix(cleaned, "tick-") && len(cleaned) == 11 {
+				return cleaned
 			}
 		}
 	}

@@ -14,6 +14,8 @@ type App struct {
 	stdout io.Writer
 	stderr io.Writer
 	opts   GlobalOpts
+	isTTY  bool
+	fmtr   Formatter
 }
 
 // GlobalOpts holds parsed global flags.
@@ -26,10 +28,16 @@ type GlobalOpts struct {
 }
 
 // NewApp creates a new CLI application with the given output writers.
+// TTY detection is based on whether stdout is an *os.File with a character device.
 func NewApp(stdout, stderr io.Writer) *App {
+	isTTY := false
+	if f, ok := stdout.(*os.File); ok {
+		isTTY = DetectTTY(f)
+	}
 	return &App{
 		stdout: stdout,
 		stderr: stderr,
+		isTTY:  isTTY,
 	}
 }
 
@@ -46,7 +54,13 @@ func (a *App) Run(args []string, workDir string) int {
 		return 0
 	}
 
-	var err error
+	// Resolve output format once before dispatch.
+	format, err := ResolveFormat(a.opts.Toon, a.opts.Pretty, a.opts.JSON, a.isTTY)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "Error: %s\n", err)
+		return 1
+	}
+	a.fmtr = newFormatter(format)
 	switch subcmd {
 	case "init":
 		err = a.cmdInit(workDir)
@@ -156,7 +170,7 @@ func (a *App) cmdInit(workDir string) error {
 
 	if !a.opts.Quiet {
 		absDir, _ := filepath.Abs(tickDir)
-		fmt.Fprintf(a.stdout, "Initialized tick in %s/\n", absDir)
+		a.fmtr.FormatMessage(a.stdout, fmt.Sprintf("Initialized tick in %s/", absDir))
 	}
 
 	return nil

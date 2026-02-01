@@ -15,7 +15,7 @@ func runCmd(t *testing.T, dir string, args ...string) (stdout, stderr string, co
 }
 
 func TestListCommand(t *testing.T) {
-	t.Run("lists all tasks with aligned columns", func(t *testing.T) {
+	t.Run("lists all tasks", func(t *testing.T) {
 		dir := initTickDir(t)
 		createTask(t, dir, "First task")
 		createTask(t, dir, "Second task")
@@ -23,9 +23,6 @@ func TestListCommand(t *testing.T) {
 		stdout, _, code := runCmd(t, dir, "tick", "list")
 		if code != 0 {
 			t.Fatalf("expected exit 0, got %d", code)
-		}
-		if !strings.Contains(stdout, "ID") {
-			t.Error("expected header row with ID")
 		}
 		if !strings.Contains(stdout, "First task") {
 			t.Error("expected First task in output")
@@ -43,28 +40,27 @@ func TestListCommand(t *testing.T) {
 
 		stdout, _, _ := runCmd(t, dir, "tick", "list")
 		lines := strings.Split(strings.TrimSpace(stdout), "\n")
-		// Skip header
+		// TOON: header line + 3 data lines
 		if len(lines) < 4 {
 			t.Fatalf("expected at least 4 lines (header + 3 tasks), got %d", len(lines))
 		}
-		// First data line should be priority 0 (High)
 		if !strings.Contains(lines[1], "High priority") {
 			t.Errorf("first task should be High priority, got %q", lines[1])
 		}
-		// Last data line should be priority 3 (Low)
 		if !strings.Contains(lines[3], "Low priority") {
 			t.Errorf("last task should be Low priority, got %q", lines[3])
 		}
 	})
 
-	t.Run("prints 'No tasks found.' when empty", func(t *testing.T) {
+	t.Run("prints empty result when no tasks", func(t *testing.T) {
 		dir := initTickDir(t)
 		stdout, _, code := runCmd(t, dir, "tick", "list")
 		if code != 0 {
 			t.Fatalf("expected exit 0, got %d", code)
 		}
-		if !strings.Contains(stdout, "No tasks found.") {
-			t.Errorf("expected 'No tasks found.', got %q", stdout)
+		// TOON format: zero-count section
+		if !strings.Contains(stdout, "tasks[0]") {
+			t.Errorf("expected empty list indicator, got %q", stdout)
 		}
 	})
 
@@ -115,8 +111,9 @@ func TestShowCommand(t *testing.T) {
 		id2 := extractID(t, out2)
 
 		stdout, _, _ := runCmd(t, dir, "tick", "show", id2)
-		if !strings.Contains(stdout, "Blocked by:") {
-			t.Error("expected 'Blocked by:' section")
+		// TOON: blocked_by[1]{id,title,status}:
+		if !strings.Contains(stdout, "blocked_by[1]") {
+			t.Error("expected blocked_by section with count 1")
 		}
 		if !strings.Contains(stdout, id1) {
 			t.Error("expected blocker ID in output")
@@ -133,8 +130,9 @@ func TestShowCommand(t *testing.T) {
 		createTask(t, dir, "Child task", "--parent", id1)
 
 		stdout, _, _ := runCmd(t, dir, "tick", "show", id1)
-		if !strings.Contains(stdout, "Children:") {
-			t.Error("expected 'Children:' section")
+		// TOON: children[1]{id,title,status}:
+		if !strings.Contains(stdout, "children[1]") {
+			t.Error("expected children section with count 1")
 		}
 		if !strings.Contains(stdout, "Child task") {
 			t.Error("expected child title in output")
@@ -147,33 +145,34 @@ func TestShowCommand(t *testing.T) {
 		id := extractID(t, out)
 
 		stdout, _, _ := runCmd(t, dir, "tick", "show", id)
-		if !strings.Contains(stdout, "Description:") {
-			t.Error("expected 'Description:' section")
+		if !strings.Contains(stdout, "description") {
+			t.Error("expected description section")
 		}
 		if !strings.Contains(stdout, "Detailed info here") {
 			t.Error("expected description content")
 		}
 	})
 
-	t.Run("omits blocked_by section when no dependencies", func(t *testing.T) {
+	t.Run("shows blocked_by with count 0 when no dependencies", func(t *testing.T) {
 		dir := initTickDir(t)
 		out, _, _ := createTask(t, dir, "No deps")
 		id := extractID(t, out)
 
 		stdout, _, _ := runCmd(t, dir, "tick", "show", id)
-		if strings.Contains(stdout, "Blocked by:") {
-			t.Error("should not show 'Blocked by:' when no deps")
+		// TOON always shows blocked_by, even empty
+		if !strings.Contains(stdout, "blocked_by[0]") {
+			t.Error("expected blocked_by[0] section")
 		}
 	})
 
-	t.Run("omits children section when no children", func(t *testing.T) {
+	t.Run("shows children with count 0 when no children", func(t *testing.T) {
 		dir := initTickDir(t)
 		out, _, _ := createTask(t, dir, "No children")
 		id := extractID(t, out)
 
 		stdout, _, _ := runCmd(t, dir, "tick", "show", id)
-		if strings.Contains(stdout, "Children:") {
-			t.Error("should not show 'Children:' when no children")
+		if !strings.Contains(stdout, "children[0]") {
+			t.Error("expected children[0] section")
 		}
 	})
 
@@ -183,12 +182,12 @@ func TestShowCommand(t *testing.T) {
 		id := extractID(t, out)
 
 		stdout, _, _ := runCmd(t, dir, "tick", "show", id)
-		if strings.Contains(stdout, "Description:") {
-			t.Error("should not show 'Description:' when empty")
+		if strings.Contains(stdout, "description:") {
+			t.Error("should not show description section when empty")
 		}
 	})
 
-	t.Run("shows parent with ID and title when set", func(t *testing.T) {
+	t.Run("shows parent ID when set", func(t *testing.T) {
 		dir := initTickDir(t)
 		out1, _, _ := createTask(t, dir, "Parent task")
 		id1 := extractID(t, out1)
@@ -196,25 +195,23 @@ func TestShowCommand(t *testing.T) {
 		id2 := extractID(t, out2)
 
 		stdout, _, _ := runCmd(t, dir, "tick", "show", id2)
-		if !strings.Contains(stdout, "Parent:") {
-			t.Error("expected 'Parent:' field")
+		if !strings.Contains(stdout, "parent") {
+			t.Error("expected parent in schema")
 		}
 		if !strings.Contains(stdout, id1) {
 			t.Error("expected parent ID in output")
 		}
-		if !strings.Contains(stdout, "Parent task") {
-			t.Error("expected parent title in output")
-		}
 	})
 
-	t.Run("omits parent field when not set", func(t *testing.T) {
+	t.Run("omits parent from schema when not set", func(t *testing.T) {
 		dir := initTickDir(t)
 		out, _, _ := createTask(t, dir, "No parent")
 		id := extractID(t, out)
 
 		stdout, _, _ := runCmd(t, dir, "tick", "show", id)
-		if strings.Contains(stdout, "Parent:") {
-			t.Error("should not show 'Parent:' when not set")
+		// In TOON, parent should not appear in the schema header
+		if strings.Contains(stdout, ",parent,") || strings.Contains(stdout, ",parent}") {
+			t.Error("should not show parent in schema when not set")
 		}
 	})
 

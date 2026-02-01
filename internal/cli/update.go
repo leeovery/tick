@@ -167,9 +167,8 @@ func (a *App) cmdUpdate(workDir string, args []string) error {
 
 	if a.opts.Quiet {
 		fmt.Fprintln(a.stdout, updatedTask.ID)
-	} else {
-		a.printTaskBasic(updatedTask)
+		return nil
 	}
 
-	return nil
+	return a.queryAndFormatTaskDetail(store, updatedTask.ID)
 }

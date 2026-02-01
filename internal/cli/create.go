@@ -164,30 +164,11 @@ func (a *App) cmdCreate(workDir string, args []string) error {
 		return err
 	}
 
-	// Output
 	if a.opts.Quiet {
 		fmt.Fprintln(a.stdout, createdTask.ID)
-	} else {
-		a.printTaskBasic(createdTask)
+		return nil
 	}
 
-	return nil
-}
-
-// printTaskBasic outputs basic task details (Phase 1 format — simple key-value).
-func (a *App) printTaskBasic(t task.Task) {
-	fmt.Fprintf(a.stdout, "ID:       %s\n", t.ID)
-	fmt.Fprintf(a.stdout, "Title:    %s\n", t.Title)
-	fmt.Fprintf(a.stdout, "Status:   %s\n", t.Status)
-	fmt.Fprintf(a.stdout, "Priority: %d\n", t.Priority)
-	if t.Description != "" {
-		fmt.Fprintf(a.stdout, "Description: %s\n", t.Description)
-	}
-	if t.Parent != "" {
-		fmt.Fprintf(a.stdout, "Parent:   %s\n", t.Parent)
-	}
-	if len(t.BlockedBy) > 0 {
-		fmt.Fprintf(a.stdout, "Blocked by: %s\n", strings.Join(t.BlockedBy, ", "))
-	}
-	fmt.Fprintf(a.stdout, "Created:  %s\n", task.FormatTimestamp(t.Created))
+	// Query full detail via store (includes context like parent title).
+	return a.queryAndFormatTaskDetail(store, createdTask.ID)
 }

@@ -166,8 +166,9 @@ func TestUpdateCommand(t *testing.T) {
 		id := extractID(t, out)
 
 		stdout, _, _ := runCmd(t, dir, "tick", "update", id, "--title", "Changed")
-		if !strings.Contains(stdout, "ID:") {
-			t.Errorf("expected full task details, got %q", stdout)
+		// TOON format: task detail with schema header
+		if !strings.Contains(stdout, "task{") {
+			t.Errorf("expected TOON task detail, got %q", stdout)
 		}
 		if !strings.Contains(stdout, id) {
 			t.Errorf("expected task ID in output, got %q", stdout)

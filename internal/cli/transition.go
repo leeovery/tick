@@ -46,7 +46,11 @@ func (a *App) cmdTransition(workDir string, args []string, command string) error
 	}
 
 	if !a.opts.Quiet {
-		fmt.Fprintf(a.stdout, "%s: %s → %s\n", taskID, result.OldStatus, result.NewStatus)
+		return a.fmtr.FormatTransition(a.stdout, TransitionData{
+			ID:        taskID,
+			OldStatus: string(result.OldStatus),
+			NewStatus: string(result.NewStatus),
+		})
 	}
 
 	return nil

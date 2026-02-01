@@ -136,8 +136,9 @@ func TestReadyCommand(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("expected exit 0, got %d", code)
 		}
-		if !strings.Contains(stdout, "No tasks found.") {
-			t.Errorf("expected 'No tasks found.', got %q", stdout)
+		// TOON format: empty list shows zero-count section
+		if !strings.Contains(stdout, "tasks[0]") {
+			t.Errorf("expected empty list indicator, got %q", stdout)
 		}
 	})
 
