@@ -4,7 +4,7 @@ plan: ../planning/tick-core.md
 format: local-markdown
 status: in-progress
 current_phase: 4
-current_task: ~
+current_task: tick-core-4-6
 completed_phases:
   - 1
   - 2
@@ -25,6 +25,11 @@ completed_tasks:
   - tick-core-3-3
   - tick-core-3-4
   - tick-core-3-5
+  - tick-core-4-1
+  - tick-core-4-2
+  - tick-core-4-3
+  - tick-core-4-4
+  - tick-core-4-5
 started: 2026-02-01
 updated: 2026-02-01
 completed: ~
@@ -56,4 +61,10 @@ All tasks completed.
 - Task 3.4: Blocked query, tick blocked & cancel-unblocks - done
 - Task 3.5: tick list filter flags - done
 
-## Phase 4: Output Formats (next)
+## Phase 4: Output Formats (current)
+- Task 4.1: Formatter abstraction & TTY-based format selection - done
+- Task 4.2: TOON formatter - done
+- Task 4.3: Human-readable formatter - done
+- Task 4.4: JSON formatter - done
+- Task 4.5: Integrate formatters into all commands - done
+- Task 4.6: Verbose output & edge case hardening (next)

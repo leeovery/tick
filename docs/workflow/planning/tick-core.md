@@ -138,11 +138,11 @@ approved_at: 2026-01-30
 #### Tasks
 | ID            | Name                                                   | Edge Cases                                                                                                       | Status  |
 |---------------|--------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|---------|
-| tick-core-4-1 | Formatter abstraction & TTY-based format selection     | TTY vs non-TTY auto-detection, flag overrides, conflicting flags, verbose propagation                             | authored |
-| tick-core-4-2 | TOON formatter — list, show, stats output              | zero count empty results, multi-section show, field escaping, omitted vs empty sections, multiline description    | authored |
-| tick-core-4-3 | Human-readable formatter — list, show, stats output    | column alignment, long titles, empty results, omitted sections, stats zero counts, priority labels                | authored |
-| tick-core-4-4 | JSON formatter — list, show, stats output              | null vs omitted fields, empty arrays vs absent keys, snake_case keys, empty list as []                            | authored |
-| tick-core-4-5 | Integrate formatters into all commands                 | create/update full task output, transition output, dep confirmation, --quiet overrides format, empty across formats | authored |
+| tick-core-4-1 | Formatter abstraction & TTY-based format selection     | TTY vs non-TTY auto-detection, flag overrides, conflicting flags, verbose propagation                             | completed |
+| tick-core-4-2 | TOON formatter — list, show, stats output              | zero count empty results, multi-section show, field escaping, omitted vs empty sections, multiline description    | completed |
+| tick-core-4-3 | Human-readable formatter — list, show, stats output    | column alignment, long titles, empty results, omitted sections, stats zero counts, priority labels                | completed |
+| tick-core-4-4 | JSON formatter — list, show, stats output              | null vs omitted fields, empty arrays vs absent keys, snake_case keys, empty list as []                            | completed |
+| tick-core-4-5 | Integrate formatters into all commands                 | create/update full task output, transition output, dep confirmation, --quiet overrides format, empty across formats | completed |
 | tick-core-4-6 | Verbose output & edge case hardening                   | --verbose debug detail to stderr, verbose + quiet interaction, no verbose leakage into pipes                      | authored |
 
 ---
