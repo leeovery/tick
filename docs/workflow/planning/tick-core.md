@@ -126,14 +126,14 @@ approved_at: 2026-01-30
 **Why this order**: Functionality complete from Phases 1-3. Now format output correctly for all consumers. Prior phases can use minimal/basic output.
 
 **Acceptance**:
-- [ ] TTY detection selects human-readable (TTY) vs TOON (non-TTY) automatically
-- [ ] TOON output matches spec format for all commands (list, show, stats)
-- [ ] Human-readable output uses aligned columns, no borders/colors
-- [ ] --toon, --pretty, --json flags override auto-detection
-- [ ] --quiet suppresses non-essential output (create/update → ID only)
-- [ ] --verbose adds debug detail
-- [ ] JSON output available via --json flag
-- [ ] Empty results handled correctly per format
+- [x] TTY detection selects human-readable (TTY) vs TOON (non-TTY) automatically
+- [x] TOON output matches spec format for all commands (list, show, stats)
+- [x] Human-readable output uses aligned columns, no borders/colors
+- [x] --toon, --pretty, --json flags override auto-detection
+- [x] --quiet suppresses non-essential output (create/update → ID only)
+- [x] --verbose adds debug detail
+- [x] JSON output available via --json flag
+- [x] Empty results handled correctly per format
 
 #### Tasks
 | ID            | Name                                                   | Edge Cases                                                                                                       | Status  |
@@ -143,7 +143,7 @@ approved_at: 2026-01-30
 | tick-core-4-3 | Human-readable formatter — list, show, stats output    | column alignment, long titles, empty results, omitted sections, stats zero counts, priority labels                | completed |
 | tick-core-4-4 | JSON formatter — list, show, stats output              | null vs omitted fields, empty arrays vs absent keys, snake_case keys, empty list as []                            | completed |
 | tick-core-4-5 | Integrate formatters into all commands                 | create/update full task output, transition output, dep confirmation, --quiet overrides format, empty across formats | completed |
-| tick-core-4-6 | Verbose output & edge case hardening                   | --verbose debug detail to stderr, verbose + quiet interaction, no verbose leakage into pipes                      | authored |
+| tick-core-4-6 | Verbose output & edge case hardening                   | --verbose debug detail to stderr, verbose + quiet interaction, no verbose leakage into pipes                      | completed |
 
 ---
 
