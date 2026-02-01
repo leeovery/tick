@@ -1,3 +1,5 @@
+// Package task defines the core task model, ID generation, and field validation
+// for the Tick task tracker.
 package task
 
 import (

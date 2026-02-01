@@ -1,35 +1,35 @@
 package task
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 )
 
+var idPattern = regexp.MustCompile(`^tick-[0-9a-f]{6}$`)
+
 func TestGenerateID(t *testing.T) {
 	t.Run("generates IDs matching tick-{6 hex} pattern", func(t *testing.T) {
-		pattern := regexp.MustCompile(`^tick-[0-9a-f]{6}$`)
-		exists := func(id string) bool { return false }
+		noCollisions := func(string) bool { return false }
 
-		id, err := GenerateID(exists)
+		id, err := GenerateID(noCollisions)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if !pattern.MatchString(id) {
+		if !idPattern.MatchString(id) {
 			t.Errorf("ID %q does not match pattern tick-{6 hex}", id)
 		}
 	})
 
 	t.Run("retries on collision up to 5 times", func(t *testing.T) {
 		attempts := 0
-		exists := func(id string) bool {
+		collidesUntilFifth := func(string) bool {
 			attempts++
-			return attempts < 5 // first 4 collide, 5th succeeds
+			return attempts < 5
 		}
 
-		id, err := GenerateID(exists)
+		id, err := GenerateID(collidesUntilFifth)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -42,332 +42,306 @@ func TestGenerateID(t *testing.T) {
 	})
 
 	t.Run("errors after 5 collision retries", func(t *testing.T) {
-		exists := func(id string) bool { return true } // always collide
+		alwaysCollides := func(string) bool { return true }
 
-		_, err := GenerateID(exists)
+		_, err := GenerateID(alwaysCollides)
 		if err == nil {
 			t.Fatal("expected error, got nil")
-		}
-		expected := "failed to generate unique ID after 5 attempts - task list may be too large"
-		if err.Error() != expected {
-			t.Errorf("expected error %q, got %q", expected, err.Error())
-		}
-	})
-}
-
-func TestNormalizeID(t *testing.T) {
-	t.Run("normalizes IDs to lowercase", func(t *testing.T) {
-		cases := []struct {
-			input, want string
-		}{
-			{"TICK-A3F2B7", "tick-a3f2b7"},
-			{"Tick-A3F2B7", "tick-a3f2b7"},
-			{"tick-a3f2b7", "tick-a3f2b7"},
-		}
-		for _, tc := range cases {
-			got := NormalizeID(tc.input)
-			if got != tc.want {
-				t.Errorf("NormalizeID(%q) = %q, want %q", tc.input, got, tc.want)
-			}
-		}
-	})
-}
-
-func TestValidateTitle(t *testing.T) {
-	t.Run("rejects empty title", func(t *testing.T) {
-		err := ValidateTitle("")
-		if err == nil {
-			t.Fatal("expected error for empty title")
-		}
-	})
-
-	t.Run("rejects whitespace-only title", func(t *testing.T) {
-		err := ValidateTitle("   ")
-		if err == nil {
-			t.Fatal("expected error for whitespace-only title")
-		}
-	})
-
-	t.Run("rejects title exceeding 500 characters", func(t *testing.T) {
-		long := strings.Repeat("a", 501)
-		err := ValidateTitle(long)
-		if err == nil {
-			t.Fatal("expected error for title exceeding 500 chars")
-		}
-	})
-
-	t.Run("accepts title at exactly 500 characters", func(t *testing.T) {
-		exact := strings.Repeat("a", 500)
-		err := ValidateTitle(exact)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-	})
-
-	t.Run("rejects title with newlines", func(t *testing.T) {
-		err := ValidateTitle("line1\nline2")
-		if err == nil {
-			t.Fatal("expected error for title with newline")
-		}
-	})
-
-	t.Run("trims whitespace from title", func(t *testing.T) {
-		// ValidateTitle should accept trimmed titles;
-		// TrimTitle provides the trimmed value
-		trimmed := TrimTitle("  hello world  ")
-		if trimmed != "hello world" {
-			t.Errorf("expected %q, got %q", "hello world", trimmed)
-		}
-	})
-}
-
-func TestValidatePriority(t *testing.T) {
-	t.Run("accepts valid priorities 0-4", func(t *testing.T) {
-		for p := 0; p <= 4; p++ {
-			if err := ValidatePriority(p); err != nil {
-				t.Errorf("priority %d should be valid, got error: %v", p, err)
-			}
-		}
-	})
-
-	t.Run("rejects priority outside 0-4", func(t *testing.T) {
-		for _, p := range []int{-1, 5, 100, -100} {
-			if err := ValidatePriority(p); err == nil {
-				t.Errorf("priority %d should be rejected", p)
-			}
-		}
-	})
-}
-
-func TestValidateBlockedBy(t *testing.T) {
-	t.Run("rejects self-reference in blocked_by", func(t *testing.T) {
-		err := ValidateBlockedBy("tick-a1b2c3", []string{"tick-a1b2c3"})
-		if err == nil {
-			t.Fatal("expected error for self-reference")
-		}
-	})
-
-	t.Run("accepts valid blocked_by references", func(t *testing.T) {
-		err := ValidateBlockedBy("tick-a1b2c3", []string{"tick-d4e5f6"})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-	})
-}
-
-func TestValidateParent(t *testing.T) {
-	t.Run("rejects self-reference in parent", func(t *testing.T) {
-		err := ValidateParent("tick-a1b2c3", "tick-a1b2c3")
-		if err == nil {
-			t.Fatal("expected error for self-reference")
-		}
-	})
-
-	t.Run("accepts valid parent reference", func(t *testing.T) {
-		err := ValidateParent("tick-a1b2c3", "tick-d4e5f6")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-	})
-
-	t.Run("accepts empty parent", func(t *testing.T) {
-		err := ValidateParent("tick-a1b2c3", "")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-	})
-}
-
-func TestNewTask(t *testing.T) {
-	t.Run("sets default priority to 2 when not specified", func(t *testing.T) {
-		task := NewTask("tick-abc123", "Test task", -1) // -1 signals "use default"
-		if task.Priority != 2 {
-			t.Errorf("expected default priority 2, got %d", task.Priority)
-		}
-	})
-
-	t.Run("sets created and updated timestamps to current UTC time", func(t *testing.T) {
-		before := time.Now().UTC().Truncate(time.Second)
-		task := NewTask("tick-abc123", "Test task", 2)
-		after := time.Now().UTC().Add(time.Second).Truncate(time.Second)
-
-		if task.Created.Before(before) || task.Created.After(after) {
-			t.Errorf("created timestamp %v not within expected range", task.Created)
-		}
-		if task.Updated.Before(before) || task.Updated.After(after) {
-			t.Errorf("updated timestamp %v not within expected range", task.Updated)
-		}
-		if !task.Created.Equal(task.Updated) {
-			t.Error("created and updated should be equal on new task")
-		}
-	})
-
-	t.Run("has all 10 fields with correct types", func(t *testing.T) {
-		task := NewTask("tick-abc123", "Test task", 1)
-		// Verify fields exist and have correct zero/default values
-		_ = task.ID          // string
-		_ = task.Title       // string
-		_ = task.Status      // Status
-		_ = task.Priority    // int
-		_ = task.Description // string
-		_ = task.BlockedBy   // []string
-		_ = task.Parent      // string
-		_ = task.Created     // time.Time
-		_ = task.Updated     // time.Time
-		_ = task.Closed      // *time.Time
-
-		if task.ID != "tick-abc123" {
-			t.Errorf("expected ID tick-abc123, got %s", task.ID)
-		}
-		if task.Title != "Test task" {
-			t.Errorf("expected title 'Test task', got %s", task.Title)
-		}
-		if task.Status != StatusOpen {
-			t.Errorf("expected status open, got %s", task.Status)
-		}
-		if task.Description != "" {
-			t.Errorf("expected empty description, got %q", task.Description)
-		}
-		if task.BlockedBy != nil {
-			t.Errorf("expected nil blocked_by, got %v", task.BlockedBy)
-		}
-		if task.Parent != "" {
-			t.Errorf("expected empty parent, got %q", task.Parent)
-		}
-		if task.Closed != nil {
-			t.Errorf("expected nil closed, got %v", task.Closed)
-		}
-	})
-}
-
-func TestStatusConstants(t *testing.T) {
-	t.Run("defines all four status values", func(t *testing.T) {
-		statuses := []Status{StatusOpen, StatusInProgress, StatusDone, StatusCancelled}
-		expected := []string{"open", "in_progress", "done", "cancelled"}
-		for i, s := range statuses {
-			if string(s) != expected[i] {
-				t.Errorf("expected %q, got %q", expected[i], s)
-			}
-		}
-	})
-}
-
-func TestTimestampFormat(t *testing.T) {
-	t.Run("timestamps use ISO 8601 UTC format", func(t *testing.T) {
-		task := NewTask("tick-abc123", "Test task", 2)
-		formatted := FormatTimestamp(task.Created)
-		// Should match YYYY-MM-DDTHH:MM:SSZ
-		pattern := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$`)
-		if !pattern.MatchString(formatted) {
-			t.Errorf("timestamp %q does not match ISO 8601 UTC format", formatted)
-		}
-	})
-}
-
-func TestGenerateIDUniqueness(t *testing.T) {
-	t.Run("generates different IDs on successive calls", func(t *testing.T) {
-		exists := func(id string) bool { return false }
-		ids := make(map[string]bool)
-		for i := 0; i < 100; i++ {
-			id, err := GenerateID(exists)
-			if err != nil {
-				t.Fatalf("unexpected error on iteration %d: %v", i, err)
-			}
-			if ids[id] {
-				t.Fatalf("duplicate ID %q on iteration %d", id, i)
-			}
-			ids[id] = true
-		}
-	})
-}
-
-// Ensure the error message matches spec exactly
-func TestCollisionErrorMessage(t *testing.T) {
-	t.Run("collision error message matches spec", func(t *testing.T) {
-		exists := func(id string) bool { return true }
-		_, err := GenerateID(exists)
-		if err == nil {
-			t.Fatal("expected error")
 		}
 		want := "failed to generate unique ID after 5 attempts - task list may be too large"
 		if err.Error() != want {
 			t.Errorf("error = %q, want %q", err.Error(), want)
 		}
 	})
-}
 
-func TestTrimTitle(t *testing.T) {
-	t.Run("trims leading and trailing whitespace", func(t *testing.T) {
-		cases := []struct {
-			input, want string
-		}{
-			{"  hello  ", "hello"},
-			{"\thello\t", "hello"},
-			{"hello", "hello"},
-			{"  hello world  ", "hello world"},
-		}
-		for _, tc := range cases {
-			got := TrimTitle(tc.input)
-			if got != tc.want {
-				t.Errorf("TrimTitle(%q) = %q, want %q", tc.input, got, tc.want)
+	t.Run("generates unique IDs across 100 calls", func(t *testing.T) {
+		noCollisions := func(string) bool { return false }
+		seen := make(map[string]bool)
+
+		for i := 0; i < 100; i++ {
+			id, err := GenerateID(noCollisions)
+			if err != nil {
+				t.Fatalf("iteration %d: %v", i, err)
 			}
+			if seen[id] {
+				t.Fatalf("duplicate ID %q at iteration %d", id, i)
+			}
+			seen[id] = true
 		}
 	})
 }
 
-func TestValidateTitleRejectsCarriageReturn(t *testing.T) {
-	t.Run("rejects title with carriage return", func(t *testing.T) {
-		err := ValidateTitle("line1\rline2")
-		if err == nil {
-			t.Fatal("expected error for title with carriage return")
-		}
-	})
-}
+func TestNormalizeID(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"all uppercase", "TICK-A3F2B7", "tick-a3f2b7"},
+		{"mixed case", "Tick-A3F2B7", "tick-a3f2b7"},
+		{"already lowercase", "tick-a3f2b7", "tick-a3f2b7"},
+	}
 
-// Verify default priority sentinel works
-func TestNewTaskDefaultPriority(t *testing.T) {
-	t.Run("uses explicit priority when provided", func(t *testing.T) {
-		task := NewTask("tick-abc123", "Test", 0)
-		if task.Priority != 0 {
-			t.Errorf("expected priority 0, got %d", task.Priority)
-		}
-
-		task = NewTask("tick-abc123", "Test", 4)
-		if task.Priority != 4 {
-			t.Errorf("expected priority 4, got %d", task.Priority)
-		}
-	})
-}
-
-func TestValidateBlockedByCaseInsensitive(t *testing.T) {
-	t.Run("self-reference detection is case-insensitive", func(t *testing.T) {
-		err := ValidateBlockedBy("tick-a1b2c3", []string{"TICK-A1B2C3"})
-		if err == nil {
-			t.Fatal("expected error for case-insensitive self-reference")
-		}
-	})
-}
-
-func TestValidateParentCaseInsensitive(t *testing.T) {
-	t.Run("self-reference detection is case-insensitive", func(t *testing.T) {
-		err := ValidateParent("tick-a1b2c3", "TICK-A1B2C3")
-		if err == nil {
-			t.Fatal("expected error for case-insensitive self-reference")
-		}
-	})
-}
-
-// Quick sanity: FormatTimestamp produces the exact expected string
-func TestFormatTimestampExact(t *testing.T) {
-	ts := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
-	got := FormatTimestamp(ts)
-	want := "2026-01-19T10:00:00Z"
-	if got != want {
-		t.Errorf("FormatTimestamp = %q, want %q", got, want)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NormalizeID(tt.input); got != tt.want {
+				t.Errorf("NormalizeID(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
 	}
 }
 
-func init() {
-	// Suppress unused import warning — fmt is used in tests
-	_ = fmt.Sprintf
+func TestValidateTitle(t *testing.T) {
+	t.Run("valid titles", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			title string
+		}{
+			{"simple title", "Setup authentication"},
+			{"exactly 500 chars", strings.Repeat("a", 500)},
+			{"with internal spaces", "hello world"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if err := ValidateTitle(tt.title); err != nil {
+					t.Errorf("expected valid, got error: %v", err)
+				}
+			})
+		}
+	})
+
+	t.Run("invalid titles", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			title string
+		}{
+			{"empty string", ""},
+			{"whitespace only", "   "},
+			{"exceeds 500 chars", strings.Repeat("a", 501)},
+			{"contains newline", "line1\nline2"},
+			{"contains carriage return", "line1\rline2"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if err := ValidateTitle(tt.title); err == nil {
+					t.Error("expected error, got nil")
+				}
+			})
+		}
+	})
+}
+
+func TestTrimTitle(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"leading/trailing spaces", "  hello  ", "hello"},
+		{"tabs", "\thello\t", "hello"},
+		{"no whitespace", "hello", "hello"},
+		{"internal spaces preserved", "  hello world  ", "hello world"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := TrimTitle(tt.input); got != tt.want {
+				t.Errorf("TrimTitle(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidatePriority(t *testing.T) {
+	t.Run("valid priorities", func(t *testing.T) {
+		for p := 0; p <= 4; p++ {
+			if err := ValidatePriority(p); err != nil {
+				t.Errorf("priority %d: unexpected error: %v", p, err)
+			}
+		}
+	})
+
+	t.Run("invalid priorities", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			priority int
+		}{
+			{"negative", -1},
+			{"too high", 5},
+			{"way too high", 100},
+			{"way too low", -100},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if err := ValidatePriority(tt.priority); err == nil {
+					t.Errorf("priority %d: expected error, got nil", tt.priority)
+				}
+			})
+		}
+	})
+}
+
+func TestValidateBlockedBy(t *testing.T) {
+	tests := []struct {
+		name      string
+		taskID    string
+		blockedBy []string
+		wantErr   bool
+	}{
+		{"valid reference", "tick-a1b2c3", []string{"tick-d4e5f6"}, false},
+		{"self-reference", "tick-a1b2c3", []string{"tick-a1b2c3"}, true},
+		{"case-insensitive self-reference", "tick-a1b2c3", []string{"TICK-A1B2C3"}, true},
+		{"empty list", "tick-a1b2c3", []string{}, false},
+		{"self among others", "tick-a1b2c3", []string{"tick-d4e5f6", "tick-a1b2c3"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateBlockedBy(tt.taskID, tt.blockedBy)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBlockedBy() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateParent(t *testing.T) {
+	tests := []struct {
+		name     string
+		taskID   string
+		parentID string
+		wantErr  bool
+	}{
+		{"valid parent", "tick-a1b2c3", "tick-d4e5f6", false},
+		{"self-reference", "tick-a1b2c3", "tick-a1b2c3", true},
+		{"case-insensitive self-reference", "tick-a1b2c3", "TICK-A1B2C3", true},
+		{"empty parent", "tick-a1b2c3", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateParent(tt.taskID, tt.parentID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateParent() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestNewTask(t *testing.T) {
+	t.Run("default values", func(t *testing.T) {
+		task := NewTask("tick-abc123", "Test task", -1)
+
+		if task.ID != "tick-abc123" {
+			t.Errorf("ID = %q, want %q", task.ID, "tick-abc123")
+		}
+		if task.Title != "Test task" {
+			t.Errorf("Title = %q, want %q", task.Title, "Test task")
+		}
+		if task.Status != StatusOpen {
+			t.Errorf("Status = %q, want %q", task.Status, StatusOpen)
+		}
+		if task.Priority != 2 {
+			t.Errorf("Priority = %d, want 2 (default)", task.Priority)
+		}
+		if task.Description != "" {
+			t.Errorf("Description = %q, want empty", task.Description)
+		}
+		if task.BlockedBy != nil {
+			t.Errorf("BlockedBy = %v, want nil", task.BlockedBy)
+		}
+		if task.Parent != "" {
+			t.Errorf("Parent = %q, want empty", task.Parent)
+		}
+		if task.Closed != nil {
+			t.Errorf("Closed = %v, want nil", task.Closed)
+		}
+	})
+
+	t.Run("explicit priority", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			priority int
+			want     int
+		}{
+			{"priority 0", 0, 0},
+			{"priority 1", 1, 1},
+			{"priority 4", 4, 4},
+			{"negative uses default", -1, 2},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				task := NewTask("tick-abc123", "Test", tt.priority)
+				if task.Priority != tt.want {
+					t.Errorf("Priority = %d, want %d", task.Priority, tt.want)
+				}
+			})
+		}
+	})
+
+	t.Run("timestamps are current UTC", func(t *testing.T) {
+		before := time.Now().UTC().Truncate(time.Second)
+		task := NewTask("tick-abc123", "Test task", 2)
+		after := time.Now().UTC().Add(time.Second).Truncate(time.Second)
+
+		if task.Created.Before(before) || task.Created.After(after) {
+			t.Errorf("Created = %v, not within [%v, %v]", task.Created, before, after)
+		}
+		if !task.Created.Equal(task.Updated) {
+			t.Error("Created and Updated should be equal on new task")
+		}
+	})
+}
+
+func TestStatusConstants(t *testing.T) {
+	tests := []struct {
+		status Status
+		want   string
+	}{
+		{StatusOpen, "open"},
+		{StatusInProgress, "in_progress"},
+		{StatusDone, "done"},
+		{StatusCancelled, "cancelled"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			if got := string(tt.status); got != tt.want {
+				t.Errorf("status = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatTimestamp(t *testing.T) {
+	tests := []struct {
+		name string
+		time time.Time
+		want string
+	}{
+		{"specific time", time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC), "2026-01-19T10:00:00Z"},
+		{"midnight", time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), "2026-01-01T00:00:00Z"},
+		{"end of day", time.Date(2026, 12, 31, 23, 59, 59, 0, time.UTC), "2026-12-31T23:59:59Z"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FormatTimestamp(tt.time); got != tt.want {
+				t.Errorf("FormatTimestamp() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+
+	t.Run("matches ISO 8601 pattern", func(t *testing.T) {
+		pattern := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$`)
+		task := NewTask("tick-abc123", "Test", 2)
+		formatted := FormatTimestamp(task.Created)
+		if !pattern.MatchString(formatted) {
+			t.Errorf("timestamp %q does not match ISO 8601 UTC format", formatted)
+		}
+	})
 }
