@@ -6,6 +6,11 @@ specification: ../specification/migration.md
 spec_commit: d75ee0ec089a456e34c6b10585da4cf18922a0a5
 created: 2026-01-31
 updated: 2026-01-31
+external_dependencies:
+  - topic: tick-core
+    description: Migration inserts tasks into tick's data store. Cannot create tasks without the data layer, schema, and write operations.
+    state: resolved
+    task_id: tick-core-1-4
 planning:
   phase: 2
   task: 5
@@ -83,10 +88,6 @@ approved_at: 2026-01-31
 | migration-2-5 | Unknown Provider Available Listing | single provider in registry, multiple providers in registry | authored |
 
 ---
-
-## External Dependencies
-
-- tick-core: Migration inserts tasks into tick's data store. Cannot create tasks without the data layer, schema, and write operations. → tick-core-1-4 (resolved)
 
 ## Log
 

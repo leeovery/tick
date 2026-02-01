@@ -6,6 +6,7 @@ specification: ../specification/tick-core.md
 spec_commit: b74fff5d638e8cb3a13a21b7c01b83bb1821f7ce
 created: 2026-01-27
 updated: 2026-01-30
+external_dependencies: []
 planning:
   phase: 5
   task: 2
@@ -164,10 +165,6 @@ approved_at: 2026-01-30
 | tick-core-5-2 | tick rebuild command | missing cache.db, valid cache overwritten, concurrent access during rebuild, confirmation output   | authored |
 
 ---
-
-## External Dependencies
-
-None. This is the foundational data layer that other specifications depend on.
 
 ### External Libraries
 
