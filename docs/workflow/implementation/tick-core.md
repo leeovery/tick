@@ -3,11 +3,12 @@ topic: tick-core
 plan: ../planning/tick-core.md
 format: local-markdown
 status: in-progress
-current_phase: 3
+current_phase: 4
 current_task: ~
 completed_phases:
   - 1
   - 2
+  - 3
 completed_tasks:
   - tick-core-1-1
   - tick-core-1-2
@@ -19,6 +20,11 @@ completed_tasks:
   - tick-core-2-1
   - tick-core-2-2
   - tick-core-2-3
+  - tick-core-3-1
+  - tick-core-3-2
+  - tick-core-3-3
+  - tick-core-3-4
+  - tick-core-3-5
 started: 2026-02-01
 updated: 2026-02-01
 completed: ~
@@ -42,4 +48,12 @@ All tasks completed.
 - Task 2.2: tick start, done, cancel, reopen commands - done
 - Task 2.3: tick update command - done
 
-## Phase 3: Hierarchy & Dependencies (next)
+## Phase 3: Hierarchy & Dependencies
+All tasks completed.
+- Task 3.1: Cycle detection & child-blocked-by-parent validation - done
+- Task 3.2: tick dep add & tick dep rm commands - done
+- Task 3.3: Ready query & tick ready command - done
+- Task 3.4: Blocked query, tick blocked & cancel-unblocks - done
+- Task 3.5: tick list filter flags - done
+
+## Phase 4: Output Formats (next)
