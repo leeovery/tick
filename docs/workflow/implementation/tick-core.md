@@ -3,10 +3,11 @@ topic: tick-core
 plan: ../planning/tick-core.md
 format: local-markdown
 status: in-progress
-current_phase: 2
+current_phase: 3
 current_task: ~
 completed_phases:
   - 1
+  - 2
 completed_tasks:
   - tick-core-1-1
   - tick-core-1-2
@@ -15,6 +16,9 @@ completed_tasks:
   - tick-core-1-5
   - tick-core-1-6
   - tick-core-1-7
+  - tick-core-2-1
+  - tick-core-2-2
+  - tick-core-2-3
 started: 2026-02-01
 updated: 2026-02-01
 completed: ~
@@ -32,4 +36,10 @@ All tasks completed.
 - Task 1.6: tick create command - done
 - Task 1.7: tick list & tick show commands - done
 
-## Phase 2: Task Lifecycle (next)
+## Phase 2: Task Lifecycle
+All tasks completed.
+- Task 2.1: Status transition validation logic - done
+- Task 2.2: tick start, done, cancel, reopen commands - done
+- Task 2.3: tick update command - done
+
+## Phase 3: Hierarchy & Dependencies (next)
