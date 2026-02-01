@@ -3,73 +3,109 @@ package cli
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
 )
 
+var validStatuses = map[string]bool{
+	"open": true, "in_progress": true, "done": true, "cancelled": true,
+}
+
 func (a *App) cmdList(workDir string, args []string) error {
-	tickDir, err := FindTickDir(workDir)
-	if err != nil {
-		return err
-	}
+	// Parse list filter flags.
+	var (
+		filterReady    bool
+		filterBlocked  bool
+		filterStatus   string
+		filterPriority = -1 // sentinel: no filter
+	)
 
-	store, err := storage.NewStore(tickDir)
-	if err != nil {
-		return fmt.Errorf("opening store: %w", err)
-	}
-	defer store.Close()
-
-	type taskRow struct {
-		ID       string
-		Title    string
-		Status   string
-		Priority int
-	}
-
-	var tasks []taskRow
-
-	err = store.Query(func(db *sql.DB) error {
-		rows, err := db.Query("SELECT id, title, status, priority FROM tasks ORDER BY priority ASC, created ASC")
-		if err != nil {
-			return fmt.Errorf("querying tasks: %w", err)
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var t taskRow
-			if err := rows.Scan(&t.ID, &t.Title, &t.Status, &t.Priority); err != nil {
-				return fmt.Errorf("scanning task: %w", err)
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--ready":
+			filterReady = true
+		case "--blocked":
+			filterBlocked = true
+		case "--status":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--status requires a value")
 			}
-			tasks = append(tasks, t)
+			i++
+			filterStatus = args[i]
+			if !validStatuses[filterStatus] {
+				return fmt.Errorf("invalid status '%s'. Valid: open, in_progress, done, cancelled", filterStatus)
+			}
+		case "--priority":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--priority requires a value")
+			}
+			i++
+			p, err := strconv.Atoi(args[i])
+			if err != nil {
+				return fmt.Errorf("invalid priority value: %s", args[i])
+			}
+			if err := task.ValidatePriority(p); err != nil {
+				return err
+			}
+			filterPriority = p
 		}
-		return rows.Err()
-	})
-	if err != nil {
-		return err
 	}
 
-	if len(tasks) == 0 {
-		fmt.Fprintln(a.stdout, "No tasks found.")
-		return nil
+	if filterReady && filterBlocked {
+		return fmt.Errorf("--ready and --blocked are mutually exclusive")
 	}
 
-	if a.opts.Quiet {
-		for _, t := range tasks {
-			fmt.Fprintln(a.stdout, t.ID)
+	// Build query based on filters.
+	var query string
+	switch {
+	case filterReady:
+		query = readyQuery
+	case filterBlocked:
+		query = blockedQuery
+	default:
+		query = "SELECT t.id, t.title, t.status, t.priority FROM tasks t"
+	}
+
+	// Apply additional filters.
+	query = a.applyListFilters(query, filterStatus, filterPriority, filterReady || filterBlocked)
+
+	return a.cmdListFiltered(workDir, query)
+}
+
+// applyListFilters adds WHERE/AND clauses for --status and --priority to a query.
+func (a *App) applyListFilters(baseQuery string, status string, priority int, hasBaseFilter bool) string {
+	var conditions []string
+
+	if status != "" {
+		conditions = append(conditions, fmt.Sprintf("t.status = '%s'", status))
+	}
+	if priority >= 0 {
+		conditions = append(conditions, fmt.Sprintf("t.priority = %d", priority))
+	}
+
+	if len(conditions) == 0 {
+		if !hasBaseFilter {
+			return baseQuery + " ORDER BY t.priority ASC, t.created ASC"
 		}
-		return nil
+		return baseQuery
 	}
 
-	// Aligned column output
-	fmt.Fprintf(a.stdout, "%-12s %-12s %-4s %s\n", "ID", "STATUS", "PRI", "TITLE")
-	for _, t := range tasks {
-		fmt.Fprintf(a.stdout, "%-12s %-12s %-4d %s\n", t.ID, t.Status, t.Priority, t.Title)
+	extra := strings.Join(conditions, " AND ")
+
+	if hasBaseFilter {
+		// Ready/blocked queries already have WHERE. Insert additional conditions before ORDER BY.
+		// The queries end with ORDER BY clause. Insert AND before it.
+		orderIdx := strings.LastIndex(baseQuery, "ORDER BY")
+		if orderIdx > 0 {
+			return baseQuery[:orderIdx] + "AND " + extra + "\n" + baseQuery[orderIdx:]
+		}
+		return baseQuery + " AND " + extra
 	}
 
-	_ = args
-	return nil
+	return baseQuery + " WHERE " + extra + " ORDER BY t.priority ASC, t.created ASC"
 }
 
 func (a *App) cmdShow(workDir string, args []string) error {
