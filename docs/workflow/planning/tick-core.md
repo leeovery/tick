@@ -44,12 +44,12 @@ approved_at: 2026-01-30
 **Why this order**: Foundation. Every subsequent phase builds on this data layer and command infrastructure. Must validate architecture first.
 
 **Acceptance**:
-- [ ] `tick init` creates .tick/ directory with empty tasks.jsonl
-- [ ] `tick create` writes to JSONL, rebuilds SQLite, returns task details
-- [ ] `tick list` shows all tasks (basic output, no filters)
-- [ ] `tick show <id>` displays full task details
-- [ ] Deleting cache.db and running any read rebuilds it automatically
-- [ ] Concurrent access protected by file locking
+- [x] `tick init` creates .tick/ directory with empty tasks.jsonl
+- [x] `tick create` writes to JSONL, rebuilds SQLite, returns task details
+- [x] `tick list` shows all tasks (basic output, no filters)
+- [x] `tick show <id>` displays full task details
+- [x] Deleting cache.db and running any read rebuilds it automatically
+- [x] Concurrent access protected by file locking
 
 #### Tasks
 | ID            | Name                                  | Edge Cases                                                            | Status   |
@@ -72,13 +72,13 @@ approved_at: 2026-01-30
 **Why this order**: Tasks exist from Phase 1 but can't change state. This makes tick usable for actual work tracking.
 
 **Acceptance**:
-- [ ] `tick start` transitions open → in_progress
-- [ ] `tick done` transitions open/in_progress → done (sets closed timestamp)
-- [ ] `tick cancel` transitions open/in_progress → cancelled (sets closed timestamp)
-- [ ] `tick reopen` transitions done/cancelled → open (clears closed timestamp)
-- [ ] Invalid transitions return errors (e.g., start on a done task)
-- [ ] `tick update` modifies title, description, priority
-- [ ] `updated` timestamp refreshed on every mutation
+- [x] `tick start` transitions open → in_progress
+- [x] `tick done` transitions open/in_progress → done (sets closed timestamp)
+- [x] `tick cancel` transitions open/in_progress → cancelled (sets closed timestamp)
+- [x] `tick reopen` transitions done/cancelled → open (clears closed timestamp)
+- [x] Invalid transitions return errors (e.g., start on a done task)
+- [x] `tick update` modifies title, description, priority
+- [x] `updated` timestamp refreshed on every mutation
 
 #### Tasks
 | ID            | Name                                      | Edge Cases                                                                                                                                                                                                                      | Status  |
@@ -97,15 +97,15 @@ approved_at: 2026-01-30
 **Why this order**: Requires working tasks with status transitions (Phase 2). This is the core value — answering "what should I work on next?"
 
 **Acceptance**:
-- [ ] `tick create --parent <id>` sets organizational hierarchy
-- [ ] `tick create --blocked-by <ids>` sets dependencies
-- [ ] `tick dep add/rm` manages dependencies after creation
-- [ ] Cycle detection rejects circular dependencies at write time
-- [ ] Child-blocked-by-parent rejected at write time
-- [ ] `tick ready` returns only tasks that are open, unblocked, and have no open children
-- [ ] `tick blocked` returns open tasks that are not ready
-- [ ] `tick list` supports --ready, --blocked, --status, --priority filters
-- [ ] Cancelled tasks unblock their dependents
+- [x] `tick create --parent <id>` sets organizational hierarchy
+- [x] `tick create --blocked-by <ids>` sets dependencies
+- [x] `tick dep add/rm` manages dependencies after creation
+- [x] Cycle detection rejects circular dependencies at write time
+- [x] Child-blocked-by-parent rejected at write time
+- [x] `tick ready` returns only tasks that are open, unblocked, and have no open children
+- [x] `tick blocked` returns open tasks that are not ready
+- [x] `tick list` supports --ready, --blocked, --status, --priority filters
+- [x] Cancelled tasks unblock their dependents
 
 #### Tasks
 | ID            | Name                                                              | Edge Cases                                                                                                                                                                                         | Status  |
