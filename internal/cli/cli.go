@@ -52,6 +52,10 @@ func (a *App) Run(args []string, workDir string) int {
 		err = a.cmdInit(workDir)
 	case "create":
 		err = a.cmdCreate(workDir, cmdArgs)
+	case "list":
+		err = a.cmdList(workDir, cmdArgs)
+	case "show":
+		err = a.cmdShow(workDir, cmdArgs)
 	default:
 		fmt.Fprintf(a.stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1

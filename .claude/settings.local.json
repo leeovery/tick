@@ -11,7 +11,10 @@
       "Bash(.claude/scripts/discovery-for-specification.sh)",
       "Bash(git commit:*)",
       "Bash(ls:*)",
-      "Bash(git -C /Users/leeovery/Code/tick rev-parse:*)"
+      "Bash(git -C /Users/leeovery/Code/tick rev-parse:*)",
+      "Bash(go test:*)",
+      "Bash(go fmt:*)",
+      "Bash(go get:*)"
     ]
   }
 }
