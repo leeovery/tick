@@ -168,6 +168,49 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	return nil
 }
 
+// ForceRebuild deletes the existing cache and rebuilds from JSONL,
+// bypassing the freshness check. Acquires exclusive lock.
+// Returns the number of tasks rebuilt.
+func (s *Store) ForceRebuild() (int, error) {
+	fl, err := s.acquireExclusiveLock()
+	if err != nil {
+		return 0, err
+	}
+	defer fl.Unlock()
+
+	// Delete existing cache.
+	s.logf("deleting existing cache")
+	if err := s.cache.Close(); err != nil {
+		return 0, fmt.Errorf("closing cache: %w", err)
+	}
+	os.Remove(s.cachePath)
+
+	// Reopen cache (creates fresh).
+	cache, err := NewCacheWithRecovery(s.cachePath)
+	if err != nil {
+		return 0, fmt.Errorf("reopening cache: %w", err)
+	}
+	s.cache = cache
+
+	// Read JSONL.
+	content, err := os.ReadFile(s.jsonlPath)
+	if err != nil {
+		return 0, fmt.Errorf("reading tasks.jsonl: %w", err)
+	}
+
+	tasks, err := ReadJSONLBytes(content)
+	if err != nil {
+		return 0, fmt.Errorf("parsing tasks.jsonl: %w", err)
+	}
+
+	s.logf("rebuilding cache (%d tasks)", len(tasks))
+	if err := s.cache.Rebuild(tasks, content); err != nil {
+		return 0, fmt.Errorf("rebuilding cache: %w", err)
+	}
+
+	return len(tasks), nil
+}
+
 // Query executes a read operation with shared locking.
 // The query function receives the SQLite database connection.
 func (s *Store) Query(fn func(db *sql.DB) error) error {

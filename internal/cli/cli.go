@@ -95,6 +95,8 @@ func (a *App) Run(args []string, workDir string) int {
 		err = a.cmdBlocked(workDir, cmdArgs)
 	case "stats":
 		err = a.cmdStats(workDir)
+	case "rebuild":
+		err = a.cmdRebuild(workDir)
 	default:
 		fmt.Fprintf(a.stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
