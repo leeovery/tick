@@ -750,3 +750,184 @@ func TestTransition(t *testing.T) {
 		}
 	})
 }
+
+func TestValidateDependency(t *testing.T) {
+	t.Run("it allows valid dependency between unrelated tasks", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: nil},
+			{ID: "tick-bbb", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-aaa", "tick-bbb")
+		if err != nil {
+			t.Errorf("ValidateDependency() returned error: %v", err)
+		}
+	})
+
+	t.Run("it rejects direct self-reference", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-aaa", "tick-aaa")
+		if err == nil {
+			t.Fatal("ValidateDependency() expected error for self-reference, got nil")
+		}
+		wantContains := "creates cycle"
+		if !strings.Contains(err.Error(), wantContains) {
+			t.Errorf("error = %q, want to contain %q", err.Error(), wantContains)
+		}
+	})
+
+	t.Run("it rejects 2-node cycle with path", func(t *testing.T) {
+		// tick-aaa is already blocked by tick-bbb.
+		// Adding tick-bbb blocked by tick-aaa would create: tick-bbb -> tick-aaa -> tick-bbb
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: []string{"tick-bbb"}},
+			{ID: "tick-bbb", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-bbb", "tick-aaa")
+		if err == nil {
+			t.Fatal("ValidateDependency() expected error for 2-node cycle, got nil")
+		}
+		want := "Cannot add dependency - creates cycle: tick-bbb \u2192 tick-aaa \u2192 tick-bbb"
+		if err.Error() != want {
+			t.Errorf("error = %q, want %q", err.Error(), want)
+		}
+	})
+
+	t.Run("it rejects 3+ node cycle with full path", func(t *testing.T) {
+		// tick-aaa blocked by tick-bbb, tick-bbb blocked by tick-ccc.
+		// Adding tick-ccc blocked by tick-aaa would create: tick-ccc -> tick-aaa -> tick-bbb -> tick-ccc
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: []string{"tick-bbb"}},
+			{ID: "tick-bbb", BlockedBy: []string{"tick-ccc"}},
+			{ID: "tick-ccc", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-ccc", "tick-aaa")
+		if err == nil {
+			t.Fatal("ValidateDependency() expected error for 3+ node cycle, got nil")
+		}
+		want := "Cannot add dependency - creates cycle: tick-ccc \u2192 tick-aaa \u2192 tick-bbb \u2192 tick-ccc"
+		if err.Error() != want {
+			t.Errorf("error = %q, want %q", err.Error(), want)
+		}
+	})
+
+	t.Run("it rejects child blocked by own parent", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-parent", BlockedBy: nil},
+			{ID: "tick-child", Parent: "tick-parent", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-child", "tick-parent")
+		if err == nil {
+			t.Fatal("ValidateDependency() expected error for child-blocked-by-parent, got nil")
+		}
+		want := "Cannot add dependency - tick-child cannot be blocked by its parent tick-parent"
+		if err.Error() != want {
+			t.Errorf("error = %q, want %q", err.Error(), want)
+		}
+	})
+
+	t.Run("it allows parent blocked by own child", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-parent", BlockedBy: nil},
+			{ID: "tick-child", Parent: "tick-parent", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-parent", "tick-child")
+		if err != nil {
+			t.Errorf("ValidateDependency() returned error: %v", err)
+		}
+	})
+
+	t.Run("it allows sibling dependencies", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-parent", BlockedBy: nil},
+			{ID: "tick-sib1", Parent: "tick-parent", BlockedBy: nil},
+			{ID: "tick-sib2", Parent: "tick-parent", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-sib2", "tick-sib1")
+		if err != nil {
+			t.Errorf("ValidateDependency() returned error: %v", err)
+		}
+	})
+
+	t.Run("it allows cross-hierarchy dependencies", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-epic1", BlockedBy: nil},
+			{ID: "tick-child1", Parent: "tick-epic1", BlockedBy: nil},
+			{ID: "tick-epic2", BlockedBy: nil},
+			{ID: "tick-child2", Parent: "tick-epic2", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-child2", "tick-child1")
+		if err != nil {
+			t.Errorf("ValidateDependency() returned error: %v", err)
+		}
+	})
+
+	t.Run("it returns cycle path format: tick-a -> tick-b -> tick-a", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-a", BlockedBy: []string{"tick-b"}},
+			{ID: "tick-b", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-b", "tick-a")
+		if err == nil {
+			t.Fatal("ValidateDependency() expected error, got nil")
+		}
+		want := "Cannot add dependency - creates cycle: tick-b \u2192 tick-a \u2192 tick-b"
+		if err.Error() != want {
+			t.Errorf("error = %q, want %q", err.Error(), want)
+		}
+	})
+
+	t.Run("it detects cycle through existing multi-hop chain", func(t *testing.T) {
+		// Chain: tick-a -> tick-b -> tick-c -> tick-d (existing)
+		// Adding: tick-d blocked by tick-a would create cycle: tick-d -> tick-a -> tick-b -> tick-c -> tick-d
+		tasks := []Task{
+			{ID: "tick-a", BlockedBy: []string{"tick-b"}},
+			{ID: "tick-b", BlockedBy: []string{"tick-c"}},
+			{ID: "tick-c", BlockedBy: []string{"tick-d"}},
+			{ID: "tick-d", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "tick-d", "tick-a")
+		if err == nil {
+			t.Fatal("ValidateDependency() expected error for multi-hop cycle, got nil")
+		}
+		want := "Cannot add dependency - creates cycle: tick-d \u2192 tick-a \u2192 tick-b \u2192 tick-c \u2192 tick-d"
+		if err.Error() != want {
+			t.Errorf("error = %q, want %q", err.Error(), want)
+		}
+	})
+}
+
+func TestValidateDependencies(t *testing.T) {
+	t.Run("it validates multiple blocked_by IDs, fails on first error", func(t *testing.T) {
+		// tick-aaa blocked by tick-bbb exists.
+		// Batch: add tick-bbb blocked by [tick-ccc, tick-aaa]
+		// tick-ccc is valid, tick-aaa would create 2-node cycle.
+		// Should fail on tick-aaa (second in list).
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: []string{"tick-bbb"}},
+			{ID: "tick-bbb", BlockedBy: nil},
+			{ID: "tick-ccc", BlockedBy: nil},
+		}
+
+		err := ValidateDependencies(tasks, "tick-bbb", []string{"tick-ccc", "tick-aaa"})
+		if err == nil {
+			t.Fatal("ValidateDependencies() expected error, got nil")
+		}
+		// Should fail on tick-aaa creating cycle
+		wantContains := "creates cycle"
+		if !strings.Contains(err.Error(), wantContains) {
+			t.Errorf("error = %q, want to contain %q", err.Error(), wantContains)
+		}
+	})
+}

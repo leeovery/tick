@@ -192,6 +192,111 @@ func NewTask(title string, opts *TaskOptions, existsFn func(id string) bool) (*T
 	}, nil
 }
 
+// ValidateDependency checks that adding newBlockedByID as a blocker for taskID
+// does not create a cycle or violate the child-blocked-by-parent rule.
+// It takes the full set of tasks to traverse the dependency graph.
+// This is a pure validation function with no I/O.
+func ValidateDependency(tasks []Task, taskID, newBlockedByID string) error {
+	normalizedTaskID := NormalizeID(taskID)
+	normalizedBlockedByID := NormalizeID(newBlockedByID)
+
+	// Self-reference is a trivial cycle
+	if normalizedTaskID == normalizedBlockedByID {
+		return fmt.Errorf("Cannot add dependency - creates cycle: %s \u2192 %s", taskID, taskID)
+	}
+
+	// Build lookup map: id -> Task
+	taskMap := make(map[string]Task, len(tasks))
+	for _, t := range tasks {
+		taskMap[NormalizeID(t.ID)] = t
+	}
+
+	// Child-blocked-by-parent check
+	if task, ok := taskMap[normalizedTaskID]; ok {
+		if NormalizeID(task.Parent) == normalizedBlockedByID {
+			return fmt.Errorf("Cannot add dependency - %s cannot be blocked by its parent %s", taskID, newBlockedByID)
+		}
+	}
+
+	// Cycle detection: DFS from newBlockedByID following blocked_by edges
+	// to see if we can reach taskID. If so, adding the edge taskID -> newBlockedByID creates a cycle.
+	// We also track the path to reconstruct the full cycle.
+	path, hasCycle := detectCycle(taskMap, normalizedTaskID, normalizedBlockedByID)
+	if hasCycle {
+		// Build path string: taskID -> newBlockedByID -> ... -> taskID
+		parts := make([]string, 0, len(path)+1)
+		parts = append(parts, taskID)
+		for _, id := range path {
+			// Use original-cased ID from the task map
+			if t, ok := taskMap[id]; ok {
+				parts = append(parts, t.ID)
+			} else {
+				parts = append(parts, id)
+			}
+		}
+		parts = append(parts, taskID)
+		return fmt.Errorf("Cannot add dependency - creates cycle: %s", strings.Join(parts, " \u2192 "))
+	}
+
+	return nil
+}
+
+// detectCycle performs a DFS from startID following blocked_by edges
+// to determine if targetID is reachable. If so, it returns the path from
+// startID to targetID (inclusive of startID, exclusive of targetID) and true.
+func detectCycle(taskMap map[string]Task, targetID, startID string) ([]string, bool) {
+	type frame struct {
+		id   string
+		path []string
+	}
+
+	visited := make(map[string]bool)
+	stack := []frame{{id: startID, path: []string{startID}}}
+
+	for len(stack) > 0 {
+		// Pop
+		current := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		if visited[current.id] {
+			continue
+		}
+		visited[current.id] = true
+
+		task, ok := taskMap[current.id]
+		if !ok {
+			continue
+		}
+
+		for _, dep := range task.BlockedBy {
+			normalizedDep := NormalizeID(dep)
+			if normalizedDep == targetID {
+				// Found target - return the path
+				return current.path, true
+			}
+			if !visited[normalizedDep] {
+				newPath := make([]string, len(current.path)+1)
+				copy(newPath, current.path)
+				newPath[len(current.path)] = normalizedDep
+				stack = append(stack, frame{id: normalizedDep, path: newPath})
+			}
+		}
+	}
+
+	return nil, false
+}
+
+// ValidateDependencies validates multiple blocked_by IDs sequentially,
+// failing on the first error. This is a pure validation function with no I/O.
+func ValidateDependencies(tasks []Task, taskID string, blockedByIDs []string) error {
+	for _, blockedByID := range blockedByIDs {
+		if err := ValidateDependency(tasks, taskID, blockedByID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // optString extracts the description from TaskOptions, returning empty string if opts is nil.
 func optString(opts *TaskOptions) string {
 	if opts == nil {
