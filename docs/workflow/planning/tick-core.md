@@ -1,6 +1,6 @@
 ---
 topic: tick-core
-status: concluded
+status: planning
 format: local-markdown
 specification: ../specification/tick-core.md
 spec_commit: b74fff5d638e8cb3a13a21b7c01b83bb1821f7ce
