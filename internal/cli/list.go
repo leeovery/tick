@@ -21,24 +21,51 @@ WHERE status = 'open'
   )
 ORDER BY priority ASC, created ASC`
 
+// BlockedSQL is the SQL query for blocked tasks: open tasks that are NOT ready.
+// A task is blocked if it is open AND has unclosed blockers OR has open children.
+// This is the inverse of ReadySQL — reuses the same subqueries.
+const BlockedSQL = `SELECT id, status, priority, title FROM tasks
+WHERE status = 'open'
+  AND (
+    id IN (
+      SELECT d.task_id FROM dependencies d
+      JOIN tasks t ON d.blocked_by = t.id
+      WHERE t.status NOT IN ('done', 'cancelled')
+    )
+    OR id IN (
+      SELECT parent FROM tasks WHERE parent IS NOT NULL AND status IN ('open', 'in_progress')
+    )
+  )
+ORDER BY priority ASC, created ASC`
+
 // listAllSQL is the default list query: all tasks ordered by priority and created.
 const listAllSQL = `SELECT id, status, priority, title FROM tasks ORDER BY priority ASC, created ASC`
 
-// parseListFlags parses list-specific flags from args and returns whether --ready is set.
-func parseListFlags(args []string) (ready bool) {
+// listFlags holds parsed list-specific flags.
+type listFlags struct {
+	ready   bool
+	blocked bool
+}
+
+// parseListFlags parses list-specific flags from args.
+func parseListFlags(args []string) listFlags {
+	var flags listFlags
 	for _, arg := range args {
-		if arg == "--ready" {
-			ready = true
+		switch arg {
+		case "--ready":
+			flags.ready = true
+		case "--blocked":
+			flags.blocked = true
 		}
 	}
-	return
+	return flags
 }
 
 // runList implements the `tick list` command.
 // It queries tasks ordered by priority ASC then created ASC and displays them in aligned columns.
 // When --ready is set (or invoked via `tick ready`), it filters to ready tasks only.
 func (a *App) runList(args []string) error {
-	ready := parseListFlags(args)
+	flags := parseListFlags(args)
 
 	tickDir, err := DiscoverTickDir(a.workDir)
 	if err != nil {
@@ -59,8 +86,10 @@ func (a *App) runList(args []string) error {
 	}
 
 	querySQL := listAllSQL
-	if ready {
+	if flags.ready {
 		querySQL = ReadySQL
+	} else if flags.blocked {
+		querySQL = BlockedSQL
 	}
 
 	var rows []listRow

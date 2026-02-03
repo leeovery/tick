@@ -82,6 +82,8 @@ func (a *App) Run(args []string) error {
 		return a.runList(cmdArgs)
 	case "ready":
 		return a.runList([]string{"--ready"})
+	case "blocked":
+		return a.runList([]string{"--blocked"})
 	case "show":
 		return a.runShow(cmdArgs)
 	case "start", "done", "cancel", "reopen":
