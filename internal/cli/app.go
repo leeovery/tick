@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -75,6 +76,8 @@ func (a *App) Run(args []string) error {
 		return a.runInit()
 	case "create":
 		return a.runCreate(cmdArgs)
+	case "update":
+		return a.runUpdate(cmdArgs)
 	case "list":
 		return a.runList()
 	case "show":
@@ -130,6 +133,17 @@ Global flags:
 `
 	fmt.Fprint(a.stdout, usage)
 	return nil
+}
+
+// unwrapMutationError extracts the inner error from store.Mutate's wrapping.
+// store.Mutate wraps callback errors with "mutation failed: <inner>", and this
+// function returns the inner error for cleaner user-facing messages.
+// If the error has no wrapped inner error, it is returned as-is.
+func unwrapMutationError(err error) error {
+	if inner := errors.Unwrap(err); inner != nil {
+		return inner
+	}
+	return err
 }
 
 // detectTTY checks whether stdout is a terminal.

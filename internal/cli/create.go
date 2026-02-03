@@ -197,8 +197,18 @@ func (a *App) runCreate(args []string) error {
 				normalizedID := task.NormalizeID(modified[i].ID)
 				for _, blocksID := range flags.blocks {
 					if normalizedID == blocksID {
-						modified[i].BlockedBy = append(modified[i].BlockedBy, newTask.ID)
-						modified[i].Updated = now
+						// Skip if new task ID already present in target's blocked_by
+						alreadyPresent := false
+						for _, existingID := range modified[i].BlockedBy {
+							if task.NormalizeID(existingID) == task.NormalizeID(newTask.ID) {
+								alreadyPresent = true
+								break
+							}
+						}
+						if !alreadyPresent {
+							modified[i].BlockedBy = append(modified[i].BlockedBy, newTask.ID)
+							modified[i].Updated = now
+						}
 						break
 					}
 				}
@@ -208,7 +218,7 @@ func (a *App) runCreate(args []string) error {
 		return modified, nil
 	})
 	if err != nil {
-		return err
+		return unwrapMutationError(err)
 	}
 
 	// Output

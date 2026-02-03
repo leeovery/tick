@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
@@ -56,12 +55,7 @@ func (a *App) runTransition(command string, args []string) error {
 		return tasks, nil
 	})
 	if err != nil {
-		// Unwrap "mutation failed: " prefix from store.Mutate
-		errMsg := err.Error()
-		if strings.HasPrefix(errMsg, "mutation failed: ") {
-			return fmt.Errorf("%s", strings.TrimPrefix(errMsg, "mutation failed: "))
-		}
-		return err
+		return unwrapMutationError(err)
 	}
 
 	// Output

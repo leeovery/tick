@@ -443,6 +443,10 @@ func TestCreateCommand(t *testing.T) {
 		if !strings.Contains(err.Error(), "tick-nonexist") {
 			t.Errorf("error = %q, want it to contain 'tick-nonexist'", err.Error())
 		}
+		// Error should not expose internal "mutation failed:" prefix
+		if strings.Contains(err.Error(), "mutation failed:") {
+			t.Errorf("error = %q, should not contain internal 'mutation failed:' prefix", err.Error())
+		}
 
 		// Verify no task was created
 		tasks := readTasksJSONL(t, dir)
@@ -618,6 +622,40 @@ func TestCreateCommand(t *testing.T) {
 		tasks := readTasksJSONL(t, dir)
 		if tasks[0]["title"] != "Trimmed title" {
 			t.Errorf("title = %q, want %q", tasks[0]["title"], "Trimmed title")
+		}
+	})
+
+	t.Run("it silently skips duplicate when --blocks target already has source in blocked_by", func(t *testing.T) {
+		// tick-aaa111 already blocks tick-bbb222. Creating a new task with --blocks tick-bbb222
+		// that also has tick-aaa111 in its own blocked_by would be a different scenario.
+		// Here we test: target tick-bbb222 already has tick-existing in blocked_by, and we create
+		// a new task with --blocks tick-bbb222. Since it's a NEW task, the new ID won't already
+		// be in blocked_by. So the real duplicate scenario for create is: using --blocks on a target
+		// that already lists the newly created task. That can't happen since the ID is new.
+		// However, we should still verify the dedup logic works if somehow the same ID appears twice
+		// in the --blocks list (edge case).
+		content := `{"id":"tick-bbb222","title":"Target task","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+`
+		dir := setupTickDirWithContent(t, content)
+
+		app := NewApp()
+		app.workDir = dir
+		var stdout strings.Builder
+		app.stdout = &stdout
+
+		// Use --blocks with duplicate target IDs in comma list
+		err := app.Run([]string{"tick", "create", "Blocker", "--blocks", "tick-bbb222,tick-bbb222"})
+		if err != nil {
+			t.Fatalf("create returned error: %v", err)
+		}
+
+		target := readTaskByID(t, dir, "tick-bbb222")
+		blockedBy, ok := target["blocked_by"].([]interface{})
+		if !ok {
+			t.Fatalf("target blocked_by is not an array: %T", target["blocked_by"])
+		}
+		if len(blockedBy) != 1 {
+			t.Errorf("blocked_by has %d items, want 1 (no duplicate from repeated --blocks target)", len(blockedBy))
 		}
 	})
 }
