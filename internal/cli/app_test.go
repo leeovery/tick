@@ -145,7 +145,7 @@ func TestTTYDetection(t *testing.T) {
 	t.Run("it detects TTY vs non-TTY on stdout", func(t *testing.T) {
 		// In tests, stdout is never a TTY (it's a pipe).
 		// So detectTTY should return false.
-		isTTY := detectTTY()
+		isTTY := DetectTTY()
 
 		// We can only verify the non-TTY case in tests since we're piped
 		if isTTY {

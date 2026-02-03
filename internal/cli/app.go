@@ -28,10 +28,11 @@ type Config struct {
 
 // App is the CLI application.
 type App struct {
-	config  Config
-	workDir string
-	stdout  io.Writer
-	stderr  io.Writer
+	config    Config
+	FormatCfg FormatConfig
+	workDir   string
+	stdout    io.Writer
+	stderr    io.Writer
 }
 
 // NewApp creates a new App with default settings.
@@ -45,19 +46,10 @@ func NewApp() *App {
 // Run parses args and dispatches the subcommand.
 // args[0] is the program name (e.g., "tick").
 func (a *App) Run(args []string) error {
-	// Parse global flags and extract subcommand + remaining args
+	// Parse global flags (including format resolution via ResolveFormat)
 	subcmd, cmdArgs, err := a.parseGlobalFlags(args[1:])
 	if err != nil {
 		return err
-	}
-
-	// Apply TTY detection for default output format (only if no format flag was set)
-	if a.config.OutputFormat == "" {
-		if detectTTY() {
-			a.config.OutputFormat = FormatPretty
-		} else {
-			a.config.OutputFormat = FormatTOON
-		}
 	}
 
 	// Resolve working directory
@@ -67,6 +59,9 @@ func (a *App) Run(args []string) error {
 			return fmt.Errorf("failed to determine working directory: %w", err)
 		}
 	}
+
+	// Resolve FormatConfig and store on App for handlers to use
+	a.FormatCfg = a.formatConfig()
 
 	// Dispatch subcommand
 	switch subcmd {
@@ -97,7 +92,10 @@ func (a *App) Run(args []string) error {
 
 // parseGlobalFlags parses global flags from args and returns the subcommand name
 // and remaining arguments after the subcommand.
+// Format flags are tracked individually so ResolveFormat can detect conflicts.
 func (a *App) parseGlobalFlags(args []string) (string, []string, error) {
+	var toonFlag, prettyFlag, jsonFlag bool
+
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
@@ -107,16 +105,29 @@ func (a *App) parseGlobalFlags(args []string) (string, []string, error) {
 		case "--verbose", "-v":
 			a.config.Verbose = true
 		case "--toon":
-			a.config.OutputFormat = FormatTOON
+			toonFlag = true
 		case "--pretty":
-			a.config.OutputFormat = FormatPretty
+			prettyFlag = true
 		case "--json":
-			a.config.OutputFormat = FormatJSON
+			jsonFlag = true
 		default:
 			// First non-flag argument is the subcommand; rest are command args
+			// Resolve format before returning so conflicts are detected early
+			format, err := ResolveFormat(toonFlag, prettyFlag, jsonFlag, DetectTTY())
+			if err != nil {
+				return "", nil, err
+			}
+			a.config.OutputFormat = format
 			return arg, args[i+1:], nil
 		}
 	}
+
+	// No subcommand found; still resolve format
+	format, err := ResolveFormat(toonFlag, prettyFlag, jsonFlag, DetectTTY())
+	if err != nil {
+		return "", nil, err
+	}
+	a.config.OutputFormat = format
 	return "", nil, nil
 }
 
@@ -152,11 +163,21 @@ func unwrapMutationError(err error) error {
 	return err
 }
 
-// detectTTY checks whether stdout is a terminal.
-func detectTTY() bool {
-	fi, err := os.Stdout.Stat()
-	if err != nil {
-		return false
+// formatConfig returns the FormatConfig derived from the App's parsed config.
+// This is the entry point for passing output configuration to command handlers.
+func (a *App) formatConfig() FormatConfig {
+	return FormatConfig{
+		Format:  a.config.OutputFormat,
+		Quiet:   a.config.Quiet,
+		Verbose: a.config.Verbose,
 	}
-	return fi.Mode()&os.ModeCharDevice != 0
+}
+
+// logVerbose writes a message to stderr only when verbose mode is enabled.
+// Verbose output always goes to stderr so it never contaminates stdout.
+func (a *App) logVerbose(msg string) {
+	if !a.config.Verbose {
+		return
+	}
+	fmt.Fprintln(a.stderr, msg)
 }
