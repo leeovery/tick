@@ -16,7 +16,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-aaa111"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-aaa111"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}
@@ -55,7 +55,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-bbb222"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-bbb222"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}
@@ -86,7 +86,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-aaa111"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-aaa111"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}
@@ -116,7 +116,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-aaa111"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-aaa111"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}
@@ -140,7 +140,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-aaa111"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-aaa111"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}
@@ -161,7 +161,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-aaa111"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-aaa111"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}
@@ -182,7 +182,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-aaa111"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-aaa111"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}
@@ -204,7 +204,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-bbb222"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-bbb222"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}
@@ -231,7 +231,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-aaa111"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-aaa111"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}
@@ -252,7 +252,7 @@ func TestShowCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "show", "tick-aaa111"})
+		err := app.Run([]string{"tick", "--pretty", "show", "tick-aaa111"})
 		if err != nil {
 			t.Fatalf("show returned error: %v", err)
 		}

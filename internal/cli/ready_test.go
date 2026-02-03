@@ -222,7 +222,7 @@ func TestReadyQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "ready"})
+		err := app.Run([]string{"tick", "--pretty", "ready"})
 		if err != nil {
 			t.Fatalf("ready returned error: %v", err)
 		}
@@ -242,7 +242,7 @@ func TestReadyQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "ready"})
+		err := app.Run([]string{"tick", "--pretty", "ready"})
 		if err != nil {
 			t.Fatalf("ready returned error: %v", err)
 		}
@@ -262,7 +262,7 @@ func TestReadyQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "ready"})
+		err := app.Run([]string{"tick", "--pretty", "ready"})
 		if err != nil {
 			t.Fatalf("ready returned error: %v", err)
 		}
@@ -318,7 +318,7 @@ func TestReadyQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "ready"})
+		err := app.Run([]string{"tick", "--pretty", "ready"})
 		if err != nil {
 			t.Fatalf("ready returned error: %v", err)
 		}
@@ -383,7 +383,7 @@ func TestReadyQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "ready"})
+		err := app.Run([]string{"tick", "--pretty", "ready"})
 		if err != nil {
 			t.Fatalf("ready returned error: %v", err)
 		}
@@ -437,7 +437,7 @@ func TestReadyQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "ready"})
+		err := app.Run([]string{"tick", "--pretty", "ready"})
 		if err != nil {
 			t.Fatalf("ready returned error: %v", err)
 		}

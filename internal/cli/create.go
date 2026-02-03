@@ -224,34 +224,18 @@ func (a *App) runCreate(args []string) error {
 	// Output
 	if a.config.Quiet {
 		fmt.Fprintln(a.stdout, createdTask.ID)
-	} else {
-		a.printTaskDetails(createdTask)
+		return nil
 	}
 
-	return nil
-}
-
-// printTaskDetails outputs task details in a basic format (Phase 1).
-func (a *App) printTaskDetails(t *task.Task) {
-	fmt.Fprintf(a.stdout, "ID:       %s\n", t.ID)
-	fmt.Fprintf(a.stdout, "Title:    %s\n", t.Title)
-	fmt.Fprintf(a.stdout, "Status:   %s\n", string(t.Status))
-	fmt.Fprintf(a.stdout, "Priority: %d\n", t.Priority)
-
-	if t.Description != "" {
-		fmt.Fprintf(a.stdout, "Description: %s\n", t.Description)
+	// Query full show data for formatted output
+	data, err := queryShowData(store, createdTask.ID)
+	if err != nil {
+		// Fallback: if query fails, just print the ID
+		fmt.Fprintln(a.stdout, createdTask.ID)
+		return nil
 	}
 
-	if len(t.BlockedBy) > 0 {
-		fmt.Fprintf(a.stdout, "Blocked by: %s\n", strings.Join(t.BlockedBy, ", "))
-	}
-
-	if t.Parent != "" {
-		fmt.Fprintf(a.stdout, "Parent:   %s\n", t.Parent)
-	}
-
-	fmt.Fprintf(a.stdout, "Created:  %s\n", formatTime(t.Created))
-	fmt.Fprintf(a.stdout, "Updated:  %s\n", formatTime(t.Updated))
+	return a.formatter.FormatTaskDetail(a.stdout, data)
 }
 
 // formatTime formats a time.Time as ISO 8601 UTC.

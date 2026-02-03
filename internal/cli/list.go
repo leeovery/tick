@@ -203,23 +203,26 @@ func (a *App) runList(args []string) error {
 		return err
 	}
 
-	if len(rows) == 0 {
-		fmt.Fprintln(a.stdout, "No tasks found.")
-		return nil
-	}
-
 	if a.config.Quiet {
+		if len(rows) == 0 {
+			return nil
+		}
 		for _, r := range rows {
 			fmt.Fprintln(a.stdout, r.ID)
 		}
 		return nil
 	}
 
-	// Column widths: ID (12), STATUS (12), PRI (4), TITLE (remainder)
-	fmt.Fprintf(a.stdout, "%-12s%-12s%-4s%s\n", "ID", "STATUS", "PRI", "TITLE")
-	for _, r := range rows {
-		fmt.Fprintf(a.stdout, "%-12s%-12s%-4d%s\n", r.ID, r.Status, r.Priority, r.Title)
+	// Convert to TaskRow for the formatter
+	taskRows := make([]TaskRow, len(rows))
+	for i, r := range rows {
+		taskRows[i] = TaskRow{
+			ID:       r.ID,
+			Status:   r.Status,
+			Priority: r.Priority,
+			Title:    r.Title,
+		}
 	}
 
-	return nil
+	return a.formatter.FormatTaskList(a.stdout, taskRows)
 }

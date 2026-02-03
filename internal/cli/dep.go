@@ -94,7 +94,7 @@ func (a *App) runDepAdd(args []string) error {
 
 	// Output
 	if !a.config.Quiet {
-		fmt.Fprintf(a.stdout, "Dependency added: %s blocked by %s\n", taskID, blockedByID)
+		return a.formatter.FormatDepChange(a.stdout, "added", taskID, blockedByID)
 	}
 
 	return nil
@@ -163,7 +163,7 @@ func (a *App) runDepRm(args []string) error {
 
 	// Output
 	if !a.config.Quiet {
-		fmt.Fprintf(a.stdout, "Dependency removed: %s no longer blocked by %s\n", taskID, blockedByID)
+		return a.formatter.FormatDepChange(a.stdout, "removed", taskID, blockedByID)
 	}
 
 	return nil

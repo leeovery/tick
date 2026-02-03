@@ -51,10 +51,26 @@ func (a *App) runShow(args []string) error {
 	}
 	defer store.Close()
 
+	data, err := queryShowData(store, lookupID)
+	if err != nil {
+		return err
+	}
+
+	// Output
+	if a.config.Quiet {
+		fmt.Fprintln(a.stdout, data.ID)
+		return nil
+	}
+
+	return a.formatter.FormatTaskDetail(a.stdout, data)
+}
+
+// queryShowData queries full task details from the store for display.
+// Reused by show, create, and update commands.
+func queryShowData(store *storage.Store, lookupID string) (*showData, error) {
 	var data *showData
 
-	err = store.Query(func(db *sql.DB) error {
-		// Query the task itself
+	err := store.Query(func(db *sql.DB) error {
 		var d showData
 		var description, parent, closed sql.NullString
 		err := db.QueryRow(
@@ -73,7 +89,6 @@ func (a *App) runShow(args []string) error {
 		}
 		if parent.Valid {
 			d.Parent = parent.String
-			// Look up parent title
 			var parentTitle string
 			err := db.QueryRow("SELECT title FROM tasks WHERE id = ?", d.Parent).Scan(&parentTitle)
 			if err == nil {
@@ -129,61 +144,6 @@ func (a *App) runShow(args []string) error {
 		data = &d
 		return nil
 	})
-	if err != nil {
-		return err
-	}
 
-	// Output
-	if a.config.Quiet {
-		fmt.Fprintln(a.stdout, data.ID)
-		return nil
-	}
-
-	a.printShowOutput(data)
-	return nil
-}
-
-// printShowOutput renders the full show output for a task.
-func (a *App) printShowOutput(d *showData) {
-	fmt.Fprintf(a.stdout, "ID:       %s\n", d.ID)
-	fmt.Fprintf(a.stdout, "Title:    %s\n", d.Title)
-	fmt.Fprintf(a.stdout, "Status:   %s\n", d.Status)
-	fmt.Fprintf(a.stdout, "Priority: %d\n", d.Priority)
-
-	if d.Parent != "" {
-		if d.ParentTitle != "" {
-			fmt.Fprintf(a.stdout, "Parent:   %s  %s\n", d.Parent, d.ParentTitle)
-		} else {
-			fmt.Fprintf(a.stdout, "Parent:   %s\n", d.Parent)
-		}
-	}
-
-	fmt.Fprintf(a.stdout, "Created:  %s\n", d.Created)
-	fmt.Fprintf(a.stdout, "Updated:  %s\n", d.Updated)
-
-	if d.Closed != "" {
-		fmt.Fprintf(a.stdout, "Closed:   %s\n", d.Closed)
-	}
-
-	if len(d.BlockedBy) > 0 {
-		fmt.Fprintln(a.stdout)
-		fmt.Fprintln(a.stdout, "Blocked by:")
-		for _, r := range d.BlockedBy {
-			fmt.Fprintf(a.stdout, "  %s  %s (%s)\n", r.ID, r.Title, r.Status)
-		}
-	}
-
-	if len(d.Children) > 0 {
-		fmt.Fprintln(a.stdout)
-		fmt.Fprintln(a.stdout, "Children:")
-		for _, r := range d.Children {
-			fmt.Fprintf(a.stdout, "  %s  %s (%s)\n", r.ID, r.Title, r.Status)
-		}
-	}
-
-	if d.Description != "" {
-		fmt.Fprintln(a.stdout)
-		fmt.Fprintln(a.stdout, "Description:")
-		fmt.Fprintf(a.stdout, "  %s\n", d.Description)
-	}
+	return data, err
 }

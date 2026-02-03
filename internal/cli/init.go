@@ -34,7 +34,8 @@ func (a *App) runInit() error {
 
 	// Print confirmation (unless quiet)
 	if !a.config.Quiet {
-		fmt.Fprintf(a.stdout, "Initialized tick in %s/\n", tickDir)
+		msg := fmt.Sprintf("Initialized tick in %s/", tickDir)
+		return a.formatter.FormatMessage(a.stdout, msg)
 	}
 
 	return nil

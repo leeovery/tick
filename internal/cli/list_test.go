@@ -18,7 +18,7 @@ func TestListCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "list"})
+		err := app.Run([]string{"tick", "--pretty", "list"})
 		if err != nil {
 			t.Fatalf("list returned error: %v", err)
 		}
@@ -119,7 +119,7 @@ func TestListCommand(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "list"})
+		err := app.Run([]string{"tick", "--pretty", "list"})
 		if err != nil {
 			t.Fatalf("list returned error: %v", err)
 		}
@@ -583,7 +583,7 @@ func TestListFilterFlags(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "list", "--priority", "0"})
+		err := app.Run([]string{"tick", "--pretty", "list", "--priority", "0"})
 		if err != nil {
 			t.Fatalf("list returned error: %v", err)
 		}
@@ -607,7 +607,7 @@ func TestListFilterFlags(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "list", "--status", "done", "--ready"})
+		err := app.Run([]string{"tick", "--pretty", "list", "--status", "done", "--ready"})
 		if err != nil {
 			t.Fatalf("expected no error for contradictory filters, got: %v", err)
 		}

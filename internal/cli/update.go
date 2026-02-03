@@ -236,9 +236,16 @@ func (a *App) runUpdate(args []string) error {
 	// Output
 	if a.config.Quiet {
 		fmt.Fprintln(a.stdout, updatedTask.ID)
-	} else {
-		a.printTaskDetails(updatedTask)
+		return nil
 	}
 
-	return nil
+	// Query full show data for formatted output
+	data, err := queryShowData(store, updatedTask.ID)
+	if err != nil {
+		// Fallback: if query fails, just print the ID
+		fmt.Fprintln(a.stdout, updatedTask.ID)
+		return nil
+	}
+
+	return a.formatter.FormatTaskDetail(a.stdout, data)
 }

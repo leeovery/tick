@@ -30,6 +30,7 @@ type Config struct {
 type App struct {
 	config    Config
 	FormatCfg FormatConfig
+	formatter Formatter
 	workDir   string
 	stdout    io.Writer
 	stderr    io.Writer
@@ -62,6 +63,9 @@ func (a *App) Run(args []string) error {
 
 	// Resolve FormatConfig and store on App for handlers to use
 	a.FormatCfg = a.formatConfig()
+
+	// Resolve formatter once based on FormatConfig
+	a.formatter = newFormatter(a.FormatCfg.Format)
 
 	// Dispatch subcommand
 	switch subcmd {
@@ -180,4 +184,16 @@ func (a *App) logVerbose(msg string) {
 		return
 	}
 	fmt.Fprintln(a.stderr, msg)
+}
+
+// newFormatter returns the concrete Formatter for the given output format.
+func newFormatter(format OutputFormat) Formatter {
+	switch format {
+	case FormatPretty:
+		return &PrettyFormatter{}
+	case FormatJSON:
+		return &JSONFormatter{}
+	default:
+		return &ToonFormatter{}
+	}
 }

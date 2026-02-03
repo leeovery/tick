@@ -60,7 +60,7 @@ func (a *App) runTransition(command string, args []string) error {
 
 	// Output
 	if !a.config.Quiet {
-		fmt.Fprintf(a.stdout, "%s: %s \u2192 %s\n", id, oldStatus, newStatus)
+		return a.formatter.FormatTransition(a.stdout, id, oldStatus, newStatus)
 	}
 
 	return nil

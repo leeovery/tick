@@ -167,7 +167,7 @@ func TestBlockedQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "blocked"})
+		err := app.Run([]string{"tick", "--pretty", "blocked"})
 		if err != nil {
 			t.Fatalf("blocked returned error: %v", err)
 		}
@@ -188,7 +188,7 @@ func TestBlockedQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "blocked"})
+		err := app.Run([]string{"tick", "--pretty", "blocked"})
 		if err != nil {
 			t.Fatalf("blocked returned error: %v", err)
 		}
@@ -255,7 +255,7 @@ func TestBlockedQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "blocked"})
+		err := app.Run([]string{"tick", "--pretty", "blocked"})
 		if err != nil {
 			t.Fatalf("blocked returned error: %v", err)
 		}
@@ -300,7 +300,7 @@ func TestBlockedQuery(t *testing.T) {
 		var stdout strings.Builder
 		app.stdout = &stdout
 
-		err := app.Run([]string{"tick", "blocked"})
+		err := app.Run([]string{"tick", "--pretty", "blocked"})
 		if err != nil {
 			t.Fatalf("blocked returned error: %v", err)
 		}
