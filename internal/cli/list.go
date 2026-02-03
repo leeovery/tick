@@ -7,9 +7,39 @@ import (
 	"github.com/leeovery/tick/internal/storage"
 )
 
+// ReadySQL is the SQL query for ready tasks: open, all blockers closed, no open children.
+// Exported so it can be reused by other queries (e.g., blocked query, list filters).
+const ReadySQL = `SELECT id, status, priority, title FROM tasks
+WHERE status = 'open'
+  AND id NOT IN (
+    SELECT d.task_id FROM dependencies d
+    JOIN tasks t ON d.blocked_by = t.id
+    WHERE t.status NOT IN ('done', 'cancelled')
+  )
+  AND id NOT IN (
+    SELECT parent FROM tasks WHERE parent IS NOT NULL AND status IN ('open', 'in_progress')
+  )
+ORDER BY priority ASC, created ASC`
+
+// listAllSQL is the default list query: all tasks ordered by priority and created.
+const listAllSQL = `SELECT id, status, priority, title FROM tasks ORDER BY priority ASC, created ASC`
+
+// parseListFlags parses list-specific flags from args and returns whether --ready is set.
+func parseListFlags(args []string) (ready bool) {
+	for _, arg := range args {
+		if arg == "--ready" {
+			ready = true
+		}
+	}
+	return
+}
+
 // runList implements the `tick list` command.
-// It queries all tasks ordered by priority ASC then created ASC and displays them in aligned columns.
-func (a *App) runList() error {
+// It queries tasks ordered by priority ASC then created ASC and displays them in aligned columns.
+// When --ready is set (or invoked via `tick ready`), it filters to ready tasks only.
+func (a *App) runList(args []string) error {
+	ready := parseListFlags(args)
+
 	tickDir, err := DiscoverTickDir(a.workDir)
 	if err != nil {
 		return err
@@ -28,12 +58,15 @@ func (a *App) runList() error {
 		Title    string
 	}
 
+	querySQL := listAllSQL
+	if ready {
+		querySQL = ReadySQL
+	}
+
 	var rows []listRow
 
 	err = store.Query(func(db *sql.DB) error {
-		sqlRows, err := db.Query(
-			"SELECT id, status, priority, title FROM tasks ORDER BY priority ASC, created ASC",
-		)
+		sqlRows, err := db.Query(querySQL)
 		if err != nil {
 			return fmt.Errorf("failed to query tasks: %w", err)
 		}
