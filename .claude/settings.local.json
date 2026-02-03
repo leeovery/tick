@@ -11,7 +11,18 @@
       "Bash(.claude/scripts/discovery-for-specification.sh)",
       "Bash(git commit:*)",
       "Bash(ls:*)",
-      "Bash(git -C /Users/leeovery/Code/tick rev-parse:*)"
+      "Bash(git -C /Users/leeovery/Code/tick rev-parse:*)",
+      "Bash(go test:*)",
+      "Bash(gofmt:*)",
+      "Bash(go run:*)",
+      "Bash(/Users/leeovery/Code/tick/cmd/jsontest/main.go <<'GOEOF'\npackage main\n\nimport \\(\n\t\"encoding/json\"\n\t\"fmt\"\n\t\"github.com/leeovery/tick/internal/task\"\n\\)\n\nfunc main\\(\\) {\n\texistsFn := func\\(id string\\) bool { return false }\n\tt, err := task.NewTask\\(\"Test task\", nil, existsFn\\)\n\tif err != nil {\n\t\tpanic\\(err\\)\n\t}\n\tb, err := json.Marshal\\(t\\)\n\tif err != nil {\n\t\tpanic\\(err\\)\n\t}\n\tfmt.Println\\(string\\(b\\)\\)\n\n\tp := 1\n\topts := &task.TaskOptions{\n\t\tPriority:    &p,\n\t\tDescription: \"desc\",\n\t\tBlockedBy:   []string{\"tick-aaaaaa\"},\n\t\tParent:      \"tick-bbbbbb\",\n\t}\n\tt2, err := task.NewTask\\(\"Full task\", opts, existsFn\\)\n\tif err != nil {\n\t\tpanic\\(err\\)\n\t}\n\tb2, err := json.Marshal\\(t2\\)\n\tif err != nil {\n\t\tpanic\\(err\\)\n\t}\n\tfmt.Println\\(string\\(b2\\)\\)\n}\nGOEOF)",
+      "Bash(go version:*)",
+      "Bash(go build:*)",
+      "Bash(go vet:*)",
+      "Bash(go list:*)",
+      "Bash(go get:*)",
+      "Bash(go doc:*)",
+      "Bash(git -C /Users/leeovery/Code/tick diff HEAD~1 --name-only)"
     ]
   }
 }
