@@ -199,3 +199,54 @@ func optString(opts *TaskOptions) string {
 	}
 	return opts.Description
 }
+
+// validTransitions maps each command to a set of valid source statuses and the resulting target status.
+var validTransitions = map[string]struct {
+	from []Status
+	to   Status
+}{
+	"start":  {from: []Status{StatusOpen}, to: StatusInProgress},
+	"done":   {from: []Status{StatusOpen, StatusInProgress}, to: StatusDone},
+	"cancel": {from: []Status{StatusOpen, StatusInProgress}, to: StatusCancelled},
+	"reopen": {from: []Status{StatusDone, StatusCancelled}, to: StatusOpen},
+}
+
+// Transition applies a status transition to the given task by command name.
+// Valid commands are: start, done, cancel, reopen.
+// On success it mutates the task's Status, Updated, and Closed fields,
+// and returns the old and new status. On failure it returns an error
+// without modifying the task.
+func Transition(task *Task, command string) (oldStatus Status, newStatus Status, err error) {
+	transition, ok := validTransitions[command]
+	if !ok {
+		return "", "", fmt.Errorf("unknown command: %s", command)
+	}
+
+	currentStatus := task.Status
+	allowed := false
+	for _, s := range transition.from {
+		if currentStatus == s {
+			allowed = true
+			break
+		}
+	}
+
+	if !allowed {
+		return "", "", fmt.Errorf("Cannot %s task %s \u2014 status is '%s'", command, task.ID, currentStatus)
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+
+	task.Status = transition.to
+	task.Updated = now
+
+	switch transition.to {
+	case StatusDone, StatusCancelled:
+		task.Closed = &now
+	case StatusOpen:
+		// reopen clears closed
+		task.Closed = nil
+	}
+
+	return currentStatus, transition.to, nil
+}

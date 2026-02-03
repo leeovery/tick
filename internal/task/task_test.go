@@ -360,3 +360,393 @@ func TestStatusConstants(t *testing.T) {
 		}
 	})
 }
+
+// newTestTask creates a task in the given status for transition tests.
+// For done/cancelled tasks, it also sets a Closed timestamp.
+func newTestTask(status Status) *Task {
+	now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+	t := &Task{
+		ID:       "tick-a3f2b7",
+		Title:    "Test task",
+		Status:   status,
+		Priority: 2,
+		Created:  now,
+		Updated:  now,
+	}
+	if status == StatusDone || status == StatusCancelled {
+		closed := now
+		t.Closed = &closed
+	}
+	return t
+}
+
+func TestTransition(t *testing.T) {
+	t.Run("it transitions open to in_progress via start", func(t *testing.T) {
+		tk := newTestTask(StatusOpen)
+		oldStatus, newStatus, err := Transition(tk, "start")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+		if oldStatus != StatusOpen {
+			t.Errorf("oldStatus = %q, want %q", oldStatus, StatusOpen)
+		}
+		if newStatus != StatusInProgress {
+			t.Errorf("newStatus = %q, want %q", newStatus, StatusInProgress)
+		}
+		if tk.Status != StatusInProgress {
+			t.Errorf("task.Status = %q, want %q", tk.Status, StatusInProgress)
+		}
+	})
+
+	t.Run("it transitions open to done via done", func(t *testing.T) {
+		tk := newTestTask(StatusOpen)
+		oldStatus, newStatus, err := Transition(tk, "done")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+		if oldStatus != StatusOpen {
+			t.Errorf("oldStatus = %q, want %q", oldStatus, StatusOpen)
+		}
+		if newStatus != StatusDone {
+			t.Errorf("newStatus = %q, want %q", newStatus, StatusDone)
+		}
+		if tk.Status != StatusDone {
+			t.Errorf("task.Status = %q, want %q", tk.Status, StatusDone)
+		}
+	})
+
+	t.Run("it transitions in_progress to done via done", func(t *testing.T) {
+		tk := newTestTask(StatusInProgress)
+		oldStatus, newStatus, err := Transition(tk, "done")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+		if oldStatus != StatusInProgress {
+			t.Errorf("oldStatus = %q, want %q", oldStatus, StatusInProgress)
+		}
+		if newStatus != StatusDone {
+			t.Errorf("newStatus = %q, want %q", newStatus, StatusDone)
+		}
+		if tk.Status != StatusDone {
+			t.Errorf("task.Status = %q, want %q", tk.Status, StatusDone)
+		}
+	})
+
+	t.Run("it transitions open to cancelled via cancel", func(t *testing.T) {
+		tk := newTestTask(StatusOpen)
+		oldStatus, newStatus, err := Transition(tk, "cancel")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+		if oldStatus != StatusOpen {
+			t.Errorf("oldStatus = %q, want %q", oldStatus, StatusOpen)
+		}
+		if newStatus != StatusCancelled {
+			t.Errorf("newStatus = %q, want %q", newStatus, StatusCancelled)
+		}
+		if tk.Status != StatusCancelled {
+			t.Errorf("task.Status = %q, want %q", tk.Status, StatusCancelled)
+		}
+	})
+
+	t.Run("it transitions in_progress to cancelled via cancel", func(t *testing.T) {
+		tk := newTestTask(StatusInProgress)
+		oldStatus, newStatus, err := Transition(tk, "cancel")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+		if oldStatus != StatusInProgress {
+			t.Errorf("oldStatus = %q, want %q", oldStatus, StatusInProgress)
+		}
+		if newStatus != StatusCancelled {
+			t.Errorf("newStatus = %q, want %q", newStatus, StatusCancelled)
+		}
+		if tk.Status != StatusCancelled {
+			t.Errorf("task.Status = %q, want %q", tk.Status, StatusCancelled)
+		}
+	})
+
+	t.Run("it transitions done to open via reopen", func(t *testing.T) {
+		tk := newTestTask(StatusDone)
+		oldStatus, newStatus, err := Transition(tk, "reopen")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+		if oldStatus != StatusDone {
+			t.Errorf("oldStatus = %q, want %q", oldStatus, StatusDone)
+		}
+		if newStatus != StatusOpen {
+			t.Errorf("newStatus = %q, want %q", newStatus, StatusOpen)
+		}
+		if tk.Status != StatusOpen {
+			t.Errorf("task.Status = %q, want %q", tk.Status, StatusOpen)
+		}
+	})
+
+	t.Run("it transitions cancelled to open via reopen", func(t *testing.T) {
+		tk := newTestTask(StatusCancelled)
+		oldStatus, newStatus, err := Transition(tk, "reopen")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+		if oldStatus != StatusCancelled {
+			t.Errorf("oldStatus = %q, want %q", oldStatus, StatusCancelled)
+		}
+		if newStatus != StatusOpen {
+			t.Errorf("newStatus = %q, want %q", newStatus, StatusOpen)
+		}
+		if tk.Status != StatusOpen {
+			t.Errorf("task.Status = %q, want %q", tk.Status, StatusOpen)
+		}
+	})
+
+	// Invalid transitions
+	t.Run("it rejects start on in_progress task", func(t *testing.T) {
+		tk := newTestTask(StatusInProgress)
+		_, _, err := Transition(tk, "start")
+		if err == nil {
+			t.Fatal("Transition() expected error, got nil")
+		}
+		wantMsg := "Cannot start task tick-a3f2b7 — status is 'in_progress'"
+		if err.Error() != wantMsg {
+			t.Errorf("error = %q, want %q", err.Error(), wantMsg)
+		}
+	})
+
+	t.Run("it rejects start on done task", func(t *testing.T) {
+		tk := newTestTask(StatusDone)
+		_, _, err := Transition(tk, "start")
+		if err == nil {
+			t.Fatal("Transition() expected error, got nil")
+		}
+		wantMsg := "Cannot start task tick-a3f2b7 — status is 'done'"
+		if err.Error() != wantMsg {
+			t.Errorf("error = %q, want %q", err.Error(), wantMsg)
+		}
+	})
+
+	t.Run("it rejects start on cancelled task", func(t *testing.T) {
+		tk := newTestTask(StatusCancelled)
+		_, _, err := Transition(tk, "start")
+		if err == nil {
+			t.Fatal("Transition() expected error, got nil")
+		}
+		wantMsg := "Cannot start task tick-a3f2b7 — status is 'cancelled'"
+		if err.Error() != wantMsg {
+			t.Errorf("error = %q, want %q", err.Error(), wantMsg)
+		}
+	})
+
+	t.Run("it rejects done on done task", func(t *testing.T) {
+		tk := newTestTask(StatusDone)
+		_, _, err := Transition(tk, "done")
+		if err == nil {
+			t.Fatal("Transition() expected error, got nil")
+		}
+		wantMsg := "Cannot done task tick-a3f2b7 — status is 'done'"
+		if err.Error() != wantMsg {
+			t.Errorf("error = %q, want %q", err.Error(), wantMsg)
+		}
+	})
+
+	t.Run("it rejects done on cancelled task", func(t *testing.T) {
+		tk := newTestTask(StatusCancelled)
+		_, _, err := Transition(tk, "done")
+		if err == nil {
+			t.Fatal("Transition() expected error, got nil")
+		}
+		wantMsg := "Cannot done task tick-a3f2b7 — status is 'cancelled'"
+		if err.Error() != wantMsg {
+			t.Errorf("error = %q, want %q", err.Error(), wantMsg)
+		}
+	})
+
+	t.Run("it rejects cancel on done task", func(t *testing.T) {
+		tk := newTestTask(StatusDone)
+		_, _, err := Transition(tk, "cancel")
+		if err == nil {
+			t.Fatal("Transition() expected error, got nil")
+		}
+		wantMsg := "Cannot cancel task tick-a3f2b7 — status is 'done'"
+		if err.Error() != wantMsg {
+			t.Errorf("error = %q, want %q", err.Error(), wantMsg)
+		}
+	})
+
+	t.Run("it rejects cancel on cancelled task", func(t *testing.T) {
+		tk := newTestTask(StatusCancelled)
+		_, _, err := Transition(tk, "cancel")
+		if err == nil {
+			t.Fatal("Transition() expected error, got nil")
+		}
+		wantMsg := "Cannot cancel task tick-a3f2b7 — status is 'cancelled'"
+		if err.Error() != wantMsg {
+			t.Errorf("error = %q, want %q", err.Error(), wantMsg)
+		}
+	})
+
+	t.Run("it rejects reopen on open task", func(t *testing.T) {
+		tk := newTestTask(StatusOpen)
+		_, _, err := Transition(tk, "reopen")
+		if err == nil {
+			t.Fatal("Transition() expected error, got nil")
+		}
+		wantMsg := "Cannot reopen task tick-a3f2b7 — status is 'open'"
+		if err.Error() != wantMsg {
+			t.Errorf("error = %q, want %q", err.Error(), wantMsg)
+		}
+	})
+
+	t.Run("it rejects reopen on in_progress task", func(t *testing.T) {
+		tk := newTestTask(StatusInProgress)
+		_, _, err := Transition(tk, "reopen")
+		if err == nil {
+			t.Fatal("Transition() expected error, got nil")
+		}
+		wantMsg := "Cannot reopen task tick-a3f2b7 — status is 'in_progress'"
+		if err.Error() != wantMsg {
+			t.Errorf("error = %q, want %q", err.Error(), wantMsg)
+		}
+	})
+
+	// Timestamp tests
+	t.Run("it sets closed timestamp when transitioning to done", func(t *testing.T) {
+		tk := newTestTask(StatusOpen)
+		before := time.Now().UTC().Truncate(time.Second)
+
+		_, _, err := Transition(tk, "done")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+
+		after := time.Now().UTC().Truncate(time.Second).Add(time.Second)
+
+		if tk.Closed == nil {
+			t.Fatal("task.Closed is nil, want non-nil")
+		}
+		if tk.Closed.Before(before) || tk.Closed.After(after) {
+			t.Errorf("task.Closed = %v, want between %v and %v", *tk.Closed, before, after)
+		}
+		if tk.Closed.Location() != time.UTC {
+			t.Errorf("task.Closed timezone = %v, want UTC", tk.Closed.Location())
+		}
+	})
+
+	t.Run("it sets closed timestamp when transitioning to cancelled", func(t *testing.T) {
+		tk := newTestTask(StatusOpen)
+		before := time.Now().UTC().Truncate(time.Second)
+
+		_, _, err := Transition(tk, "cancel")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+
+		after := time.Now().UTC().Truncate(time.Second).Add(time.Second)
+
+		if tk.Closed == nil {
+			t.Fatal("task.Closed is nil, want non-nil")
+		}
+		if tk.Closed.Before(before) || tk.Closed.After(after) {
+			t.Errorf("task.Closed = %v, want between %v and %v", *tk.Closed, before, after)
+		}
+	})
+
+	t.Run("it clears closed timestamp when reopening", func(t *testing.T) {
+		tk := newTestTask(StatusDone)
+		if tk.Closed == nil {
+			t.Fatal("precondition: task.Closed should be non-nil for done task")
+		}
+
+		_, _, err := Transition(tk, "reopen")
+		if err != nil {
+			t.Fatalf("Transition() returned error: %v", err)
+		}
+
+		if tk.Closed != nil {
+			t.Errorf("task.Closed = %v, want nil after reopen", *tk.Closed)
+		}
+	})
+
+	t.Run("it updates the updated timestamp on every valid transition", func(t *testing.T) {
+		commands := []struct {
+			fromStatus Status
+			command    string
+		}{
+			{StatusOpen, "start"},
+			{StatusOpen, "done"},
+			{StatusInProgress, "done"},
+			{StatusOpen, "cancel"},
+			{StatusInProgress, "cancel"},
+			{StatusDone, "reopen"},
+			{StatusCancelled, "reopen"},
+		}
+
+		for _, tc := range commands {
+			t.Run(fmt.Sprintf("%s_%s", tc.fromStatus, tc.command), func(t *testing.T) {
+				tk := newTestTask(tc.fromStatus)
+				originalUpdated := tk.Updated
+				// Ensure some time passes so the timestamp is different
+				time.Sleep(time.Millisecond)
+				before := time.Now().UTC().Truncate(time.Second)
+
+				_, _, err := Transition(tk, tc.command)
+				if err != nil {
+					t.Fatalf("Transition() returned error: %v", err)
+				}
+
+				after := time.Now().UTC().Truncate(time.Second).Add(time.Second)
+
+				if tk.Updated.Before(before) || tk.Updated.After(after) {
+					t.Errorf("task.Updated = %v, want between %v and %v", tk.Updated, before, after)
+				}
+				if !tk.Updated.After(originalUpdated) {
+					t.Errorf("task.Updated (%v) should be after original (%v)", tk.Updated, originalUpdated)
+				}
+			})
+		}
+	})
+
+	t.Run("it does not modify task on invalid transition", func(t *testing.T) {
+		invalidCases := []struct {
+			fromStatus Status
+			command    string
+		}{
+			{StatusInProgress, "start"},
+			{StatusDone, "start"},
+			{StatusCancelled, "start"},
+			{StatusDone, "done"},
+			{StatusCancelled, "done"},
+			{StatusDone, "cancel"},
+			{StatusCancelled, "cancel"},
+			{StatusOpen, "reopen"},
+			{StatusInProgress, "reopen"},
+		}
+
+		for _, tc := range invalidCases {
+			t.Run(fmt.Sprintf("%s_%s", tc.fromStatus, tc.command), func(t *testing.T) {
+				tk := newTestTask(tc.fromStatus)
+				origStatus := tk.Status
+				origUpdated := tk.Updated
+				origClosed := tk.Closed
+
+				_, _, err := Transition(tk, tc.command)
+				if err == nil {
+					t.Fatal("Transition() expected error, got nil")
+				}
+
+				if tk.Status != origStatus {
+					t.Errorf("task.Status = %q, want %q (unchanged)", tk.Status, origStatus)
+				}
+				if !tk.Updated.Equal(origUpdated) {
+					t.Errorf("task.Updated = %v, want %v (unchanged)", tk.Updated, origUpdated)
+				}
+				if (origClosed == nil) != (tk.Closed == nil) {
+					t.Errorf("task.Closed changed: was %v, now %v", origClosed, tk.Closed)
+				}
+				if origClosed != nil && tk.Closed != nil && !origClosed.Equal(*tk.Closed) {
+					t.Errorf("task.Closed changed: was %v, now %v", *origClosed, *tk.Closed)
+				}
+			})
+		}
+	})
+}
