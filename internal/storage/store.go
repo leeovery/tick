@@ -156,6 +156,60 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	return nil
 }
 
+// ForceRebuild deletes the existing cache and rebuilds it from JSONL,
+// bypassing the freshness check. Returns the number of tasks rebuilt.
+// Acquires an exclusive lock for the entire operation.
+func (s *Store) ForceRebuild() (int, error) {
+	fl := flock.New(s.lockPath)
+
+	s.logVerbose("lock: acquiring exclusive lock")
+	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
+	defer cancel()
+
+	locked, err := fl.TryLockContext(ctx, 10*time.Millisecond)
+	if err != nil || !locked {
+		return 0, fmt.Errorf("Could not acquire lock on .tick/lock - another process may be using tick")
+	}
+	s.logVerbose("lock: exclusive lock acquired")
+	defer func() {
+		fl.Unlock()
+		s.logVerbose("lock: exclusive lock released")
+	}()
+
+	// Read raw JSONL content
+	s.logVerbose("rebuild: reading tasks.jsonl")
+	rawContent, err := os.ReadFile(s.jsonlPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read tasks.jsonl: %w", err)
+	}
+
+	// Parse tasks from raw content
+	tasks, err := jsonl.ParseTasks(rawContent)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse tasks.jsonl: %w", err)
+	}
+	s.logVerbose(fmt.Sprintf("rebuild: read %d tasks from JSONL", len(tasks)))
+
+	// Delete existing cache.db if present
+	s.logVerbose("rebuild: deleting existing cache.db")
+	os.Remove(s.cachePath)
+
+	// Create fresh cache and rebuild
+	s.logVerbose(fmt.Sprintf("rebuild: inserting %d tasks into new cache", len(tasks)))
+	cache, err := sqlite.NewCache(s.cachePath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create new cache: %w", err)
+	}
+	defer cache.Close()
+
+	if err := cache.Rebuild(tasks, rawContent); err != nil {
+		return 0, fmt.Errorf("failed to rebuild cache: %w", err)
+	}
+	s.logVerbose("rebuild: hash updated in metadata table")
+
+	return len(tasks), nil
+}
+
 // Query executes a read operation with the full query flow:
 // acquire shared lock -> read JSONL -> check freshness -> query SQLite -> release lock.
 func (s *Store) Query(fn func(db *sql.DB) error) error {
