@@ -44,8 +44,8 @@ func NewApp() *App {
 // Run parses args and dispatches the subcommand.
 // args[0] is the program name (e.g., "tick").
 func (a *App) Run(args []string) error {
-	// Parse global flags and extract subcommand
-	subcmd, err := a.parseGlobalFlags(args[1:])
+	// Parse global flags and extract subcommand + remaining args
+	subcmd, cmdArgs, err := a.parseGlobalFlags(args[1:])
 	if err != nil {
 		return err
 	}
@@ -73,13 +73,16 @@ func (a *App) Run(args []string) error {
 		return a.printUsage()
 	case "init":
 		return a.runInit()
+	case "create":
+		return a.runCreate(cmdArgs)
 	default:
 		return fmt.Errorf("Unknown command '%s'. Run 'tick help' for usage.", subcmd)
 	}
 }
 
-// parseGlobalFlags parses global flags from args and returns the subcommand name.
-func (a *App) parseGlobalFlags(args []string) (string, error) {
+// parseGlobalFlags parses global flags from args and returns the subcommand name
+// and remaining arguments after the subcommand.
+func (a *App) parseGlobalFlags(args []string) (string, []string, error) {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
@@ -95,11 +98,11 @@ func (a *App) parseGlobalFlags(args []string) (string, error) {
 		case "--json":
 			a.config.OutputFormat = FormatJSON
 		default:
-			// First non-flag argument is the subcommand
-			return arg, nil
+			// First non-flag argument is the subcommand; rest are command args
+			return arg, args[i+1:], nil
 		}
 	}
-	return "", nil
+	return "", nil, nil
 }
 
 // printUsage prints basic usage information.
@@ -108,6 +111,7 @@ func (a *App) printUsage() error {
 
 Commands:
   init       Initialize a new tick project
+  create     Create a new task
 
 Global flags:
   -q, --quiet     Suppress non-essential output
