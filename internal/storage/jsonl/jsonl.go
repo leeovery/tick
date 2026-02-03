@@ -145,15 +145,19 @@ func WriteTasks(path string, tasks []task.Task) error {
 // Empty lines are skipped. An empty file returns an empty task list.
 // A missing file returns an error.
 func ReadTasks(path string) ([]task.Task, error) {
-	file, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open tasks file: %w", err)
 	}
-	defer file.Close()
+	return ParseTasks(data)
+}
 
+// ParseTasks parses tasks from raw JSONL bytes.
+// Empty lines are skipped. Empty input returns an empty task list.
+func ParseTasks(data []byte) ([]task.Task, error) {
 	var tasks []task.Task
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
 	lineNum := 0
 	for scanner.Scan() {
 		lineNum++
@@ -176,7 +180,7 @@ func ReadTasks(path string) ([]task.Task, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("failed to read tasks file: %w", err)
+		return nil, fmt.Errorf("failed to read tasks data: %w", err)
 	}
 
 	return tasks, nil

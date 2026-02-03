@@ -104,6 +104,39 @@ func TestReadTasks(t *testing.T) {
 	})
 }
 
+func TestParseTasks(t *testing.T) {
+	t.Run("it parses tasks from raw JSONL bytes", func(t *testing.T) {
+		data := []byte(`{"id":"tick-a1b2c3","title":"First task","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-d4e5f6","title":"Second task","status":"done","priority":1,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+`)
+
+		tasks, err := ParseTasks(data)
+		if err != nil {
+			t.Fatalf("ParseTasks() returned error: %v", err)
+		}
+
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-a1b2c3" {
+			t.Errorf("tasks[0].ID = %q, want %q", tasks[0].ID, "tick-a1b2c3")
+		}
+		if tasks[1].ID != "tick-d4e5f6" {
+			t.Errorf("tasks[1].ID = %q, want %q", tasks[1].ID, "tick-d4e5f6")
+		}
+	})
+
+	t.Run("it returns empty list for empty bytes", func(t *testing.T) {
+		tasks, err := ParseTasks([]byte(""))
+		if err != nil {
+			t.Fatalf("ParseTasks() returned error: %v", err)
+		}
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks, got %d", len(tasks))
+		}
+	})
+}
+
 func TestRoundTrip(t *testing.T) {
 	t.Run("it round-trips all task fields without loss", func(t *testing.T) {
 		dir := t.TempDir()
