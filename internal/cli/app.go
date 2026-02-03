@@ -75,6 +75,10 @@ func (a *App) Run(args []string) error {
 		return a.runInit()
 	case "create":
 		return a.runCreate(cmdArgs)
+	case "list":
+		return a.runList()
+	case "show":
+		return a.runShow(cmdArgs)
 	default:
 		return fmt.Errorf("Unknown command '%s'. Run 'tick help' for usage.", subcmd)
 	}
@@ -112,6 +116,8 @@ func (a *App) printUsage() error {
 Commands:
   init       Initialize a new tick project
   create     Create a new task
+  list       List all tasks
+  show       Show detailed task information
 
 Global flags:
   -q, --quiet     Suppress non-essential output
