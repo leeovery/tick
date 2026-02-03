@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
-
-	"github.com/leeovery/tick/internal/storage"
 )
 
 // readyWhere is the WHERE clause fragment for ready tasks: open, all blockers closed, no open children.
@@ -166,7 +164,7 @@ func (a *App) runList(args []string) error {
 		return err
 	}
 
-	store, err := storage.NewStore(tickDir)
+	store, err := a.newStore(tickDir)
 	if err != nil {
 		return err
 	}

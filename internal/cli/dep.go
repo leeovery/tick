@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
 )
 
@@ -43,7 +42,7 @@ func (a *App) runDepAdd(args []string) error {
 	}
 
 	// Open storage
-	store, err := storage.NewStore(tickDir)
+	store, err := a.newStore(tickDir)
 	if err != nil {
 		return err
 	}
@@ -116,7 +115,7 @@ func (a *App) runDepRm(args []string) error {
 	}
 
 	// Open storage
-	store, err := storage.NewStore(tickDir)
+	store, err := a.newStore(tickDir)
 	if err != nil {
 		return err
 	}

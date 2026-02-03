@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/leeovery/tick/internal/storage"
 )
 
 // OutputFormat represents the output format for CLI responses.
@@ -31,6 +33,7 @@ type App struct {
 	config    Config
 	FormatCfg FormatConfig
 	formatter Formatter
+	verbose   *VerboseLogger
 	workDir   string
 	stdout    io.Writer
 	stderr    io.Writer
@@ -61,8 +64,12 @@ func (a *App) Run(args []string) error {
 		}
 	}
 
+	// Initialize verbose logger (always created; no-op when disabled)
+	a.verbose = NewVerboseLogger(a.stderr, a.config.Verbose)
+
 	// Resolve FormatConfig and store on App for handlers to use
 	a.FormatCfg = a.formatConfig()
+	a.verbose.Log(fmt.Sprintf("format resolved: %s", a.FormatCfg.Format))
 
 	// Resolve formatter once based on FormatConfig
 	a.formatter = newFormatter(a.FormatCfg.Format)
@@ -179,11 +186,29 @@ func (a *App) formatConfig() FormatConfig {
 
 // logVerbose writes a message to stderr only when verbose mode is enabled.
 // Verbose output always goes to stderr so it never contaminates stdout.
+// Delegates to the VerboseLogger which handles the "verbose: " prefix.
+// If the VerboseLogger has not been initialized yet (pre-Run), falls back
+// to direct stderr write when config.Verbose is true.
 func (a *App) logVerbose(msg string) {
-	if !a.config.Verbose {
+	if a.verbose != nil {
+		a.verbose.Log(msg)
 		return
 	}
-	fmt.Fprintln(a.stderr, msg)
+	if a.config.Verbose {
+		fmt.Fprintf(a.stderr, "verbose: %s\n", msg)
+	}
+}
+
+// newStore creates a Store for the given .tick/ directory and wires verbose logging.
+func (a *App) newStore(tickDir string) (*storage.Store, error) {
+	store, err := storage.NewStore(tickDir)
+	if err != nil {
+		return nil, err
+	}
+	if a.verbose != nil {
+		store.SetLogger(a.verbose)
+	}
+	return store, nil
 }
 
 // newFormatter returns the concrete Formatter for the given output format.

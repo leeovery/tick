@@ -45,7 +45,7 @@ func (a *App) runShow(args []string) error {
 		return err
 	}
 
-	store, err := storage.NewStore(tickDir)
+	store, err := a.newStore(tickDir)
 	if err != nil {
 		return err
 	}

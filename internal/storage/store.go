@@ -20,6 +20,12 @@ import (
 
 const defaultLockTimeout = 5 * time.Second
 
+// Logger is an optional interface for verbose/debug logging.
+// When set on a Store, key operations will log through it.
+type Logger interface {
+	Log(msg string)
+}
+
 // Store orchestrates JSONL reads/writes and SQLite cache operations
 // with file locking for concurrent access safety.
 type Store struct {
@@ -28,6 +34,19 @@ type Store struct {
 	cachePath   string
 	lockPath    string
 	lockTimeout time.Duration
+	logger      Logger
+}
+
+// SetLogger sets an optional logger for verbose output of internal operations.
+func (s *Store) SetLogger(l Logger) {
+	s.logger = l
+}
+
+// logVerbose writes a message through the logger if one is set.
+func (s *Store) logVerbose(msg string) {
+	if s.logger != nil {
+		s.logger.Log(msg)
+	}
 }
 
 // NewStore creates a Store for the given .tick/ directory.
@@ -70,6 +89,7 @@ func (s *Store) Close() error {
 func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	fl := flock.New(s.lockPath)
 
+	s.logVerbose("lock: acquiring exclusive lock")
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	defer cancel()
 
@@ -77,7 +97,11 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	if err != nil || !locked {
 		return fmt.Errorf("Could not acquire lock on .tick/lock - another process may be using tick")
 	}
-	defer fl.Unlock()
+	s.logVerbose("lock: exclusive lock acquired")
+	defer func() {
+		fl.Unlock()
+		s.logVerbose("lock: exclusive lock released")
+	}()
 
 	// Read raw JSONL content
 	rawContent, err := os.ReadFile(s.jsonlPath)
@@ -90,13 +114,16 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse tasks.jsonl: %w", err)
 	}
+	s.logVerbose(fmt.Sprintf("freshness: read %d tasks from JSONL", len(tasks)))
 
 	// Check freshness and rebuild cache if stale
+	s.logVerbose("freshness: checking cache hash")
 	cache, err := sqlite.EnsureFresh(s.cachePath, tasks, rawContent)
 	if err != nil {
 		return fmt.Errorf("failed to ensure cache freshness: %w", err)
 	}
 	defer cache.Close()
+	s.logVerbose("cache: freshness check complete")
 
 	// Apply mutation
 	modified, err := fn(tasks)
@@ -105,9 +132,11 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	}
 
 	// Write modified tasks atomically
+	s.logVerbose("write: atomic write to tasks.jsonl")
 	if err := jsonl.WriteTasks(s.jsonlPath, modified); err != nil {
 		return fmt.Errorf("failed to write tasks.jsonl: %w", err)
 	}
+	s.logVerbose(fmt.Sprintf("write: wrote %d tasks", len(modified)))
 
 	// Read back the written content for hash computation
 	newRawContent, err := os.ReadFile(s.jsonlPath)
@@ -117,10 +146,12 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	}
 
 	// Update SQLite cache — if this fails, log and continue
+	s.logVerbose("cache: rebuilding SQLite cache with new hash")
 	if err := cache.Rebuild(modified, newRawContent); err != nil {
 		log.Printf("warning: failed to update SQLite cache: %v", err)
 		return nil
 	}
+	s.logVerbose("cache: rebuild complete")
 
 	return nil
 }
@@ -130,6 +161,7 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 func (s *Store) Query(fn func(db *sql.DB) error) error {
 	fl := flock.New(s.lockPath)
 
+	s.logVerbose("lock: acquiring shared lock")
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	defer cancel()
 
@@ -137,7 +169,11 @@ func (s *Store) Query(fn func(db *sql.DB) error) error {
 	if err != nil || !locked {
 		return fmt.Errorf("Could not acquire lock on .tick/lock - another process may be using tick")
 	}
-	defer fl.Unlock()
+	s.logVerbose("lock: shared lock acquired")
+	defer func() {
+		fl.Unlock()
+		s.logVerbose("lock: shared lock released")
+	}()
 
 	// Read raw JSONL content
 	rawContent, err := os.ReadFile(s.jsonlPath)
@@ -150,13 +186,16 @@ func (s *Store) Query(fn func(db *sql.DB) error) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse tasks.jsonl: %w", err)
 	}
+	s.logVerbose(fmt.Sprintf("freshness: read %d tasks from JSONL", len(tasks)))
 
 	// Check freshness and rebuild cache if stale
+	s.logVerbose("freshness: checking cache hash")
 	cache, err := sqlite.EnsureFresh(s.cachePath, tasks, rawContent)
 	if err != nil {
 		return fmt.Errorf("failed to ensure cache freshness: %w", err)
 	}
 	defer cache.Close()
+	s.logVerbose("cache: freshness check complete")
 
 	// Execute query
 	if err := fn(cache.DB()); err != nil {

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
 )
 
@@ -123,7 +122,7 @@ func (a *App) runCreate(args []string) error {
 	}
 
 	// Open storage
-	store, err := storage.NewStore(tickDir)
+	store, err := a.newStore(tickDir)
 	if err != nil {
 		return err
 	}
