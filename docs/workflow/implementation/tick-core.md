@@ -2,7 +2,7 @@
 topic: tick-core
 plan: ../planning/tick-core.md
 format: local-markdown
-status: in-progress
+status: completed
 task_gate_mode: auto
 project_skills:
   - .claude/skills/golang-pro
@@ -40,7 +40,7 @@ completed_tasks:
   - tick-core-5-2
 started: 2026-02-03
 updated: 2026-02-03
-completed: ~
+completed: 2026-02-03
 ---
 
 # Implementation: Tick Core
