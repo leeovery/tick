@@ -96,6 +96,8 @@ func (a *App) Run(args []string) error {
 		return a.runTransition(subcmd, cmdArgs)
 	case "dep":
 		return a.runDep(cmdArgs)
+	case "stats":
+		return a.runStats()
 	default:
 		return fmt.Errorf("Unknown command '%s'. Run 'tick help' for usage.", subcmd)
 	}
