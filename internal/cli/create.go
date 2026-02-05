@@ -153,10 +153,25 @@ func (a *App) runCreate(args []string) int {
 	}
 
 	// Output
-	if a.flags.Quiet {
+	if a.formatConfig.Quiet {
 		fmt.Fprintln(a.Stdout, createdTask.ID)
 	} else {
-		a.printTaskDetails(createdTask)
+		// Build task detail data for formatter
+		data := &TaskDetailData{
+			ID:          createdTask.ID,
+			Title:       createdTask.Title,
+			Status:      string(createdTask.Status),
+			Priority:    createdTask.Priority,
+			Description: createdTask.Description,
+			Parent:      createdTask.Parent,
+			Created:     createdTask.Created,
+			Updated:     createdTask.Updated,
+			Closed:      createdTask.Closed,
+			BlockedBy:   make([]RelatedTaskData, 0),
+			Children:    make([]RelatedTaskData, 0),
+		}
+		formatter := a.formatConfig.Formatter()
+		fmt.Fprint(a.Stdout, formatter.FormatTaskDetail(data))
 	}
 
 	return 0

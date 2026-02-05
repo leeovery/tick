@@ -178,6 +178,19 @@ func NewFormatConfig(toonFlag, prettyFlag, jsonFlag, quiet, verbose bool, stdout
 	}, nil
 }
 
+// Formatter returns the appropriate Formatter for the configured format.
+// This is the single point where format is resolved to a concrete formatter.
+func (c FormatConfig) Formatter() Formatter {
+	switch c.Format {
+	case FormatJSON:
+		return &JSONFormatter{}
+	case FormatPretty:
+		return &PrettyFormatter{}
+	default:
+		return &ToonFormatter{}
+	}
+}
+
 // StubFormatter is a placeholder formatter that returns empty strings.
 // Used as a placeholder until concrete formatters (TOON, Pretty, JSON) are implemented.
 type StubFormatter struct{}

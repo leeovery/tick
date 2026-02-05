@@ -321,7 +321,7 @@ func TestReadyQuery(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "ready"})
+		code := app.Run([]string{"tick", "--pretty", "ready"})
 		if code != 0 {
 			t.Errorf("expected exit code 0, got %d", code)
 		}
@@ -347,7 +347,7 @@ func TestReadyQuery(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "ready"})
+		code := app.Run([]string{"tick", "--pretty", "ready"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -391,7 +391,7 @@ func TestReadyCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "ready"})
+		code := app.Run([]string{"tick", "--pretty", "ready"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -422,7 +422,7 @@ func TestReadyCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "ready"})
+		code := app.Run([]string{"tick", "--pretty", "ready"})
 		if code != 0 {
 			t.Errorf("expected exit code 0, got %d", code)
 		}

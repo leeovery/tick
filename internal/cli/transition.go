@@ -66,8 +66,9 @@ func (a *App) runTransition(command string, args []string) int {
 	}
 
 	// Output (unless --quiet)
-	if !a.flags.Quiet {
-		fmt.Fprintf(a.Stdout, "%s: %s → %s\n", taskID, transitionResult.OldStatus, transitionResult.NewStatus)
+	if !a.formatConfig.Quiet {
+		formatter := a.formatConfig.Formatter()
+		fmt.Fprint(a.Stdout, formatter.FormatTransition(taskID, string(transitionResult.OldStatus), string(transitionResult.NewStatus)))
 	}
 
 	return 0

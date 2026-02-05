@@ -375,7 +375,7 @@ func TestListFilters(t *testing.T) {
 		}
 
 		// Search for done tasks (none exist)
-		code := app.Run([]string{"tick", "list", "--status", "done"})
+		code := app.Run([]string{"tick", "--pretty", "list", "--status", "done"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0 (not error), got %d; stderr: %s", code, stderr.String())
 		}
@@ -399,7 +399,7 @@ func TestListFilters(t *testing.T) {
 		}
 
 		// --status done --ready is contradictory (ready requires status=open)
-		code := app.Run([]string{"tick", "list", "--status", "done", "--ready"})
+		code := app.Run([]string{"tick", "--pretty", "list", "--status", "done", "--ready"})
 		// Should not error, just return empty
 		if code != 0 {
 			t.Fatalf("expected exit code 0 (not error), got %d; stderr: %s", code, stderr.String())

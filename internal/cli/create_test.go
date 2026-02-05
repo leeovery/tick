@@ -611,7 +611,7 @@ func TestCreateCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "create", "Output test task"})
+		code := app.Run([]string{"tick", "--pretty", "create", "Output test task"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}

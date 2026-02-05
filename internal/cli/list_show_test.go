@@ -21,7 +21,7 @@ func TestListCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "list"})
+		code := app.Run([]string{"tick", "--pretty", "list"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -65,7 +65,7 @@ func TestListCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "list"})
+		code := app.Run([]string{"tick", "--pretty", "list"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -107,7 +107,7 @@ func TestListCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "list"})
+		code := app.Run([]string{"tick", "--pretty", "list"})
 		if code != 0 {
 			t.Errorf("expected exit code 0, got %d", code)
 		}
@@ -163,7 +163,7 @@ func TestListCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "list"})
+		code := app.Run([]string{"tick", "--pretty", "list"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -188,7 +188,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-a1b2"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-a1b2"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -226,7 +226,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-blocked"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-blocked"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -259,7 +259,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-parent"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-parent"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -290,7 +290,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-a1b2"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-a1b2"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -315,7 +315,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-a1b2"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-a1b2"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -337,7 +337,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-a1b2"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-a1b2"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -359,7 +359,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-a1b2"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-a1b2"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -382,7 +382,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-child"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-child"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -410,7 +410,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-a1b2"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-a1b2"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -432,7 +432,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-done"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-done"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -457,7 +457,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-open"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-open"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -534,7 +534,7 @@ func TestShowCommand(t *testing.T) {
 		}
 
 		// Use uppercase ID
-		code := app.Run([]string{"tick", "show", "TICK-A1B2"})
+		code := app.Run([]string{"tick", "--pretty", "show", "TICK-A1B2"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -578,7 +578,7 @@ func TestShowCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "show", "tick-a1b2"})
+		code := app.Run([]string{"tick", "--pretty", "show", "tick-a1b2"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}

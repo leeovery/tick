@@ -113,8 +113,10 @@ func (a *App) runInit() int {
 	f.Close()
 
 	// Print confirmation (unless --quiet)
-	if !a.flags.Quiet {
-		fmt.Fprintf(a.Stdout, "Initialized tick in %s/\n", tickDir)
+	if !a.formatConfig.Quiet {
+		formatter := a.formatConfig.Formatter()
+		msg := fmt.Sprintf("Initialized tick in %s/", tickDir)
+		fmt.Fprint(a.Stdout, formatter.FormatMessage(msg))
 	}
 
 	return 0

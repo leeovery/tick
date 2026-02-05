@@ -239,7 +239,7 @@ func TestBlockedQuery(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "blocked"})
+		code := app.Run([]string{"tick", "--pretty", "blocked"})
 		if code != 0 {
 			t.Errorf("expected exit code 0, got %d", code)
 		}
@@ -267,7 +267,7 @@ func TestBlockedQuery(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "blocked"})
+		code := app.Run([]string{"tick", "--pretty", "blocked"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -312,7 +312,7 @@ func TestBlockedCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "blocked"})
+		code := app.Run([]string{"tick", "--pretty", "blocked"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}
@@ -343,7 +343,7 @@ func TestBlockedCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "blocked"})
+		code := app.Run([]string{"tick", "--pretty", "blocked"})
 		if code != 0 {
 			t.Errorf("expected exit code 0, got %d", code)
 		}

@@ -107,8 +107,9 @@ func (a *App) runDepAdd(tickDir string, args []string) int {
 	}
 
 	// Output (unless --quiet)
-	if !a.flags.Quiet {
-		fmt.Fprintf(a.Stdout, "Dependency added: %s blocked by %s\n", taskID, blockedByID)
+	if !a.formatConfig.Quiet {
+		formatter := a.formatConfig.Formatter()
+		fmt.Fprint(a.Stdout, formatter.FormatDepChange("add", taskID, blockedByID))
 	}
 
 	return 0
@@ -177,8 +178,9 @@ func (a *App) runDepRm(tickDir string, args []string) int {
 	}
 
 	// Output (unless --quiet)
-	if !a.flags.Quiet {
-		fmt.Fprintf(a.Stdout, "Dependency removed: %s no longer blocked by %s\n", taskID, blockedByID)
+	if !a.formatConfig.Quiet {
+		formatter := a.formatConfig.Formatter()
+		fmt.Fprint(a.Stdout, formatter.FormatDepChange("remove", taskID, blockedByID))
 	}
 
 	return 0

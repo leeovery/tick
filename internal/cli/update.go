@@ -183,10 +183,25 @@ func (a *App) runUpdate(args []string) int {
 	}
 
 	// Output
-	if a.flags.Quiet {
+	if a.formatConfig.Quiet {
 		fmt.Fprintln(a.Stdout, updatedTask.ID)
 	} else {
-		a.printTaskDetails(updatedTask)
+		// Build task detail data for formatter
+		data := &TaskDetailData{
+			ID:          updatedTask.ID,
+			Title:       updatedTask.Title,
+			Status:      string(updatedTask.Status),
+			Priority:    updatedTask.Priority,
+			Description: updatedTask.Description,
+			Parent:      updatedTask.Parent,
+			Created:     updatedTask.Created,
+			Updated:     updatedTask.Updated,
+			Closed:      updatedTask.Closed,
+			BlockedBy:   make([]RelatedTaskData, 0),
+			Children:    make([]RelatedTaskData, 0),
+		}
+		formatter := a.formatConfig.Formatter()
+		fmt.Fprint(a.Stdout, formatter.FormatTaskDetail(data))
 	}
 
 	return 0

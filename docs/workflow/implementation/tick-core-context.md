@@ -282,3 +282,18 @@
 - JSON struct tags use snake_case matching JSONL storage convention
 - Test naming "it does X" maintained consistently
 - Reuses data types from format.go (TaskListData, TaskDetailData, StatsData)
+
+## tick-core-4-5: Integrate formatters into all commands
+
+### Integration (executor)
+- `FormatConfig.Formatter()` method in format.go returns appropriate Formatter instance based on format setting
+- FormatConfig resolved once in App.Run dispatcher before command dispatch — all handlers access via `a.formatConfig`
+- All commands use `a.formatConfig.Quiet` (not `a.flags.Quiet`) for quiet mode checks
+- Quiet precedence: --quiet checked before formatter call, suppresses format-specific wrapping
+- Pattern: build data struct (TaskListData/TaskDetailData), get formatter via formatConfig.Formatter(), write to stdout
+
+### Cohesion (reviewer)
+- Consistent pattern across all commands: check Quiet first, then use Formatter
+- Existing tests updated with --pretty flag to explicitly test Pretty formatter output
+- Error convention maintained: plain text "Error: ..." to stderr regardless of format flag
+- Empty list handling per format (TOON: zero count header, Pretty: message, JSON: [])

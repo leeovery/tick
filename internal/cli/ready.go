@@ -99,24 +99,27 @@ func (a *App) runReady() int {
 		return 1
 	}
 
-	// Handle empty result
-	if len(tasks) == 0 {
-		fmt.Fprintln(a.Stdout, "No tasks found.")
-		return 0
-	}
-
 	// Output
-	if a.flags.Quiet {
+	if a.formatConfig.Quiet {
 		// --quiet: output only task IDs, one per line
 		for _, t := range tasks {
 			fmt.Fprintln(a.Stdout, t.ID)
 		}
 	} else {
-		// Aligned columns: ID (12), STATUS (12), PRI (4), TITLE (remainder)
-		fmt.Fprintf(a.Stdout, "%-12s %-12s %-4s %s\n", "ID", "STATUS", "PRI", "TITLE")
-		for _, t := range tasks {
-			fmt.Fprintf(a.Stdout, "%-12s %-12s %-4d %s\n", t.ID, t.Status, t.Priority, t.Title)
+		// Build task list data for formatter
+		data := &TaskListData{
+			Tasks: make([]TaskRowData, len(tasks)),
 		}
+		for i, t := range tasks {
+			data.Tasks[i] = TaskRowData{
+				ID:       t.ID,
+				Title:    t.Title,
+				Status:   t.Status,
+				Priority: t.Priority,
+			}
+		}
+		formatter := a.formatConfig.Formatter()
+		fmt.Fprint(a.Stdout, formatter.FormatTaskList(data))
 	}
 
 	return 0

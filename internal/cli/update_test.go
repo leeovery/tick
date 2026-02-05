@@ -282,7 +282,7 @@ func TestUpdateCommand(t *testing.T) {
 			Cwd:    dir,
 		}
 
-		code := app.Run([]string{"tick", "update", "tick-a1b2c3", "--title", "Updated title"})
+		code := app.Run([]string{"tick", "--pretty", "update", "tick-a1b2c3", "--title", "Updated title"})
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
 		}

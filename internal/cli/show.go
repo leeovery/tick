@@ -3,7 +3,6 @@ package cli
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
@@ -135,57 +134,36 @@ func (a *App) runShow(args []string) int {
 	}
 
 	// Output
-	if a.flags.Quiet {
+	if a.formatConfig.Quiet {
 		// --quiet: output only task ID
 		fmt.Fprintln(a.Stdout, t.ID)
 		return 0
 	}
 
-	// Full output format as key-value
-	fmt.Fprintf(a.Stdout, "ID:       %s\n", t.ID)
-	fmt.Fprintf(a.Stdout, "Title:    %s\n", t.Title)
-	fmt.Fprintf(a.Stdout, "Status:   %s\n", t.Status)
-	fmt.Fprintf(a.Stdout, "Priority: %d\n", t.Priority)
-	if t.Parent != "" {
-		if t.ParentTitle != "" {
-			fmt.Fprintf(a.Stdout, "Parent:   %s (%s)\n", t.Parent, t.ParentTitle)
-		} else {
-			fmt.Fprintf(a.Stdout, "Parent:   %s\n", t.Parent)
-		}
+	// Build task detail data for formatter
+	data := &TaskDetailData{
+		ID:          t.ID,
+		Title:       t.Title,
+		Status:      t.Status,
+		Priority:    t.Priority,
+		Description: t.Description,
+		Parent:      t.Parent,
+		ParentTitle: t.ParentTitle,
+		Created:     t.Created,
+		Updated:     t.Updated,
+		Closed:      t.Closed,
+		BlockedBy:   make([]RelatedTaskData, len(blockedBy)),
+		Children:    make([]RelatedTaskData, len(children)),
 	}
-	fmt.Fprintf(a.Stdout, "Created:  %s\n", t.Created)
-	fmt.Fprintf(a.Stdout, "Updated:  %s\n", t.Updated)
-	if t.Closed != "" {
-		fmt.Fprintf(a.Stdout, "Closed:   %s\n", t.Closed)
+	for i, r := range blockedBy {
+		data.BlockedBy[i] = RelatedTaskData{ID: r.ID, Title: r.Title, Status: r.Status}
 	}
-
-	// Blocked by section (if any)
-	if len(blockedBy) > 0 {
-		fmt.Fprintln(a.Stdout)
-		fmt.Fprintln(a.Stdout, "Blocked by:")
-		for _, r := range blockedBy {
-			fmt.Fprintf(a.Stdout, "  %s  %s (%s)\n", r.ID, r.Title, r.Status)
-		}
+	for i, r := range children {
+		data.Children[i] = RelatedTaskData{ID: r.ID, Title: r.Title, Status: r.Status}
 	}
 
-	// Children section (if any)
-	if len(children) > 0 {
-		fmt.Fprintln(a.Stdout)
-		fmt.Fprintln(a.Stdout, "Children:")
-		for _, r := range children {
-			fmt.Fprintf(a.Stdout, "  %s  %s (%s)\n", r.ID, r.Title, r.Status)
-		}
-	}
-
-	// Description section (if present)
-	if t.Description != "" {
-		fmt.Fprintln(a.Stdout)
-		fmt.Fprintln(a.Stdout, "Description:")
-		// Indent description lines
-		for _, line := range strings.Split(t.Description, "\n") {
-			fmt.Fprintf(a.Stdout, "  %s\n", line)
-		}
-	}
+	formatter := a.formatConfig.Formatter()
+	fmt.Fprint(a.Stdout, formatter.FormatTaskDetail(data))
 
 	return 0
 }
