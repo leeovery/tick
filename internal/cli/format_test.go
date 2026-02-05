@@ -439,7 +439,7 @@ func TestVerboseOutput(t *testing.T) {
 		stdoutContent := stdout.String()
 		// If there's any verbose-style debug info, it should NOT be in stdout
 		// (It should be in stderr instead)
-		if strings.Contains(stdoutContent, "[verbose]") || strings.Contains(stdoutContent, "[debug]") {
+		if strings.Contains(stdoutContent, "verbose:") || strings.Contains(stdoutContent, "[debug]") {
 			t.Errorf("verbose/debug output should not appear in stdout, got %q", stdoutContent)
 		}
 	})
@@ -501,8 +501,8 @@ func TestWriteVerbose(t *testing.T) {
 
 		app.WriteVerbose("debug message")
 
-		if stderr.String() != "[verbose] debug message\n" {
-			t.Errorf("stderr = %q, want %q", stderr.String(), "[verbose] debug message\n")
+		if stderr.String() != "verbose: debug message\n" {
+			t.Errorf("stderr = %q, want %q", stderr.String(), "verbose: debug message\n")
 		}
 		if stdout.Len() != 0 {
 			t.Errorf("stdout should be empty, got %q", stdout.String())
@@ -539,7 +539,7 @@ func TestWriteVerbose(t *testing.T) {
 
 		app.WriteVerbose("loaded %d tasks from %s", 5, "tasks.jsonl")
 
-		expected := "[verbose] loaded 5 tasks from tasks.jsonl\n"
+		expected := "verbose: loaded 5 tasks from tasks.jsonl\n"
 		if stderr.String() != expected {
 			t.Errorf("stderr = %q, want %q", stderr.String(), expected)
 		}

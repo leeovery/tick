@@ -106,6 +106,7 @@ func (a *App) runList(args []string) int {
 	}
 
 	// Open store
+	a.WriteVerbose("store open %s", tickDir)
 	store, err := storage.NewStore(tickDir)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
@@ -116,11 +117,14 @@ func (a *App) runList(args []string) int {
 	var tasks []taskRow
 
 	// Query tasks from SQLite based on filters
+	a.WriteVerbose("lock acquire shared")
+	a.WriteVerbose("cache freshness check")
 	err = store.Query(func(db *sql.DB) error {
 		var queryErr error
 		tasks, queryErr = queryListTasks(db, flags)
 		return queryErr
 	})
+	a.WriteVerbose("lock release")
 
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)

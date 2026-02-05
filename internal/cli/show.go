@@ -28,6 +28,7 @@ func (a *App) runShow(args []string) int {
 	}
 
 	// Open store
+	a.WriteVerbose("store open %s", tickDir)
 	store, err := storage.NewStore(tickDir)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
@@ -62,6 +63,8 @@ func (a *App) runShow(args []string) int {
 	var found bool
 
 	// Query task details
+	a.WriteVerbose("lock acquire shared")
+	a.WriteVerbose("cache freshness check")
 	err = store.Query(func(db *sql.DB) error {
 		// Get main task
 		row := db.QueryRow(`SELECT id, title, status, priority, COALESCE(description, ''), COALESCE(parent, ''), created, updated, COALESCE(closed, '') FROM tasks WHERE id = ?`, taskID)
@@ -121,6 +124,7 @@ func (a *App) runShow(args []string) int {
 		}
 		return childRows.Err()
 	})
+	a.WriteVerbose("lock release")
 
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)

@@ -49,6 +49,7 @@ func (a *App) Run(args []string) int {
 		return 1
 	}
 	a.formatConfig = formatConfig
+	a.WriteVerbose("format resolved to %s", formatConfig.Format)
 
 	// Get subcommand
 	if len(args) < 2 {
@@ -189,12 +190,13 @@ func ParseGlobalFlags(args []string) (GlobalFlags, []string) {
 
 // WriteVerbose writes a verbose message to stderr if verbose mode is enabled.
 // Verbose output is always written to stderr to avoid contaminating stdout.
+// All lines are prefixed with "verbose:" for grep-ability.
 func (a *App) WriteVerbose(format string, args ...interface{}) {
 	if !a.formatConfig.Verbose {
 		return
 	}
 	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintf(a.Stderr, "[verbose] %s\n", msg)
+	fmt.Fprintf(a.Stderr, "verbose: %s\n", msg)
 }
 
 // DiscoverTickDir walks up from the given directory looking for .tick/.

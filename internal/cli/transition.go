@@ -26,6 +26,7 @@ func (a *App) runTransition(command string, args []string) int {
 	taskID := task.NormalizeID(args[2])
 
 	// Open store
+	a.WriteVerbose("store open %s", tickDir)
 	store, err := storage.NewStore(tickDir)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
@@ -36,6 +37,8 @@ func (a *App) runTransition(command string, args []string) int {
 	var transitionResult task.TransitionResult
 
 	// Execute mutation
+	a.WriteVerbose("lock acquire exclusive")
+	a.WriteVerbose("cache freshness check")
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Find task by ID
 		var targetTask *task.Task
@@ -59,6 +62,8 @@ func (a *App) runTransition(command string, args []string) int {
 		transitionResult = result
 		return tasks, nil
 	})
+	a.WriteVerbose("atomic write complete")
+	a.WriteVerbose("lock release")
 
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)

@@ -297,3 +297,17 @@
 - Existing tests updated with --pretty flag to explicitly test Pretty formatter output
 - Error convention maintained: plain text "Error: ..." to stderr regardless of format flag
 - Empty list handling per format (TOON: zero count header, Pretty: message, JSON: [])
+
+## tick-core-4-6: Verbose output & edge case hardening
+
+### Integration (executor)
+- `WriteVerbose(format, args...)` uses `verbose:` prefix (changed from `[verbose]`) — all debug output to stderr only
+- Verbose instrumentation in all command handlers: store open, lock acquire/release, cache freshness, atomic write, format resolution
+- Quiet and verbose orthogonal: quiet controls stdout suppression, verbose controls stderr debug output
+- Format resolution logged in App.Run() before dispatch — all commands get it automatically
+
+### Cohesion (reviewer)
+- `verbose:` prefix pattern established for all debug output — grep-able
+- Instrumentation placement consistent: before NewStore, before Query/Mutate, after closure returns
+- Read commands log: store open, lock acquire shared, cache freshness, lock release
+- Write commands additionally log: lock acquire exclusive, atomic write complete

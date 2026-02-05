@@ -73,6 +73,7 @@ func (a *App) runBlocked() int {
 	}
 
 	// Open store
+	a.WriteVerbose("store open %s", tickDir)
 	store, err := storage.NewStore(tickDir)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
@@ -83,11 +84,14 @@ func (a *App) runBlocked() int {
 	var tasks []taskRow
 
 	// Query blocked tasks from SQLite
+	a.WriteVerbose("lock acquire shared")
+	a.WriteVerbose("cache freshness check")
 	err = store.Query(func(db *sql.DB) error {
 		var queryErr error
 		tasks, queryErr = queryBlockedTasks(db)
 		return queryErr
 	})
+	a.WriteVerbose("lock release")
 
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)

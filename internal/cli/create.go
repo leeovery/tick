@@ -63,6 +63,7 @@ func (a *App) runCreate(args []string) int {
 	flags.Parent = task.NormalizeID(flags.Parent)
 
 	// Open store
+	a.WriteVerbose("store open %s", tickDir)
 	store, err := storage.NewStore(tickDir)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
@@ -73,6 +74,8 @@ func (a *App) runCreate(args []string) int {
 	var createdTask task.Task
 
 	// Execute mutation
+	a.WriteVerbose("lock acquire exclusive")
+	a.WriteVerbose("cache freshness check")
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Build ID lookup
 		idSet := make(map[string]bool)
@@ -146,6 +149,9 @@ func (a *App) runCreate(args []string) int {
 		// Append new task
 		return append(tasks, newTask), nil
 	})
+
+	a.WriteVerbose("atomic write complete")
+	a.WriteVerbose("lock release")
 
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)

@@ -78,6 +78,7 @@ func (a *App) runReady() int {
 	}
 
 	// Open store
+	a.WriteVerbose("store open %s", tickDir)
 	store, err := storage.NewStore(tickDir)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
@@ -88,11 +89,14 @@ func (a *App) runReady() int {
 	var tasks []taskRow
 
 	// Query ready tasks from SQLite
+	a.WriteVerbose("lock acquire shared")
+	a.WriteVerbose("cache freshness check")
 	err = store.Query(func(db *sql.DB) error {
 		var queryErr error
 		tasks, queryErr = queryReadyTasks(db)
 		return queryErr
 	})
+	a.WriteVerbose("lock release")
 
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)

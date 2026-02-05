@@ -91,6 +91,7 @@ func (a *App) runUpdate(args []string) int {
 	}
 
 	// Open store
+	a.WriteVerbose("store open %s", tickDir)
 	store, err := storage.NewStore(tickDir)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
@@ -101,6 +102,8 @@ func (a *App) runUpdate(args []string) int {
 	var updatedTask task.Task
 
 	// Execute mutation
+	a.WriteVerbose("lock acquire exclusive")
+	a.WriteVerbose("cache freshness check")
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Build ID lookup
 		idSet := make(map[string]bool)
@@ -176,6 +179,8 @@ func (a *App) runUpdate(args []string) int {
 		updatedTask = tasks[targetIdx]
 		return tasks, nil
 	})
+	a.WriteVerbose("atomic write complete")
+	a.WriteVerbose("lock release")
 
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
