@@ -89,3 +89,17 @@
 - Store.Mutate pattern correctly used for atomic writes with SQLite cache update
 - ID normalization uses task.NormalizeID() consistently across blocked_by, blocks, and parent
 - Test naming follows established "it does X" format consistently with prior tasks
+
+## tick-core-1-7: tick list & tick show commands
+
+### Integration (executor)
+- `runList()` in `/Users/leeovery/Code/tick/internal/cli/list.go` — queries SQLite via `Store.Query()`, ordered by priority ASC then created ASC
+- `runShow()` in `/Users/leeovery/Code/tick/internal/cli/show.go` — fetches task + relationships (blocked_by from dependencies table, children via parent field)
+- Both commands use `Store.Query()` for shared-lock read flow — ensures cache freshness automatically
+- Shared test helpers extracted to `/Users/leeovery/Code/tick/internal/cli/test_helpers_test.go` following Go convention
+
+### Cohesion (reviewer)
+- Test helpers extracted to test_helpers_test.go following Go convention of _test.go files sharing package scope
+- Consistent error message format "Error: ..." followed by details
+- Commands follow same pattern: discover tick dir, open store, query, format output
+- strconv.Itoa pattern used for priority conversion in test data setup

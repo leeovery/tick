@@ -28,7 +28,9 @@
       "Bash(/tmp/tick-test:*)",
       "Bash(echo:*)",
       "Bash(/tmp/tick:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(/tmp/tick-bin show:*)",
+      "Bash(/tmp/tick-bin create:*)"
     ]
   }
 }
