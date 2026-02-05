@@ -173,3 +173,17 @@
 - Store.Mutate pattern correctly used for atomic writes
 - ID normalization via task.NormalizeID() consistently applied to both positional arguments
 - Test naming follows established "it does X" format
+
+## tick-core-3-3: Ready query & tick ready command
+
+### Integration (executor)
+- `ReadyCondition` constant in `/Users/leeovery/Code/tick/internal/cli/ready.go` — reusable SQL WHERE clause: status=open, all blockers closed, no open children
+- `queryReadyTasks(db *sql.DB)` function — returns `[]taskRow` ordered by priority ASC, created ASC. Reusable for filter implementations
+- `tick ready` registered in cli.go — outputs aligned columns like `tick list`
+- Empty result: prints "No tasks found." to stdout, exit 0 (not error)
+
+### Cohesion (reviewer)
+- ReadyCondition constant pattern established: SQL WHERE clause fragments as exported const for cross-command reuse
+- taskRow struct at package level in ready.go enables reuse by future list filters and blocked command
+- Command handler pattern confirmed: DiscoverTickDir -> NewStore -> Query callback -> format output
+- Test helper reuse confirmed: setupTaskFull supports all task field combinations
