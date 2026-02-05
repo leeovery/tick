@@ -44,3 +44,18 @@
 - Error handling follows project convention: returns raw errors without wrapping
 - Test naming follows "it does X" format consistently
 - Cache struct mirrors established patterns: constructor returns pointer with error, Close method for cleanup
+
+## tick-core-1-4: Storage engine with file locking
+
+### Integration (executor)
+- Created `Store` in `/Users/leeovery/Code/tick/internal/storage/store.go` — use for all task read/write operations; composes JSONL and SQLite cache
+- `Store.Mutate(func([]task.Task) ([]task.Task, error))` — exclusive lock, receives current tasks, returns modified tasks; handles atomic write flow
+- `Store.Query(func(*sql.DB) error)` — shared lock, provides direct SQLite access for queries; automatically ensures cache freshness
+- Lock timeout is 5 seconds; error message: "could not acquire lock on .tick/lock - another process may be using tick"
+- JSONL-first principle: SQLite failures during mutation are logged to stderr but return success (next read self-heals)
+
+### Cohesion (reviewer)
+- Store constructor pattern (`NewStore(path) (*Store, error)`) matches Cache constructor pattern from tick-core-1-3
+- Error messages follow project convention: lowercase, descriptive, no "Error:" prefix
+- Test naming follows "it does X" format consistently with prior tasks
+- Lock path `.tick/lock` and cache path `.tick/cache.db` follow directory structure from spec
