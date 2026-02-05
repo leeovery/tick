@@ -14,3 +14,18 @@
 - Validation pattern: standalone functions returning `error` for each field type
 - Type conventions: `Status` as named string type with constants, not iota
 - Test structure: subtests with descriptive names matching "it does X" format
+
+## tick-core-1-2: JSONL storage with atomic writes
+
+### Integration (executor)
+- JSONL storage in `/Users/leeovery/Code/tick/internal/storage/jsonl.go` — `WriteJSONL(path, []task.Task)` and `ReadJSONL(path) ([]task.Task, error)`
+- Atomic write pattern: temp file in same directory + fsync + rename — ensures crash safety
+- Empty file returns empty slice (not nil); missing file returns `os.ErrNotExist`
+- Relies on Task struct's `omitempty` JSON tags for optional field omission — no custom marshaling needed
+- Field order in JSONL matches struct definition order (id, title, status, priority, optional fields, timestamps)
+
+### Cohesion (reviewer)
+- Storage package follows established pattern: internal/storage separate from internal/task
+- Test naming convention: "it does X" format maintained
+- Package doc comment present on jsonl.go
+- Error handling: returns raw errors (acceptable for low-level storage layer)
