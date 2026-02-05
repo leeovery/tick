@@ -79,6 +79,8 @@ func (a *App) Run(args []string) int {
 		return a.runReady()
 	case "blocked":
 		return a.runBlocked()
+	case "stats":
+		return a.runStats()
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcommand)
 		return 1
@@ -140,6 +142,7 @@ func (a *App) printUsage() {
 	fmt.Fprintln(a.Stdout, "  dep     Manage dependencies (add/rm)")
 	fmt.Fprintln(a.Stdout, "  ready   Show tasks that are ready to work on")
 	fmt.Fprintln(a.Stdout, "  blocked Show tasks that are blocked")
+	fmt.Fprintln(a.Stdout, "  stats   Show task statistics")
 	fmt.Fprintln(a.Stdout, "")
 	fmt.Fprintln(a.Stdout, "Global Options:")
 	fmt.Fprintln(a.Stdout, "  -q, --quiet    Suppress non-essential output")

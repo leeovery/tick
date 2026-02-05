@@ -311,3 +311,17 @@
 - Instrumentation placement consistent: before NewStore, before Query/Mutate, after closure returns
 - Read commands log: store open, lock acquire shared, cache freshness, lock release
 - Write commands additionally log: lock acquire exclusive, atomic write complete
+
+## tick-core-5-1: tick stats command
+
+### Integration (executor)
+- `queryStats(db *sql.DB) (*StatsData, error)` in `/Users/leeovery/Code/tick/internal/cli/stats.go` — reusable stats query
+- Reuses `ReadyCondition` and `BlockedCondition` from Phase 3 for workflow counts
+- `runStats()` follows established handler pattern: DiscoverTickDir -> NewStore -> Query -> Formatter.FormatStats
+- --quiet suppresses all output (no mutation ID to return)
+
+### Cohesion (reviewer)
+- Uses existing StatsData/PriorityCount types from format.go
+- ReadyCondition/BlockedCondition reuse validates Phase 3 design of exported SQL fragments
+- Handler pattern consistent with runReady/runBlocked
+- Test naming "it does X" maintained
