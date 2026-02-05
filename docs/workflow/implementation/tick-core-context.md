@@ -187,3 +187,18 @@
 - taskRow struct at package level in ready.go enables reuse by future list filters and blocked command
 - Command handler pattern confirmed: DiscoverTickDir -> NewStore -> Query callback -> format output
 - Test helper reuse confirmed: setupTaskFull supports all task field combinations
+
+## tick-core-3-4: Blocked query, tick blocked & cancel-unblocks-dependents
+
+### Integration (executor)
+- `BlockedCondition` constant in `/Users/leeovery/Code/tick/internal/cli/blocked.go` — reusable SQL WHERE clause: open AND (has unclosed blocker OR has open children)
+- `queryBlockedTasks(db *sql.DB)` function — returns `[]taskRow` ordered by priority ASC, created ASC. Reusable for filter implementations
+- `tick blocked` registered in cli.go — outputs aligned columns like `tick list` and `tick ready`
+- Empty result: prints "No tasks found." to stdout, exit 0 (not error)
+- Cancel-unblocks-dependents verified: cancelling a blocker allows dependent to become ready
+
+### Cohesion (reviewer)
+- BlockedCondition follows ReadyCondition pattern: SQL WHERE clause fragment as exported const
+- Reuses taskRow struct from ready.go — no duplication
+- Command handler pattern consistent: DiscoverTickDir -> NewStore -> Query callback -> format output
+- Test naming follows established "it does X" format

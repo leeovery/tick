@@ -56,6 +56,8 @@ func (a *App) Run(args []string) int {
 		return a.runDep(args)
 	case "ready":
 		return a.runReady()
+	case "blocked":
+		return a.runBlocked()
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcommand)
 		return 1
@@ -114,6 +116,7 @@ func (a *App) printUsage() {
 	fmt.Fprintln(a.Stdout, "  reopen  Reopen a closed task")
 	fmt.Fprintln(a.Stdout, "  dep     Manage dependencies (add/rm)")
 	fmt.Fprintln(a.Stdout, "  ready   Show tasks that are ready to work on")
+	fmt.Fprintln(a.Stdout, "  blocked Show tasks that are blocked")
 	fmt.Fprintln(a.Stdout, "")
 	fmt.Fprintln(a.Stdout, "Global Options:")
 	fmt.Fprintln(a.Stdout, "  -q, --quiet    Suppress non-essential output")
