@@ -52,6 +52,8 @@ func (a *App) Run(args []string) int {
 		return a.runShow(args)
 	case "start", "done", "cancel", "reopen":
 		return a.runTransition(subcommand, args)
+	case "dep":
+		return a.runDep(args)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcommand)
 		return 1
@@ -108,6 +110,7 @@ func (a *App) printUsage() {
 	fmt.Fprintln(a.Stdout, "  done    Mark task as completed")
 	fmt.Fprintln(a.Stdout, "  cancel  Mark task as cancelled")
 	fmt.Fprintln(a.Stdout, "  reopen  Reopen a closed task")
+	fmt.Fprintln(a.Stdout, "  dep     Manage dependencies (add/rm)")
 	fmt.Fprintln(a.Stdout, "")
 	fmt.Fprintln(a.Stdout, "Global Options:")
 	fmt.Fprintln(a.Stdout, "  -q, --quiet    Suppress non-essential output")

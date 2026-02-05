@@ -159,3 +159,17 @@
 - Error message style matches existing codebase (lowercase, fmt.Errorf pattern)
 - Pure function design aligns with other validation functions in the task package
 - BFS cycle detection correctly finds shortest path
+
+## tick-core-3-2: tick dep add & tick dep rm commands
+
+### Integration (executor)
+- `/Users/leeovery/Code/tick/internal/cli/dep.go` with `runDep()`, `runDepAdd()`, `runDepRm()` — follows established CLI patterns
+- `dep add` validates both task_id and blocked_by_id exist; `dep rm` only validates task_id (allows removing stale refs)
+- Uses `task.ValidateDependency()` from tick-core-3-1 for cycle detection and child-blocked-by-parent validation
+- Output: "Dependency added: {task_id} blocked by {blocked_by_id}" and "Dependency removed: {task_id} no longer blocked by {blocked_by_id}"
+
+### Cohesion (reviewer)
+- Error message pattern maintained: "Error: <lowercase message>\n" to stderr with exit code 1
+- Store.Mutate pattern correctly used for atomic writes
+- ID normalization via task.NormalizeID() consistently applied to both positional arguments
+- Test naming follows established "it does X" format
