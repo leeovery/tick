@@ -250,3 +250,19 @@
 - Uses concrete data types (TaskListData, TaskDetailData, StatsData) from format.go
 - Test structure matches established pattern with "it does X" naming
 - escapeValue() function provides manual fallback for robustness
+
+## tick-core-4-3: Human-readable formatter — list, show, stats output
+
+### Integration (executor)
+- `PrettyFormatter` in `/Users/leeovery/Code/tick/internal/cli/pretty_formatter.go` — concrete Formatter for terminal (TTY) output
+- FormatTaskList: aligned columns with header, dynamic widths; empty → "No tasks found." (no headers)
+- FormatTaskDetail: key-value with aligned labels; omits empty sections (Blocked by, Children, Description)
+- FormatStats: three groups (total, status breakdown, workflow), right-aligned numbers, P0-P4 labels always present
+- `maxTitleLength` constant (50 chars) controls truncation in list view; `truncateTitle()` helper adds "..."
+- `priorityLabels` map provides human-readable priority names (P0: critical, P1: high, etc.)
+
+### Cohesion (reviewer)
+- PrettyFormatter follows same pattern as ToonFormatter (implements all 6 Formatter methods)
+- Plain text passthrough for FormatTransition/FormatDepChange/FormatMessage matches ToonFormatter exactly
+- Test naming "it does X" maintained consistently
+- priorityLabels map pattern established for human-readable priority descriptions
