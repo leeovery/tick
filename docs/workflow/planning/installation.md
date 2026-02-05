@@ -6,6 +6,11 @@ specification: ../specification/installation.md
 spec_commit: d20af03c956b3e3c4608eb4d5945a67c5a3f6c90
 created: 2026-01-31
 updated: 2026-01-31
+external_dependencies:
+  - topic: tick-core
+    description: Buildable Go binary that compiles successfully
+    state: resolved
+    task_id: tick-core-1-5
 planning:
   phase: 2
   task: 4
@@ -80,10 +85,6 @@ approved_at: 2026-01-31
 | installation-2-4 | Install Script Error Handling Hardening | script piped via curl with server error, partial download, OS value that is neither Linux nor Darwin (e.g. FreeBSD) | authored |
 
 ---
-
-## External Dependencies
-
-- tick-core: Buildable Go binary that compiles successfully → tick-core-1-5 (resolved)
 
 ## Log
 
