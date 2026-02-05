@@ -103,3 +103,17 @@
 - Consistent error message format "Error: ..." followed by details
 - Commands follow same pattern: discover tick dir, open store, query, format output
 - strconv.Itoa pattern used for priority conversion in test data setup
+
+## tick-core-2-1: Status transition validation logic
+
+### Integration (executor)
+- `Transition(task *Task, command string) (TransitionResult, error)` in `/Users/leeovery/Code/tick/internal/task/transition.go` — pure domain logic for status transitions
+- `TransitionResult{OldStatus, NewStatus}` — returns both statuses for CLI output formatting (e.g., "tick-a3f2b7: open -> in_progress")
+- Timestamps handled internally: `updated` refreshed on every valid transition, `closed` set on done/cancel, cleared on reopen
+- Task pointer mutated in place on success; left unmodified on error
+
+### Cohesion (reviewer)
+- TransitionResult struct follows project pattern of returning structured data with named fields
+- Error message format "cannot %s task %s - status is '%s'" maintains lowercase convention
+- time.RFC3339 usage consistent with DefaultTimestamps() in task.go
+- Test structure (helper functions at top, valid cases, invalid cases, timestamp tests) provides good organizational pattern

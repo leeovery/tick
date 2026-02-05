@@ -30,7 +30,8 @@
       "Bash(/tmp/tick:*)",
       "Bash(sqlite3:*)",
       "Bash(/tmp/tick-bin show:*)",
-      "Bash(/tmp/tick-bin create:*)"
+      "Bash(/tmp/tick-bin create:*)",
+      "Bash(golangci-lint run:*)"
     ]
   }
 }
