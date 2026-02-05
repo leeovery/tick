@@ -217,3 +217,20 @@
 - Flag validation pattern: parse first, validate second, then execute — matches update.go pattern
 - Pointer types for optional filter values (*int) follow established UpdateFlags pattern
 - Test structure follows "it does X" naming and uses setupTaskFull helper consistently
+
+## tick-core-4-1: Formatter abstraction & TTY-based format selection
+
+### Integration (executor)
+- `Format` type with constants `FormatToon`, `FormatPretty`, `FormatJSON` in `/Users/leeovery/Code/tick/internal/cli/format.go`
+- `Formatter` interface with methods: `FormatTaskList`, `FormatTaskDetail`, `FormatTransition`, `FormatDepChange`, `FormatStats`, `FormatMessage`
+- `DetectTTY(io.Writer)` is the single authoritative TTY detection function — use for all TTY checks
+- `ResolveFormat(toonFlag, prettyFlag, jsonFlag, isTTY)` handles flag priority and auto-detection
+- `FormatConfig` struct holds Format, Quiet, Verbose — access via `app.formatConfig` in command handlers
+- `WriteVerbose(format, args...)` method writes to stderr when verbose enabled — use for debug output
+- Conflicting format flags error with "cannot specify multiple format flags (--toon, --pretty, --json)"
+
+### Cohesion (reviewer)
+- `DetectTTY()` consolidates TTY detection — removed duplicate `IsTTY()` function
+- `FormatConfig` pattern established for passing output config to handlers
+- `WriteVerbose()` pattern for verbose output to stderr only
+- Error message convention maintained: lowercase messages, "Error: %s\n" at CLI layer

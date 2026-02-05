@@ -365,13 +365,13 @@ func TestTTYDetection(t *testing.T) {
 	t.Run("it detects TTY vs non-TTY on stdout", func(t *testing.T) {
 		// Non-TTY case: bytes.Buffer is not a TTY
 		var buf bytes.Buffer
-		if IsTTY(&buf) {
+		if DetectTTY(&buf) {
 			t.Error("bytes.Buffer should not be detected as TTY")
 		}
 
 		// Note: We can't easily test actual TTY detection in unit tests
 		// because /dev/tty is not available in CI environments.
-		// The important thing is that IsTTY works with os.File.
+		// The important thing is that DetectTTY works with os.File.
 	})
 
 	t.Run("it sets default output format based on TTY detection", func(t *testing.T) {

@@ -11,10 +11,11 @@ import (
 
 // App represents the CLI application with configurable I/O.
 type App struct {
-	Stdout io.Writer
-	Stderr io.Writer
-	Cwd    string
-	flags  GlobalFlags
+	Stdout       io.Writer
+	Stderr       io.Writer
+	Cwd          string
+	flags        GlobalFlags
+	formatConfig FormatConfig
 }
 
 // GlobalFlags holds parsed global command-line flags.
@@ -22,6 +23,10 @@ type GlobalFlags struct {
 	Quiet        bool
 	Verbose      bool
 	OutputFormat string // "toon", "pretty", "json", or "" for auto-detect
+	// Individual format flags for conflict detection
+	ToonFlag   bool
+	PrettyFlag bool
+	JSONFlag   bool
 }
 
 // Run executes the CLI with the given arguments.
@@ -29,6 +34,21 @@ type GlobalFlags struct {
 func (a *App) Run(args []string) int {
 	// Parse global flags
 	a.flags, args = ParseGlobalFlags(args)
+
+	// Resolve format config early to catch conflicting flags before dispatch
+	formatConfig, err := NewFormatConfig(
+		a.flags.ToonFlag,
+		a.flags.PrettyFlag,
+		a.flags.JSONFlag,
+		a.flags.Quiet,
+		a.flags.Verbose,
+		a.Stdout,
+	)
+	if err != nil {
+		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
+		return 1
+	}
+	a.formatConfig = formatConfig
 
 	// Get subcommand
 	if len(args) < 2 {
@@ -131,7 +151,7 @@ func (a *App) DefaultOutputFormat() string {
 	if a.flags.OutputFormat != "" {
 		return a.flags.OutputFormat
 	}
-	if IsTTY(a.Stdout) {
+	if DetectTTY(a.Stdout) {
 		return "pretty"
 	}
 	return "toon"
@@ -149,10 +169,13 @@ func ParseGlobalFlags(args []string) (GlobalFlags, []string) {
 		case "-v", "--verbose":
 			flags.Verbose = true
 		case "--toon":
+			flags.ToonFlag = true
 			flags.OutputFormat = "toon"
 		case "--pretty":
+			flags.PrettyFlag = true
 			flags.OutputFormat = "pretty"
 		case "--json":
+			flags.JSONFlag = true
 			flags.OutputFormat = "json"
 		default:
 			remaining = append(remaining, arg)
@@ -162,19 +185,14 @@ func ParseGlobalFlags(args []string) (GlobalFlags, []string) {
 	return flags, remaining
 }
 
-// IsTTY checks if the given writer is a terminal.
-func IsTTY(w io.Writer) bool {
-	f, ok := w.(*os.File)
-	if !ok {
-		return false
+// WriteVerbose writes a verbose message to stderr if verbose mode is enabled.
+// Verbose output is always written to stderr to avoid contaminating stdout.
+func (a *App) WriteVerbose(format string, args ...interface{}) {
+	if !a.formatConfig.Verbose {
+		return
 	}
-
-	info, err := f.Stat()
-	if err != nil {
-		return false
-	}
-
-	return info.Mode()&os.ModeCharDevice != 0
+	msg := fmt.Sprintf(format, args...)
+	fmt.Fprintf(a.Stderr, "[verbose] %s\n", msg)
 }
 
 // DiscoverTickDir walks up from the given directory looking for .tick/.
