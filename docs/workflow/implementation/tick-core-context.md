@@ -29,3 +29,18 @@
 - Test naming convention: "it does X" format maintained
 - Package doc comment present on jsonl.go
 - Error handling: returns raw errors (acceptable for low-level storage layer)
+
+## tick-core-1-3: SQLite cache with freshness detection
+
+### Integration (executor)
+- SQLite cache in `/Users/leeovery/Code/tick/internal/storage/cache.go` — `Cache` struct wraps `*sql.DB`, path stored for corruption recovery
+- `NewCache(path)` creates cache.db with schema; `EnsureFresh(path, tasks, jsonlContent)` is the gatekeeper to call on every operation
+- Hash stored in metadata table under key `jsonl_hash` — use SHA256 of raw JSONL bytes
+- Dependencies normalized to `dependencies` table with composite PK `(task_id, blocked_by)` — query this table for blocking relationships instead of the JSONL array
+- Rebuild is transactional — all-or-nothing via `tx.Begin()`/`tx.Commit()`; rollback automatic on error via `defer tx.Rollback()`
+
+### Cohesion (reviewer)
+- Package structure follows established pattern: storage package contains both JSONL and SQLite cache
+- Error handling follows project convention: returns raw errors without wrapping
+- Test naming follows "it does X" format consistently
+- Cache struct mirrors established patterns: constructor returns pointer with error, Close method for cleanup
