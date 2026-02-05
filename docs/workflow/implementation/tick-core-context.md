@@ -117,3 +117,17 @@
 - Error message format "cannot %s task %s - status is '%s'" maintains lowercase convention
 - time.RFC3339 usage consistent with DefaultTimestamps() in task.go
 - Test structure (helper functions at top, valid cases, invalid cases, timestamp tests) provides good organizational pattern
+
+## tick-core-2-2: tick start, done, cancel, reopen commands
+
+### Integration (executor)
+- `runTransition(command, args)` in `/Users/leeovery/Code/tick/internal/cli/transition.go` — single handler for all four transition commands
+- Output format: `{id}: {old_status} → {new_status}\n` with unicode arrow (→), uses normalized lowercase ID
+- Commands registered in cli.go switch: `case "start", "done", "cancel", "reopen":` routes to common handler
+- Uses existing patterns: `DiscoverTickDir()`, `Store.Mutate()`, `task.NormalizeID()`, `task.Transition()`
+
+### Cohesion (reviewer)
+- Pattern established: transition commands share single handler (runTransition) with command parameter
+- Error message convention maintained: "Error: task 'tick-xyz' not found" format
+- Store.Mutate correctly returns modified slice after in-place mutation via pointer
+- Test helper setupTaskFull enables testing tasks in various states

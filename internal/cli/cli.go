@@ -48,6 +48,8 @@ func (a *App) Run(args []string) int {
 		return a.runList(args)
 	case "show":
 		return a.runShow(args)
+	case "start", "done", "cancel", "reopen":
+		return a.runTransition(subcommand, args)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcommand)
 		return 1
@@ -99,6 +101,10 @@ func (a *App) printUsage() {
 	fmt.Fprintln(a.Stdout, "  create  Create a new task")
 	fmt.Fprintln(a.Stdout, "  list    List all tasks")
 	fmt.Fprintln(a.Stdout, "  show    Show task details")
+	fmt.Fprintln(a.Stdout, "  start   Mark task as in-progress")
+	fmt.Fprintln(a.Stdout, "  done    Mark task as completed")
+	fmt.Fprintln(a.Stdout, "  cancel  Mark task as cancelled")
+	fmt.Fprintln(a.Stdout, "  reopen  Reopen a closed task")
 	fmt.Fprintln(a.Stdout, "")
 	fmt.Fprintln(a.Stdout, "Global Options:")
 	fmt.Fprintln(a.Stdout, "  -q, --quiet    Suppress non-essential output")
