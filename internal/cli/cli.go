@@ -42,6 +42,8 @@ func (a *App) Run(args []string) int {
 	switch subcommand {
 	case "init":
 		return a.runInit()
+	case "create":
+		return a.runCreate(args)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcommand)
 		return 1
@@ -90,6 +92,7 @@ func (a *App) printUsage() {
 	fmt.Fprintln(a.Stdout, "")
 	fmt.Fprintln(a.Stdout, "Commands:")
 	fmt.Fprintln(a.Stdout, "  init    Initialize tick in current directory")
+	fmt.Fprintln(a.Stdout, "  create  Create a new task")
 	fmt.Fprintln(a.Stdout, "")
 	fmt.Fprintln(a.Stdout, "Global Options:")
 	fmt.Fprintln(a.Stdout, "  -q, --quiet    Suppress non-essential output")

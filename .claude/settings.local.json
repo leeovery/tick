@@ -26,7 +26,9 @@
       "Bash(go get:*)",
       "Bash(go build:*)",
       "Bash(/tmp/tick-test:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(/tmp/tick:*)",
+      "Bash(sqlite3:*)"
     ]
   }
 }

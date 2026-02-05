@@ -74,3 +74,18 @@
 - App struct pattern with injectable Stdout/Stderr/Cwd enables testability
 - GlobalFlags struct with OutputFormat string allows flag-based format override or TTY auto-detection
 - Test naming consistently follows "it does X" format established in prior tasks
+
+## tick-core-1-6: tick create command
+
+### Integration (executor)
+- Created `/Users/leeovery/Code/tick/internal/cli/create.go` with `runCreate()` method, `parseCreateArgs()` for flag parsing, and `printTaskDetails()` for output formatting
+- Flag parsing pattern: positional arg for title, `--flag value` style for options
+- `--blocks` flag is the inverse of `--blocked-by`: modifies target tasks' `blocked_by` arrays and refreshes their `updated` timestamps atomically
+- `normalizeIDs()` helper in create.go handles slice normalization; use `task.NormalizeID()` for single IDs
+- Error messages follow CLI layer pattern: "Error: <message>\n" to stderr with exit code 1
+
+### Cohesion (reviewer)
+- Error message convention maintained: user-facing errors use "Error: " prefix written to stderr
+- Store.Mutate pattern correctly used for atomic writes with SQLite cache update
+- ID normalization uses task.NormalizeID() consistently across blocked_by, blocks, and parent
+- Test naming follows established "it does X" format consistently with prior tasks
