@@ -145,3 +145,17 @@
 - --blocks flag pattern established: modifies target tasks' blocked_by arrays atomically
 - Reuses existing helpers: normalizeIDs(), printTaskDetails(), DiscoverTickDir(), Store.Mutate()
 - Test helper reuse confirmed: setupTaskFull() enables testing tasks with specific initial states
+
+## tick-core-3-1: Dependency validation — cycle detection & child-blocked-by-parent
+
+### Integration (executor)
+- `ValidateDependency(tasks []Task, taskID, newBlockedByID string) error` in `/Users/leeovery/Code/tick/internal/task/dependency.go` — validates single dependency
+- `ValidateDependencies(tasks, taskID, blockedByIDs)` for batch validation — fails on first error
+- Cycle error format: `cannot add dependency - creates cycle: tick-a → tick-b → tick-a` (unicode arrow)
+- Child-blocked-by-parent error includes explanatory line about leaf-only ready rule
+
+### Cohesion (reviewer)
+- Uses established NormalizeID helper for consistent ID handling
+- Error message style matches existing codebase (lowercase, fmt.Errorf pattern)
+- Pure function design aligns with other validation functions in the task package
+- BFS cycle detection correctly finds shortest path
