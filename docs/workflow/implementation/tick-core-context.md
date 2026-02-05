@@ -234,3 +234,19 @@
 - `FormatConfig` pattern established for passing output config to handlers
 - `WriteVerbose()` pattern for verbose output to stderr only
 - Error message convention maintained: lowercase messages, "Error: %s\n" at CLI layer
+
+## tick-core-4-2: TOON formatter — list, show, stats output
+
+### Integration (executor)
+- `ToonFormatter` in `/Users/leeovery/Code/tick/internal/cli/toon_formatter.go` — concrete Formatter implementation for TOON output
+- toon-go library (`github.com/toon-format/toon-go`) added to go.mod for proper value escaping
+- FormatTaskList: `tasks[N]{id,title,status,priority}:` + indented data rows; zero count shows empty section
+- FormatTaskDetail: multi-section with dynamic schema (parent/closed omitted when empty); blocked_by/children always present
+- FormatStats: stats summary + by_priority with 5 rows (P0-P4)
+- FormatTransition/FormatDepChange/FormatMessage: plain text passthrough with trailing newline
+
+### Cohesion (reviewer)
+- ToonFormatter follows StubFormatter pattern from format.go (implements all 6 Formatter methods)
+- Uses concrete data types (TaskListData, TaskDetailData, StatsData) from format.go
+- Test structure matches established pattern with "it does X" naming
+- escapeValue() function provides manual fallback for robustness
