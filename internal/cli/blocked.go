@@ -48,18 +48,7 @@ func queryBlockedTasks(db *sql.DB) ([]taskRow, error) {
 	}
 	defer rows.Close()
 
-	var tasks []taskRow
-	for rows.Next() {
-		var t taskRow
-		if err := rows.Scan(&t.ID, &t.Title, &t.Status, &t.Priority); err != nil {
-			return nil, err
-		}
-		tasks = append(tasks, t)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return tasks, nil
+	return scanTaskRows(rows)
 }
 
 // runBlocked executes the blocked subcommand.
@@ -98,28 +87,6 @@ func (a *App) runBlocked() int {
 		return 1
 	}
 
-	// Output
-	if a.formatConfig.Quiet {
-		// --quiet: output only task IDs, one per line
-		for _, t := range tasks {
-			fmt.Fprintln(a.Stdout, t.ID)
-		}
-	} else {
-		// Build task list data for formatter
-		data := &TaskListData{
-			Tasks: make([]TaskRowData, len(tasks)),
-		}
-		for i, t := range tasks {
-			data.Tasks[i] = TaskRowData{
-				ID:       t.ID,
-				Title:    t.Title,
-				Status:   t.Status,
-				Priority: t.Priority,
-			}
-		}
-		formatter := a.formatConfig.Formatter()
-		fmt.Fprint(a.Stdout, formatter.FormatTaskList(data))
-	}
-
+	a.renderTaskList(tasks)
 	return 0
 }

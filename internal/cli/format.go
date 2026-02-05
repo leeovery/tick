@@ -190,37 +190,3 @@ func (c FormatConfig) Formatter() Formatter {
 		return &ToonFormatter{}
 	}
 }
-
-// StubFormatter is a placeholder formatter that returns empty strings.
-// Used as a placeholder until concrete formatters (TOON, Pretty, JSON) are implemented.
-type StubFormatter struct{}
-
-// FormatTaskList returns empty string (stub implementation).
-func (f *StubFormatter) FormatTaskList(data *TaskListData) string {
-	return ""
-}
-
-// FormatTaskDetail returns empty string (stub implementation).
-func (f *StubFormatter) FormatTaskDetail(data *TaskDetailData) string {
-	return ""
-}
-
-// FormatTransition returns empty string (stub implementation).
-func (f *StubFormatter) FormatTransition(taskID, oldStatus, newStatus string) string {
-	return ""
-}
-
-// FormatDepChange returns empty string (stub implementation).
-func (f *StubFormatter) FormatDepChange(action, taskID, blockedByID string) string {
-	return ""
-}
-
-// FormatStats returns empty string (stub implementation).
-func (f *StubFormatter) FormatStats(data *StatsData) string {
-	return ""
-}
-
-// FormatMessage returns empty string (stub implementation).
-func (f *StubFormatter) FormatMessage(msg string) string {
-	return ""
-}

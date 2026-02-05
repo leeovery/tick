@@ -155,17 +155,6 @@ func (a *App) printUsage() {
 	fmt.Fprintln(a.Stdout, "  --json         Force JSON output format")
 }
 
-// DefaultOutputFormat returns the default output format based on TTY detection.
-func (a *App) DefaultOutputFormat() string {
-	if a.flags.OutputFormat != "" {
-		return a.flags.OutputFormat
-	}
-	if DetectTTY(a.Stdout) {
-		return "pretty"
-	}
-	return "toon"
-}
-
 // ParseGlobalFlags extracts global flags from args and returns the remaining args.
 func ParseGlobalFlags(args []string) (GlobalFlags, []string) {
 	var flags GlobalFlags

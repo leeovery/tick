@@ -229,58 +229,10 @@ func TestNewFormatConfig(t *testing.T) {
 
 func TestFormatter(t *testing.T) {
 	t.Run("it defines interface with all required methods", func(t *testing.T) {
-		// This test verifies that StubFormatter implements the Formatter interface
-		var _ Formatter = &StubFormatter{}
-	})
-}
-
-func TestStubFormatter(t *testing.T) {
-	t.Run("it implements FormatTaskList", func(t *testing.T) {
-		f := &StubFormatter{}
-		result := f.FormatTaskList(nil)
-		if result != "" {
-			t.Errorf("expected empty string from stub, got %q", result)
-		}
-	})
-
-	t.Run("it implements FormatTaskDetail", func(t *testing.T) {
-		f := &StubFormatter{}
-		result := f.FormatTaskDetail(nil)
-		if result != "" {
-			t.Errorf("expected empty string from stub, got %q", result)
-		}
-	})
-
-	t.Run("it implements FormatTransition", func(t *testing.T) {
-		f := &StubFormatter{}
-		result := f.FormatTransition("", "", "")
-		if result != "" {
-			t.Errorf("expected empty string from stub, got %q", result)
-		}
-	})
-
-	t.Run("it implements FormatDepChange", func(t *testing.T) {
-		f := &StubFormatter{}
-		result := f.FormatDepChange("", "", "")
-		if result != "" {
-			t.Errorf("expected empty string from stub, got %q", result)
-		}
-	})
-
-	t.Run("it implements FormatStats", func(t *testing.T) {
-		f := &StubFormatter{}
-		result := f.FormatStats(nil)
-		if result != "" {
-			t.Errorf("expected empty string from stub, got %q", result)
-		}
-	})
-
-	t.Run("it implements FormatMessage", func(t *testing.T) {
-		f := &StubFormatter{}
-		result := f.FormatMessage("")
-		if result != "" {
-			t.Errorf("expected empty string from stub, got %q", result)
-		}
+		// Verify that concrete formatters implement the Formatter interface
+		var _ Formatter = &ToonFormatter{}
+		var _ Formatter = &PrettyFormatter{}
+		var _ Formatter = &JSONFormatter{}
 	})
 }
 

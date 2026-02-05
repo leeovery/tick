@@ -136,6 +136,13 @@ func (a *App) runUpdate(args []string) int {
 			}
 		}
 
+		// Validate --blocks dependencies (cycle detection, child-blocked-by-parent)
+		for _, blocksID := range flags.Blocks {
+			if err := task.ValidateDependency(tasks, blocksID, taskID); err != nil {
+				return nil, err
+			}
+		}
+
 		// Get current timestamp for updates
 		now := time.Now().UTC().Format(time.RFC3339)
 

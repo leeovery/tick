@@ -134,6 +134,22 @@ func (a *App) runCreate(args []string) int {
 			return nil, err
 		}
 
+		// Validate dependencies (cycle detection, child-blocked-by-parent)
+		// Include the new task in the list for accurate validation
+		tasksWithNew := append(tasks, newTask)
+
+		// Validate --blocked-by dependencies
+		if err := task.ValidateDependencies(tasksWithNew, newTask.ID, flags.BlockedBy); err != nil {
+			return nil, err
+		}
+
+		// Validate --blocks dependencies (inverse: target is blocked by new task)
+		for _, blocksID := range flags.Blocks {
+			if err := task.ValidateDependency(tasksWithNew, blocksID, newTask.ID); err != nil {
+				return nil, err
+			}
+		}
+
 		// Update --blocks targets: add new task's ID to their blocked_by
 		for i := range tasks {
 			for _, blocksID := range flags.Blocks {
@@ -258,23 +274,4 @@ func normalizeIDs(ids []string) []string {
 		result[i] = task.NormalizeID(id)
 	}
 	return result
-}
-
-// printTaskDetails outputs task details in basic format.
-func (a *App) printTaskDetails(t task.Task) {
-	fmt.Fprintf(a.Stdout, "ID:          %s\n", t.ID)
-	fmt.Fprintf(a.Stdout, "Title:       %s\n", t.Title)
-	fmt.Fprintf(a.Stdout, "Status:      %s\n", t.Status)
-	fmt.Fprintf(a.Stdout, "Priority:    %d\n", t.Priority)
-	if t.Description != "" {
-		fmt.Fprintf(a.Stdout, "Description: %s\n", t.Description)
-	}
-	if len(t.BlockedBy) > 0 {
-		fmt.Fprintf(a.Stdout, "Blocked by:  %s\n", strings.Join(t.BlockedBy, ", "))
-	}
-	if t.Parent != "" {
-		fmt.Fprintf(a.Stdout, "Parent:      %s\n", t.Parent)
-	}
-	fmt.Fprintf(a.Stdout, "Created:     %s\n", t.Created)
-	fmt.Fprintf(a.Stdout, "Updated:     %s\n", t.Updated)
 }

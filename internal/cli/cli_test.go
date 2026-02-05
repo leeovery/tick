@@ -373,19 +373,6 @@ func TestTTYDetection(t *testing.T) {
 		// because /dev/tty is not available in CI environments.
 		// The important thing is that DetectTTY works with os.File.
 	})
-
-	t.Run("it sets default output format based on TTY detection", func(t *testing.T) {
-		// Non-TTY defaults to TOON
-		var buf bytes.Buffer
-		app := &App{
-			Stdout: &buf,
-			Stderr: &buf,
-		}
-
-		if app.DefaultOutputFormat() != "toon" {
-			t.Errorf("non-TTY should default to 'toon', got %q", app.DefaultOutputFormat())
-		}
-	})
 }
 
 func TestGlobalFlags(t *testing.T) {
