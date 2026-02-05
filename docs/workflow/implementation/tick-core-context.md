@@ -202,3 +202,18 @@
 - Reuses taskRow struct from ready.go — no duplication
 - Command handler pattern consistent: DiscoverTickDir -> NewStore -> Query callback -> format output
 - Test naming follows established "it does X" format
+
+## tick-core-3-5: tick list filter flags — --ready, --blocked, --status, --priority
+
+### Integration (executor)
+- `listFlags` struct in `/Users/leeovery/Code/tick/internal/cli/list.go` — uses pointer for priority (`*int`) to distinguish "not provided" from "value 0"
+- `parseListFlags()` and `validateListFlags()` functions separate parsing from validation — same pattern as other commands
+- `queryListTasks()`, `queryReadyTasksWithFilters()`, `queryBlockedTasksWithFilters()` — reuse `ReadyCondition` and `BlockedCondition` constants for SQL WHERE clauses
+- Error messages for invalid values include valid options (e.g., "must be one of open, in_progress, done, cancelled")
+- Contradictory filters (e.g., --status done --ready) return empty result without error — by design per spec
+
+### Cohesion (reviewer)
+- Pattern confirmed: SQL WHERE clause fragments as exported constants (ReadyCondition, BlockedCondition) for cross-command reuse
+- Flag validation pattern: parse first, validate second, then execute — matches update.go pattern
+- Pointer types for optional filter values (*int) follow established UpdateFlags pattern
+- Test structure follows "it does X" naming and uses setupTaskFull helper consistently
