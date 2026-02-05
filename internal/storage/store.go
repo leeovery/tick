@@ -163,6 +163,48 @@ func (s *Store) Query(fn func(db *sql.DB) error) error {
 	return fn(cache.db)
 }
 
+// Rebuild forces a complete rebuild of the SQLite cache from JSONL.
+// Acquires exclusive lock, deletes existing cache.db, reads JSONL,
+// creates fresh cache with schema, inserts all tasks, and updates hash.
+// Returns the number of tasks rebuilt.
+func (s *Store) Rebuild() (int, error) {
+	// Acquire exclusive lock with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), lockTimeout)
+	defer cancel()
+
+	locked, err := s.flock.TryLockContext(ctx, 50*time.Millisecond)
+	if err != nil || !locked {
+		if errors.Is(err, context.DeadlineExceeded) || !locked {
+			return 0, errors.New("could not acquire lock on .tick/lock - another process may be using tick")
+		}
+		return 0, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+	defer s.flock.Unlock()
+
+	// Delete existing cache.db if present
+	os.Remove(s.cachePath)
+
+	// Read JSONL and compute hash
+	tasks, jsonlContent, err := s.readJSONLWithContent()
+	if err != nil {
+		return 0, err
+	}
+
+	// Create fresh cache with schema
+	cache, err := NewCache(s.cachePath)
+	if err != nil {
+		return 0, err
+	}
+	defer cache.Close()
+
+	// Rebuild: insert all tasks and update hash
+	if err := cache.Rebuild(tasks, jsonlContent); err != nil {
+		return 0, err
+	}
+
+	return len(tasks), nil
+}
+
 // readJSONLWithContent reads JSONL file and returns both parsed tasks and raw content.
 func (s *Store) readJSONLWithContent() ([]task.Task, []byte, error) {
 	content, err := os.ReadFile(s.jsonlPath)

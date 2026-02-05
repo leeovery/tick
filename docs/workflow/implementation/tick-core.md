@@ -2,14 +2,14 @@
 topic: tick-core
 plan: ../planning/tick-core.md
 format: local-markdown
-status: in-progress
+status: completed
 task_gate_mode: auto
 fix_gate_mode: gated
 fix_attempts: 0
 project_skills:
   - .claude/skills/golang-pro/SKILL.md
 current_phase: 5
-current_task: tick-core-5-2
+current_task: ~
 completed_tasks:
   - tick-core-1-1
   - tick-core-1-2
@@ -33,14 +33,16 @@ completed_tasks:
   - tick-core-4-5
   - tick-core-4-6
   - tick-core-5-1
+  - tick-core-5-2
 completed_phases:
   - 1
   - 2
   - 3
   - 4
+  - 5
 started: 2026-02-05
 updated: 2026-02-05
-completed: ~
+completed: 2026-02-05
 ---
 
 # Implementation: Tick Core

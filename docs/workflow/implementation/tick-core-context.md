@@ -325,3 +325,17 @@
 - ReadyCondition/BlockedCondition reuse validates Phase 3 design of exported SQL fragments
 - Handler pattern consistent with runReady/runBlocked
 - Test naming "it does X" maintained
+
+## tick-core-5-2: tick rebuild command
+
+### Integration (executor)
+- `Store.Rebuild()` in `/Users/leeovery/Code/tick/internal/storage/store.go` — exclusive-lock rebuild returning task count; bypasses EnsureFresh
+- `runRebuild()` in `/Users/leeovery/Code/tick/internal/cli/rebuild.go` — handler pattern: DiscoverTickDir -> NewStore -> Rebuild -> FormatMessage
+- Confirmation message: "Rebuilt cache: N tasks" via FormatMessage
+- Verbose logs 6 steps: store open, lock acquire, delete, read JSONL, insert count, hash update
+
+### Cohesion (reviewer)
+- Store.Rebuild() composes existing primitives (readJSONLWithContent, NewCache, cache.Rebuild)
+- FormatMessage used for non-data commands (init, rebuild)
+- Handler pattern consistent across all 14 commands
+- Lock acquisition pattern matches Mutate/Query
