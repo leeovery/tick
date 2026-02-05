@@ -131,3 +131,17 @@
 - Error message convention maintained: "Error: task 'tick-xyz' not found" format
 - Store.Mutate correctly returns modified slice after in-place mutation via pointer
 - Test helper setupTaskFull enables testing tasks in various states
+
+## tick-core-2-3: tick update command
+
+### Integration (executor)
+- `runUpdate()` in `/Users/leeovery/Code/tick/internal/cli/update.go` — follows same pattern as runCreate and runTransition
+- `UpdateFlags` struct uses pointers for optional fields (`*string`, `*int`) to distinguish "not provided" from "empty value"
+- `--description ""` clears description; `--parent ""` clears parent
+- `--blocks` adds this task to targets' `blocked_by`, refreshes their `updated` timestamps
+
+### Cohesion (reviewer)
+- UpdateFlags uses pointer types (*string, *int) for optional field detection — good pattern for update commands
+- --blocks flag pattern established: modifies target tasks' blocked_by arrays atomically
+- Reuses existing helpers: normalizeIDs(), printTaskDetails(), DiscoverTickDir(), Store.Mutate()
+- Test helper reuse confirmed: setupTaskFull() enables testing tasks with specific initial states
