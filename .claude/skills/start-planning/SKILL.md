@@ -1,5 +1,7 @@
 ---
-description: Start a planning session from an existing specification. Discovers available specifications, gathers context, and invokes the technical-planning skill.
+name: start-planning
+description: "Start a planning session from an existing specification. Discovers available specifications, gathers context, and invokes the technical-planning skill."
+disable-model-invocation: true
 allowed-tools: Bash(.claude/scripts/discovery-for-planning.sh)
 ---
 
@@ -40,7 +42,7 @@ Follow these steps EXACTLY as written. Do not skip steps or combine them. Presen
 
 **This step is mandatory. You must complete it before proceeding.**
 
-Invoke the `/migrate` command and assess its output.
+Invoke the `/migrate` skill and assess its output.
 
 **If files were updated**: STOP and wait for the user to review the changes (e.g., via `git diff`) and confirm before proceeding to Step 1. Do not continue automatically.
 
@@ -149,6 +151,8 @@ Omit either section entirely if it has no entries.
 
 **If multiple actionable items:**
 ```
+· · ·
+
 Select a specification (enter number):
 ```
 
@@ -165,12 +169,14 @@ Auto-selecting: {topic} (only actionable specification)
 ```
 No plannable specifications.
 
-To proceed:
-- Complete any in-progress specifications with /start-specification
-- Or create a new specification first
+Before you can start planning:
+- Complete any in-progress specifications with /start-specification, or
+- Create a new specification first
+
+Then re-run /start-planning.
 ```
 
-**STOP.** Wait for user response before ending.
+**STOP.** This workflow cannot continue — do not proceed.
 
 → Based on user choice, proceed to **Step 4**.
 
@@ -246,9 +252,9 @@ These specifications contain validated architectural decisions that should infor
 
 ## Step 7: Invoke the Skill
 
-After completing the steps above, this command's purpose is fulfilled.
+After completing the steps above, this skill's purpose is fulfilled.
 
-Invoke the [technical-planning](../../skills/technical-planning/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
+Invoke the [technical-planning](../technical-planning/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
 
 **Example handoff (fresh plan):**
 ```
