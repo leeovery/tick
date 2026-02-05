@@ -11,7 +11,16 @@
       "Bash(.claude/scripts/discovery-for-specification.sh)",
       "Bash(git commit:*)",
       "Bash(ls:*)",
-      "Bash(git -C /Users/leeovery/Code/tick rev-parse:*)"
+      "Bash(git -C /Users/leeovery/Code/tick rev-parse:*)",
+      "Bash(.claude/scripts/discovery-for-implementation-and-review.sh:*)",
+      "Bash(go version:*)",
+      "Bash(go mod init:*)",
+      "Bash(go test:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go tool cover:*)",
+      "Bash(go vet:*)",
+      "Bash(gofmt:*)",
+      "Bash(go run -exec '' - <<'EOF'\npackage main\n\nimport \\(\n\t\"fmt\"\n\t\"time\"\n\\)\n\nfunc main\\(\\) {\n\tnow := time.Now\\(\\).UTC\\(\\)\n\tfmt.Println\\(\"RFC3339:\", now.Format\\(time.RFC3339\\)\\)\n\tfmt.Println\\(\"Expected:\", now.Format\\(\"2006-01-02T15:04:05Z\"\\)\\)\n}\nEOF)"
     ]
   }
 }
