@@ -59,3 +59,18 @@
 - Error messages follow project convention: lowercase, descriptive, no "Error:" prefix
 - Test naming follows "it does X" format consistently with prior tasks
 - Lock path `.tick/lock` and cache path `.tick/cache.db` follow directory structure from spec
+
+## tick-core-1-5: CLI framework & tick init
+
+### Integration (executor)
+- CLI entry point at `cmd/tick/main.go` — use `go build ./cmd/tick` to build the binary
+- CLI application in `internal/cli/cli.go` with testable `App` struct — inject `Stdout`, `Stderr`, `Cwd` for testing
+- `DiscoverTickDir(startDir string) (string, error)` in `internal/cli/cli.go` — walks up from cwd to find `.tick/`, returns error "not a tick project (no .tick directory found)" if not found
+- Global flags in `GlobalFlags` struct: `Quiet`, `Verbose`, `OutputFormat` — use `ParseGlobalFlags(args)` to extract
+- `IsTTY(io.Writer) bool` detects terminal for output format auto-selection — non-TTY defaults to TOON, TTY defaults to pretty
+
+### Cohesion (reviewer)
+- CLI layer uses "Error: " prefix for user-facing error messages (distinct from internal error messages which are lowercase without prefix)
+- App struct pattern with injectable Stdout/Stderr/Cwd enables testability
+- GlobalFlags struct with OutputFormat string allows flag-based format override or TTY auto-detection
+- Test naming consistently follows "it does X" format established in prior tasks
