@@ -266,3 +266,19 @@
 - Plain text passthrough for FormatTransition/FormatDepChange/FormatMessage matches ToonFormatter exactly
 - Test naming "it does X" maintained consistently
 - priorityLabels map pattern established for human-readable priority descriptions
+
+## tick-core-4-4: JSON formatter — list, show, stats output
+
+### Integration (executor)
+- `JSONFormatter` in `/Users/leeovery/Code/tick/internal/cli/json_formatter.go` — third concrete Formatter for `--json` output
+- Uses `json.MarshalIndent` with 2-space indentation throughout
+- Empty arrays initialized with `make([]T, 0)` to avoid Go nil slice → `null` gotcha
+- `omitempty` JSON tag on parent/closed fields to omit when empty
+- FormatTransition/FormatDepChange/FormatMessage return JSON objects (unlike TOON/Pretty plain text)
+- Stats uses nested structure: `total`, `by_status` (6 status counts), `by_priority` (5 entries)
+
+### Cohesion (reviewer)
+- JSONFormatter follows established Formatter pattern from TOON/Pretty formatters
+- JSON struct tags use snake_case matching JSONL storage convention
+- Test naming "it does X" maintained consistently
+- Reuses data types from format.go (TaskListData, TaskDetailData, StatsData)
