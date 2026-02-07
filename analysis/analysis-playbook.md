@@ -25,7 +25,7 @@ SCRATCHPAD="/private/tmp/tick-analysis-worktrees"
 mkdir -p "$SCRATCHPAD"
 
 # Baseline (V2 — the current best)
-git worktree add "$SCRATCHPAD/v2" implementation-take-two 2>/dev/null || echo "v2 exists"
+git worktree add "$SCRATCHPAD/v2" implementation-v2 2>/dev/null || echo "v2 exists"
 
 # New version under test (change branch name as needed)
 git worktree add "$SCRATCHPAD/v4" implementation-v4 2>/dev/null || echo "v4 exists"

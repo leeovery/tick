@@ -22,10 +22,10 @@ Compare multiple implementations of the same plan (same specification, same task
 
 | Branch | Approach | Description |
 |---|---|---|
-| `implementation` | V1 — Sequential single-agent | Main Claude session executes all tasks directly in one continuous context |
-| `implementation-take-two` | V2 — Agent-based with review | Orchestrator dispatches fresh executor + reviewer sub-agents per task |
+| `implementation-v1` | V1 — Sequential single-agent | Main Claude session executes all tasks directly in one continuous context |
+| `implementation-v2` | V2 — Agent-based with review | Orchestrator dispatches fresh executor + reviewer sub-agents per task |
 
-Future branches (e.g., `implementation-take-three`) should be added to this table and included in the analysis.
+Future branches (e.g., `implementation-v4`) should be added to this table and included in the analysis.
 
 ---
 

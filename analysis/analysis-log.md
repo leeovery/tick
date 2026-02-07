@@ -37,8 +37,8 @@ V3's integration context mechanism amplifies whatever direction the first few ta
 
 | Version | Branch | Workflow Version | Dates | Tasks Won |
 |---------|--------|-----------------|-------|-----------|
-| V1 | `implementation` | Pre-#73 (monolithic) | Pre-Feb 2 | 0/23 |
-| V2 | `implementation-take-two` | v2.1.3 (PR #73) | Feb 3 | 21/23 |
+| V1 | `implementation-v1` | Pre-#73 (monolithic) | Pre-Feb 2 | 0/23 |
+| V2 | `implementation-v2` | v2.1.3 (PR #73) | Feb 3 | 21/23 |
 | V3 | `implementation-v3` | v2.1.5 (PRs #77-80) | Feb 5 | 1/23 |
 
 ### Commit Mapping
@@ -48,8 +48,8 @@ All commit SHAs for each version's 23 tasks are documented in the plan that prod
 ### Worktree Paths (for future analysis)
 
 ```
-git worktree add /private/tmp/tick-analysis-worktrees/v1 implementation
-git worktree add /private/tmp/tick-analysis-worktrees/v2 implementation-take-two
+git worktree add /private/tmp/tick-analysis-worktrees/v1 implementation-v1
+git worktree add /private/tmp/tick-analysis-worktrees/v2 implementation-v2
 git worktree add /private/tmp/tick-analysis-worktrees/v3 implementation-v3
 ```
 

@@ -2,8 +2,8 @@
 
 A comprehensive analysis comparing two implementations of the TIC core plan, built from the same specification and plan files using two different workflow approaches.
 
-- **V1** (`implementation` branch): Sequential single-agent approach. The main Claude session executed all tasks directly, one after another, within a continuous context window.
-- **V2** (`implementation-take-two` branch): Agent-based approach. An orchestrator dispatched fresh executor sub-agents per task, followed by independent reviewer sub-agents, with approval gates between tasks.
+- **V1** (`implementation-v1` branch): Sequential single-agent approach. The main Claude session executed all tasks directly, one after another, within a continuous context window.
+- **V2** (`implementation-v2` branch): Agent-based approach. An orchestrator dispatched fresh executor sub-agents per task, followed by independent reviewer sub-agents, with approval gates between tasks.
 
 Both implementations follow the same 23 tasks across 5 phases for "Tick" — a task tracker CLI with JSONL/SQLite dual storage, dependency management, and multiple output formats.
 

@@ -4,8 +4,8 @@
 
 Three implementations of the same `tick-core` plan were produced using different Claude workflow approaches:
 
-- **V1** (`implementation` branch): Sequential approach — main Claude session handled all tasks directly. Fastest execution, but hit compaction limits 3-4 times.
-- **V2** (`implementation-take-two` branch): Agent-based approach — main session orchestrates sub-agents for coding + review agents per task. Slower but reduces context pollution.
+- **V1** (`implementation-v1` branch): Sequential approach — main Claude session handled all tasks directly. Fastest execution, but hit compaction limits 3-4 times.
+- **V2** (`implementation-v2` branch): Agent-based approach — main session orchestrates sub-agents for coding + review agents per task. Slower but reduces context pollution.
 - **V3** (`implementation-v3` branch): Agent-based approach (third attempt) — same agent-based workflow as V2.
 
 All three implement the same plan: 5 phases, 23 tasks, covering a minimal task tracker with JSONL source of truth, SQLite cache, file locking, 3 output formats, and full CLI.
@@ -119,7 +119,7 @@ V1's tests are adequate but significantly thinner across every dimension.
 
 ## Verdict
 
-**Best implementation: V2 (implementation-take-two)**
+**Best implementation: V2 (implementation-v2)**
 
 Reasons:
 1. **SQL safety** — parameterized queries vs V1's string interpolation
