@@ -7,16 +7,13 @@ import (
 	"github.com/leeovery/tick/internal/store"
 )
 
-// readyQuery is the SQL query that returns tasks matching all ready conditions:
-// 1. Status is 'open'
-// 2. All blocked_by tasks are closed (done or cancelled)
-// 3. No children with status 'open' or 'in_progress'
-// Order: priority ASC, created ASC (deterministic)
-const readyQuery = `
-SELECT t.id, t.status, t.priority, t.title
-FROM tasks t
-WHERE t.status = 'open'
-  AND NOT EXISTS (
+// readyConditions contains the WHERE clause conditions that define a "ready" task:
+// 1. All blocked_by tasks are closed (done or cancelled)
+// 2. No children with status 'open' or 'in_progress'
+// Shared by readyQuery and blockedQuery so ready logic is defined once.
+// The alias used for the task table must be "t".
+const readyConditions = `
+  NOT EXISTS (
     SELECT 1 FROM dependencies d
     JOIN tasks blocker ON d.blocked_by = blocker.id
     WHERE d.task_id = t.id
@@ -26,7 +23,18 @@ WHERE t.status = 'open'
     SELECT 1 FROM tasks child
     WHERE child.parent = t.id
       AND child.status IN ('open', 'in_progress')
-  )
+  )`
+
+// readyQuery is the SQL query that returns tasks matching all ready conditions:
+// 1. Status is 'open'
+// 2. All blocked_by tasks are closed (done or cancelled)
+// 3. No children with status 'open' or 'in_progress'
+// Order: priority ASC, created ASC (deterministic)
+var readyQuery = `
+SELECT t.id, t.status, t.priority, t.title
+FROM tasks t
+WHERE t.status = 'open'
+  AND` + readyConditions + `
 ORDER BY t.priority ASC, t.created ASC
 `
 
