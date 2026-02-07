@@ -493,3 +493,202 @@ func TestReadJSONL(t *testing.T) {
 		}
 	})
 }
+
+func TestReadJSONLFromBytes(t *testing.T) {
+	t.Run("it parses tasks from in-memory bytes", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		content := []byte(`{"id":"tick-a1b2c3","title":"First task","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-d4e5f6","title":"Second task","status":"done","priority":1,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+`)
+
+		tasks, err := ReadJSONLFromBytes(content)
+		if err != nil {
+			t.Fatalf("ReadJSONLFromBytes returned error: %v", err)
+		}
+
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-a1b2c3" {
+			t.Errorf("expected first task ID tick-a1b2c3, got %s", tasks[0].ID)
+		}
+		if !tasks[0].Created.Equal(now) {
+			t.Errorf("expected first task Created %v, got %v", now, tasks[0].Created)
+		}
+		if tasks[1].ID != "tick-d4e5f6" {
+			t.Errorf("expected second task ID tick-d4e5f6, got %s", tasks[1].ID)
+		}
+	})
+
+	t.Run("it returns empty list for empty bytes", func(t *testing.T) {
+		tasks, err := ReadJSONLFromBytes([]byte{})
+		if err != nil {
+			t.Fatalf("ReadJSONLFromBytes returned error for empty bytes: %v", err)
+		}
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks for empty bytes, got %d", len(tasks))
+		}
+		if tasks == nil {
+			t.Error("expected empty slice, got nil")
+		}
+	})
+
+	t.Run("it skips empty lines", func(t *testing.T) {
+		content := []byte(`{"id":"tick-a1b2c3","title":"First","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+
+{"id":"tick-d4e5f6","title":"Second","status":"done","priority":1,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+
+`)
+		tasks, err := ReadJSONLFromBytes(content)
+		if err != nil {
+			t.Fatalf("ReadJSONLFromBytes returned error: %v", err)
+		}
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks (skipping empty lines), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it returns error for invalid JSON", func(t *testing.T) {
+		content := []byte(`{"id":"tick-a1b2c3","title":"First","status":"open"
+not-json
+`)
+		_, err := ReadJSONLFromBytes(content)
+		if err == nil {
+			t.Fatal("expected error for invalid JSON, got nil")
+		}
+	})
+
+	t.Run("it produces same results as ReadJSONL for same content", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "tasks.jsonl")
+
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closed := time.Date(2026, 1, 19, 16, 0, 0, 0, time.UTC)
+		original := []Task{
+			{
+				ID:          "tick-a1b2c3",
+				Title:       "Full task",
+				Status:      StatusInProgress,
+				Priority:    1,
+				Description: "Details here",
+				BlockedBy:   []string{"tick-x1y2z3"},
+				Parent:      "tick-e5f6a7",
+				Created:     now,
+				Updated:     now,
+				Closed:      &closed,
+			},
+		}
+
+		if err := WriteJSONL(path, original); err != nil {
+			t.Fatalf("WriteJSONL returned error: %v", err)
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+
+		fromFile, err := ReadJSONL(path)
+		if err != nil {
+			t.Fatalf("ReadJSONL returned error: %v", err)
+		}
+
+		fromBytes, err := ReadJSONLFromBytes(data)
+		if err != nil {
+			t.Fatalf("ReadJSONLFromBytes returned error: %v", err)
+		}
+
+		if !reflect.DeepEqual(fromFile, fromBytes) {
+			t.Errorf("ReadJSONL and ReadJSONLFromBytes produced different results:\nfromFile:  %+v\nfromBytes: %+v", fromFile, fromBytes)
+		}
+	})
+}
+
+func TestSerializeJSONL(t *testing.T) {
+	t.Run("it serializes tasks to JSONL bytes", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "First task",
+				Status:   StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			{
+				ID:       "tick-d4e5f6",
+				Title:    "Second task",
+				Status:   StatusDone,
+				Priority: 1,
+				Created:  now,
+				Updated:  now,
+			},
+		}
+
+		data, err := SerializeJSONL(tasks)
+		if err != nil {
+			t.Fatalf("SerializeJSONL returned error: %v", err)
+		}
+
+		// Verify the bytes can be parsed back
+		parsed, err := ReadJSONLFromBytes(data)
+		if err != nil {
+			t.Fatalf("ReadJSONLFromBytes returned error: %v", err)
+		}
+		if len(parsed) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(parsed))
+		}
+		if parsed[0].ID != "tick-a1b2c3" {
+			t.Errorf("expected first task ID tick-a1b2c3, got %s", parsed[0].ID)
+		}
+		if parsed[1].ID != "tick-d4e5f6" {
+			t.Errorf("expected second task ID tick-d4e5f6, got %s", parsed[1].ID)
+		}
+	})
+
+	t.Run("it produces bytes identical to WriteJSONL output", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "tasks.jsonl")
+
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Test task",
+				Status:   StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+		}
+
+		if err := WriteJSONL(path, tasks); err != nil {
+			t.Fatalf("WriteJSONL returned error: %v", err)
+		}
+
+		fileData, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+
+		serialized, err := SerializeJSONL(tasks)
+		if err != nil {
+			t.Fatalf("SerializeJSONL returned error: %v", err)
+		}
+
+		if string(fileData) != string(serialized) {
+			t.Errorf("SerializeJSONL output differs from WriteJSONL file content:\nfile:       %q\nserialized: %q", string(fileData), string(serialized))
+		}
+	})
+
+	t.Run("it returns empty bytes for empty task list", func(t *testing.T) {
+		data, err := SerializeJSONL([]Task{})
+		if err != nil {
+			t.Fatalf("SerializeJSONL returned error: %v", err)
+		}
+		if len(data) != 0 {
+			t.Errorf("expected empty bytes for empty task list, got %d bytes", len(data))
+		}
+	})
+}
