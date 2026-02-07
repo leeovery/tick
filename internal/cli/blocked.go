@@ -8,7 +8,7 @@ import (
 )
 
 // blockedQuery returns open tasks that are NOT ready.
-// Derived from readyConditions: blocked = open AND NOT IN ready set.
+// Derived from readyConditionsFor: blocked = open AND NOT IN ready set.
 // This reuses the ready query logic so changes to ready conditions
 // automatically propagate to the blocked query.
 // Order: priority ASC, created ASC (deterministic)
@@ -19,7 +19,7 @@ WHERE t.status = 'open'
   AND t.id NOT IN (
     SELECT t.id FROM tasks t
     WHERE t.status = 'open'
-      AND` + readyConditions + `
+      AND` + readyConditionsFor("t") + `
   )
 ORDER BY t.priority ASC, t.created ASC
 `
