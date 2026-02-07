@@ -1,0 +1,191 @@
+# Implementation Analysis Log
+
+Tracking document for the ongoing comparison of tick-core implementations produced by different versions of the claude-technical-workflows implementation skill.
+
+---
+
+## Current State (Feb 6, 2026)
+
+### What We've Done
+
+1. **23 task-level reports** comparing V1, V2, V3 code for every plan task (`round-1/task-reports/`)
+2. **5 phase-level reports** analysing cross-task patterns per phase (`round-1/phase-reports/`)
+3. **Final synthesis** aggregating all findings (`round-1/final-synthesis.md`)
+4. **Polish impact analysis** isolating V3's polish commit effects (`round-1/polish-impact.md`)
+5. **Workflow skill diff** comparing executor/reviewer prompts between V2 and V3 runs (`round-1/workflow-skill-diff.md`)
+6. **External version analysis** from the workflows repo (`claude-technical-workflows/implementation-version-analysis.md`)
+
+### Key Findings
+
+**V2 wins 21/23 tasks, all 5 phases.** V3 wins 1/23 (task 1-5). V1 wins 0/23.
+
+**Root cause of V3's regression**: PR #79 (integration context + codebase cohesion) created a "convention gravity well" where V3's task 1-1 made unconventional Go choices (string timestamps, bare error returns, no NewTask factory) that got documented as established patterns in the integration context file. Every subsequent executor faithfully propagated these choices because it was instructed to "match conventions" and the reviewer's cohesion dimension actively enforced consistency with them.
+
+**The Polish agent (PR #80) was purely beneficial**: removed dead code, extracted shared helpers, fixed a missing dependency validation bug. Zero regressions. Did not cause any of V3's quality issues.
+
+**PR #77 (fix executor re-attempts)** was a correct bugfix with no negative effects.
+
+**PR #78 (fix recommendations + fix_gate_mode)** was neutral-to-positive. The structured FIX/ALTERNATIVE/CONFIDENCE output from reviewers is the single best V3 addition.
+
+### The Problem in One Sentence
+
+V3's integration context mechanism amplifies whatever direction the first few tasks set — good or bad — by documenting early decisions as constraints and having the reviewer enforce consistency with them.
+
+---
+
+## Version Inventory
+
+| Version | Branch | Workflow Version | Dates | Tasks Won |
+|---------|--------|-----------------|-------|-----------|
+| V1 | `implementation` | Pre-#73 (monolithic) | Pre-Feb 2 | 0/23 |
+| V2 | `implementation-take-two` | v2.1.3 (PR #73) | Feb 3 | 21/23 |
+| V3 | `implementation-v3` | v2.1.5 (PRs #77-80) | Feb 5 | 1/23 |
+
+### Commit Mapping
+
+All commit SHAs for each version's 23 tasks are documented in the plan that produced this analysis. See the Appendix in the original plan or the task-level reports for specific commits.
+
+### Worktree Paths (for future analysis)
+
+```
+git worktree add /private/tmp/tick-analysis-worktrees/v1 implementation
+git worktree add /private/tmp/tick-analysis-worktrees/v2 implementation-take-two
+git worktree add /private/tmp/tick-analysis-worktrees/v3 implementation-v3
+```
+
+---
+
+## File Structure
+
+```
+analysis/
+  index.md                    <- Start here. Directory of everything.
+  analysis-log.md             <- This file. State tracking across rounds.
+  analysis-playbook.md        <- Reusable instructions for running analysis rounds.
+  round-1/                    <- V1 vs V2 vs V3 (3-way comparison, Feb 6 2026)
+    task-reports/             <- 23 per-task reports
+      tick-core-{P}-{T}.md
+    phase-reports/            <- 5 cross-task phase reports
+      phase-{N}.md
+    final-synthesis.md        <- Definitive V1/V2/V3 comparison
+    polish-impact.md          <- V3 polish commit analysis
+    workflow-skill-diff.md    <- Executor/reviewer prompt diffs between V2 and V3
+    root-cause-task-1-1.md    <- Why V3 chose string timestamps
+    course-correction-evidence.md <- V2's 6 retroactive fixes vs V3's zero
+  round-2/                    <- V4 vs V2 (2-way comparison, TBD)
+    task-reports/
+    phase-reports/
+    final-synthesis.md
+```
+
+External:
+| File | Location |
+|------|----------|
+| `implementation-version-analysis.md` | `claude-technical-workflows` repo — PR-level analysis with actionable recommendations |
+
+---
+
+## What Changed Between V2 and V3 (PR Summary)
+
+| PR | Change | Impact | Keep? |
+|----|--------|--------|-------|
+| #76 | Commands-to-skills migration | Neutral (structural) | N/A |
+| #77 | Fix executor re-attempt context | **Positive** (bugfix) | Yes |
+| #78 | Fix recommendations + fix_gate_mode | **Positive** (better reviewer output, stop gates) | Yes |
+| #79 | Integration context + cohesion review + prescriptive exploration | **Negative** (convention lock-in, attention dilution) | Rework |
+| #80 | Polish agent | **Positive** (dead code removal, DRY, bug fix) | Yes |
+
+---
+
+## Planned Next Step: V4
+
+### Approach: Option A (Rollback to V2 + cherry-pick beneficial additions)
+
+**Base**: V2's executor and reviewer (simpler, less prescriptive)
+
+**Keep from V3**:
+- PR #77: Fix executor re-attempt context (bugfix)
+- PR #78: Fix recommendations (FIX/ALTERNATIVE/CONFIDENCE) — clear V3 winner
+- PR #78: fix_gate_mode stop gates (human-in-the-loop)
+- PR #80: Polish agent (proven beneficial)
+
+**Remove/skip entirely**:
+- PR #79's integration context file mechanism
+- PR #79's prescriptive exploration rewrite (7 bullets back to V2's 3)
+- PR #79's "same developer" instruction
+- PR #79's plan-file access for executor
+- PR #79's reviewer dimension 6 (codebase cohesion)
+- PR #79's INTEGRATION_NOTES / COHESION_NOTES output fields
+
+### Possible Enhancement (lighter than PR #79)
+
+Consider a lightweight alternative to integration context: a simple "patterns and helpers" appendix maintained by the orchestrator (not executor/reviewer), listing function names and file paths of shared utilities. Read as reference, not as convention authority. No cohesion enforcement.
+
+### How to Analyse V4
+
+1. Run V4 implementation against tick-core plan (same 23 tasks, same spec)
+2. Create worktree: `git worktree add /private/tmp/tick-analysis-worktrees/v4 implementation-v4`
+3. Run task-level agents comparing V4 against V2 only (skip V1/V3 — results are stable)
+4. Produce a focused V4-vs-V2 synthesis rather than a full 4-way comparison
+5. If V4 matches or beats V2, the changes are validated
+
+**Do NOT re-analyse V1/V2/V3** — those 29 reports are stable reference material. Only produce new reports for V4.
+
+### Alternate: Option B (Fix-forward)
+
+If preferred, implement the Tier 1 recommendations from `implementation-version-analysis.md`:
+1. Remove plan file access from executor
+2. Change integration context reading order (last not first)
+3. Qualify "same developer" with code-quality.md precedence
+4. Cap integration context growth (consolidate after 8 tasks)
+5. Make cohesion review conditional (task 4+)
+6. Add foundational design review for tasks 1-3
+
+This preserves the integration context idea but with guardrails. Higher risk (5 simultaneous changes), higher reward if it works.
+
+---
+
+## Future Ideas (from discussion, not yet actioned)
+
+These emerged from analysing why V3 regressed. Not for implementation now — the tick-core spec/plan must NOT change (to keep experiments controlled). All future experiments use the same planning and specification documents. The goal is making the implementation skill robust to ambiguous plans, because that's the nature of planning.
+
+### The Core Insight: Feedback Loop Direction
+
+The V3 failure wasn't "bad plan" or "bad executor" — it was the feedback loop direction. V3 created a **positive** feedback loop (early decisions reinforced by integration context + cohesion review). V2 had **no** feedback loop (stateless executors). The ideal might be a **negative** feedback loop — one that actively challenges early decisions rather than reinforcing or ignoring them.
+
+### 1. Language-Specific Type Guidance at Implementation Time
+
+The spec says "ISO 8601 UTC format" — a perfectly good spec-level statement. The problem is the translation from spec to code. A Go developer reads that and thinks `time.Time` internally, serialise to string at boundaries. V3's executor read the same words and thought "strings throughout." Both defensible — one is idiomatically wrong.
+
+The gap isn't in planning/specification (those should stay language-agnostic, focused on *what* not *how*). It's in the executor's context. The executor already has access to language skills (golang-pro) but doesn't consult them for foundational type decisions — it pattern-matches on spec text instead.
+
+**Possible approach**: Executor prompts could instruct early tasks (1-3) to explicitly consult the language skill for type/idiom guidance on foundational structures. Or the reviewer could flag "this looks like a string type where the language idiom would be a dedicated type" on early tasks.
+
+Note: We already have internal/external perspective analysis at planning and specification stages, but these deliberately avoid code-level discussion. That was intentional to keep those stages clean. Introducing code examples or language-specific sections at those stages risks polluting them. Better to handle this at the implementation boundary.
+
+### 2. Mid-Implementation Course Correction (Phase Checkpoint)
+
+V2 self-corrected naturally (6 retroactive fixes across 23 tasks). V3 couldn't because of convention lock-in. V4 (removing integration context) should restore natural course correction, but it's still luck-dependent — V2 *happened* to get task 1-1 right. We don't know if a V2 executor would have gone back and changed a type-level architectural choice vs just adding a helper function.
+
+**Possible approach**: A periodic checkpoint agent — say after phase 1 completes — that asks: "Here are the foundational types and patterns established so far. Do any of these violate language idioms or create problems for upcoming tasks?" If yes, fix them *before* building 16 more tasks on top.
+
+**Key distinction from integration context**: The checkpoint's job is to *challenge* early decisions, not *document* them as conventions. It's adversarial rather than conformist. It should produce fix instructions, not a "patterns to match" file.
+
+**Risk**: This starts looking like integration context again if not carefully scoped. Must be framed as "what's wrong?" not "what exists?"
+
+### 3. Making Implementation Robust to Ambiguous Plans
+
+Rather than perfecting plans (impossible), the implementation skill needs to handle ambiguity well:
+- Executors should bring language expertise to ambiguous areas (not just pattern-match the spec)
+- Reviewers should catch idiom violations early (tasks 1-3 especially), not just check acceptance criteria
+- Course correction should be possible at any point, not locked by convention conformity
+- V4's Option A already addresses the third point by removing convention lock-in; the first two are future improvements
+
+---
+
+## Open Questions
+
+1. Is it worth running both Option A and Option B as V4/V5 to compare directly?
+2. Should the foundational design review (Tier 3 rec #9) be included in either option?
+3. Does the orchestrator need any changes, or only agent prompts?
+4. Should we test on a different project type to control for TICK-specific factors?

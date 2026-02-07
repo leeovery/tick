@@ -11,7 +11,16 @@
       "Bash(.claude/scripts/discovery-for-specification.sh)",
       "Bash(git commit:*)",
       "Bash(ls:*)",
-      "Bash(git -C /Users/leeovery/Code/tick rev-parse:*)"
+      "Bash(git -C /Users/leeovery/Code/tick rev-parse:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git -C /Users/leeovery/Code/tick show:*)",
+      "Bash(git -C /Users/leeovery/Code/tick diff:*)",
+      "Bash(git -C /Users/leeovery/Code/tick log:*)",
+      "Bash(wc:*)",
+      "Read(/private/tmp/tick-analysis-worktrees/*)",
+      "Write(/Users/leeovery/Code/tick/analysis/*)",
+      "Glob(/private/tmp/tick-analysis-worktrees/*)",
+      "Glob(/Users/leeovery/Code/tick/analysis/*)"
     ]
   }
 }
