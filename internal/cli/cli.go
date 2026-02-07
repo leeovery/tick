@@ -84,6 +84,12 @@ func (a *App) Run(args []string) int {
 			return 1
 		}
 		return 0
+	case "update":
+		if err := a.runUpdate(subArgs); err != nil {
+			a.writeError(err)
+			return 1
+		}
+		return 0
 	case "start", "done", "cancel", "reopen":
 		if err := a.runTransition(subcommand, subArgs); err != nil {
 			a.writeError(err)
