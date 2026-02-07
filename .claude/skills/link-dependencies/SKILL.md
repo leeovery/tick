@@ -1,5 +1,7 @@
 ---
-description: Scan all plans and wire up cross-topic dependencies. Finds unresolved external dependencies, matches them to tasks in other plans, and updates both the plan index and output format.
+name: link-dependencies
+description: "Scan all plans and wire up cross-topic dependencies. Finds unresolved external dependencies, matches them to tasks in other plans, and updates both the plan index and output format."
+disable-model-invocation: true
 ---
 
 Link cross-topic dependencies across all existing plans.
@@ -65,13 +67,13 @@ Stop here.
 
 ## Step 3: Extract External Dependencies
 
-For each plan, find the External Dependencies section:
+For each plan, read the `external_dependencies` field from the frontmatter:
 
-1. **Read the External Dependencies section** from each plan index file
-2. **Categorize each dependency**:
-   - **Unresolved**: `- {topic}: {description}` (no arrow, no task ID)
-   - **Resolved**: `- {topic}: {description} → {task-id}` (has task ID)
-   - **Satisfied externally**: `- ~~{topic}: {description}~~ → satisfied externally`
+1. **Read `external_dependencies`** from each plan index file's frontmatter
+2. **Categorize each dependency** by its `state` field:
+   - **Unresolved**: `state: unresolved` (no task linked)
+   - **Resolved**: `state: resolved` (has `task_id`)
+   - **Satisfied externally**: `state: satisfied_externally`
 
 3. **Build a summary**:
 
@@ -84,7 +86,7 @@ Plan: authentication (format: {format})
 
 Plan: billing-system (format: {format})
   - authentication: User context (unresolved)
-  - ~~payment-gateway: Payment processing~~ → satisfied externally
+  - payment-gateway: Payment processing (satisfied externally)
 
 Plan: notifications (format: {format})
   - authentication: User lookup (unresolved)
@@ -98,10 +100,10 @@ For each unresolved dependency:
 1. **Search for matching plan**: Does `docs/workflow/planning/{dependency-topic}.md` exist?
    - If no match: Mark as "no plan exists" - cannot resolve yet
 
-2. **If plan exists**: Load the output format reference file
+2. **If plan exists**: Load the format's reading reference
    - Read `format:` from the dependency plan's frontmatter
-   - Load `skills/technical-planning/references/output-formats/output-{format}.md`
-   - Follow the "Querying Dependencies" section to search for matching tasks
+   - Load `../technical-planning/references/output-formats/{format}/reading.md`
+   - Use the task extraction instructions to search for matching tasks
 
 3. **Handle ambiguous matches**:
    - If multiple tasks could satisfy the dependency, present options to user
@@ -111,19 +113,19 @@ For each unresolved dependency:
 
 For each resolved match:
 
-1. **Update the plan index file**:
-   - Change `- {topic}: {description}` to `- {topic}: {description} → {task-id}`
+1. **Update the plan index file's frontmatter**:
+   - Change the dependency's `state: unresolved` to `state: resolved` and add `task_id: {task-id}`
 
 2. **Create dependency in output format**:
-   - Load `skills/technical-planning/references/output-formats/output-{format}.md`
-   - Follow the "Cross-Epic Dependencies" or equivalent section to create the blocking relationship
+   - Load `../technical-planning/references/output-formats/{format}/graph.md`
+   - Follow the "Adding a Dependency" section to create the blocking relationship
 
 ## Step 6: Bidirectional Check
 
 For each plan that was a dependency target (i.e., other plans depend on it):
 
 1. **Check reverse dependencies**: Are there other plans that should have this wired up?
-2. **Offer to update**: "Plan X depends on tasks you just linked. Update its External Dependencies section?"
+2. **Offer to update**: "Plan X depends on tasks you just linked. Update its `external_dependencies` frontmatter?"
 
 ## Step 7: Report Results
 
@@ -159,7 +161,11 @@ UPDATED FILES:
 If any files were updated:
 
 ```
-Shall I commit these dependency updates? (y/n)
+· · ·
+
+Shall I commit these dependency updates?
+- **`y`/`yes`** — Commit the changes
+- **`n`/`no`** — Skip
 ```
 
 If yes, commit with message:

@@ -1,6 +1,8 @@
 ---
-description: Start a technical discussion. Discovers research and existing discussions, offers multiple entry paths, and invokes the technical-discussion skill.
-allowed-tools: Bash(.claude/scripts/discovery-for-discussion.sh), Bash(mkdir -p docs/workflow/.cache), Bash(rm docs/workflow/.cache/research-analysis.md)
+name: start-discussion
+description: "Start a technical discussion. Discovers research and existing discussions, offers multiple entry paths, and invokes the technical-discussion skill."
+disable-model-invocation: true
+allowed-tools: Bash(../../scripts/discovery-for-discussion.sh), Bash(mkdir -p docs/workflow/.cache), Bash(rm docs/workflow/.cache/research-analysis.md)
 ---
 
 Invoke the **technical-discussion** skill for this conversation.
@@ -40,7 +42,7 @@ Follow these steps EXACTLY as written. Do not skip steps or combine them. Presen
 
 **This step is mandatory. You must complete it before proceeding.**
 
-Invoke the `/migrate` command and assess its output.
+Invoke the `/migrate` skill and assess its output.
 
 **If files were updated**: STOP and wait for the user to review the changes (e.g., via `git diff`) and confirm before proceeding to Step 1. Do not continue automatically.
 
@@ -53,7 +55,7 @@ Invoke the `/migrate` command and assess its output.
 Run the discovery script to gather current state:
 
 ```bash
-.claude/scripts/discovery-for-discussion.sh
+../../scripts/discovery-for-discussion.sh
 ```
 
 This outputs structured YAML. Parse it to understand:
@@ -222,25 +224,31 @@ Discussions:
 
 **If research AND discussions exist:**
 ```
+· · ·
+
 How would you like to proceed?
 
   • **From research** - Pick a topic number above (e.g., "research 1" or "1")
   • **Continue discussion** - Name one above (e.g., "continue {topic}")
   • **Fresh topic** - Describe what you want to discuss
-  • **refresh** - Force fresh research analysis
+  • **`r`/`refresh`** - Force fresh research analysis
 ```
 
 **If ONLY research exists:**
 ```
+· · ·
+
 How would you like to proceed?
 
   • **From research** - Pick a topic number above (e.g., "research 1" or "1")
   • **Fresh topic** - Describe what you want to discuss
-  • **refresh** - Force fresh research analysis
+  • **`r`/`refresh`** - Force fresh research analysis
 ```
 
 **If ONLY discussions exist:**
 ```
+· · ·
+
 How would you like to proceed?
 
   • **Continue discussion** - Name one above (e.g., "continue {topic}")
@@ -348,9 +356,9 @@ What would you like to focus on in this session?
 
 ## Step 7: Invoke the Skill
 
-After completing the steps above, this command's purpose is fulfilled.
+After completing the steps above, this skill's purpose is fulfilled.
 
-Invoke the [technical-discussion](../../skills/technical-discussion/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
+Invoke the [technical-discussion](../technical-discussion/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
 
 **Example handoff (from research):**
 ```

@@ -1,6 +1,7 @@
 ---
 name: technical-discussion
 description: "Document technical discussions as expert architect and meeting assistant. Capture context, decisions, edge cases, debates, and rationale without jumping to specification or implementation. Use when: (1) Users discuss/explore/debate architecture or design, (2) Working through edge cases before specification, (3) Need to document technical decisions and their rationale, (4) Capturing competing solutions and why choices were made. Creates documentation in docs/workflow/discussion/{topic}.md that can be used to build validated specifications."
+user-invocable: false
 ---
 
 # Technical Discussion
@@ -28,6 +29,21 @@ Either way: Capture decisions, rationale, competing approaches, and edge cases.
 
 - **Topic is broad or ambiguous?**
   > "You mentioned {topic}. To keep the discussion focused, is there a specific aspect or decision you want to work through first?"
+
+---
+
+## Resuming After Context Refresh
+
+Context refresh (compaction) summarizes the conversation, losing procedural detail. When you detect a context refresh has occurred — the conversation feels abruptly shorter, you lack memory of recent steps, or a summary precedes this message — follow this recovery protocol:
+
+1. **Re-read this skill file completely.** Do not rely on your summary of it. The full process, steps, and rules must be reloaded.
+2. **Read all tracking and state files** for the current topic — plan index files, review tracking files, implementation tracking files, or any working documents this skill creates. These are your source of truth for progress.
+3. **Check git state.** Run `git status` and `git log --oneline -10` to see recent commits. Commit messages follow a conventional pattern that reveals what was completed.
+4. **Announce your position** to the user before continuing: what step you believe you're at, what's been completed, and what comes next. Wait for confirmation.
+
+Do not guess at progress or continue from memory. The files on disk and git history are authoritative — your recollection is not.
+
+---
 
 ## What to Capture
 
