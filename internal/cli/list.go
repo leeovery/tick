@@ -3,9 +3,42 @@ package cli
 import (
 	"database/sql"
 	"fmt"
+	"io"
 
 	"github.com/leeovery/tick/internal/store"
 )
+
+// listRow represents a single task row in list/ready output.
+type listRow struct {
+	ID       string
+	Status   string
+	Priority int
+	Title    string
+}
+
+// renderListOutput writes task rows to stdout as aligned columns.
+// In quiet mode it outputs only task IDs. When no rows exist it prints "No tasks found.".
+func renderListOutput(rows []listRow, stdout io.Writer, quiet bool) error {
+	if len(rows) == 0 {
+		fmt.Fprintln(stdout, "No tasks found.")
+		return nil
+	}
+
+	if quiet {
+		for _, r := range rows {
+			fmt.Fprintln(stdout, r.ID)
+		}
+		return nil
+	}
+
+	// Aligned columns: ID (12), STATUS (12), PRI (4), TITLE (remainder)
+	fmt.Fprintf(stdout, "%-12s %-12s %-4s %s\n", "ID", "STATUS", "PRI", "TITLE")
+	for _, r := range rows {
+		fmt.Fprintf(stdout, "%-12s %-12s %-4d %s\n", r.ID, r.Status, r.Priority, r.Title)
+	}
+
+	return nil
+}
 
 // runList implements the `tick list` command.
 // It queries all tasks from SQLite, ordered by priority ASC then created ASC,
@@ -21,13 +54,6 @@ func (a *App) runList(args []string) error {
 		return err
 	}
 	defer s.Close()
-
-	type listRow struct {
-		ID       string
-		Status   string
-		Priority int
-		Title    string
-	}
 
 	var rows []listRow
 
@@ -53,25 +79,5 @@ func (a *App) runList(args []string) error {
 		return err
 	}
 
-	// Empty result
-	if len(rows) == 0 {
-		fmt.Fprintln(a.Stdout, "No tasks found.")
-		return nil
-	}
-
-	// Quiet mode: only IDs
-	if a.Quiet {
-		for _, r := range rows {
-			fmt.Fprintln(a.Stdout, r.ID)
-		}
-		return nil
-	}
-
-	// Aligned columns: ID (12), STATUS (12), PRI (4), TITLE (remainder)
-	fmt.Fprintf(a.Stdout, "%-12s %-12s %-4s %s\n", "ID", "STATUS", "PRI", "TITLE")
-	for _, r := range rows {
-		fmt.Fprintf(a.Stdout, "%-12s %-12s %-4d %s\n", r.ID, r.Status, r.Priority, r.Title)
-	}
-
-	return nil
+	return renderListOutput(rows, a.Stdout, a.Quiet)
 }
