@@ -5,19 +5,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"os"
-)
-
-// OutputFormat represents the output format for CLI responses.
-type OutputFormat string
-
-const (
-	// FormatTOON is the default for non-TTY (agent-optimized output).
-	FormatTOON OutputFormat = "toon"
-	// FormatPretty is the default for TTY (human-readable output).
-	FormatPretty OutputFormat = "pretty"
-	// FormatJSON forces JSON output.
-	FormatJSON OutputFormat = "json"
 )
 
 // App is the top-level CLI application.
@@ -32,21 +19,31 @@ type App struct {
 	Verbose bool
 
 	// Output format
-	OutputFormat OutputFormat
+	OutputFormat Format
 	IsTTY        bool
+
+	// FormatCfg holds the resolved format configuration passed to command handlers.
+	FormatCfg FormatConfig
 }
 
 // Run parses global flags, determines the subcommand, and dispatches it.
 // Returns exit code: 0 for success, 1 for error.
 func (a *App) Run(args []string) int {
-	// Detect TTY and set default format
-	a.detectTTY()
+	// Detect TTY
+	a.IsTTY = DetectTTY(a.Stdout)
 
 	// Parse global flags from args[1:] (skip program name)
 	remaining, err := a.parseGlobalFlags(args[1:])
 	if err != nil {
 		a.writeError(err)
 		return 1
+	}
+
+	// Build FormatConfig for command handlers
+	a.FormatCfg = FormatConfig{
+		Format:  a.OutputFormat,
+		Quiet:   a.Quiet,
+		Verbose: a.Verbose,
 	}
 
 	// Determine subcommand
@@ -120,44 +117,37 @@ func (a *App) Run(args []string) int {
 	}
 }
 
-// detectTTY checks if stdout is a terminal device.
-// For non-*os.File writers (e.g., bytes.Buffer), it defaults to non-TTY.
-func (a *App) detectTTY() {
-	a.IsTTY = false
-	a.OutputFormat = FormatTOON
-
-	if f, ok := a.Stdout.(*os.File); ok {
-		info, err := f.Stat()
-		if err == nil && (info.Mode()&os.ModeCharDevice) != 0 {
-			a.IsTTY = true
-			a.OutputFormat = FormatPretty
-		}
-	}
-}
-
 // parseGlobalFlags extracts global flags and returns the remaining arguments.
+// It tracks format flag usage and uses ResolveFormat for conflict detection.
 func (a *App) parseGlobalFlags(args []string) ([]string, error) {
 	var remaining []string
+	var toonFlag, prettyFlag, jsonFlag bool
 
 	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch arg {
+		switch args[i] {
 		case "--quiet", "-q":
 			a.Quiet = true
 		case "--verbose", "-v":
 			a.Verbose = true
 		case "--toon":
-			a.OutputFormat = FormatTOON
+			toonFlag = true
 		case "--pretty":
-			a.OutputFormat = FormatPretty
+			prettyFlag = true
 		case "--json":
-			a.OutputFormat = FormatJSON
+			jsonFlag = true
 		default:
 			// Not a global flag; everything from here on is subcommand + subcommand args
 			remaining = append(remaining, args[i:]...)
-			return remaining, nil
+			i = len(args) // exit the loop
 		}
 	}
+
+	// Resolve format from flags and TTY detection
+	format, err := ResolveFormat(toonFlag, prettyFlag, jsonFlag, a.IsTTY)
+	if err != nil {
+		return nil, err
+	}
+	a.OutputFormat = format
 
 	return remaining, nil
 }

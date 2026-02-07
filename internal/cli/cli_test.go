@@ -169,8 +169,7 @@ func TestCLI_GlobalFlagsParsed(t *testing.T) {
 }
 
 func TestCLI_TTYDetection(t *testing.T) {
-	t.Run("it detects TTY vs non-TTY on stdout", func(t *testing.T) {
-		// When Stdout is a bytes.Buffer (not a terminal), IsTTY should be false
+	t.Run("it detects non-TTY and defaults to Toon via Run", func(t *testing.T) {
 		var stdout bytes.Buffer
 		app := &App{
 			Stdout: &stdout,
@@ -178,16 +177,13 @@ func TestCLI_TTYDetection(t *testing.T) {
 			Dir:    t.TempDir(),
 		}
 
-		// Before Run, detect TTY
-		app.detectTTY()
+		app.Run([]string{"tick", "init"})
 
 		if app.IsTTY {
 			t.Error("expected IsTTY to be false when stdout is a bytes.Buffer")
 		}
-
-		// Default format for non-TTY should be TOON
-		if app.OutputFormat != FormatTOON {
-			t.Errorf("expected default format FormatTOON for non-TTY, got %q", app.OutputFormat)
+		if app.OutputFormat != FormatToon {
+			t.Errorf("expected default format FormatToon for non-TTY, got %v", app.OutputFormat)
 		}
 	})
 }
@@ -205,8 +201,8 @@ func TestCLI_OutputFormatFlagOverride(t *testing.T) {
 
 		app.Run([]string{"tick", "--toon", "init"})
 
-		if app.OutputFormat != FormatTOON {
-			t.Errorf("expected format FormatTOON with --toon flag, got %q", app.OutputFormat)
+		if app.OutputFormat != FormatToon {
+			t.Errorf("expected format FormatToon with --toon flag, got %v", app.OutputFormat)
 		}
 	})
 
@@ -223,7 +219,7 @@ func TestCLI_OutputFormatFlagOverride(t *testing.T) {
 		app.Run([]string{"tick", "--pretty", "init"})
 
 		if app.OutputFormat != FormatPretty {
-			t.Errorf("expected format FormatPretty with --pretty flag, got %q", app.OutputFormat)
+			t.Errorf("expected format FormatPretty with --pretty flag, got %v", app.OutputFormat)
 		}
 	})
 
@@ -240,7 +236,7 @@ func TestCLI_OutputFormatFlagOverride(t *testing.T) {
 		app.Run([]string{"tick", "--json", "init"})
 
 		if app.OutputFormat != FormatJSON {
-			t.Errorf("expected format FormatJSON with --json flag, got %q", app.OutputFormat)
+			t.Errorf("expected format FormatJSON with --json flag, got %v", app.OutputFormat)
 		}
 	})
 }
