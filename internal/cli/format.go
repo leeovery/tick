@@ -25,13 +25,39 @@ type FormatConfig struct {
 	Verbose bool
 }
 
+// RelatedTask holds a related task's summary (used in blocked_by and children lists).
+type RelatedTask struct {
+	ID     string
+	Title  string
+	Status string
+}
+
 // TaskDetail holds data for rendering a single task's full detail.
-// TODO: Fields will be added when show/create/update formatters are implemented.
-type TaskDetail struct{}
+type TaskDetail struct {
+	ID          string
+	Title       string
+	Status      string
+	Priority    int
+	Description string
+	Parent      string
+	Created     string
+	Updated     string
+	Closed      string
+	BlockedBy   []RelatedTask
+	Children    []RelatedTask
+}
 
 // StatsData holds data for rendering task statistics.
-// TODO: Fields will be added when stats formatter is implemented.
-type StatsData struct{}
+type StatsData struct {
+	Total      int
+	Open       int
+	InProgress int
+	Done       int
+	Cancelled  int
+	Ready      int
+	Blocked    int
+	ByPriority [5]int // index 0-4 maps to priority 0-4
+}
 
 // Formatter is the interface for rendering command output in different formats.
 // Concrete implementations (toon, pretty, json) are provided in tasks 4-2 through 4-4.
