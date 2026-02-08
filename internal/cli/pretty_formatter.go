@@ -84,7 +84,11 @@ func (f *PrettyFormatter) FormatTaskDetail(w io.Writer, detail TaskDetail) error
 	fmt.Fprintf(w, fmtStr, "Priority:", strconv.Itoa(detail.Priority))
 
 	if detail.Parent != "" {
-		fmt.Fprintf(w, fmtStr, "Parent:", detail.Parent)
+		parentVal := detail.Parent
+		if detail.ParentTitle != "" {
+			parentVal = detail.Parent + " " + detail.ParentTitle
+		}
+		fmt.Fprintf(w, fmtStr, "Parent:", parentVal)
 	}
 
 	fmt.Fprintf(w, fmtStr, "Created:", detail.Created)

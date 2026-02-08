@@ -99,14 +99,13 @@ func (a *App) runCreate(args []string) error {
 		return err
 	}
 
-	// Output
+	// Output via formatter
 	if a.Quiet {
 		fmt.Fprintln(a.Stdout, createdTask.ID)
-	} else {
-		a.printTaskDetails(createdTask)
+		return nil
 	}
-
-	return nil
+	detail := taskToDetail(createdTask)
+	return a.Formatter.FormatTaskDetail(a.Stdout, detail)
 }
 
 // createFlags holds parsed flags for the create command.
@@ -198,22 +197,22 @@ func parseCommaSeparatedIDs(s string) []string {
 	return ids
 }
 
-// printTaskDetails outputs task details to stdout.
-// This is a basic Phase 1 format; full formatting comes in Phase 4.
-func (a *App) printTaskDetails(t *task.Task) {
-	fmt.Fprintf(a.Stdout, "ID:          %s\n", t.ID)
-	fmt.Fprintf(a.Stdout, "Title:       %s\n", t.Title)
-	fmt.Fprintf(a.Stdout, "Status:      %s\n", t.Status)
-	fmt.Fprintf(a.Stdout, "Priority:    %d\n", t.Priority)
-	if t.Description != "" {
-		fmt.Fprintf(a.Stdout, "Description: %s\n", t.Description)
+// taskToDetail converts a task.Task to a TaskDetail for formatter output.
+// It populates basic fields; blocked_by and children are empty since
+// create/update don't have the full DB context for related task details.
+func taskToDetail(t *task.Task) TaskDetail {
+	detail := TaskDetail{
+		ID:          t.ID,
+		Title:       t.Title,
+		Status:      string(t.Status),
+		Priority:    t.Priority,
+		Description: t.Description,
+		Parent:      t.Parent,
+		Created:     t.Created.Format("2006-01-02T15:04:05Z"),
+		Updated:     t.Updated.Format("2006-01-02T15:04:05Z"),
 	}
-	if len(t.BlockedBy) > 0 {
-		fmt.Fprintf(a.Stdout, "Blocked by:  %s\n", strings.Join(t.BlockedBy, ", "))
+	if t.Closed != nil {
+		detail.Closed = t.Closed.Format("2006-01-02T15:04:05Z")
 	}
-	if t.Parent != "" {
-		fmt.Fprintf(a.Stdout, "Parent:      %s\n", t.Parent)
-	}
-	fmt.Fprintf(a.Stdout, "Created:     %s\n", t.Created.Format("2006-01-02T15:04:05Z"))
-	fmt.Fprintf(a.Stdout, "Updated:     %s\n", t.Updated.Format("2006-01-02T15:04:05Z"))
+	return detail
 }

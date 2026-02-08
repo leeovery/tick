@@ -77,5 +77,5 @@ func (a *App) runReady(args []string) error {
 		return err
 	}
 
-	return renderListOutput(rows, a.Stdout, a.Quiet)
+	return a.Formatter.FormatTaskList(a.Stdout, rows, a.Quiet)
 }

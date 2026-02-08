@@ -102,12 +102,8 @@ func (a *App) runDepAdd(args []string) error {
 		return err
 	}
 
-	// Output
-	if !a.Quiet {
-		fmt.Fprintf(a.Stdout, "Dependency added: %s blocked by %s\n", taskID, blockedByID)
-	}
-
-	return nil
+	// Output via formatter
+	return a.Formatter.FormatDepChange(a.Stdout, taskID, blockedByID, "added", a.Quiet)
 }
 
 // runDepRm implements `tick dep rm <task_id> <blocked_by_id>`.
@@ -171,10 +167,6 @@ func (a *App) runDepRm(args []string) error {
 		return err
 	}
 
-	// Output
-	if !a.Quiet {
-		fmt.Fprintf(a.Stdout, "Dependency removed: %s no longer blocked by %s\n", taskID, blockedByID)
-	}
-
-	return nil
+	// Output via formatter
+	return a.Formatter.FormatDepChange(a.Stdout, taskID, blockedByID, "removed", a.Quiet)
 }

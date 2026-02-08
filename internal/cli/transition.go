@@ -56,10 +56,9 @@ func (a *App) runTransition(command string, args []string) error {
 		return err
 	}
 
-	// Output
-	if !a.Quiet {
-		fmt.Fprintf(a.Stdout, "%s: %s \u2192 %s\n", id, result.OldStatus, result.NewStatus)
+	// Output via formatter
+	if a.Quiet {
+		return nil
 	}
-
-	return nil
+	return a.Formatter.FormatTransition(a.Stdout, id, string(result.OldStatus), string(result.NewStatus))
 }

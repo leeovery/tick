@@ -34,10 +34,10 @@ func (a *App) runInit(args []string) error {
 		return fmt.Errorf("failed to create tasks.jsonl: %w", err)
 	}
 
-	// Print confirmation (unless quiet)
-	if !a.Quiet {
-		fmt.Fprintf(a.Stdout, "Initialized tick in %s/\n", tickDir)
+	// Output via formatter
+	if a.Quiet {
+		return nil
 	}
-
-	return nil
+	msg := fmt.Sprintf("Initialized tick in %s/", tickDir)
+	return a.Formatter.FormatMessage(a.Stdout, msg)
 }

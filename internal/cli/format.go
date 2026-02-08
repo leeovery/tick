@@ -40,6 +40,7 @@ type TaskDetail struct {
 	Priority    int
 	Description string
 	Parent      string
+	ParentTitle string
 	Created     string
 	Updated     string
 	Closed      string
@@ -108,6 +109,18 @@ func (f *StubFormatter) FormatStats(w io.Writer, stats StatsData) error {
 // FormatMessage is a stub implementation.
 func (f *StubFormatter) FormatMessage(w io.Writer, msg string) error {
 	return nil
+}
+
+// resolveFormatter returns the concrete Formatter for the given format.
+func resolveFormatter(f Format) Formatter {
+	switch f {
+	case FormatPretty:
+		return &PrettyFormatter{}
+	case FormatJSON:
+		return &JSONFormatter{}
+	default:
+		return &ToonFormatter{}
+	}
 }
 
 // DetectTTY checks if the given writer is connected to a terminal device.

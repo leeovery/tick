@@ -322,8 +322,8 @@ func TestReady_EmptyList(t *testing.T) {
 		}
 
 		output := strings.TrimSpace(stdout.String())
-		if output != "No tasks found." {
-			t.Errorf("expected %q, got %q", "No tasks found.", output)
+		if !strings.Contains(output, "tasks[0]") {
+			t.Errorf("expected empty list indicator 'tasks[0]', got %q", output)
 		}
 	})
 }
@@ -404,27 +404,31 @@ func TestReady_AlignedColumnsOutput(t *testing.T) {
 		}
 
 		header := lines[0]
-		if !strings.HasPrefix(header, "ID") {
-			t.Errorf("expected header to start with 'ID', got %q", header)
+		if !strings.Contains(header, "tasks[") {
+			t.Errorf("expected header to contain 'tasks[', got %q", header)
 		}
-		if !strings.Contains(header, "STATUS") {
-			t.Errorf("expected header to contain 'STATUS', got %q", header)
+		if !strings.Contains(header, "id") {
+			t.Errorf("expected header to contain 'id', got %q", header)
 		}
-		if !strings.Contains(header, "PRI") {
-			t.Errorf("expected header to contain 'PRI', got %q", header)
+		if !strings.Contains(header, "status") {
+			t.Errorf("expected header to contain 'status', got %q", header)
 		}
-		if !strings.Contains(header, "TITLE") {
-			t.Errorf("expected header to contain 'TITLE', got %q", header)
+		if !strings.Contains(header, "priority") {
+			t.Errorf("expected header to contain 'priority', got %q", header)
+		}
+		if !strings.Contains(header, "title") {
+			t.Errorf("expected header to contain 'title', got %q", header)
 		}
 
-		if !strings.Contains(lines[1], "tick-aaa111") {
-			t.Errorf("expected first row to contain tick-aaa111, got %q", lines[1])
+		// Data rows contain task values
+		if !strings.Contains(output, "tick-aaa111") {
+			t.Errorf("expected output to contain tick-aaa111, got %q", output)
 		}
-		if !strings.Contains(lines[1], "open") {
-			t.Errorf("expected first row to contain 'open', got %q", lines[1])
+		if !strings.Contains(output, "open") {
+			t.Errorf("expected output to contain 'open', got %q", output)
 		}
-		if !strings.Contains(lines[1], "Setup Sanctum") {
-			t.Errorf("expected first row to contain 'Setup Sanctum', got %q", lines[1])
+		if !strings.Contains(output, "Setup Sanctum") {
+			t.Errorf("expected output to contain 'Setup Sanctum', got %q", output)
 		}
 	})
 }
@@ -446,8 +450,8 @@ func TestReady_NoTasksFoundMessage(t *testing.T) {
 		}
 
 		output := strings.TrimSpace(stdout.String())
-		if output != "No tasks found." {
-			t.Errorf("expected %q, got %q", "No tasks found.", output)
+		if !strings.Contains(output, "tasks[0]") {
+			t.Errorf("expected empty list indicator 'tasks[0]', got %q", output)
 		}
 	})
 }

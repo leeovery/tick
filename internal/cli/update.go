@@ -127,14 +127,13 @@ func (a *App) runUpdate(args []string) error {
 		return err
 	}
 
-	// Output
+	// Output via formatter
 	if a.Quiet {
 		fmt.Fprintln(a.Stdout, updatedTask.ID)
-	} else {
-		a.printTaskDetails(updatedTask)
+		return nil
 	}
-
-	return nil
+	detail := taskToDetail(updatedTask)
+	return a.Formatter.FormatTaskDetail(a.Stdout, detail)
 }
 
 // updateFlags holds parsed flags for the update command.

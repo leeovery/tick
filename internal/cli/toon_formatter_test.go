@@ -120,6 +120,7 @@ func TestToonFormatter_FormatTaskDetail(t *testing.T) {
 			Status:      "in_progress",
 			Priority:    1,
 			Parent:      "tick-e5f6",
+			ParentTitle: "Epic task",
 			Created:     "2026-01-19T10:00:00Z",
 			Updated:     "2026-01-19T14:30:00Z",
 			Closed:      "2026-01-19T16:00:00Z",
@@ -141,8 +142,8 @@ func TestToonFormatter_FormatTaskDetail(t *testing.T) {
 		got := buf.String()
 
 		// Check task section with all fields including parent and closed
-		if !strings.Contains(got, "task{id,title,status,priority,parent,created,updated,closed}:") {
-			t.Errorf("missing task header with parent and closed, got:\n%s", got)
+		if !strings.Contains(got, "task{id,title,status,priority,parent,parent_title,created,updated,closed}:") {
+			t.Errorf("missing task header with parent, parent_title, and closed, got:\n%s", got)
 		}
 
 		// Check blocked_by section

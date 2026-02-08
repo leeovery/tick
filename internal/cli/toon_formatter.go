@@ -129,8 +129,8 @@ func (f *ToonFormatter) buildTaskSection(detail TaskDetail) string {
 	}
 
 	if detail.Parent != "" {
-		fields = append(fields, "parent")
-		values = append(values, toonEscapeValue(detail.Parent))
+		fields = append(fields, "parent", "parent_title")
+		values = append(values, toonEscapeValue(detail.Parent), toonEscapeValue(detail.ParentTitle))
 	}
 
 	fields = append(fields, "created", "updated")

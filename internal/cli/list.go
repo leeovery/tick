@@ -3,7 +3,6 @@ package cli
 import (
 	"database/sql"
 	"fmt"
-	"io"
 	"strconv"
 
 	"github.com/leeovery/tick/internal/store"
@@ -78,30 +77,6 @@ func parseListFlags(args []string) (listFlags, error) {
 	}
 
 	return f, nil
-}
-
-// renderListOutput writes task rows to stdout as aligned columns.
-// In quiet mode it outputs only task IDs. When no rows exist it prints "No tasks found.".
-func renderListOutput(rows []listRow, stdout io.Writer, quiet bool) error {
-	if len(rows) == 0 {
-		fmt.Fprintln(stdout, "No tasks found.")
-		return nil
-	}
-
-	if quiet {
-		for _, r := range rows {
-			fmt.Fprintln(stdout, r.ID)
-		}
-		return nil
-	}
-
-	// Aligned columns: ID (12), STATUS (12), PRI (4), TITLE (remainder)
-	fmt.Fprintf(stdout, "%-12s %-12s %-4s %s\n", "ID", "STATUS", "PRI", "TITLE")
-	for _, r := range rows {
-		fmt.Fprintf(stdout, "%-12s %-12s %-4d %s\n", r.ID, r.Status, r.Priority, r.Title)
-	}
-
-	return nil
 }
 
 // buildListQuery constructs the SQL query and parameters for the list command
@@ -184,5 +159,5 @@ func (a *App) runList(args []string) error {
 		return err
 	}
 
-	return renderListOutput(rows, a.Stdout, a.Quiet)
+	return a.Formatter.FormatTaskList(a.Stdout, rows, a.Quiet)
 }

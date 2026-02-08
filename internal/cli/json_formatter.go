@@ -36,6 +36,7 @@ type jsonTaskDetail struct {
 	Priority    int               `json:"priority"`
 	Description string            `json:"description"`
 	Parent      string            `json:"parent,omitempty"`
+	ParentTitle string            `json:"parent_title,omitempty"`
 	Created     string            `json:"created"`
 	Updated     string            `json:"updated"`
 	Closed      string            `json:"closed,omitempty"`
@@ -146,6 +147,7 @@ func (f *JSONFormatter) FormatTaskDetail(w io.Writer, detail TaskDetail) error {
 		Priority:    detail.Priority,
 		Description: detail.Description,
 		Parent:      detail.Parent,
+		ParentTitle: detail.ParentTitle,
 		Created:     detail.Created,
 		Updated:     detail.Updated,
 		Closed:      detail.Closed,

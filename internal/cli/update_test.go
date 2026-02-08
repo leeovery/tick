@@ -331,23 +331,18 @@ func TestUpdate_OutputsFullTaskDetails(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if !strings.Contains(output, "ID:") {
-			t.Errorf("expected output to contain 'ID:', got %q", output)
-		}
+		// TOON format: task{id,title,status,priority,...}: header with data
 		if !strings.Contains(output, "tick-aaa111") {
 			t.Errorf("expected output to contain task ID, got %q", output)
-		}
-		if !strings.Contains(output, "Title:") {
-			t.Errorf("expected output to contain 'Title:', got %q", output)
 		}
 		if !strings.Contains(output, "Updated") {
 			t.Errorf("expected output to contain new title, got %q", output)
 		}
-		if !strings.Contains(output, "Status:") {
-			t.Errorf("expected output to contain 'Status:', got %q", output)
+		if !strings.Contains(output, "open") {
+			t.Errorf("expected output to contain status 'open', got %q", output)
 		}
-		if !strings.Contains(output, "Priority:") {
-			t.Errorf("expected output to contain 'Priority:', got %q", output)
+		if !strings.Contains(output, "task{") {
+			t.Errorf("expected output to contain TOON task header, got %q", output)
 		}
 	})
 }

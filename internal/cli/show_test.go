@@ -30,35 +30,18 @@ func TestShow_FullTaskDetails(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if !strings.Contains(output, "ID:") {
-			t.Errorf("expected output to contain 'ID:', got %q", output)
-		}
+		// Check data presence (format-agnostic)
 		if !strings.Contains(output, "tick-aaa111") {
 			t.Errorf("expected output to contain task ID, got %q", output)
-		}
-		if !strings.Contains(output, "Title:") {
-			t.Errorf("expected output to contain 'Title:', got %q", output)
 		}
 		if !strings.Contains(output, "Setup Sanctum") {
 			t.Errorf("expected output to contain title, got %q", output)
 		}
-		if !strings.Contains(output, "Status:") {
-			t.Errorf("expected output to contain 'Status:', got %q", output)
-		}
 		if !strings.Contains(output, "in_progress") {
 			t.Errorf("expected output to contain status, got %q", output)
 		}
-		if !strings.Contains(output, "Priority:") {
-			t.Errorf("expected output to contain 'Priority:', got %q", output)
-		}
-		if !strings.Contains(output, "Created:") {
-			t.Errorf("expected output to contain 'Created:', got %q", output)
-		}
 		if !strings.Contains(output, "2026-01-19T10:00:00Z") {
 			t.Errorf("expected output to contain created timestamp, got %q", output)
-		}
-		if !strings.Contains(output, "Updated:") {
-			t.Errorf("expected output to contain 'Updated:', got %q", output)
 		}
 		if !strings.Contains(output, "2026-01-19T14:30:00Z") {
 			t.Errorf("expected output to contain updated timestamp, got %q", output)
@@ -88,8 +71,9 @@ func TestShow_BlockedBySection(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if !strings.Contains(output, "Blocked by:") {
-			t.Errorf("expected output to contain 'Blocked by:', got %q", output)
+		// TOON uses "blocked_by[N]{...}:" section header
+		if !strings.Contains(output, "blocked_by") {
+			t.Errorf("expected output to contain 'blocked_by' section, got %q", output)
 		}
 		if !strings.Contains(output, "tick-aaa111") {
 			t.Errorf("expected blocked_by section to contain blocker ID, got %q", output)
@@ -97,7 +81,7 @@ func TestShow_BlockedBySection(t *testing.T) {
 		if !strings.Contains(output, "Blocker task") {
 			t.Errorf("expected blocked_by section to contain blocker title, got %q", output)
 		}
-		if !strings.Contains(output, "(done)") {
+		if !strings.Contains(output, "done") {
 			t.Errorf("expected blocked_by section to contain blocker status, got %q", output)
 		}
 	})
@@ -125,17 +109,15 @@ func TestShow_ChildrenSection(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if !strings.Contains(output, "Children:") {
-			t.Errorf("expected output to contain 'Children:', got %q", output)
+		// TOON uses "children[N]{...}:" section header
+		if !strings.Contains(output, "children[1]") {
+			t.Errorf("expected output to contain 'children[1]' section, got %q", output)
 		}
 		if !strings.Contains(output, "tick-bbb222") {
 			t.Errorf("expected children section to contain child ID, got %q", output)
 		}
 		if !strings.Contains(output, "Child task one") {
 			t.Errorf("expected children section to contain child title, got %q", output)
-		}
-		if !strings.Contains(output, "(open)") {
-			t.Errorf("expected children section to contain child status, got %q", output)
 		}
 	})
 }
@@ -161,8 +143,9 @@ func TestShow_DescriptionSection(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if !strings.Contains(output, "Description:") {
-			t.Errorf("expected output to contain 'Description:', got %q", output)
+		// TOON uses "description:" section header
+		if !strings.Contains(output, "description:") {
+			t.Errorf("expected output to contain 'description:', got %q", output)
 		}
 		if !strings.Contains(output, "Implement the login endpoint...") {
 			t.Errorf("expected output to contain description text, got %q", output)
@@ -171,7 +154,7 @@ func TestShow_DescriptionSection(t *testing.T) {
 }
 
 func TestShow_OmitsBlockedByWhenEmpty(t *testing.T) {
-	t.Run("it omits blocked_by section when task has no dependencies", func(t *testing.T) {
+	t.Run("it shows blocked_by section as empty when task has no dependencies", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		tasks := []task.Task{
 			{ID: "tick-aaa111", Title: "No deps", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
@@ -191,14 +174,15 @@ func TestShow_OmitsBlockedByWhenEmpty(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if strings.Contains(output, "Blocked by:") {
-			t.Errorf("expected output to NOT contain 'Blocked by:' when task has no deps, got %q", output)
+		// TOON always shows blocked_by with count 0
+		if !strings.Contains(output, "blocked_by[0]") {
+			t.Errorf("expected output to contain 'blocked_by[0]' when task has no deps, got %q", output)
 		}
 	})
 }
 
 func TestShow_OmitsChildrenWhenEmpty(t *testing.T) {
-	t.Run("it omits children section when task has no children", func(t *testing.T) {
+	t.Run("it shows children section as empty when task has no children", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		tasks := []task.Task{
 			{ID: "tick-aaa111", Title: "No children", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
@@ -218,8 +202,9 @@ func TestShow_OmitsChildrenWhenEmpty(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if strings.Contains(output, "Children:") {
-			t.Errorf("expected output to NOT contain 'Children:' when task has no children, got %q", output)
+		// TOON always shows children with count 0
+		if !strings.Contains(output, "children[0]") {
+			t.Errorf("expected output to contain 'children[0]' when task has no children, got %q", output)
 		}
 	})
 }
@@ -245,14 +230,14 @@ func TestShow_OmitsDescriptionWhenEmpty(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if strings.Contains(output, "Description:") {
-			t.Errorf("expected output to NOT contain 'Description:' when empty, got %q", output)
+		if strings.Contains(output, "description:") {
+			t.Errorf("expected output to NOT contain 'description:' when empty, got %q", output)
 		}
 	})
 }
 
 func TestShow_ParentFieldWhenSet(t *testing.T) {
-	t.Run("it shows parent field with ID and title when parent is set", func(t *testing.T) {
+	t.Run("it shows parent field when parent is set", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		tasks := []task.Task{
 			{ID: "tick-aaa111", Title: "Parent task", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
@@ -273,8 +258,9 @@ func TestShow_ParentFieldWhenSet(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if !strings.Contains(output, "Parent:") {
-			t.Errorf("expected output to contain 'Parent:', got %q", output)
+		// TOON includes parent in the task schema when set
+		if !strings.Contains(output, "parent") {
+			t.Errorf("expected output to contain 'parent', got %q", output)
 		}
 		if !strings.Contains(output, "tick-aaa111") {
 			t.Errorf("expected parent field to contain parent ID, got %q", output)
@@ -306,8 +292,10 @@ func TestShow_OmitsParentWhenNull(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if strings.Contains(output, "Parent:") {
-			t.Errorf("expected output to NOT contain 'Parent:' when parent is null, got %q", output)
+		// TOON omits parent from schema when empty
+		// Check that schema does not include "parent" field
+		if strings.Contains(output, ",parent,") {
+			t.Errorf("expected output to NOT contain 'parent' in schema when parent is null, got %q", output)
 		}
 	})
 }
@@ -334,8 +322,9 @@ func TestShow_ClosedTimestampWhenDone(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if !strings.Contains(output, "Closed:") {
-			t.Errorf("expected output to contain 'Closed:', got %q", output)
+		// TOON includes "closed" in schema when set
+		if !strings.Contains(output, "closed") {
+			t.Errorf("expected output to contain 'closed', got %q", output)
 		}
 		if !strings.Contains(output, "2026-01-19T16:00:00Z") {
 			t.Errorf("expected output to contain closed timestamp, got %q", output)
@@ -364,8 +353,9 @@ func TestShow_OmitsClosedWhenOpen(t *testing.T) {
 		}
 
 		output := stdout.String()
-		if strings.Contains(output, "Closed:") {
-			t.Errorf("expected output to NOT contain 'Closed:' when task is open, got %q", output)
+		// TOON omits "closed" from schema when not set
+		if strings.Contains(output, ",closed") {
+			t.Errorf("expected output to NOT contain 'closed' field when task is open, got %q", output)
 		}
 	})
 }

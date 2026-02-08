@@ -24,6 +24,9 @@ type App struct {
 
 	// FormatCfg holds the resolved format configuration passed to command handlers.
 	FormatCfg FormatConfig
+
+	// Formatter is the resolved output formatter (set once in Run).
+	Formatter Formatter
 }
 
 // Run parses global flags, determines the subcommand, and dispatches it.
@@ -45,6 +48,9 @@ func (a *App) Run(args []string) int {
 		Quiet:   a.Quiet,
 		Verbose: a.Verbose,
 	}
+
+	// Resolve formatter once based on format
+	a.Formatter = resolveFormatter(a.OutputFormat)
 
 	// Determine subcommand
 	if len(remaining) == 0 {

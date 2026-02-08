@@ -36,6 +36,7 @@ func (a *App) runShow(args []string) error {
 		Priority    int
 		Description string
 		Parent      string
+		ParentTitle string
 		Created     string
 		Updated     string
 		Closed      string
@@ -50,7 +51,6 @@ func (a *App) runShow(args []string) error {
 	var detail taskDetail
 	var blockedBy []relatedTask
 	var children []relatedTask
-	var parentInfo *relatedTask
 
 	err = s.Query(func(db *sql.DB) error {
 		// Query the task itself
@@ -71,6 +71,12 @@ func (a *App) runShow(args []string) error {
 		}
 		if parent.Valid {
 			detail.Parent = parent.String
+			// Query parent task's title
+			var parentTitle string
+			err := db.QueryRow("SELECT title FROM tasks WHERE id = ?", parent.String).Scan(&parentTitle)
+			if err == nil {
+				detail.ParentTitle = parentTitle
+			}
 		}
 		if closed.Valid {
 			detail.Closed = closed.String
@@ -118,19 +124,6 @@ func (a *App) runShow(args []string) error {
 			return fmt.Errorf("children rows error: %w", err)
 		}
 
-		// Query parent info if parent is set
-		if detail.Parent != "" {
-			var p relatedTask
-			err := db.QueryRow(
-				"SELECT id, title, status FROM tasks WHERE id = ?",
-				detail.Parent,
-			).Scan(&p.ID, &p.Title, &p.Status)
-			if err == nil {
-				parentInfo = &p
-			}
-			// If parent not found (orphaned), we just skip showing parent info
-		}
-
 		return nil
 	})
 	if err != nil {
@@ -143,47 +136,35 @@ func (a *App) runShow(args []string) error {
 		return nil
 	}
 
-	// Output key-value format
-	fmt.Fprintf(a.Stdout, "ID:       %s\n", detail.ID)
-	fmt.Fprintf(a.Stdout, "Title:    %s\n", detail.Title)
-	fmt.Fprintf(a.Stdout, "Status:   %s\n", detail.Status)
-	fmt.Fprintf(a.Stdout, "Priority: %d\n", detail.Priority)
-	if parentInfo != nil {
-		fmt.Fprintf(a.Stdout, "Parent:   %s  %s\n", parentInfo.ID, parentInfo.Title)
-	}
-	fmt.Fprintf(a.Stdout, "Created:  %s\n", detail.Created)
-	fmt.Fprintf(a.Stdout, "Updated:  %s\n", detail.Updated)
-	if detail.Closed != "" {
-		fmt.Fprintf(a.Stdout, "Closed:   %s\n", detail.Closed)
-	}
-
-	// Blocked by section
-	if len(blockedBy) > 0 {
-		fmt.Fprintln(a.Stdout)
-		fmt.Fprintln(a.Stdout, "Blocked by:")
-		for _, b := range blockedBy {
-			fmt.Fprintf(a.Stdout, "  %s  %s (%s)\n", b.ID, b.Title, b.Status)
-		}
+	// Build TaskDetail for formatter
+	td := TaskDetail{
+		ID:          detail.ID,
+		Title:       detail.Title,
+		Status:      detail.Status,
+		Priority:    detail.Priority,
+		Description: detail.Description,
+		Parent:      detail.Parent,
+		ParentTitle: detail.ParentTitle,
+		Created:     detail.Created,
+		Updated:     detail.Updated,
+		Closed:      detail.Closed,
 	}
 
-	// Children section
-	if len(children) > 0 {
-		fmt.Fprintln(a.Stdout)
-		fmt.Fprintln(a.Stdout, "Children:")
-		for _, c := range children {
-			fmt.Fprintf(a.Stdout, "  %s  %s (%s)\n", c.ID, c.Title, c.Status)
-		}
+	for _, b := range blockedBy {
+		td.BlockedBy = append(td.BlockedBy, RelatedTask{
+			ID:     b.ID,
+			Title:  b.Title,
+			Status: b.Status,
+		})
 	}
 
-	// Description section
-	if detail.Description != "" {
-		fmt.Fprintln(a.Stdout)
-		fmt.Fprintln(a.Stdout, "Description:")
-		// Indent each line of description
-		for _, line := range strings.Split(detail.Description, "\n") {
-			fmt.Fprintf(a.Stdout, "  %s\n", line)
-		}
+	for _, c := range children {
+		td.Children = append(td.Children, RelatedTask{
+			ID:     c.ID,
+			Title:  c.Title,
+			Status: c.Status,
+		})
 	}
 
-	return nil
+	return a.Formatter.FormatTaskDetail(a.Stdout, td)
 }
