@@ -9,14 +9,15 @@ Reusable instructions for running a deep task-by-task code comparison of tick-co
 1. All implementation branches must be complete (23 tasks each)
 2. Worktrees must be set up for each version being compared
 3. The `analysis/` directory must exist with `task-reports/` and `phase-reports/` subdirs
-4. Existing reports from prior versions (V1/V2/V3) do NOT need to be regenerated — they are stable baselines
+4. Existing reports from prior rounds (round-0, round-1, round-2) do NOT need to be regenerated — they are stable baselines
+5. Identify all project skills used during implementation (check `docs/workflow/implementation/{topic}.md` for the `project_skills` field and read each skill file)
 
 ## Setup
 
 ```bash
 # Create output directories for this round
-# Increment the round number for each new analysis (round-1 = V1/V2/V3, round-2 = V4 vs V2, etc.)
-ROUND="round-2"
+# Increment the round number for each new analysis (round-1 = V1/V2/V3, round-2 = V4 vs V2, round-3 = V5 vs V4)
+ROUND="round-3"
 mkdir -p /Users/leeovery/Code/tick/analysis/$ROUND/task-reports
 mkdir -p /Users/leeovery/Code/tick/analysis/$ROUND/phase-reports
 
@@ -24,14 +25,14 @@ mkdir -p /Users/leeovery/Code/tick/analysis/$ROUND/phase-reports
 SCRATCHPAD="/private/tmp/tick-analysis-worktrees"
 mkdir -p "$SCRATCHPAD"
 
-# Baseline (V2 — the current best)
-git worktree add "$SCRATCHPAD/v2" implementation-v2 2>/dev/null || echo "v2 exists"
+# Baseline (V4 — the current best)
+git worktree add "$SCRATCHPAD/v4" implementation-v4 2>/dev/null || echo "v4 exists"
 
 # New version under test (change branch name as needed)
-git worktree add "$SCRATCHPAD/v4" implementation-v4 2>/dev/null || echo "v4 exists"
+git worktree add "$SCRATCHPAD/v5" implementation-v5 2>/dev/null || echo "v5 exists"
 ```
 
-**Verify**: `ls $SCRATCHPAD/v2/internal/task/task.go $SCRATCHPAD/v4/internal/task/task.go`
+**Verify**: `ls $SCRATCHPAD/v4/internal/task/task.go $SCRATCHPAD/v5/internal/task/task.go`
 
 ## Permissions
 
@@ -44,7 +45,8 @@ Add these to `.claude/settings.local.json` under `permissions.allow`:
 "Read(/private/tmp/tick-analysis-worktrees/*)",
 "Write(/Users/leeovery/Code/tick/analysis/*)",
 "Glob(/private/tmp/tick-analysis-worktrees/*)",
-"Glob(/Users/leeovery/Code/tick/analysis/*)"
+"Glob(/Users/leeovery/Code/tick/analysis/*)",
+"Grep(/private/tmp/tick-analysis-worktrees/*)"
 ```
 
 ---
@@ -74,17 +76,24 @@ You are a Go code reviewer producing an EXHAUSTIVE comparison of 2 implementatio
 of the same task specification. Your report must be detailed enough that a reader
 can understand exactly what each version did without reading the code themselves.
 
+## Project skills (read FIRST)
+Read the skill files that were active during implementation. These define
+MUST DO / MUST NOT DO constraints that carry equal weight to spec acceptance criteria.
+{List skill file paths, e.g.:}
+- /Users/leeovery/Code/tick/.claude/skills/golang-pro/SKILL.md
+{If a project-local Go skill exists, include it too}
+
 ## Task plan file
 Read: /Users/leeovery/Code/tick/docs/workflow/planning/tick-core/tick-core-{P}-{T}.md
 
 ## Get the diffs (run via Bash)
-- V2: git -C /Users/leeovery/Code/tick show {V2_COMMIT} -- ':!.claude'
 - V4: git -C /Users/leeovery/Code/tick show {V4_COMMIT} -- ':!.claude'
+- V5: git -C /Users/leeovery/Code/tick show {V5_COMMIT} -- ':!.claude'
 
 ## Read resulting source files
 After getting diffs, read the FULL source files created/modified by this task:
-- V2: /private/tmp/tick-analysis-worktrees/v2/{relevant files}
 - V4: /private/tmp/tick-analysis-worktrees/v4/{relevant files}
+- V5: /private/tmp/tick-analysis-worktrees/v5/{relevant files}
 
 Read BOTH implementation AND test files for each version.
 
@@ -99,7 +108,7 @@ Use this structure:
 {What this task requires — from the plan file. Include all acceptance criteria.}
 
 ## Acceptance Criteria Compliance
-| Criterion | V2 | V4 |
+| Criterion | V4 | V5 |
 |-----------|-----|-----|
 {One row per criterion. PASS/FAIL/PARTIAL with specific evidence.}
 
@@ -124,8 +133,38 @@ Use this structure:
 
  Then: DIFF of test coverage between versions.}
 
+### Skill Compliance
+{Check each version against the MUST DO and MUST NOT DO constraints from the
+ project's injected skills (e.g. golang-pro). For each constraint that applies
+ to this task's code, note whether each version complies.
+
+ Example constraints to check (adjust per skill):
+ - Error wrapping with fmt.Errorf("%w", err)
+ - Table-driven tests with subtests
+ - Explicit error handling (no ignored errors)
+ - Exported function documentation
+ - Any other MUST DO / MUST NOT DO from the skill file
+
+ | Constraint | V4 | V5 |
+ |------------|-----|-----|
+ {One row per applicable constraint. PASS/FAIL with evidence.}}
+
+### Spec-vs-Convention Conflicts
+{Identify places where the task specification conflicts with language idioms
+ or skill constraints. For each conflict found:
+ - What the spec says
+ - What the language convention / skill requires
+ - What each version chose to do
+ - Assessment: was the choice a reasonable judgment call?
+
+ This section prevents penalizing implementations for intelligent spec deviations
+ that follow language best practices (e.g. lowercase error messages in Go when
+ the spec shows capitalized ones).
+
+ If no conflicts exist for this task, state "No spec-vs-convention conflicts identified."}
+
 ## Diff Stats
-| Metric | V2 | V4 |
+| Metric | V4 | V5 |
 |--------|-----|-----|
 | Files changed | | |
 | Lines added | | |
@@ -143,6 +182,10 @@ Use this structure:
 - Identify test gaps between versions.
 - Distinguish "genuinely better" from "different but equivalent".
 - Pure code analysis. Reference specific function names, line numbers, file paths.
+- Read the project skill files BEFORE analysing code. Skill constraints carry
+  equal weight to spec acceptance criteria when judging implementation quality.
+- When spec and language convention conflict, do NOT automatically credit
+  spec-verbatim compliance. Assess whether deviating was the right call.
 - Do NOT create any git commits or temporary files.
 ```
 
@@ -161,7 +204,45 @@ Use this structure:
 
 **After each batch**: Verify all reports were written before proceeding.
 
-### V2 Commit Mapping (Baseline — stable)
+### V4 Commit Mapping (Baseline — stable)
+
+| Task | Commit |
+|------|--------|
+| 1-1 | e6443c9 |
+| 1-2 | eab0e0d |
+| 1-3 | 003b167 |
+| 1-4 | 4292323 |
+| 1-5 | e8967ef |
+| 1-6 | 8216ffc |
+| 1-7 | de898f4 |
+| 2-1 | d964047 |
+| 2-2 | 40beac2 |
+| 2-3 | 332939d |
+| 3-1 | 0bb85cc |
+| 3-2 | 95c0230 |
+| 3-3 | 37e69a6 |
+| 3-4 | 957b234 |
+| 3-5 | 7665c68 |
+| 4-1 | 9171403 |
+| 4-2 | 67805bd |
+| 4-3 | 16ace67 |
+| 4-4 | 1a0f941 |
+| 4-5 | 5a26a04 |
+| 4-6 | e0d31d7 |
+| 5-1 | 89b8fd5 |
+| 5-2 | 5b27694 |
+
+Additional V4 commits (not per-task):
+| Description | Commit |
+|-------------|--------|
+| Pre-polish checkpoint | ca0ac05 |
+| Polish | 199e407 |
+| Complete implementation | cbcbfcb |
+
+### Prior Baseline Commit Mappings (for reference)
+
+<details>
+<summary>V2 Commits</summary>
 
 | Task | Commit |
 |------|--------|
@@ -189,33 +270,11 @@ Use this structure:
 | 5-1 | 3055def |
 | 5-2 | 7936ab2 |
 
-### V4 Commit Mapping (Fill in after implementation)
+</details>
 
-| Task | Commit |
-|------|--------|
-| 1-1 | {TODO} |
-| 1-2 | {TODO} |
-| 1-3 | {TODO} |
-| 1-4 | {TODO} |
-| 1-5 | {TODO} |
-| 1-6 | {TODO} |
-| 1-7 | {TODO} |
-| 2-1 | {TODO} |
-| 2-2 | {TODO} |
-| 2-3 | {TODO} |
-| 3-1 | {TODO} |
-| 3-2 | {TODO} |
-| 3-3 | {TODO} |
-| 3-4 | {TODO} |
-| 3-5 | {TODO} |
-| 4-1 | {TODO} |
-| 4-2 | {TODO} |
-| 4-3 | {TODO} |
-| 4-4 | {TODO} |
-| 4-5 | {TODO} |
-| 4-6 | {TODO} |
-| 5-1 | {TODO} |
-| 5-2 | {TODO} |
+### V5 Commit Mapping
+
+_(Fill in after V5 implementation by running: `git log implementation-v5 --oneline | grep "impl(tick-core)"`)_
 
 ---
 
@@ -231,14 +290,14 @@ You are analysing Phase {N} ({Phase Name}) across 2 implementations of a Go task
 Your job is to find CROSS-TASK patterns that individual task analyses miss.
 
 ## Read task reports first
-{list all task report files for this phase — use the v4 comparison reports}
+{list all task report files for this phase — use the round-3 comparison reports}
 
 ## Read the phase description
 /Users/leeovery/Code/tick/docs/workflow/planning/tick-core.md (Phase {N} section)
 
 ## Read the source files for this phase
-- V2: /private/tmp/tick-analysis-worktrees/v2/{files for this phase}
 - V4: /private/tmp/tick-analysis-worktrees/v4/{files for this phase}
+- V5: /private/tmp/tick-analysis-worktrees/v5/{files for this phase}
 
 Use Glob to discover the actual file layout first.
 
@@ -296,15 +355,15 @@ Use Glob to discover the actual file layout first.
 ### Prompt
 
 ```
-You are producing the definitive synthesis comparing V4 against V2 (the current best
+You are producing the definitive synthesis comparing V5 against V4 (the current best
 implementation) of a Go task tracker.
 
 You have access to:
-- 23 V4-vs-V2 task reports in /Users/leeovery/Code/tick/analysis/$ROUND/task-reports/
-- 5 V4-vs-V2 phase reports in /Users/leeovery/Code/tick/analysis/$ROUND/phase-reports/
-- The original V1/V2/V3 synthesis at /Users/leeovery/Code/tick/analysis/round-1/final-synthesis.md
+- 23 V5-vs-V4 task reports in /Users/leeovery/Code/tick/analysis/$ROUND/task-reports/
+- 5 V5-vs-V4 phase reports in /Users/leeovery/Code/tick/analysis/$ROUND/phase-reports/
+- Prior round syntheses at /Users/leeovery/Code/tick/analysis/round-1/final-synthesis.md and round-2/final-synthesis.md
 - The analysis log at /Users/leeovery/Code/tick/analysis/analysis-log.md
-- Source code at /private/tmp/tick-analysis-worktrees/{v2,v4}/
+- Source code at /private/tmp/tick-analysis-worktrees/{v4,v5}/
 
 Read ALL phase reports first. Then scan each task report's Verdict section.
 If you need to verify a claim, read the source code.
@@ -313,35 +372,61 @@ Write to: /Users/leeovery/Code/tick/analysis/$ROUND/final-synthesis.md
 
 ## Structure
 
-# V4 vs V2 Synthesis
+# V5 vs V4 Synthesis
 
 ## Executive Summary
-{Did V4 match, exceed, or fall short of V2? Back with evidence.}
+{Did V5 match, exceed, or fall short of V4? Back with evidence.}
 
 ## Phase-by-Phase Results
 | Phase | Winner | Margin | Key Factor |
 
 ## Full Task Scorecard
-| Task | V2 | V4 | Winner |
+| Task | V4 | V5 | Winner |
 
-## What V4 Did Better Than V2
+## What V5 Did Better Than V4
 {Specific improvements with evidence}
 
-## What V4 Did Worse Than V2
+## What V5 Did Worse Than V4
 {Specific regressions with evidence}
 
 ## What Stayed the Same
 {Patterns that both versions share}
 
 ## Did the Workflow Changes Work?
-{Direct assessment: did removing PR #79's integration context / adding polish / etc
- produce the expected improvement? Reference the analysis-log.md predictions.}
+{Direct assessment of V5's workflow changes against V4. Evaluate whether each change
+ achieved its goal and whether any had unintended side effects.}
 
 ## Recommendations
-{What to change next based on V4 results.}
+{What to change next based on V5 results.}
 
 Do NOT create any git commits or temporary files.
 ```
+
+---
+
+## Step 4: Update Tracking Files
+
+After the final synthesis is written, update these files to reflect the completed round:
+
+1. **`analysis/index.md`** — Add the new round section with:
+   - Status and date
+   - Link to final synthesis
+   - Full task report table with winners
+   - Phase report table with winners
+   - Update Key Findings Summary if results change the overall narrative
+
+2. **`analysis/analysis-log.md`** — Update:
+   - Current State section (date, what was done)
+   - Key Findings (add new round results)
+   - Version Inventory table (add new version row)
+   - Completed round section (move from "Planned" to "Completed" with results)
+   - Planned Next Step (update based on synthesis recommendations)
+
+3. **`analysis/analysis-playbook.md`** — If applicable:
+   - Fill in any pending commit mappings
+   - Add methodology improvements discovered during this round
+
+**This step is mandatory.** Do not consider the analysis complete until tracking files are updated.
 
 ---
 
@@ -352,7 +437,8 @@ Do NOT create any git commits or temporary files.
 | Task analysis | 23 | 8 | 23 task reports in `$ROUND/task-reports/` |
 | Phase analysis | 5 | 2 | 5 phase reports in `$ROUND/phase-reports/` |
 | Final synthesis | 1 | 1 | `$ROUND/final-synthesis.md` |
-| **Total** | **29** | **11** | **29 files** |
+| Tracking updates | — | — | `index.md`, `analysis-log.md`, `analysis-playbook.md` |
+| **Total** | **29** | **11+1** | **29 files + tracking updates** |
 
 ---
 
@@ -363,6 +449,7 @@ Do NOT create any git commits or temporary files.
 - Verify each report was written before proceeding
 - If an agent has permission issues reading worktree files, check `.claude/settings.local.json`
 - Each round gets its own directory (`round-2/`, `round-3/`, etc.) — no filename suffixes needed
-- The V2 commit mapping is stable and doesn't change between analysis runs
-- Fill in the V4 commit mapping by running: `git log implementation-v4 --oneline | grep "impl(tick-core)"`
+- The V4 commit mapping is stable and doesn't change between analysis runs
+- Fill in the V5 commit mapping by running: `git log implementation-v5 --oneline | grep "impl(tick-core)"`
 - Update the `$ROUND` variable in setup and all path references for each new round
+- For round 3, check the analysis log for any V5-specific evaluation criteria

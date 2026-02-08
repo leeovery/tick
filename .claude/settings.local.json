@@ -22,5 +22,9 @@
       "Glob(/private/tmp/tick-analysis-worktrees/*)",
       "Glob(/Users/leeovery/Code/tick/analysis/*)"
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
   }
 }

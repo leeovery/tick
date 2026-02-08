@@ -4,10 +4,11 @@ Tracking document for the ongoing comparison of tick-core implementations produc
 
 ---
 
-## Current State (Feb 6, 2026)
+## Current State (Feb 8, 2026)
 
 ### What We've Done
 
+**Round 1 (Feb 6)**:
 1. **23 task-level reports** comparing V1, V2, V3 code for every plan task (`round-1/task-reports/`)
 2. **5 phase-level reports** analysing cross-task patterns per phase (`round-1/phase-reports/`)
 3. **Final synthesis** aggregating all findings (`round-1/final-synthesis.md`)
@@ -15,9 +16,17 @@ Tracking document for the ongoing comparison of tick-core implementations produc
 5. **Workflow skill diff** comparing executor/reviewer prompts between V2 and V3 runs (`round-1/workflow-skill-diff.md`)
 6. **External version analysis** from the workflows repo (`claude-technical-workflows/implementation-version-analysis.md`)
 
+**Round 2 (Feb 8)**:
+7. **23 task-level reports** comparing V2 vs V4 (`round-2/task-reports/`)
+8. **5 phase-level reports** for V2 vs V4 (`round-2/phase-reports/`)
+9. **Final synthesis** — V4 vs V2 definitive comparison (`round-2/final-synthesis.md`)
+10. **Playbook update** — added Skill Compliance and Spec-vs-Convention Conflicts dimensions
+
 ### Key Findings
 
-**V2 wins 21/23 tasks, all 5 phases.** V3 wins 1/23 (task 1-5). V1 wins 0/23.
+**Round 1**: V2 wins 21/23 tasks, all 5 phases. V3 wins 1/23 (task 1-5). V1 wins 0/23.
+
+**Round 2**: V4 wins 15/23 tasks, all 5 phases. V2 wins 7/23. 1 close call (1-3).
 
 **Root cause of V3's regression**: PR #79 (integration context + codebase cohesion) created a "convention gravity well" where V3's task 1-1 made unconventional Go choices (string timestamps, bare error returns, no NewTask factory) that got documented as established patterns in the integration context file. Every subsequent executor faithfully propagated these choices because it was instructed to "match conventions" and the reviewer's cohesion dimension actively enforced consistency with them.
 
@@ -35,11 +44,12 @@ V3's integration context mechanism amplifies whatever direction the first few ta
 
 ## Version Inventory
 
-| Version | Branch | Workflow Version | Dates | Tasks Won |
-|---------|--------|-----------------|-------|-----------|
-| V1 | `implementation-v1` | Pre-#73 (monolithic) | Pre-Feb 2 | 0/23 |
-| V2 | `implementation-v2` | v2.1.3 (PR #73) | Feb 3 | 21/23 |
-| V3 | `implementation-v3` | v2.1.5 (PRs #77-80) | Feb 5 | 1/23 |
+| Version | Branch | Workflow Version | Dates | Tasks Won (vs prev best) |
+|---------|--------|-----------------|-------|--------------------------|
+| V1 | `implementation-v1` | Pre-#73 (monolithic) | Pre-Feb 2 | 0/23 (vs V2) |
+| V2 | `implementation-v2` | v2.1.3 (PR #73) | Feb 3 | 21/23 (vs V3), 7/23 (vs V4) |
+| V3 | `implementation-v3` | v2.1.5 (PRs #77-80) | Feb 5 | 1/23 (vs V2) |
+| V4 | `implementation-v4` | V2 base + PRs #77/#78/#80 (no #79) | Feb 7-8 | 15/23 (vs V2) |
 
 ### Commit Mapping
 
@@ -72,10 +82,12 @@ analysis/
     workflow-skill-diff.md    <- Executor/reviewer prompt diffs between V2 and V3
     root-cause-task-1-1.md    <- Why V3 chose string timestamps
     course-correction-evidence.md <- V2's 6 retroactive fixes vs V3's zero
-  round-2/                    <- V4 vs V2 (2-way comparison, TBD)
-    task-reports/
-    phase-reports/
-    final-synthesis.md
+  round-2/                    <- V4 vs V2 (2-way comparison, Feb 8 2026)
+    task-reports/             <- 23 per-task reports
+      tick-core-{P}-{T}.md
+    phase-reports/            <- 5 cross-task phase reports
+      phase-{N}.md
+    final-synthesis.md        <- Definitive V4 vs V2 comparison
 ```
 
 External:
@@ -97,51 +109,35 @@ External:
 
 ---
 
-## Planned Next Step: V4
+## Completed: V4 (Round 2)
 
-### Approach: Option A (Rollback to V2 + cherry-pick beneficial additions)
+### Approach Used: Option A (Rollback to V2 + cherry-pick)
 
 **Base**: V2's executor and reviewer (simpler, less prescriptive)
 
-**Keep from V3**:
-- PR #77: Fix executor re-attempt context (bugfix)
-- PR #78: Fix recommendations (FIX/ALTERNATIVE/CONFIDENCE) — clear V3 winner
-- PR #78: fix_gate_mode stop gates (human-in-the-loop)
-- PR #80: Polish agent (proven beneficial)
+**Kept from V3**: PRs #77 (bugfix), #78 (fix recs + stop gates), #80 (polish)
 
-**Remove/skip entirely**:
-- PR #79's integration context file mechanism
-- PR #79's prescriptive exploration rewrite (7 bullets back to V2's 3)
-- PR #79's "same developer" instruction
-- PR #79's plan-file access for executor
-- PR #79's reviewer dimension 6 (codebase cohesion)
-- PR #79's INTEGRATION_NOTES / COHESION_NOTES output fields
+**Removed**: PR #79 entirely (integration context, cohesion review, prescriptive exploration)
 
-### Possible Enhancement (lighter than PR #79)
+### Result: V4 Exceeds V2
 
-Consider a lightweight alternative to integration context: a simple "patterns and helpers" appendix maintained by the orchestrator (not executor/reviewer), listing function names and file paths of shared utilities. Read as reference, not as convention authority. No cohesion enforcement.
+V4 wins 15/23 tasks, all 5 phases. The rollback strategy is validated — removing PR #79 eliminated the convention gravity well while the cherry-picked additions (structured fix recommendations, polish agent) contributed positively.
 
-### How to Analyse V4
+**V4's key advantages over V2**: type-safe formatter interface (concrete `StatsData` vs `interface{}`), single-source SQL reuse via `readyConditionsFor(alias)`, cleaner storage error flow, type-safe test infrastructure, more concise implementations.
 
-1. Run V4 implementation against tick-core plan (same 23 tasks, same spec)
-2. Create worktree: `git worktree add /private/tmp/tick-analysis-worktrees/v4 implementation-v4`
-3. Run task-level agents comparing V4 against V2 only (skip V1/V3 — results are stable)
-4. Produce a focused V4-vs-V2 synthesis rather than a full 4-way comparison
-5. If V4 matches or beats V2, the changes are validated
+**V2's remaining advantages**: binary-level integration tests (V4 has zero), defensive `NormalizeID()` at every comparison, spec-verbatim error messages, exact-string formatter test assertions, compile-time interface checks.
 
-**Do NOT re-analyse V1/V2/V3** — those 29 reports are stable reference material. Only produce new reports for V4.
+### Methodology Gap Discovered
 
-### Alternate: Option B (Fix-forward)
+Round 2 did not evaluate project skill compliance (golang-pro MUST DO/MUST NOT DO) or handle spec-vs-convention conflicts (e.g. Go's lowercase error convention vs spec's capitalized messages). Some verdicts crediting V2 for "spec-verbatim" error messages should have been neutral or pro-V4, since V4 followed Go idioms correctly. Playbook updated with two new analysis dimensions for future rounds.
 
-If preferred, implement the Tier 1 recommendations from `implementation-version-analysis.md`:
-1. Remove plan file access from executor
-2. Change integration context reading order (last not first)
-3. Qualify "same developer" with code-quality.md precedence
-4. Cap integration context growth (consolidate after 8 tasks)
-5. Make cohesion review conditional (task 4+)
-6. Add foundational design review for tasks 1-3
+---
 
-This preserves the integration context idea but with guardrails. Higher risk (5 simultaneous changes), higher reward if it works.
+## Planned Next Step: V5
+
+No workflow changes decided yet. Pending further discussion before any decisions are made.
+
+After decisions are finalised, update this section with the chosen approach and run `analysis-playbook.md` with `ROUND="round-3"`, baseline `implementation-v4`.
 
 ---
 
@@ -185,7 +181,8 @@ Rather than perfecting plans (impossible), the implementation skill needs to han
 
 ## Open Questions
 
-1. Is it worth running both Option A and Option B as V4/V5 to compare directly?
-2. Should the foundational design review (Tier 3 rec #9) be included in either option?
-3. Does the orchestrator need any changes, or only agent prompts?
-4. Should we test on a different project type to control for TICK-specific factors?
+1. Should V5 test on a different project type to control for tick-specific factors?
+2. Should the foundational design review (phase checkpoint agent — see Future Ideas §2) be included in V5?
+3. Agent teams vs sub-agents for cross-task review — depends on experimental feature stability
+4. How to define the boundary between "light polish during implementation" and "full review after" (Option A from v4-implementation-review.md §6.4)?
+5. Is the project-local Go skill sufficient, or should golang-pro be replaced entirely with a more comprehensive skill?
