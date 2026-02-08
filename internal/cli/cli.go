@@ -126,6 +126,12 @@ func (a *App) Run(args []string) int {
 			return 1
 		}
 		return 0
+	case "stats":
+		if err := a.runStats(subArgs); err != nil {
+			a.writeError(err)
+			return 1
+		}
+		return 0
 	default:
 		a.writeError(fmt.Errorf("Unknown command '%s'. Run 'tick help' for usage.", subcommand))
 		return 1
