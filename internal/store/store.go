@@ -153,6 +153,65 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	return nil
 }
 
+// Rebuild forces a complete cache rebuild from JSONL, bypassing freshness checks.
+// It acquires an exclusive lock, deletes existing cache.db, reads JSONL,
+// creates a new cache, inserts all tasks, and updates the hash.
+// Returns the number of tasks rebuilt.
+func (s *Store) Rebuild() (int, error) {
+	// Acquire exclusive lock
+	s.vlog("acquiring exclusive lock on %s", s.lockPath)
+	fl := flock.New(s.lockPath)
+	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
+	defer cancel()
+
+	locked, err := fl.TryLockContext(ctx, 100*time.Millisecond)
+	if err != nil {
+		return 0, fmt.Errorf("could not acquire lock on %s - another process may be using tick", s.lockPath)
+	}
+	if !locked {
+		return 0, fmt.Errorf("could not acquire lock on %s - another process may be using tick", s.lockPath)
+	}
+	s.vlog("exclusive lock acquired")
+	defer func() {
+		fl.Unlock()
+		s.vlog("exclusive lock released")
+	}()
+
+	// Delete existing cache.db if present
+	s.vlog("deleting existing cache.db at %s", s.dbPath)
+	if err := os.Remove(s.dbPath); err != nil && !os.IsNotExist(err) {
+		return 0, fmt.Errorf("failed to delete cache.db: %w", err)
+	}
+
+	// Read JSONL
+	s.vlog("reading JSONL from %s", s.jsonlPath)
+	jsonlData, err := os.ReadFile(s.jsonlPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read tasks.jsonl: %w", err)
+	}
+
+	tasks, err := task.ReadJSONLFromBytes(jsonlData)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse tasks.jsonl: %w", err)
+	}
+	s.vlog("parsed %d tasks from JSONL", len(tasks))
+
+	// Create new cache, insert all tasks, update hash
+	s.vlog("rebuilding cache with %d tasks", len(tasks))
+	c, err := cache.Open(s.dbPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create cache: %w", err)
+	}
+	defer c.Close()
+
+	if err := c.Rebuild(tasks, jsonlData); err != nil {
+		return 0, fmt.Errorf("failed to rebuild cache: %w", err)
+	}
+	s.vlog("cache rebuild complete, hash updated")
+
+	return len(tasks), nil
+}
+
 // Query executes the read query flow:
 // 1. Acquire shared lock
 // 2. Read tasks.jsonl into memory, compute SHA256 hash
