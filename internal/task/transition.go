@@ -31,11 +31,11 @@ var validTransitions = map[string]struct {
 func Transition(t *Task, command string) (*TransitionResult, error) {
 	rule, ok := validTransitions[command]
 	if !ok {
-		return nil, fmt.Errorf("Error: Cannot %s task %s \u2014 unknown command", command, t.ID)
+		return nil, fmt.Errorf("cannot %s task %s \u2014 unknown command", command, t.ID)
 	}
 
 	if !statusIn(t.Status, rule.from) {
-		return nil, fmt.Errorf("Error: Cannot %s task %s \u2014 status is '%s'", command, t.ID, t.Status)
+		return nil, fmt.Errorf("cannot %s task %s \u2014 status is '%s'", command, t.ID, t.Status)
 	}
 
 	oldStatus := t.Status

@@ -24,9 +24,6 @@ type App struct {
 	OutputFormat Format
 	IsTTY        bool
 
-	// FormatCfg holds the resolved format configuration passed to command handlers.
-	FormatCfg FormatConfig
-
 	// Formatter is the resolved output formatter (set once in Run).
 	Formatter Formatter
 
@@ -49,13 +46,6 @@ func (a *App) Run(args []string) int {
 
 	// Create verbose logger (writes to stderr when verbose enabled)
 	a.vlog = NewVerboseLogger(a.Stderr, a.Verbose)
-
-	// Build FormatConfig for command handlers
-	a.FormatCfg = FormatConfig{
-		Format:  a.OutputFormat,
-		Quiet:   a.Quiet,
-		Verbose: a.Verbose,
-	}
 
 	// Resolve formatter once based on format
 	a.Formatter = resolveFormatter(a.OutputFormat)

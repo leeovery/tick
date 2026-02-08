@@ -18,13 +18,6 @@ const (
 	FormatJSON
 )
 
-// FormatConfig holds format-related configuration passed to all command handlers.
-type FormatConfig struct {
-	Format  Format
-	Quiet   bool
-	Verbose bool
-}
-
 // RelatedTask holds a related task's summary (used in blocked_by and children lists).
 type RelatedTask struct {
 	ID     string
@@ -75,40 +68,6 @@ type Formatter interface {
 	FormatStats(w io.Writer, stats StatsData) error
 	// FormatMessage renders a simple message (used by init, rebuild, etc.).
 	FormatMessage(w io.Writer, msg string) error
-}
-
-// StubFormatter is a placeholder that implements the Formatter interface.
-// It will be replaced by concrete formatters (toon, pretty, json) in tasks 4-2 through 4-4.
-type StubFormatter struct{}
-
-// FormatTaskList is a stub implementation.
-func (f *StubFormatter) FormatTaskList(w io.Writer, rows []listRow, quiet bool) error {
-	return nil
-}
-
-// FormatTaskDetail is a stub implementation.
-func (f *StubFormatter) FormatTaskDetail(w io.Writer, detail TaskDetail) error {
-	return nil
-}
-
-// FormatTransition is a stub implementation.
-func (f *StubFormatter) FormatTransition(w io.Writer, id string, oldStatus string, newStatus string) error {
-	return nil
-}
-
-// FormatDepChange is a stub implementation.
-func (f *StubFormatter) FormatDepChange(w io.Writer, taskID string, blockedByID string, action string, quiet bool) error {
-	return nil
-}
-
-// FormatStats is a stub implementation.
-func (f *StubFormatter) FormatStats(w io.Writer, stats StatsData) error {
-	return nil
-}
-
-// FormatMessage is a stub implementation.
-func (f *StubFormatter) FormatMessage(w io.Writer, msg string) error {
-	return nil
 }
 
 // resolveFormatter returns the concrete Formatter for the given format.

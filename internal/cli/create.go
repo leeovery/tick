@@ -79,6 +79,18 @@ func (a *App) runCreate(args []string) error {
 		// Append the new task
 		tasks = append(tasks, *newTask)
 
+		// Validate --blocked-by dependencies (cycle + child-blocked-by-parent)
+		if err := task.ValidateDependencies(tasks, newTask.ID, flags.blockedBy); err != nil {
+			return nil, err
+		}
+
+		// Validate --blocks dependencies (cycle + child-blocked-by-parent)
+		for _, blockTarget := range flags.blocks {
+			if err := task.ValidateDependency(tasks, blockTarget, newTask.ID); err != nil {
+				return nil, err
+			}
+		}
+
 		// Handle --blocks: add new task's ID to target tasks' blocked_by
 		if len(flags.blocks) > 0 {
 			now := time.Now().UTC().Truncate(time.Second)

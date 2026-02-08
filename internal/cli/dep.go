@@ -40,7 +40,7 @@ func (a *App) runDepAdd(args []string) error {
 
 	// Self-reference check (before store access)
 	if taskID == blockedByID {
-		return fmt.Errorf("Cannot add dependency - creates cycle: %s \u2192 %s", taskID, taskID)
+		return fmt.Errorf("cannot add dependency - creates cycle: %s \u2192 %s", taskID, taskID)
 	}
 
 	tickDir, err := DiscoverTickDir(a.Dir)

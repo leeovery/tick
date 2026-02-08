@@ -42,7 +42,7 @@ func checkChildBlockedByParent(tasks []Task, taskID, newBlockedByID string) erro
 	for _, t := range tasks {
 		if t.ID == taskID && t.Parent == newBlockedByID {
 			return fmt.Errorf(
-				"Error: Cannot add dependency - %s cannot be blocked by its parent %s",
+				"cannot add dependency - %s cannot be blocked by its parent %s",
 				taskID, newBlockedByID,
 			)
 		}
@@ -58,7 +58,7 @@ func checkCycle(tasks []Task, taskID, newBlockedByID string) error {
 	// Self-reference is the simplest cycle
 	if taskID == newBlockedByID {
 		return fmt.Errorf(
-			"Error: Cannot add dependency - creates cycle: %s \u2192 %s",
+			"cannot add dependency - creates cycle: %s \u2192 %s",
 			taskID, taskID,
 		)
 	}
@@ -83,7 +83,7 @@ func checkCycle(tasks []Task, taskID, newBlockedByID string) error {
 				// Cycle found. Reconstruct path: taskID -> newBlockedByID -> ... -> current -> taskID
 				path := reconstructPath(parent, newBlockedByID, current)
 				return fmt.Errorf(
-					"Error: Cannot add dependency - creates cycle: %s",
+					"cannot add dependency - creates cycle: %s",
 					formatCyclePath(taskID, path),
 				)
 			}

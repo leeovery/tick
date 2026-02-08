@@ -119,7 +119,7 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	// Apply mutation
 	modified, err := fn(tasks)
 	if err != nil {
-		return fmt.Errorf("mutation failed: %w", err)
+		return err
 	}
 
 	// Serialize tasks to bytes for both writing and hash computation

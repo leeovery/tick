@@ -95,6 +95,12 @@ func (a *App) runUpdate(args []string) error {
 					return nil, fmt.Errorf("task '%s' not found (referenced in --blocks)", blockID)
 				}
 			}
+			// Validate dependencies (cycle + child-blocked-by-parent)
+			for _, blockID := range flags.blocks {
+				if err := task.ValidateDependency(tasks, blockID, id); err != nil {
+					return nil, err
+				}
+			}
 			now := time.Now().UTC().Truncate(time.Second)
 			for i := range tasks {
 				for _, blockTarget := range flags.blocks {

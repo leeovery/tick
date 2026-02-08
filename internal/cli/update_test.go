@@ -705,3 +705,86 @@ func TestUpdate_PersistsChanges(t *testing.T) {
 		}
 	})
 }
+
+func TestUpdate_BlocksRejectsCycle(t *testing.T) {
+	t.Run("it rejects --blocks that would create a dependency cycle", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		// B is blocked by A (B.blocked_by = [A])
+		existing := []task.Task{
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now, Updated: now},
+		}
+		dir := setupInitializedDirWithTasks(t, existing)
+		var stdout, stderr bytes.Buffer
+
+		app := &App{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Dir:    dir,
+		}
+
+		// Update A --blocks B => B.blocked_by would get A added, but B already blocks A transitively
+		// Actually: B.blocked_by=[A], now adding A.blocked_by=[B] via --blocks
+		// Wait: --blocks B on task A means B gets blocked_by=[A]. B already has blocked_by=[A].
+		// That's a duplicate, not a cycle. Let me use the reverse:
+		// update B --blocks A => A.blocked_by=[B], but B.blocked_by=[A] => cycle A->B->A
+		code := app.Run([]string{"tick", "update", "tick-bbb222", "--blocks", "tick-aaa111"})
+		if code != 1 {
+			t.Errorf("expected exit code 1 (cycle), got %d", code)
+		}
+		errMsg := stderr.String()
+		if !strings.Contains(errMsg, "cycle") {
+			t.Errorf("expected cycle error, got %q", errMsg)
+		}
+
+		// Verify no mutation: A should still have empty blocked_by
+		tasks := readTasksFromDir(t, dir)
+		for _, tk := range tasks {
+			if tk.ID == "tick-aaa111" {
+				if len(tk.BlockedBy) != 0 {
+					t.Errorf("expected A's blocked_by to remain empty, got %v", tk.BlockedBy)
+				}
+			}
+		}
+	})
+}
+
+func TestUpdate_BlocksRejectsChildBlockedByParent(t *testing.T) {
+	t.Run("it rejects --blocks when child would block its own parent", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		// C is a child of P
+		existing := []task.Task{
+			{ID: "tick-ppp111", Title: "Parent P", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-ccc111", Title: "Child C", Status: task.StatusOpen, Priority: 2, Parent: "tick-ppp111", Created: now, Updated: now},
+		}
+		dir := setupInitializedDirWithTasks(t, existing)
+		var stdout, stderr bytes.Buffer
+
+		app := &App{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Dir:    dir,
+		}
+
+		// update P --blocks C => C.blocked_by=[P], but C.parent=P
+		// This means child C would be blocked by its parent P — invalid
+		code := app.Run([]string{"tick", "update", "tick-ppp111", "--blocks", "tick-ccc111"})
+		if code != 1 {
+			t.Errorf("expected exit code 1 (child-blocked-by-parent), got %d", code)
+		}
+		errMsg := stderr.String()
+		if !strings.Contains(errMsg, "cannot") {
+			t.Errorf("expected rejection error, got %q", errMsg)
+		}
+
+		// Verify no mutation: C should still have empty blocked_by
+		tasks := readTasksFromDir(t, dir)
+		for _, tk := range tasks {
+			if tk.ID == "tick-ccc111" {
+				if len(tk.BlockedBy) != 0 {
+					t.Errorf("expected C's blocked_by to remain empty, got %v", tk.BlockedBy)
+				}
+			}
+		}
+	})
+}

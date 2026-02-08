@@ -129,21 +129,6 @@ func TestResolveFormat(t *testing.T) {
 	})
 }
 
-func TestFormatter(t *testing.T) {
-	t.Run("it provides a stub formatter that implements the interface", func(t *testing.T) {
-		var f Formatter = &StubFormatter{}
-		// All methods should be callable without panic
-		var buf bytes.Buffer
-
-		_ = f.FormatTaskList(&buf, nil, false)
-		_ = f.FormatTaskDetail(&buf, TaskDetail{})
-		_ = f.FormatTransition(&buf, "", "", "")
-		_ = f.FormatDepChange(&buf, "", "", "", false)
-		_ = f.FormatStats(&buf, StatsData{})
-		_ = f.FormatMessage(&buf, "")
-	})
-}
-
 func TestCLI_ConflictingFormatFlags(t *testing.T) {
 	t.Run("it errors when multiple format flags set via CLI", func(t *testing.T) {
 		dir := t.TempDir()
@@ -163,31 +148,6 @@ func TestCLI_ConflictingFormatFlags(t *testing.T) {
 		errMsg := stderr.String()
 		if errMsg == "" {
 			t.Error("expected error message on stderr for conflicting flags")
-		}
-	})
-}
-
-func TestCLI_FormatConfigWired(t *testing.T) {
-	t.Run("it wires FormatConfig into App after flag parsing", func(t *testing.T) {
-		dir := t.TempDir()
-		var stdout, stderr bytes.Buffer
-
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Dir:    dir,
-		}
-
-		app.Run([]string{"tick", "--quiet", "--verbose", "--json", "init"})
-
-		if app.FormatCfg.Format != FormatJSON {
-			t.Errorf("expected FormatJSON in FormatCfg, got %v", app.FormatCfg.Format)
-		}
-		if !app.FormatCfg.Quiet {
-			t.Error("expected FormatCfg.Quiet to be true")
-		}
-		if !app.FormatCfg.Verbose {
-			t.Error("expected FormatCfg.Verbose to be true")
 		}
 	})
 }

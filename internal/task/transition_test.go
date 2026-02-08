@@ -87,7 +87,7 @@ func TestTransition_InvalidTransitions(t *testing.T) {
 				t.Fatalf("expected error for %s on %s task, got nil", tt.command, tt.from)
 			}
 
-			wantMsg := "Error: Cannot " + tt.command + " task tick-a3f2b7 — status is '" + string(tt.from) + "'"
+			wantMsg := "cannot " + tt.command + " task tick-a3f2b7 — status is '" + string(tt.from) + "'"
 			if err.Error() != wantMsg {
 				t.Errorf("expected error %q, got %q", wantMsg, err.Error())
 			}

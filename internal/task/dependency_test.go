@@ -60,7 +60,7 @@ func TestValidateDependency(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for 2-node cycle, got nil")
 		}
-		want := "Error: Cannot add dependency - creates cycle: tick-aaa \u2192 tick-bbb \u2192 tick-aaa"
+		want := "cannot add dependency - creates cycle: tick-aaa \u2192 tick-bbb \u2192 tick-aaa"
 		if err.Error() != want {
 			t.Errorf("expected error %q, got %q", want, err.Error())
 		}
@@ -80,7 +80,7 @@ func TestValidateDependency(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for 3+ node cycle, got nil")
 		}
-		want := "Error: Cannot add dependency - creates cycle: tick-aaa \u2192 tick-ccc \u2192 tick-bbb \u2192 tick-aaa"
+		want := "cannot add dependency - creates cycle: tick-aaa \u2192 tick-ccc \u2192 tick-bbb \u2192 tick-aaa"
 		if err.Error() != want {
 			t.Errorf("expected error %q, got %q", want, err.Error())
 		}
@@ -96,7 +96,7 @@ func TestValidateDependency(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for child blocked by parent, got nil")
 		}
-		want := "Error: Cannot add dependency - tick-child cannot be blocked by its parent tick-parent"
+		want := "cannot add dependency - tick-child cannot be blocked by its parent tick-parent"
 		if err.Error() != want {
 			t.Errorf("expected error %q, got %q", want, err.Error())
 		}
@@ -151,7 +151,7 @@ func TestValidateDependency(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected cycle error, got nil")
 		}
-		want := "Error: Cannot add dependency - creates cycle: tick-a \u2192 tick-b \u2192 tick-a"
+		want := "cannot add dependency - creates cycle: tick-a \u2192 tick-b \u2192 tick-a"
 		if err.Error() != want {
 			t.Errorf("expected error %q, got %q", want, err.Error())
 		}
@@ -171,7 +171,7 @@ func TestValidateDependency(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for multi-hop cycle, got nil")
 		}
-		want := "Error: Cannot add dependency - creates cycle: tick-a \u2192 tick-d \u2192 tick-c \u2192 tick-b \u2192 tick-a"
+		want := "cannot add dependency - creates cycle: tick-a \u2192 tick-d \u2192 tick-c \u2192 tick-b \u2192 tick-a"
 		if err.Error() != want {
 			t.Errorf("expected error %q, got %q", want, err.Error())
 		}
@@ -192,7 +192,7 @@ func TestValidateDependencies(t *testing.T) {
 			t.Fatal("expected error for batch with invalid dependency, got nil")
 		}
 		// Should fail on tick-parent (child blocked by parent)
-		want := "Error: Cannot add dependency - tick-child cannot be blocked by its parent tick-parent"
+		want := "cannot add dependency - tick-child cannot be blocked by its parent tick-parent"
 		if err.Error() != want {
 			t.Errorf("expected error %q, got %q", want, err.Error())
 		}

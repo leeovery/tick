@@ -875,3 +875,74 @@ func TestCreate_TimestampsSetToUTC(t *testing.T) {
 		}
 	})
 }
+
+func TestCreate_BlocksRejectsCycle(t *testing.T) {
+	t.Run("it rejects --blocks that would create a dependency cycle", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		// A is blocked by B (A.blocked_by = [B])
+		existing := []task.Task{
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir := setupInitializedDirWithTasks(t, existing)
+		var stdout, stderr bytes.Buffer
+
+		app := &App{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Dir:    dir,
+		}
+
+		// Create C with --blocked-by A --blocks B
+		// This means: C.blocked_by=[A], B.blocked_by=[C]
+		// Cycle: B→C→A→B
+		code := app.Run([]string{"tick", "create", "Task C", "--blocked-by", "tick-aaa111", "--blocks", "tick-bbb222"})
+		if code != 1 {
+			t.Errorf("expected exit code 1 (cycle), got %d", code)
+		}
+		errMsg := stderr.String()
+		if !strings.Contains(errMsg, "cycle") {
+			t.Errorf("expected cycle error, got %q", errMsg)
+		}
+
+		// No new task should have been created
+		tasks := readTasksFromDir(t, dir)
+		if len(tasks) != 2 {
+			t.Errorf("expected 2 tasks (unchanged), got %d", len(tasks))
+		}
+	})
+}
+
+func TestCreate_BlocksRejectsChildBlockedByParent(t *testing.T) {
+	t.Run("it rejects --blocked-by parent for a child task", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		existing := []task.Task{
+			{ID: "tick-ppp111", Title: "Parent P", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir := setupInitializedDirWithTasks(t, existing)
+		var stdout, stderr bytes.Buffer
+
+		app := &App{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Dir:    dir,
+		}
+
+		// Create child C with --parent P --blocked-by P
+		// C.parent=P, C.blocked_by=[P] — child blocked by its own parent is invalid
+		code := app.Run([]string{"tick", "create", "Child C", "--parent", "tick-ppp111", "--blocked-by", "tick-ppp111"})
+		if code != 1 {
+			t.Errorf("expected exit code 1 (child-blocked-by-parent), got %d", code)
+		}
+		errMsg := stderr.String()
+		if !strings.Contains(errMsg, "cannot") {
+			t.Errorf("expected rejection error, got %q", errMsg)
+		}
+
+		// No new task should have been created
+		tasks := readTasksFromDir(t, dir)
+		if len(tasks) != 1 {
+			t.Errorf("expected 1 task (unchanged), got %d", len(tasks))
+		}
+	})
+}
