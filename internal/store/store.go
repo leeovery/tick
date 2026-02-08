@@ -26,6 +26,11 @@ type Store struct {
 	dbPath      string
 	lockPath    string
 	lockTimeout time.Duration
+
+	// LogFunc is an optional verbose logging function injected by the CLI.
+	// When set, the store logs key operations (lock, hash, cache, write).
+	// When nil, no logging occurs.
+	LogFunc func(format string, args ...interface{})
 }
 
 // NewStore creates a new Store that validates the .tick/ directory exists
@@ -58,6 +63,13 @@ func (s *Store) Close() error {
 	return nil
 }
 
+// vlog writes a verbose log message if LogFunc is set.
+func (s *Store) vlog(format string, args ...interface{}) {
+	if s.LogFunc != nil {
+		s.LogFunc(format, args...)
+	}
+}
+
 // Mutate executes the write mutation flow:
 // 1. Acquire exclusive lock
 // 2. Read tasks.jsonl into memory, compute SHA256 hash
@@ -68,6 +80,7 @@ func (s *Store) Close() error {
 // 7. Release lock (via defer)
 func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	// Acquire exclusive lock
+	s.vlog("acquiring exclusive lock on %s", s.lockPath)
 	fl := flock.New(s.lockPath)
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	defer cancel()
@@ -79,7 +92,11 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	if !locked {
 		return fmt.Errorf("could not acquire lock on %s - another process may be using tick", s.lockPath)
 	}
-	defer fl.Unlock()
+	s.vlog("exclusive lock acquired")
+	defer func() {
+		fl.Unlock()
+		s.vlog("exclusive lock released")
+	}()
 
 	// Read JSONL once and parse from memory
 	jsonlData, err := os.ReadFile(s.jsonlPath)
@@ -93,9 +110,11 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	}
 
 	// Ensure cache freshness
+	s.vlog("checking cache freshness via hash comparison")
 	if err := cache.EnsureFresh(s.dbPath, jsonlData, tasks); err != nil {
 		return fmt.Errorf("failed to ensure cache freshness: %w", err)
 	}
+	s.vlog("cache is fresh")
 
 	// Apply mutation
 	modified, err := fn(tasks)
@@ -110,11 +129,14 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	}
 
 	// Atomic write to JSONL
+	s.vlog("atomic write to %s", s.jsonlPath)
 	if err := task.WriteJSONL(s.jsonlPath, modified); err != nil {
 		return fmt.Errorf("failed to write tasks.jsonl: %w", err)
 	}
+	s.vlog("atomic write complete")
 
 	// Update SQLite cache with new data
+	s.vlog("rebuilding cache with new hash")
 	c, err := cache.Open(s.dbPath)
 	if err != nil {
 		log.Printf("warning: failed to open cache for update: %v", err)
@@ -126,6 +148,7 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 		log.Printf("warning: failed to update cache after JSONL write: %v", err)
 		return nil
 	}
+	s.vlog("cache rebuild complete")
 
 	return nil
 }
@@ -138,6 +161,7 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 // 5. Release lock (via defer)
 func (s *Store) Query(fn func(db *sql.DB) error) error {
 	// Acquire shared lock
+	s.vlog("acquiring shared lock on %s", s.lockPath)
 	fl := flock.New(s.lockPath)
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	defer cancel()
@@ -149,7 +173,11 @@ func (s *Store) Query(fn func(db *sql.DB) error) error {
 	if !locked {
 		return fmt.Errorf("could not acquire lock on %s - another process may be using tick", s.lockPath)
 	}
-	defer fl.Unlock()
+	s.vlog("shared lock acquired")
+	defer func() {
+		fl.Unlock()
+		s.vlog("shared lock released")
+	}()
 
 	// Read JSONL once and parse from memory
 	jsonlData, err := os.ReadFile(s.jsonlPath)
@@ -163,9 +191,11 @@ func (s *Store) Query(fn func(db *sql.DB) error) error {
 	}
 
 	// Ensure cache freshness
+	s.vlog("checking cache freshness via hash comparison")
 	if err := cache.EnsureFresh(s.dbPath, jsonlData, tasks); err != nil {
 		return fmt.Errorf("failed to ensure cache freshness: %w", err)
 	}
+	s.vlog("cache is fresh")
 
 	// Open cache for querying
 	c, err := cache.Open(s.dbPath)

@@ -3,8 +3,6 @@ package cli
 import (
 	"database/sql"
 	"fmt"
-
-	"github.com/leeovery/tick/internal/store"
 )
 
 // readyConditionsFor returns the WHERE clause conditions that define a "ready" task
@@ -49,7 +47,7 @@ func (a *App) runReady(args []string) error {
 		return err
 	}
 
-	s, err := store.NewStore(tickDir)
+	s, err := a.openStore(tickDir)
 	if err != nil {
 		return err
 	}

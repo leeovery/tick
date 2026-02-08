@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leeovery/tick/internal/store"
 	"github.com/leeovery/tick/internal/task"
 )
 
@@ -23,7 +22,7 @@ func (a *App) runCreate(args []string) error {
 		return err
 	}
 
-	s, err := store.NewStore(tickDir)
+	s, err := a.openStore(tickDir)
 	if err != nil {
 		return err
 	}

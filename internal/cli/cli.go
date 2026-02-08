@@ -5,6 +5,8 @@ package cli
 import (
 	"fmt"
 	"io"
+
+	"github.com/leeovery/tick/internal/store"
 )
 
 // App is the top-level CLI application.
@@ -27,6 +29,9 @@ type App struct {
 
 	// Formatter is the resolved output formatter (set once in Run).
 	Formatter Formatter
+
+	// vlog is the verbose logger, created during Run.
+	vlog *VerboseLogger
 }
 
 // Run parses global flags, determines the subcommand, and dispatches it.
@@ -42,6 +47,9 @@ func (a *App) Run(args []string) int {
 		return 1
 	}
 
+	// Create verbose logger (writes to stderr when verbose enabled)
+	a.vlog = NewVerboseLogger(a.Stderr, a.Verbose)
+
 	// Build FormatConfig for command handlers
 	a.FormatCfg = FormatConfig{
 		Format:  a.OutputFormat,
@@ -51,6 +59,7 @@ func (a *App) Run(args []string) int {
 
 	// Resolve formatter once based on format
 	a.Formatter = resolveFormatter(a.OutputFormat)
+	a.vlog.Log("format resolved to %s", formatName(a.OutputFormat))
 
 	// Determine subcommand
 	if len(remaining) == 0 {
@@ -156,6 +165,18 @@ func (a *App) parseGlobalFlags(args []string) ([]string, error) {
 	a.OutputFormat = format
 
 	return remaining, nil
+}
+
+// openStore creates a Store from the given tick directory and wires up verbose logging.
+func (a *App) openStore(tickDir string) (*store.Store, error) {
+	s, err := store.NewStore(tickDir)
+	if err != nil {
+		return nil, err
+	}
+	if a.vlog != nil {
+		s.LogFunc = a.vlog.Log
+	}
+	return s, nil
 }
 
 // writeError writes a formatted error message to stderr.

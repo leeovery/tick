@@ -3,8 +3,6 @@ package cli
 import (
 	"database/sql"
 	"fmt"
-
-	"github.com/leeovery/tick/internal/store"
 )
 
 // blockedQuery returns open tasks that are NOT ready.
@@ -32,7 +30,7 @@ func (a *App) runBlocked(args []string) error {
 		return err
 	}
 
-	s, err := store.NewStore(tickDir)
+	s, err := a.openStore(tickDir)
 	if err != nil {
 		return err
 	}

@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
-
-	"github.com/leeovery/tick/internal/store"
 )
 
 // listRow represents a single task row in list/ready output.
@@ -129,7 +127,7 @@ func (a *App) runList(args []string) error {
 		return err
 	}
 
-	s, err := store.NewStore(tickDir)
+	s, err := a.openStore(tickDir)
 	if err != nil {
 		return err
 	}

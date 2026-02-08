@@ -123,6 +123,20 @@ func resolveFormatter(f Format) Formatter {
 	}
 }
 
+// formatName returns a human-readable name for the given Format.
+func formatName(f Format) string {
+	switch f {
+	case FormatToon:
+		return "toon"
+	case FormatPretty:
+		return "pretty"
+	case FormatJSON:
+		return "json"
+	default:
+		return "unknown"
+	}
+}
+
 // DetectTTY checks if the given writer is connected to a terminal device.
 // Returns false for non-*os.File writers and on Stat failure.
 func DetectTTY(w io.Writer) bool {
