@@ -20,7 +20,17 @@
       "Read(/private/tmp/tick-analysis-worktrees/*)",
       "Write(/Users/leeovery/Code/tick/analysis/*)",
       "Glob(/private/tmp/tick-analysis-worktrees/*)",
-      "Glob(/Users/leeovery/Code/tick/analysis/*)"
+      "Glob(/Users/leeovery/Code/tick/analysis/*)",
+      "Bash(.claude/scripts/migrate.sh:*)",
+      "Bash(go version:*)",
+      "Bash(go mod init:*)",
+      "Bash(go test:*)",
+      "Bash(go vet:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go run:*)",
+      "Bash(go get:*)",
+      "Bash(go build:*)",
+      "Bash(go list:*)"
     ]
   }
 }
