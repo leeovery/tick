@@ -26,6 +26,7 @@ const lockTimeoutMsg = "Could not acquire lock on .tick/lock - another process m
 // engine with file locking for concurrent access safety.
 type Store struct {
 	jsonlPath   string
+	cachePath   string
 	lockPath    string
 	cache       *cache.Cache
 	lockTimeout time.Duration
@@ -66,13 +67,15 @@ func NewStore(tickDir string, opts ...Option) (*Store, error) {
 		return nil, fmt.Errorf("tasks.jsonl not found in %s: %w", tickDir, err)
 	}
 
-	c, err := cache.New(filepath.Join(tickDir, "cache.db"))
+	cachePath := filepath.Join(tickDir, "cache.db")
+	c, err := cache.New(cachePath)
 	if err != nil {
 		return nil, fmt.Errorf("opening cache: %w", err)
 	}
 
 	s := &Store{
 		jsonlPath:   jsonlPath,
+		cachePath:   cachePath,
 		lockPath:    filepath.Join(tickDir, "lock"),
 		cache:       c,
 		lockTimeout: defaultLockTimeout,
@@ -154,6 +157,56 @@ func (s *Store) Query(fn func(db *sql.DB) error) error {
 	}
 
 	return fn(s.cache.DB())
+}
+
+// Rebuild forces a complete SQLite cache rebuild from JSONL, bypassing the
+// freshness check. It acquires an exclusive lock, deletes the existing cache
+// file, reads and parses JSONL, creates a fresh cache, and updates the hash.
+// Returns the number of tasks rebuilt.
+func (s *Store) Rebuild() (int, error) {
+	unlock, err := s.acquireExclusive()
+	if err != nil {
+		return 0, err
+	}
+	defer unlock()
+
+	// Close existing cache connection.
+	s.verbose.Log("deleting existing cache")
+	if err := s.cache.Close(); err != nil {
+		return 0, fmt.Errorf("closing cache: %w", err)
+	}
+
+	// Delete cache.db if it exists.
+	if err := os.Remove(s.cachePath); err != nil && !os.IsNotExist(err) {
+		return 0, fmt.Errorf("deleting cache: %w", err)
+	}
+
+	// Read and parse JSONL.
+	s.verbose.Log("reading tasks.jsonl")
+	jsonlData, err := os.ReadFile(s.jsonlPath)
+	if err != nil {
+		return 0, fmt.Errorf("reading tasks.jsonl: %w", err)
+	}
+
+	tasks, err := storage.ParseTasks(jsonlData)
+	if err != nil {
+		return 0, fmt.Errorf("parsing tasks.jsonl: %w", err)
+	}
+
+	// Create fresh cache.
+	s.verbose.Logf("rebuilding cache (%d tasks)", len(tasks))
+	c, err := cache.New(s.cachePath)
+	if err != nil {
+		return 0, fmt.Errorf("creating cache: %w", err)
+	}
+	s.cache = c
+
+	if err := s.cache.Rebuild(tasks, jsonlData); err != nil {
+		return 0, fmt.Errorf("rebuilding cache: %w", err)
+	}
+
+	s.verbose.Log("hash updated")
+	return len(tasks), nil
 }
 
 // acquireExclusive acquires an exclusive file lock with the configured timeout.
