@@ -127,31 +127,13 @@ func (f *PrettyFormatter) FormatTaskDetail(w io.Writer, data interface{}) error 
 // FormatTransition renders a status transition result as plain text.
 // Data must be *TransitionData.
 func (f *PrettyFormatter) FormatTransition(w io.Writer, data interface{}) error {
-	d, ok := data.(*TransitionData)
-	if !ok {
-		return fmt.Errorf("FormatTransition: expected *TransitionData, got %T", data)
-	}
-	_, err := fmt.Fprintf(w, "%s: %s \u2192 %s\n", d.ID, d.OldStatus, d.NewStatus)
-	return err
+	return formatTransitionText(w, data)
 }
 
 // FormatDepChange renders a dependency change confirmation as plain text.
 // Data must be *DepChangeData.
 func (f *PrettyFormatter) FormatDepChange(w io.Writer, data interface{}) error {
-	d, ok := data.(*DepChangeData)
-	if !ok {
-		return fmt.Errorf("FormatDepChange: expected *DepChangeData, got %T", data)
-	}
-	switch d.Action {
-	case "added":
-		_, err := fmt.Fprintf(w, "Dependency added: %s blocked by %s\n", d.TaskID, d.BlockedByID)
-		return err
-	case "removed":
-		_, err := fmt.Fprintf(w, "Dependency removed: %s no longer blocked by %s\n", d.TaskID, d.BlockedByID)
-		return err
-	default:
-		return fmt.Errorf("FormatDepChange: unknown action %q", d.Action)
-	}
+	return formatDepChangeText(w, data)
 }
 
 // FormatStats renders task statistics in three groups: total, status/workflow
@@ -219,7 +201,7 @@ func (f *PrettyFormatter) FormatStats(w io.Writer, data interface{}) error {
 
 // FormatMessage writes the message followed by a newline.
 func (f *PrettyFormatter) FormatMessage(w io.Writer, msg string) {
-	fmt.Fprintln(w, msg)
+	formatMessageText(w, msg)
 }
 
 // maxTitleWidth is the maximum title length in list output before truncation.

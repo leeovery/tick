@@ -122,5 +122,41 @@ func (f *StubFormatter) FormatStats(w io.Writer, data interface{}) error {
 
 // FormatMessage writes the message followed by a newline.
 func (f *StubFormatter) FormatMessage(w io.Writer, msg string) {
+	formatMessageText(w, msg)
+}
+
+// formatTransitionText writes a plain-text status transition line.
+// Data must be *TransitionData. Shared by ToonFormatter and PrettyFormatter.
+func formatTransitionText(w io.Writer, data interface{}) error {
+	d, ok := data.(*TransitionData)
+	if !ok {
+		return fmt.Errorf("FormatTransition: expected *TransitionData, got %T", data)
+	}
+	_, err := fmt.Fprintf(w, "%s: %s \u2192 %s\n", d.ID, d.OldStatus, d.NewStatus)
+	return err
+}
+
+// formatDepChangeText writes a plain-text dependency change confirmation.
+// Data must be *DepChangeData. Shared by ToonFormatter and PrettyFormatter.
+func formatDepChangeText(w io.Writer, data interface{}) error {
+	d, ok := data.(*DepChangeData)
+	if !ok {
+		return fmt.Errorf("FormatDepChange: expected *DepChangeData, got %T", data)
+	}
+	switch d.Action {
+	case "added":
+		_, err := fmt.Fprintf(w, "Dependency added: %s blocked by %s\n", d.TaskID, d.BlockedByID)
+		return err
+	case "removed":
+		_, err := fmt.Fprintf(w, "Dependency removed: %s no longer blocked by %s\n", d.TaskID, d.BlockedByID)
+		return err
+	default:
+		return fmt.Errorf("FormatDepChange: unknown action %q", d.Action)
+	}
+}
+
+// formatMessageText writes a message followed by a newline.
+// Shared by ToonFormatter, PrettyFormatter, and StubFormatter.
+func formatMessageText(w io.Writer, msg string) {
 	fmt.Fprintln(w, msg)
 }
