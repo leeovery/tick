@@ -8,8 +8,8 @@ created: 2026-01-27
 updated: 2026-02-09
 external_dependencies: []
 planning:
-  phase: 5
-  task: 2
+  phase: 6
+  task: 7
 ---
 
 # Plan: Tick Core
@@ -168,6 +168,35 @@ approved_at: 2026-01-30
 
 ---
 
+### Phase 6: Analysis Refinements
+status: approved
+approved_at: 2026-02-09
+
+**Goal**: Address findings from post-implementation analysis — fix a high-severity validation gap in dependency handling, eliminate code duplication, remove dead code, and improve type safety.
+**Why this order**: All functionality complete. These are quality refinements discovered during analysis.
+
+**Acceptance**:
+- [ ] Dependency validation (cycle detection, child-blocked-by-parent) enforced in create --blocked-by, create --blocks, update --blocks
+- [ ] Ready/blocked SQL WHERE clauses deduplicated
+- [ ] JSONL parsing logic consolidated
+- [ ] Shared formatter methods extracted
+- [ ] Help text only advertises implemented commands
+- [ ] Dead StubFormatter code removed
+- [ ] Formatter interface uses type-safe signatures
+
+#### Tasks
+| ID            | Name                                                                  | Edge Cases                                                                    | Status  |
+|---------------|-----------------------------------------------------------------------|-------------------------------------------------------------------------------|---------|
+| tick-core-6-1 | Add dependency validation to create --blocked-by and --blocks paths   | cycle via --blocked-by, child-blocked-by-parent via --blocked-by, cycle via --blocks | pending |
+| tick-core-6-2 | Extract shared ready/blocked SQL WHERE clauses                        | query behavior unchanged, stats counts match                                  | pending |
+| tick-core-6-3 | Consolidate ReadTasks/ParseTasks duplicate JSONL parsing              | file-not-found errors still from ReadTasks                                    | pending |
+| tick-core-6-4 | Extract shared formatter methods (FormatTransition, FormatDepChange, FormatMessage) | output unchanged across all formatters                                  | pending |
+| tick-core-6-5 | Remove doctor command from help text                                  | tick doctor still returns unknown command error                                | pending |
+| tick-core-6-6 | Remove dead StubFormatter code                                        | no test references to StubFormatter                                           | pending |
+| tick-core-6-7 | Replace interface{} Formatter parameters with type-safe signatures    | all 15 assertion sites eliminated, compile errors on wrong types              | pending |
+
+---
+
 ### External Libraries
 
 | Library | Purpose |
@@ -190,3 +219,4 @@ approved_at: 2026-01-30
 | 2026-01-30 | Migrated to updated plan format (Plan Index + task files) |
 | 2026-01-30 | Phase 5: removed doctor (separate spec), renamed to Stats & Cache Management |
 | 2026-01-30 | Plan review complete, status concluded |
+| 2026-02-09 | Phase 6 added from analysis cycle 1 (7 tasks) |
