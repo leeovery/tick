@@ -57,7 +57,7 @@ func runUpdate(ctx *Context) error {
 	}
 
 	// Open storage engine.
-	store, err := engine.NewStore(tickDir)
+	store, err := engine.NewStore(tickDir, ctx.storeOpts()...)
 	if err != nil {
 		return err
 	}

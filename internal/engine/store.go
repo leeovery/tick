@@ -29,6 +29,7 @@ type Store struct {
 	lockPath    string
 	cache       *cache.Cache
 	lockTimeout time.Duration
+	verbose     *VerboseLogger
 }
 
 // Option configures a Store.
@@ -38,6 +39,14 @@ type Option func(*Store)
 func WithLockTimeout(d time.Duration) Option {
 	return func(s *Store) {
 		s.lockTimeout = d
+	}
+}
+
+// WithVerbose sets a VerboseLogger on the Store for debug output of lock,
+// cache, hash, and write operations.
+func WithVerbose(vl *VerboseLogger) Option {
+	return func(s *Store) {
+		s.verbose = vl
 	}
 }
 
@@ -67,6 +76,7 @@ func NewStore(tickDir string, opts ...Option) (*Store, error) {
 		lockPath:    filepath.Join(tickDir, "lock"),
 		cache:       c,
 		lockTimeout: defaultLockTimeout,
+		verbose:     NewVerboseLogger(nil, false),
 	}
 
 	for _, opt := range opts {
@@ -114,6 +124,7 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	}
 
 	// Atomic write to JSONL.
+	s.verbose.Log("atomic write to tasks.jsonl")
 	if err := storage.WriteTasks(s.jsonlPath, modified); err != nil {
 		return fmt.Errorf("writing tasks.jsonl: %w", err)
 	}
@@ -157,9 +168,12 @@ func (s *Store) acquireExclusive() (unlock func(), err error) {
 		return nil, fmt.Errorf("%s", lockTimeoutMsg)
 	}
 
+	s.verbose.Log("lock acquired (exclusive)")
+
 	return func() {
 		_ = fl.Unlock()
 		cancel()
+		s.verbose.Log("lock released")
 	}, nil
 }
 
@@ -175,9 +189,12 @@ func (s *Store) acquireShared() (unlock func(), err error) {
 		return nil, fmt.Errorf("%s", lockTimeoutMsg)
 	}
 
+	s.verbose.Log("lock acquired (shared)")
+
 	return func() {
 		_ = fl.Unlock()
 		cancel()
+		s.verbose.Log("lock released")
 	}, nil
 }
 
@@ -204,13 +221,18 @@ func (s *Store) readAndEnsureFresh() ([]task.Task, []byte, error) {
 // ensureFresh checks if the cache is up-to-date with the given JSONL data and
 // rebuilds it if stale.
 func (s *Store) ensureFresh(tasks []task.Task, jsonlData []byte) error {
+	s.verbose.Log("cache freshness check")
+
 	fresh, err := s.cache.IsFresh(jsonlData)
 	if err != nil {
 		log.Printf("warning: cache freshness check failed, rebuilding: %v", err)
 		fresh = false
 	}
 
-	if !fresh {
+	if fresh {
+		s.verbose.Log("cache is fresh")
+	} else {
+		s.verbose.Log("cache rebuild (stale or missing)")
 		if err := s.cache.Rebuild(tasks, jsonlData); err != nil {
 			return fmt.Errorf("rebuilding cache: %w", err)
 		}

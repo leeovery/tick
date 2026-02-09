@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/leeovery/tick/internal/engine"
 )
 
 // OutputFormat represents the output format for CLI commands.
@@ -41,6 +43,20 @@ func (c *Context) FormatCfg() FormatConfig {
 	}
 }
 
+// newVerboseLogger creates a VerboseLogger that writes to stderr when verbose is
+// enabled. When verbose is false the logger is a no-op.
+func (c *Context) newVerboseLogger() *engine.VerboseLogger {
+	return engine.NewVerboseLogger(c.Stderr, c.Verbose)
+}
+
+// storeOpts returns engine.Option values derived from the current context,
+// including verbose logging configuration.
+func (c *Context) storeOpts() []engine.Option {
+	return []engine.Option{
+		engine.WithVerbose(c.newVerboseLogger()),
+	}
+}
+
 // Run executes the tick CLI with the given arguments, working directory,
 // output writers, and TTY detection flag. It returns an exit code (0 for
 // success, 1 for errors).
@@ -49,6 +65,13 @@ func Run(args []string, workDir string, stdout, stderr io.Writer, isTTY bool) in
 	if err != nil {
 		fmt.Fprintf(stderr, "Error: %s\n", err)
 		return 1
+	}
+
+	// Log format resolution when verbose is enabled.
+	if ctx.Verbose {
+		vl := ctx.newVerboseLogger()
+		formatName := formatLabel(ctx.Format)
+		vl.Logf("format resolved: %s", formatName)
 	}
 
 	if subcmd == "" {
@@ -139,6 +162,20 @@ func parseArgs(args []string, workDir string, stdout, stderr io.Writer, isTTY bo
 
 	ctx.Args = cmdArgs
 	return ctx, subcmd, nil
+}
+
+// formatLabel returns a human-readable label for the output format.
+func formatLabel(f OutputFormat) string {
+	switch f {
+	case FormatToon:
+		return "toon"
+	case FormatPretty:
+		return "pretty"
+	case FormatJSON:
+		return "json"
+	default:
+		return "unknown"
+	}
 }
 
 // printUsage writes basic usage information to the given writer.

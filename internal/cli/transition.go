@@ -24,7 +24,7 @@ func runTransition(command string) func(*Context) error {
 			return err
 		}
 
-		store, err := engine.NewStore(tickDir)
+		store, err := engine.NewStore(tickDir, ctx.storeOpts()...)
 		if err != nil {
 			return err
 		}
