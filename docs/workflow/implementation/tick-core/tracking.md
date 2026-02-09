@@ -2,7 +2,7 @@
 topic: tick-core
 plan: ../../planning/tick-core.md
 format: local-markdown
-status: in-progress
+status: completed
 task_gate_mode: auto
 fix_gate_mode: gated
 fix_attempts: 0
@@ -60,7 +60,7 @@ completed_tasks:
   - tick-core-6-7
 started: 2026-02-09
 updated: 2026-02-09
-completed: ~
+completed: 2026-02-09
 ---
 
 # Implementation: Tick Core
