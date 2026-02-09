@@ -136,11 +136,10 @@ func runUpdate(ctx *Context) error {
 	// Output.
 	if ctx.Quiet {
 		fmt.Fprintln(ctx.Stdout, updatedTask.ID)
-	} else {
-		printTaskDetails(ctx.Stdout, updatedTask)
+		return nil
 	}
 
-	return nil
+	return ctx.Fmt.FormatTaskDetail(ctx.Stdout, taskToShowData(updatedTask))
 }
 
 // parseUpdateArgs parses the positional ID and flags from update command args.

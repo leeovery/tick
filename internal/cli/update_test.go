@@ -218,7 +218,7 @@ func TestUpdate(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{tk})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "update", "tick-aaaaaa", "--title", "New output"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "update", "tick-aaaaaa", "--title", "New output"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())

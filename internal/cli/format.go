@@ -76,6 +76,20 @@ func ResolveFormat(toonFlag, prettyFlag, jsonFlag, isTTY bool) (OutputFormat, er
 	}
 }
 
+// newFormatter returns the concrete Formatter for the given output format.
+func newFormatter(format OutputFormat) Formatter {
+	switch format {
+	case FormatToon:
+		return &ToonFormatter{}
+	case FormatPretty:
+		return &PrettyFormatter{}
+	case FormatJSON:
+		return &JSONFormatter{}
+	default:
+		return &ToonFormatter{}
+	}
+}
+
 // StubFormatter is a placeholder implementation of the Formatter interface.
 // It will be replaced by concrete Toon, Pretty, and JSON formatters in
 // tasks 4-2 through 4-4.

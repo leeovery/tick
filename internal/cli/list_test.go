@@ -20,7 +20,7 @@ func TestList(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{t1, t2})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "list"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "list"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -79,7 +79,7 @@ func TestList(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{t1, t2, t3})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "list"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "list"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -106,7 +106,7 @@ func TestList(t *testing.T) {
 		dir := initTickProject(t)
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "list"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "list"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -448,7 +448,7 @@ func TestList(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{done})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "list", "--status", "open"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "list", "--status", "open"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -536,7 +536,7 @@ func TestList(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{t1, t2, t3})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "list", "--status", "open"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "list", "--status", "open"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -569,7 +569,7 @@ func TestList(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{done, open})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "list", "--status", "done", "--ready"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "list", "--status", "done", "--ready"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0 for contradictory filters, got %d; stderr: %s", code, stderr.String())

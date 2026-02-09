@@ -3,8 +3,6 @@ package cli
 import (
 	"database/sql"
 	"fmt"
-	"io"
-	"strings"
 
 	"github.com/leeovery/tick/internal/engine"
 	"github.com/leeovery/tick/internal/task"
@@ -142,50 +140,29 @@ func runShow(ctx *Context) error {
 		return nil
 	}
 
-	printShowDetails(ctx.Stdout, data)
-	return nil
+	return ctx.Fmt.FormatTaskDetail(ctx.Stdout, &data)
 }
 
-// printShowDetails outputs the full task detail view in key-value format.
-func printShowDetails(w io.Writer, d showData) {
-	fmt.Fprintf(w, "ID:       %s\n", d.id)
-	fmt.Fprintf(w, "Title:    %s\n", d.title)
-	fmt.Fprintf(w, "Status:   %s\n", d.status)
-	fmt.Fprintf(w, "Priority: %d\n", d.priority)
-	fmt.Fprintf(w, "Created:  %s\n", d.created)
-	fmt.Fprintf(w, "Updated:  %s\n", d.updated)
-
-	if d.closed != "" {
-		fmt.Fprintf(w, "Closed:   %s\n", d.closed)
+// taskToShowData converts a task.Task to showData for formatter output.
+// It populates basic fields but does not enrich blockedBy or children with
+// context (titles/statuses) since those require DB queries. Use the show
+// command's full query flow when enriched data is needed.
+func taskToShowData(t task.Task) *showData {
+	d := &showData{
+		id:          t.ID,
+		title:       t.Title,
+		status:      string(t.Status),
+		priority:    t.Priority,
+		created:     task.FormatTimestamp(t.Created),
+		updated:     task.FormatTimestamp(t.Updated),
+		description: t.Description,
+		parent:      t.Parent,
 	}
-
-	if d.parent != "" {
-		if d.parentTitle != "" {
-			fmt.Fprintf(w, "Parent:   %s  %s\n", d.parent, d.parentTitle)
-		} else {
-			fmt.Fprintf(w, "Parent:   %s\n", d.parent)
-		}
+	if t.Closed != nil {
+		d.closed = task.FormatTimestamp(*t.Closed)
 	}
-
-	if len(d.blockedBy) > 0 {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Blocked by:")
-		for _, rt := range d.blockedBy {
-			fmt.Fprintf(w, "  %s  %s (%s)\n", rt.id, rt.title, rt.status)
-		}
+	for _, dep := range t.BlockedBy {
+		d.blockedBy = append(d.blockedBy, relatedTask{id: dep})
 	}
-
-	if len(d.children) > 0 {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Children:")
-		for _, rt := range d.children {
-			fmt.Fprintf(w, "  %s  %s (%s)\n", rt.id, rt.title, rt.status)
-		}
-	}
-
-	if strings.TrimSpace(d.description) != "" {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Description:")
-		fmt.Fprintf(w, "  %s\n", d.description)
-	}
+	return d
 }

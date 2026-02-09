@@ -155,7 +155,7 @@ func TestBlockedQuery(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{t1})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "blocked"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "blocked"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -194,7 +194,7 @@ func TestBlockedQuery(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{blocker, t1, t2, t3})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "blocked"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "blocked"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -231,7 +231,7 @@ func TestBlockedCommand(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{blocker, t1, t2})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "blocked"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "blocked"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -270,7 +270,7 @@ func TestBlockedCommand(t *testing.T) {
 		dir := initTickProject(t)
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "blocked"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "blocked"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())

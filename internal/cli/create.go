@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -117,11 +116,10 @@ func runCreate(ctx *Context) error {
 	// Output.
 	if ctx.Quiet {
 		fmt.Fprintln(ctx.Stdout, createdTask.ID)
-	} else {
-		printTaskDetails(ctx.Stdout, createdTask)
+		return nil
 	}
 
-	return nil
+	return ctx.Fmt.FormatTaskDetail(ctx.Stdout, taskToShowData(createdTask))
 }
 
 // createOpts holds parsed optional flags for the create command.
@@ -239,26 +237,4 @@ func normalizeIDs(ids []string) []string {
 		normalized[i] = task.NormalizeID(id)
 	}
 	return normalized
-}
-
-// printTaskDetails outputs a basic task details display to the given writer.
-func printTaskDetails(w io.Writer, t task.Task) {
-	fmt.Fprintf(w, "ID:       %s\n", t.ID)
-	fmt.Fprintf(w, "Title:    %s\n", t.Title)
-	fmt.Fprintf(w, "Status:   %s\n", t.Status)
-	fmt.Fprintf(w, "Priority: %d\n", t.Priority)
-	fmt.Fprintf(w, "Created:  %s\n", task.FormatTimestamp(t.Created))
-	fmt.Fprintf(w, "Updated:  %s\n", task.FormatTimestamp(t.Updated))
-	if t.Description != "" {
-		fmt.Fprintf(w, "\nDescription:\n  %s\n", t.Description)
-	}
-	if len(t.BlockedBy) > 0 {
-		fmt.Fprintf(w, "\nBlocked by:\n")
-		for _, dep := range t.BlockedBy {
-			fmt.Fprintf(w, "  %s\n", dep)
-		}
-	}
-	if t.Parent != "" {
-		fmt.Fprintf(w, "Parent:   %s\n", t.Parent)
-	}
 }

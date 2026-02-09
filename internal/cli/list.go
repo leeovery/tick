@@ -3,7 +3,6 @@ package cli
 import (
 	"database/sql"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
@@ -288,11 +287,6 @@ func runList(ctx *Context) error {
 		return err
 	}
 
-	if len(rows) == 0 {
-		fmt.Fprintln(ctx.Stdout, "No tasks found.")
-		return nil
-	}
-
 	if ctx.Quiet {
 		for _, r := range rows {
 			fmt.Fprintln(ctx.Stdout, r.id)
@@ -300,14 +294,15 @@ func runList(ctx *Context) error {
 		return nil
 	}
 
-	printListTable(ctx.Stdout, rows)
-	return nil
-}
-
-// printListTable prints tasks in aligned columns: ID (12), STATUS (12), PRI (4), TITLE.
-func printListTable(w io.Writer, rows []listRow) {
-	fmt.Fprintf(w, "%-12s %-12s %-4s %s\n", "ID", "STATUS", "PRI", "TITLE")
-	for _, r := range rows {
-		fmt.Fprintf(w, "%-12s %-12s %-4d %s\n", r.id, r.status, r.priority, r.title)
+	taskRows := make([]TaskRow, len(rows))
+	for i, r := range rows {
+		taskRows[i] = TaskRow{
+			ID:       r.id,
+			Title:    r.title,
+			Status:   r.status,
+			Priority: r.priority,
+		}
 	}
+
+	return ctx.Fmt.FormatTaskList(ctx.Stdout, taskRows)
 }

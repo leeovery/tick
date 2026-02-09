@@ -28,7 +28,8 @@ type Context struct {
 	Quiet   bool
 	Verbose bool
 	Format  OutputFormat
-	Args    []string // remaining args after global flags and subcommand
+	Fmt     Formatter // resolved once in dispatcher from Format
+	Args    []string  // remaining args after global flags and subcommand
 }
 
 // FormatCfg returns a FormatConfig derived from this Context's fields.
@@ -134,6 +135,7 @@ func parseArgs(args []string, workDir string, stdout, stderr io.Writer, isTTY bo
 		return nil, "", err
 	}
 	ctx.Format = format
+	ctx.Fmt = newFormatter(format)
 
 	ctx.Args = cmdArgs
 	return ctx, subcmd, nil

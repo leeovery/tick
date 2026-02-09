@@ -17,7 +17,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{tk})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -54,7 +54,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{blocker, blocked})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-bbbbbb"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-bbbbbb"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -83,7 +83,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{parent, child})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -110,7 +110,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{tk})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -130,7 +130,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{tk})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -147,7 +147,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{tk})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -164,7 +164,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{tk})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -183,7 +183,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{parent, child})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-bbbbbb"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-bbbbbb"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -206,7 +206,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{tk})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -226,7 +226,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{tk})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -246,7 +246,7 @@ func TestShow(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{tk})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "show", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())

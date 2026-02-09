@@ -91,7 +91,11 @@ func runDepAdd(ctx *Context, args []string) error {
 	}
 
 	if !ctx.Quiet {
-		fmt.Fprintf(ctx.Stdout, "Dependency added: %s blocked by %s\n", taskID, blockedByID)
+		return ctx.Fmt.FormatDepChange(ctx.Stdout, &DepChangeData{
+			Action:      "added",
+			TaskID:      taskID,
+			BlockedByID: blockedByID,
+		})
 	}
 
 	return nil
@@ -159,7 +163,11 @@ func runDepRm(ctx *Context, args []string) error {
 	}
 
 	if !ctx.Quiet {
-		fmt.Fprintf(ctx.Stdout, "Dependency removed: %s no longer blocked by %s\n", taskID, blockedByID)
+		return ctx.Fmt.FormatDepChange(ctx.Stdout, &DepChangeData{
+			Action:      "removed",
+			TaskID:      taskID,
+			BlockedByID: blockedByID,
+		})
 	}
 
 	return nil

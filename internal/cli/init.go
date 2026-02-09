@@ -33,7 +33,7 @@ func runInit(ctx *Context) error {
 		if err != nil {
 			return fmt.Errorf("resolving absolute path: %w", err)
 		}
-		fmt.Fprintf(ctx.Stdout, "Initialized tick in %s/\n", absTickDir)
+		ctx.Fmt.FormatMessage(ctx.Stdout, fmt.Sprintf("Initialized tick in %s/", absTickDir))
 	}
 
 	return nil

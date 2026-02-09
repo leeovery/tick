@@ -77,7 +77,7 @@ func TestParentScope(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{parent, child})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "list", "--parent", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "list", "--parent", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -102,7 +102,7 @@ func TestParentScope(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{parent})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "list", "--parent", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "list", "--parent", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -423,7 +423,7 @@ func TestParentScope(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{parent, child})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "list", "--parent", "tick-aaaaaa", "--status", "done"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "list", "--parent", "tick-aaaaaa", "--status", "done"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())

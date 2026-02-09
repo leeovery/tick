@@ -50,7 +50,11 @@ func runTransition(command string) func(*Context) error {
 		}
 
 		if !ctx.Quiet {
-			fmt.Fprintf(ctx.Stdout, "%s: %s \u2192 %s\n", id, result.OldStatus, result.NewStatus)
+			return ctx.Fmt.FormatTransition(ctx.Stdout, &TransitionData{
+				ID:        id,
+				OldStatus: string(result.OldStatus),
+				NewStatus: string(result.NewStatus),
+			})
 		}
 
 		return nil

@@ -241,7 +241,7 @@ func TestReadyQuery(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{doneTask})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "ready"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "ready"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -274,7 +274,7 @@ func TestReadyQuery(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{t1, t2, t3})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "ready"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "ready"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -307,7 +307,7 @@ func TestReadyCommand(t *testing.T) {
 		dir := initTickProjectWithTasks(t, []task.Task{t1, t2})
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "ready"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "ready"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
@@ -346,7 +346,7 @@ func TestReadyCommand(t *testing.T) {
 		dir := initTickProject(t)
 
 		var stdout, stderr bytes.Buffer
-		code := Run([]string{"tick", "ready"}, dir, &stdout, &stderr, false)
+		code := Run([]string{"tick", "--pretty", "ready"}, dir, &stdout, &stderr, false)
 
 		if code != 0 {
 			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
