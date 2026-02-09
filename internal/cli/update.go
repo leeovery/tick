@@ -98,6 +98,11 @@ func runUpdate(ctx *Context) error {
 			if err := validateIDsExist(existing, blocks, "--blocks"); err != nil {
 				return nil, err
 			}
+			for _, blockID := range blocks {
+				if err := task.ValidateDependency(tasks, blockID, id); err != nil {
+					return nil, err
+				}
+			}
 		}
 
 		// Apply changes.

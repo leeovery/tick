@@ -89,6 +89,29 @@ func runCreate(ctx *Context) error {
 			}
 		}
 
+		// Validate dependencies (cycle detection, child-blocked-by-parent).
+		// Build a temporary task list that includes the new task so validators
+		// can see its parent and blocked_by edges.
+		stubTask := task.NewTask(id, title)
+		stubTask.Parent = parent
+		if len(blockedBy) > 0 {
+			stubTask.BlockedBy = blockedBy
+		}
+		tasksWithNew := make([]task.Task, len(tasks)+1)
+		copy(tasksWithNew, tasks)
+		tasksWithNew[len(tasks)] = stubTask
+
+		if len(blockedBy) > 0 {
+			if err := task.ValidateDependencies(tasksWithNew, id, blockedBy); err != nil {
+				return nil, err
+			}
+		}
+		for _, blockID := range blocks {
+			if err := task.ValidateDependency(tasksWithNew, blockID, id); err != nil {
+				return nil, err
+			}
+		}
+
 		// Build the new task.
 		newTask := task.NewTask(id, title)
 		newTask.Priority = opts.priority

@@ -446,4 +446,99 @@ func TestUpdate(t *testing.T) {
 			t.Errorf("persisted title = %q, want %q", tasks[0].Title, "Persisted title")
 		}
 	})
+
+	t.Run("it rejects --blocks that would create a cycle", func(t *testing.T) {
+		// C is blocked by A. Update C --blocks A means adding C to A's blocked_by.
+		// That gives: A blocked_by C, C blocked_by A -> direct cycle.
+		taskA := task.NewTask("tick-aaaaaa", "Task A")
+		taskC := task.NewTask("tick-cccccc", "Task C")
+		taskC.BlockedBy = []string{"tick-aaaaaa"}
+		dir := initTickProjectWithTasks(t, []task.Task{taskA, taskC})
+
+		var stdout, stderr bytes.Buffer
+		code := Run([]string{"tick", "update", "tick-cccccc", "--blocks", "tick-aaaaaa"}, dir, &stdout, &stderr, false)
+
+		if code != 1 {
+			t.Errorf("expected exit code 1, got %d", code)
+		}
+		if !strings.Contains(stderr.String(), "cycle") {
+			t.Errorf("expected 'cycle' in stderr, got %q", stderr.String())
+		}
+
+		// Verify no mutation occurred.
+		tasks := readTasksFromFile(t, dir)
+		for _, tk := range tasks {
+			if tk.ID == "tick-aaaaaa" {
+				if len(tk.BlockedBy) != 0 {
+					t.Errorf("tick-aaaaaa blocked_by = %v, want empty (no mutation)", tk.BlockedBy)
+				}
+				break
+			}
+		}
+	})
+
+	t.Run("it rejects --blocks that would create an indirect cycle", func(t *testing.T) {
+		// A blocked_by B, B blocked_by C. Update C --blocks A -> A blocked_by C.
+		// Chain: C -> A -> B -> C = cycle.
+		// Wait: ValidateDependency(tasks, A, C) BFS from C: C.blocked_by=[]. No cycle found.
+		// Actually: A.blocked_by=[B,C], B.blocked_by=[C]. BFS from C following blocked_by: C has no blocked_by.
+		// So actually we need the reverse: BFS from C (the new dep) checking if it reaches A (the task).
+		// C.blocked_by = [] -> no path. Hmm...
+		//
+		// Let me reconsider: A blocked_by B, B blocked_by C. Now update A --blocks C.
+		// --blocks C means C gets blocked_by A. ValidateDependency(tasks, C, A):
+		// BFS from A following blocked_by: A.blocked_by=[B], B.blocked_by=[C]. Reaches C == taskID. Cycle!
+		taskA := task.NewTask("tick-aaaaaa", "Task A")
+		taskA.BlockedBy = []string{"tick-bbbbbb"}
+		taskB := task.NewTask("tick-bbbbbb", "Task B")
+		taskB.BlockedBy = []string{"tick-cccccc"}
+		taskC := task.NewTask("tick-cccccc", "Task C")
+		dir := initTickProjectWithTasks(t, []task.Task{taskA, taskB, taskC})
+
+		var stdout, stderr bytes.Buffer
+		code := Run([]string{"tick", "update", "tick-aaaaaa", "--blocks", "tick-cccccc"}, dir, &stdout, &stderr, false)
+
+		if code != 1 {
+			t.Errorf("expected exit code 1, got %d", code)
+		}
+		if !strings.Contains(stderr.String(), "cycle") {
+			t.Errorf("expected 'cycle' in stderr, got %q", stderr.String())
+		}
+
+		// Verify no mutation occurred.
+		tasks := readTasksFromFile(t, dir)
+		for _, tk := range tasks {
+			if tk.ID == "tick-cccccc" {
+				if len(tk.BlockedBy) != 0 {
+					t.Errorf("tick-cccccc blocked_by = %v, want empty (no mutation)", tk.BlockedBy)
+				}
+				break
+			}
+		}
+	})
+
+	t.Run("it accepts valid --blocks dependency", func(t *testing.T) {
+		// A and B exist independently. Update A --blocks B. B gets blocked_by A. No cycle.
+		taskA := task.NewTask("tick-aaaaaa", "Task A")
+		taskB := task.NewTask("tick-bbbbbb", "Task B")
+		dir := initTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		var stdout, stderr bytes.Buffer
+		code := Run([]string{"tick", "update", "tick-aaaaaa", "--blocks", "tick-bbbbbb"}, dir, &stdout, &stderr, false)
+
+		if code != 0 {
+			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
+		}
+
+		tasks := readTasksFromFile(t, dir)
+		for _, tk := range tasks {
+			if tk.ID == "tick-bbbbbb" {
+				if len(tk.BlockedBy) != 1 || tk.BlockedBy[0] != "tick-aaaaaa" {
+					t.Errorf("tick-bbbbbb blocked_by = %v, want [tick-aaaaaa]", tk.BlockedBy)
+				}
+				return
+			}
+		}
+		t.Fatal("task tick-bbbbbb not found")
+	})
 }

@@ -516,4 +516,126 @@ func TestCreate(t *testing.T) {
 			t.Errorf("title = %q, want %q", tasks[0].Title, "Trimmed title")
 		}
 	})
+
+	t.Run("it rejects --blocked-by that would create child-blocked-by-parent", func(t *testing.T) {
+		parent := task.NewTask("tick-aaaaaa", "Parent task")
+		dir := initTickProjectWithTasks(t, []task.Task{parent})
+
+		var stdout, stderr bytes.Buffer
+		code := Run([]string{
+			"tick", "create", "Child task",
+			"--parent", "tick-aaaaaa",
+			"--blocked-by", "tick-aaaaaa",
+		}, dir, &stdout, &stderr, false)
+
+		if code != 1 {
+			t.Errorf("expected exit code 1, got %d", code)
+		}
+		if !strings.Contains(stderr.String(), "parent") {
+			t.Errorf("expected 'parent' in stderr, got %q", stderr.String())
+		}
+
+		// Verify no task was created.
+		tasks := readTasksFromFile(t, dir)
+		if len(tasks) != 1 {
+			t.Errorf("expected 1 task (no new task created), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it rejects --blocked-by that would create a cycle via --blocks", func(t *testing.T) {
+		// A is blocked by B. Create C with --blocked-by A --blocks B.
+		// This means: C blocked_by A, and B blocked_by C.
+		// Chain: B -> C -> A -> B = cycle.
+		taskA := task.NewTask("tick-aaaaaa", "Task A")
+		taskA.BlockedBy = []string{"tick-bbbbbb"}
+		taskB := task.NewTask("tick-bbbbbb", "Task B")
+		dir := initTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		var stdout, stderr bytes.Buffer
+		code := Run([]string{
+			"tick", "create", "Task C",
+			"--blocked-by", "tick-aaaaaa",
+			"--blocks", "tick-bbbbbb",
+		}, dir, &stdout, &stderr, false)
+
+		if code != 1 {
+			t.Errorf("expected exit code 1, got %d", code)
+		}
+		if !strings.Contains(stderr.String(), "cycle") {
+			t.Errorf("expected 'cycle' in stderr, got %q", stderr.String())
+		}
+
+		// Verify no task was created.
+		tasks := readTasksFromFile(t, dir)
+		if len(tasks) != 2 {
+			t.Errorf("expected 2 tasks (no new task created), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it rejects --blocks that would create a direct cycle", func(t *testing.T) {
+		// A exists. Create B with --blocked-by A --blocks A.
+		// B blocked_by A, A blocked_by B -> direct cycle.
+		taskA := task.NewTask("tick-aaaaaa", "Task A")
+		dir := initTickProjectWithTasks(t, []task.Task{taskA})
+
+		var stdout, stderr bytes.Buffer
+		code := Run([]string{
+			"tick", "create", "Task B",
+			"--blocked-by", "tick-aaaaaa",
+			"--blocks", "tick-aaaaaa",
+		}, dir, &stdout, &stderr, false)
+
+		if code != 1 {
+			t.Errorf("expected exit code 1, got %d", code)
+		}
+		if !strings.Contains(stderr.String(), "cycle") {
+			t.Errorf("expected 'cycle' in stderr, got %q", stderr.String())
+		}
+
+		// Verify no task was created.
+		tasks := readTasksFromFile(t, dir)
+		if len(tasks) != 1 {
+			t.Errorf("expected 1 task (no new task created), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it accepts valid --blocked-by and --blocks dependencies", func(t *testing.T) {
+		// A and B exist independently. Create C with --blocked-by A --blocks B.
+		// C blocked_by A, B blocked_by C. No cycle.
+		taskA := task.NewTask("tick-aaaaaa", "Task A")
+		taskB := task.NewTask("tick-bbbbbb", "Task B")
+		dir := initTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		var stdout, stderr bytes.Buffer
+		code := Run([]string{
+			"tick", "create", "Task C",
+			"--blocked-by", "tick-aaaaaa",
+			"--blocks", "tick-bbbbbb",
+		}, dir, &stdout, &stderr, false)
+
+		if code != 0 {
+			t.Fatalf("expected exit code 0, got %d; stderr: %s", code, stderr.String())
+		}
+
+		tasks := readTasksFromFile(t, dir)
+		if len(tasks) != 3 {
+			t.Fatalf("expected 3 tasks, got %d", len(tasks))
+		}
+
+		// Verify new task has blocked_by = [tick-aaaaaa].
+		newTask := tasks[2]
+		if len(newTask.BlockedBy) != 1 || newTask.BlockedBy[0] != "tick-aaaaaa" {
+			t.Errorf("new task blocked_by = %v, want [tick-aaaaaa]", newTask.BlockedBy)
+		}
+
+		// Verify tick-bbbbbb has new task in its blocked_by.
+		for _, tk := range tasks {
+			if tk.ID == "tick-bbbbbb" {
+				if len(tk.BlockedBy) != 1 || tk.BlockedBy[0] != newTask.ID {
+					t.Errorf("tick-bbbbbb blocked_by = %v, want [%s]", tk.BlockedBy, newTask.ID)
+				}
+				break
+			}
+		}
+	})
 }
