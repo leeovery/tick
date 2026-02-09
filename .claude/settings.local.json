@@ -20,7 +20,22 @@
       "Read(/private/tmp/tick-analysis-worktrees/*)",
       "Write(/Users/leeovery/Code/tick/analysis/*)",
       "Glob(/private/tmp/tick-analysis-worktrees/*)",
-      "Glob(/Users/leeovery/Code/tick/analysis/*)"
+      "Glob(/Users/leeovery/Code/tick/analysis/*)",
+      "Bash(go test:*)",
+      "Bash(gofmt:*)",
+      "Bash(go vet:*)",
+      "Bash(/Users/leeovery/go/bin/golangci-lint run:*)",
+      "Bash(go get:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go build:*)",
+      "Bash(GOPROXY=https://proxy.golang.org go list:*)",
+      "Bash(GOPROXY=https://proxy.golang.org go get:*)",
+      "Bash(go run:*)",
+      "Bash(go doc:*)",
+      "Bash(/tmp/claude/test_escape.go << 'EOF'\npackage main\n\nimport \\(\n\t\"fmt\"\n\ttoon \"github.com/toon-format/toon-go\"\n\t\"strings\"\n\\)\n\ntype wrapper struct {\n\tV string `toon:\"v\"`\n}\n\nfunc escapeField\\(s string\\) string {\n\tif !strings.ContainsAny\\(s, \",\\\\\"\\\\n\\\\\\\\:[]{}\"\\) {\n\t\treturn s\n\t}\n\tout, err := toon.MarshalString\\(wrapper{V: s}\\)\n\tif err != nil {\n\t\treturn s\n\t}\n\treturn strings.TrimPrefix\\(out, \"v: \"\\)\n}\n\nfunc main\\(\\) {\n\t// Test various special chars\n\ttests := []string{\n\t\t\"Hello, World\",\n\t\t\"Has \\\\\"quotes\\\\\"\",\n\t\t\"Has\\\\nnewlines\",\n\t\t\"Has\\\\\\\\backslash\",\n\t\t\"Normal title\",\n\t\t\"Has: colon\",\n\t\t\"Has [brackets]\",\n\t\t\"Has {braces}\",\n\t}\n\tfor _, t := range tests {\n\t\tfmt.Printf\\(\"%-25s -> %s\\\\n\", t, escapeField\\(t\\)\\)\n\t}\n\t\n\t// Also test what MarshalString produces for lists\n\ttype row struct {\n\t\tID    string `toon:\"id\"`\n\t\tTitle string `toon:\"title\"`\n\t\tStatus string `toon:\"status\"`\n\t\tPriority int  `toon:\"priority\"`\n\t}\n\ttype listWrapper struct {\n\t\tTasks []row `toon:\"tasks\"`\n\t}\n\t\n\tdata := listWrapper{Tasks: []row{\n\t\t{ID: \"tick-a1b2\", Title: \"Setup Sanctum\", Status: \"done\", Priority: 1},\n\t\t{ID: \"tick-c3d4\", Title: \"Login endpoint\", Status: \"open\", Priority: 1},\n\t}}\n\tout, _ := toon.MarshalString\\(data, toon.WithIndent\\(2\\)\\)\n\tfmt.Println\\(\"\\\\n--- MarshalString for list ---\"\\)\n\tfmt.Println\\(out\\)\n}\nEOF)",
+      "Bash(/tmp/claude/test_escape2.go << 'EOF'\npackage main\n\nimport \\(\n\t\"fmt\"\n\ttoon \"github.com/toon-format/toon-go\"\n\\)\n\nfunc main\\(\\) {\n\ttype row struct {\n\t\tID    string `toon:\"id\"`\n\t\tTitle string `toon:\"title\"`\n\t\tStatus string `toon:\"status\"`\n\t\tPriority int  `toon:\"priority\"`\n\t}\n\ttype listWrapper struct {\n\t\tTasks []row `toon:\"tasks\"`\n\t}\n\t\n\t// Test with comma in title - does toon-go escape it?\n\tdata := listWrapper{Tasks: []row{\n\t\t{ID: \"tick-a1b2\", Title: \"Hello, World\", Status: \"open\", Priority: 1},\n\t}}\n\tout, _ := toon.MarshalString\\(data, toon.WithIndent\\(2\\)\\)\n\tfmt.Println\\(\"--- Comma title ---\"\\)\n\tfmt.Println\\(out\\)\n\t\n\t// Test with trailing newline from MarshalString\n\tfmt.Printf\\(\"Ends with newline: %v\\\\n\", out[len\\(out\\)-1] == '\\\\n'\\)\n}\nEOF)",
+      "Bash(golangci-lint run:*)",
+      "Bash(xxd:*)"
     ]
   },
   "sandbox": {
