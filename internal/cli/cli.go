@@ -107,6 +107,7 @@ var commands = map[string]func(*Context) error{
 	"dep":     runDep,
 	"ready":   runReady,
 	"blocked": runBlocked,
+	"stats":   runStats,
 }
 
 // parseArgs parses global flags from args and returns the context, subcommand
