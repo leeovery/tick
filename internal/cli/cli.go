@@ -64,6 +64,7 @@ func Run(args []string, workDir string, stdout, stderr io.Writer, isTTY bool) in
 var commands = map[string]func(*Context) error{
 	"init":   runInit,
 	"create": runCreate,
+	"update": runUpdate,
 	"list":   runList,
 	"show":   runShow,
 	"start":  runTransition("start"),
