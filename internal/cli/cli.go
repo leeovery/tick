@@ -64,6 +64,8 @@ func Run(args []string, workDir string, stdout, stderr io.Writer, isTTY bool) in
 var commands = map[string]func(*Context) error{
 	"init":   runInit,
 	"create": runCreate,
+	"list":   runList,
+	"show":   runShow,
 }
 
 // parseArgs parses global flags from args and returns the context, subcommand
