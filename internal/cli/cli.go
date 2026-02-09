@@ -71,6 +71,7 @@ var commands = map[string]func(*Context) error{
 	"done":   runTransition("done"),
 	"cancel": runTransition("cancel"),
 	"reopen": runTransition("reopen"),
+	"dep":    runDep,
 }
 
 // parseArgs parses global flags from args and returns the context, subcommand
