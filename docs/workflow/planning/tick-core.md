@@ -1,11 +1,11 @@
 ---
 topic: tick-core
-status: planning
+status: concluded
 format: local-markdown
 specification: ../specification/tick-core.md
 spec_commit: 4a3a40d9415de8e1bb3a1ee376efd0bef2af0dd3
 created: 2026-01-27
-updated: 2026-01-30
+updated: 2026-02-09
 external_dependencies: []
 planning:
   phase: 5
