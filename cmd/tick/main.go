@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	isTTY := isTerminal(os.Stdout)
+	isTTY := cli.DetectTTY(os.Stdout)
 	cwd, err := os.Getwd()
 	if err != nil {
 		os.Stderr.WriteString("Error: " + err.Error() + "\n")
@@ -16,13 +16,4 @@ func main() {
 	}
 	code := cli.Run(os.Args, cwd, os.Stdout, os.Stderr, isTTY)
 	os.Exit(code)
-}
-
-// isTerminal checks whether the given file is connected to a terminal (TTY).
-func isTerminal(f *os.File) bool {
-	info, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	return info.Mode()&os.ModeCharDevice != 0
 }

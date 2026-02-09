@@ -31,6 +31,15 @@ type Context struct {
 	Args    []string // remaining args after global flags and subcommand
 }
 
+// FormatCfg returns a FormatConfig derived from this Context's fields.
+func (c *Context) FormatCfg() FormatConfig {
+	return FormatConfig{
+		Format:  c.Format,
+		Quiet:   c.Quiet,
+		Verbose: c.Verbose,
+	}
+}
+
 // Run executes the tick CLI with the given arguments, working directory,
 // output writers, and TTY detection flag. It returns an exit code (0 for
 // success, 1 for errors).
@@ -86,19 +95,13 @@ func parseArgs(args []string, workDir string, stdout, stderr io.Writer, isTTY bo
 		Stderr:  stderr,
 	}
 
-	// Default format based on TTY
-	if isTTY {
-		ctx.Format = FormatPretty
-	} else {
-		ctx.Format = FormatToon
-	}
-
 	// Skip program name
 	remaining := args[1:]
 
 	var subcmd string
 	var cmdArgs []string
 	foundCmd := false
+	var toonFlag, prettyFlag, jsonFlag bool
 
 	for _, arg := range remaining {
 		if foundCmd {
@@ -112,11 +115,11 @@ func parseArgs(args []string, workDir string, stdout, stderr io.Writer, isTTY bo
 		case arg == "--verbose" || arg == "-v":
 			ctx.Verbose = true
 		case arg == "--toon":
-			ctx.Format = FormatToon
+			toonFlag = true
 		case arg == "--pretty":
-			ctx.Format = FormatPretty
+			prettyFlag = true
 		case arg == "--json":
-			ctx.Format = FormatJSON
+			jsonFlag = true
 		case strings.HasPrefix(arg, "-"):
 			return nil, "", fmt.Errorf("unknown flag '%s'", arg)
 		default:
@@ -124,6 +127,13 @@ func parseArgs(args []string, workDir string, stdout, stderr io.Writer, isTTY bo
 			foundCmd = true
 		}
 	}
+
+	// Resolve format from flags and TTY status.
+	format, err := ResolveFormat(toonFlag, prettyFlag, jsonFlag, isTTY)
+	if err != nil {
+		return nil, "", err
+	}
+	ctx.Format = format
 
 	ctx.Args = cmdArgs
 	return ctx, subcmd, nil
