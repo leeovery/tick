@@ -4,6 +4,7 @@ package storage
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -80,6 +81,31 @@ func ReadTasks(path string) ([]task.Task, error) {
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("reading tasks file: %w", err)
+	}
+
+	return tasks, nil
+}
+
+// ParseTasks parses JSONL content from a byte slice into a list of tasks.
+// Each line is parsed as a single JSON task object. Empty lines are skipped.
+func ParseTasks(data []byte) ([]task.Task, error) {
+	var tasks []task.Task
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	lineNum := 0
+	for scanner.Scan() {
+		lineNum++
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		var t task.Task
+		if err := json.Unmarshal([]byte(line), &t); err != nil {
+			return nil, fmt.Errorf("parsing task at line %d: %w", lineNum, err)
+		}
+		tasks = append(tasks, t)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("reading tasks data: %w", err)
 	}
 
 	return tasks, nil

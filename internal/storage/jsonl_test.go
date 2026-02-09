@@ -515,6 +515,67 @@ func TestFieldOrdering(t *testing.T) {
 	})
 }
 
+func TestParseTasks(t *testing.T) {
+	t.Run("it parses tasks from a byte slice of JSONL content", func(t *testing.T) {
+		content := []byte(`{"id":"tick-a1b2c3","title":"First task","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-d4e5f6","title":"Second task","status":"done","priority":1,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+`)
+		tasks, err := ParseTasks(content)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-a1b2c3" {
+			t.Errorf("task 0 ID = %q, want %q", tasks[0].ID, "tick-a1b2c3")
+		}
+		if tasks[0].Title != "First task" {
+			t.Errorf("task 0 Title = %q, want %q", tasks[0].Title, "First task")
+		}
+		if tasks[1].ID != "tick-d4e5f6" {
+			t.Errorf("task 1 ID = %q, want %q", tasks[1].ID, "tick-d4e5f6")
+		}
+		if tasks[1].Status != task.StatusDone {
+			t.Errorf("task 1 Status = %q, want %q", tasks[1].Status, task.StatusDone)
+		}
+	})
+
+	t.Run("it returns empty list for empty byte slice", func(t *testing.T) {
+		tasks, err := ParseTasks([]byte{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it skips empty lines in byte slice", func(t *testing.T) {
+		content := []byte(`{"id":"tick-a1b2c3","title":"First task","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+
+{"id":"tick-d4e5f6","title":"Second task","status":"done","priority":1,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+
+`)
+		tasks, err := ParseTasks(content)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it returns error for invalid JSON in byte slice", func(t *testing.T) {
+		content := []byte(`{"id":"tick-a1b2c3","title":"First task"` + "\n" + `not-json` + "\n")
+		_, err := ParseTasks(content)
+		if err == nil {
+			t.Fatal("expected error for invalid JSON, got nil")
+		}
+	})
+}
+
 func TestSkipsEmptyLines(t *testing.T) {
 	t.Run("it skips empty lines when reading", func(t *testing.T) {
 		dir := t.TempDir()
