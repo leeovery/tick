@@ -1,0 +1,28 @@
+// Package main is the entry point for the tick CLI.
+package main
+
+import (
+	"os"
+
+	"github.com/leeovery/tick/internal/cli"
+)
+
+func main() {
+	isTTY := isTerminal(os.Stdout)
+	cwd, err := os.Getwd()
+	if err != nil {
+		os.Stderr.WriteString("Error: " + err.Error() + "\n")
+		os.Exit(1)
+	}
+	code := cli.Run(os.Args, cwd, os.Stdout, os.Stderr, isTTY)
+	os.Exit(code)
+}
+
+// isTerminal checks whether the given file is connected to a terminal (TTY).
+func isTerminal(f *os.File) bool {
+	info, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeCharDevice != 0
+}
