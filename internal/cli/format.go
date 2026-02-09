@@ -90,41 +90,6 @@ func newFormatter(format OutputFormat) Formatter {
 	}
 }
 
-// StubFormatter is a placeholder implementation of the Formatter interface.
-// It will be replaced by concrete Toon, Pretty, and JSON formatters in
-// tasks 4-2 through 4-4.
-type StubFormatter struct{}
-
-// FormatTaskList is a stub that returns nil.
-func (f *StubFormatter) FormatTaskList(w io.Writer, data interface{}) error {
-	return nil
-}
-
-// FormatTaskDetail is a stub that returns nil.
-func (f *StubFormatter) FormatTaskDetail(w io.Writer, data interface{}) error {
-	return nil
-}
-
-// FormatTransition is a stub that returns nil.
-func (f *StubFormatter) FormatTransition(w io.Writer, data interface{}) error {
-	return nil
-}
-
-// FormatDepChange is a stub that returns nil.
-func (f *StubFormatter) FormatDepChange(w io.Writer, data interface{}) error {
-	return nil
-}
-
-// FormatStats is a stub that returns nil.
-func (f *StubFormatter) FormatStats(w io.Writer, data interface{}) error {
-	return nil
-}
-
-// FormatMessage writes the message followed by a newline.
-func (f *StubFormatter) FormatMessage(w io.Writer, msg string) {
-	formatMessageText(w, msg)
-}
-
 // formatTransitionText writes a plain-text status transition line.
 // Data must be *TransitionData. Shared by ToonFormatter and PrettyFormatter.
 func formatTransitionText(w io.Writer, data interface{}) error {
@@ -156,7 +121,7 @@ func formatDepChangeText(w io.Writer, data interface{}) error {
 }
 
 // formatMessageText writes a message followed by a newline.
-// Shared by ToonFormatter, PrettyFormatter, and StubFormatter.
+// Shared by ToonFormatter and PrettyFormatter.
 func formatMessageText(w io.Writer, msg string) {
 	fmt.Fprintln(w, msg)
 }

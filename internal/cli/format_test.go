@@ -136,22 +136,6 @@ func TestFormatConfig(t *testing.T) {
 	})
 }
 
-func TestStubFormatter(t *testing.T) {
-	t.Run("it implements Formatter interface", func(t *testing.T) {
-		var f Formatter = &StubFormatter{}
-		_ = f
-	})
-
-	t.Run("it returns placeholder output for FormatMessage", func(t *testing.T) {
-		var buf bytes.Buffer
-		f := &StubFormatter{}
-		f.FormatMessage(&buf, "hello")
-		if buf.String() != "hello\n" {
-			t.Errorf("FormatMessage output = %q, want %q", buf.String(), "hello\n")
-		}
-	})
-}
-
 func TestConflictingFormatFlagsIntegration(t *testing.T) {
 	t.Run("it errors when multiple format flags passed via CLI", func(t *testing.T) {
 		dir := t.TempDir()
