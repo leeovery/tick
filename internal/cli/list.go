@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/leeovery/tick/internal/engine"
+	"github.com/leeovery/tick/internal/task"
 )
 
 // listRow holds a single row of list output data.
@@ -24,6 +26,7 @@ type listFilters struct {
 	status   string
 	priority int
 	hasPri   bool // true when --priority was explicitly set
+	parent   string
 }
 
 // validStatuses lists the accepted values for --status.
@@ -62,6 +65,12 @@ func parseListFlags(args []string) (listFilters, error) {
 			}
 			f.priority = p
 			f.hasPri = true
+		case "--parent":
+			if i+1 >= len(args) {
+				return f, fmt.Errorf("--parent requires a task ID")
+			}
+			i++
+			f.parent = task.NormalizeID(args[i])
 		default:
 			return f, fmt.Errorf("unknown list flag %q", args[i])
 		}
@@ -85,24 +94,26 @@ func isValidStatus(s string) bool {
 }
 
 // buildListQuery returns the SQL query and parameters for the list command
-// based on the provided filters. When no filters are set, returns a query
-// for all tasks.
-func buildListQuery(f listFilters) (string, []interface{}) {
+// based on the provided filters. When descendantIDs is non-nil, results are
+// restricted to tasks whose ID is in that set (the --parent pre-filter).
+func buildListQuery(f listFilters, descendantIDs []string) (string, []interface{}) {
 	if f.ready {
-		return buildReadyFilterQuery(f)
+		return buildReadyFilterQuery(f, descendantIDs)
 	}
 	if f.blocked {
-		return buildBlockedFilterQuery(f)
+		return buildBlockedFilterQuery(f, descendantIDs)
 	}
-	return buildSimpleFilterQuery(f)
+	return buildSimpleFilterQuery(f, descendantIDs)
 }
 
 // buildReadyFilterQuery wraps ReadyQuery with additional AND filters for
 // status and priority. Ordering is provided by the inner ReadyQuery (priority
 // ASC, created ASC) and preserved by the outer select.
-func buildReadyFilterQuery(f listFilters) (string, []interface{}) {
+func buildReadyFilterQuery(f listFilters, descendantIDs []string) (string, []interface{}) {
 	q := `SELECT id, status, priority, title FROM (` + ReadyQuery + `) AS ready WHERE 1=1`
 	var params []interface{}
+
+	q, params = appendDescendantFilter(q, params, descendantIDs)
 
 	if f.status != "" {
 		q += ` AND status = ?`
@@ -119,9 +130,11 @@ func buildReadyFilterQuery(f listFilters) (string, []interface{}) {
 // buildBlockedFilterQuery wraps BlockedQuery with additional AND filters.
 // Ordering is provided by the inner BlockedQuery (priority ASC, created ASC)
 // and preserved by the outer select.
-func buildBlockedFilterQuery(f listFilters) (string, []interface{}) {
+func buildBlockedFilterQuery(f listFilters, descendantIDs []string) (string, []interface{}) {
 	q := `SELECT id, status, priority, title FROM (` + BlockedQuery + `) AS blocked WHERE 1=1`
 	var params []interface{}
+
+	q, params = appendDescendantFilter(q, params, descendantIDs)
 
 	if f.status != "" {
 		q += ` AND status = ?`
@@ -137,9 +150,11 @@ func buildBlockedFilterQuery(f listFilters) (string, []interface{}) {
 
 // buildSimpleFilterQuery builds a query for all tasks with optional status
 // and priority filters, ordered by priority ASC then created ASC.
-func buildSimpleFilterQuery(f listFilters) (string, []interface{}) {
+func buildSimpleFilterQuery(f listFilters, descendantIDs []string) (string, []interface{}) {
 	q := `SELECT id, status, priority, title FROM tasks WHERE 1=1`
 	var params []interface{}
+
+	q, params = appendDescendantFilter(q, params, descendantIDs)
 
 	if f.status != "" {
 		q += ` AND status = ?`
@@ -155,9 +170,64 @@ func buildSimpleFilterQuery(f listFilters) (string, []interface{}) {
 	return q, params
 }
 
+// appendDescendantFilter adds an AND id IN (...) clause to restrict results to
+// the given set of descendant IDs. If descendantIDs is nil, the query and params
+// are returned unchanged.
+func appendDescendantFilter(q string, params []interface{}, descendantIDs []string) (string, []interface{}) {
+	if descendantIDs == nil {
+		return q, params
+	}
+	placeholders := make([]string, len(descendantIDs))
+	for i, id := range descendantIDs {
+		placeholders[i] = "?"
+		params = append(params, id)
+	}
+	q += ` AND id IN (` + strings.Join(placeholders, ",") + `)`
+	return q, params
+}
+
+// queryDescendantIDs executes a recursive CTE to collect all descendant task IDs
+// of the given parent. The parent itself is excluded from the result.
+func queryDescendantIDs(db *sql.DB, parentID string) ([]string, error) {
+	query := `
+WITH RECURSIVE descendants(id) AS (
+  SELECT id FROM tasks WHERE parent = ?
+  UNION ALL
+  SELECT t.id FROM tasks t
+  JOIN descendants d ON t.parent = d.id
+)
+SELECT id FROM descendants`
+
+	rows, err := db.Query(query, parentID)
+	if err != nil {
+		return nil, fmt.Errorf("querying descendants: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scanning descendant ID: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// parentTaskExists checks whether a task with the given ID exists in the database.
+func parentTaskExists(db *sql.DB, id string) (bool, error) {
+	var count int
+	err := db.QueryRow(`SELECT COUNT(*) FROM tasks WHERE id = ?`, id).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("checking parent task: %w", err)
+	}
+	return count > 0, nil
+}
+
 // runList implements the "tick list" command. It parses filter flags (--ready,
-// --blocked, --status, --priority), builds the appropriate SQL query, and
-// displays results in aligned columns.
+// --blocked, --status, --priority, --parent), builds the appropriate SQL query,
+// and displays results in aligned columns.
 func runList(ctx *Context) error {
 	filters, err := parseListFlags(ctx.Args)
 	if err != nil {
@@ -175,10 +245,30 @@ func runList(ctx *Context) error {
 	}
 	defer store.Close()
 
-	query, params := buildListQuery(filters)
 	var rows []listRow
 
 	err = store.Query(func(db *sql.DB) error {
+		// Resolve --parent pre-filter if set.
+		var descendantIDs []string
+		if filters.parent != "" {
+			exists, err := parentTaskExists(db, filters.parent)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return fmt.Errorf("Task '%s' not found", filters.parent)
+			}
+			descendantIDs, err = queryDescendantIDs(db, filters.parent)
+			if err != nil {
+				return err
+			}
+			// If no descendants, return early with empty result (not an error).
+			if len(descendantIDs) == 0 {
+				return nil
+			}
+		}
+
+		query, params := buildListQuery(filters, descendantIDs)
 		sqlRows, err := db.Query(query, params...)
 		if err != nil {
 			return fmt.Errorf("querying tasks: %w", err)
