@@ -200,7 +200,6 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  blocked   Show blocked tasks")
 	fmt.Fprintln(w, "  dep       Manage task dependencies")
 	fmt.Fprintln(w, "  stats     Show task statistics")
-	fmt.Fprintln(w, "  doctor    Run diagnostics and validation")
 	fmt.Fprintln(w, "  rebuild   Force rebuild SQLite cache")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Global flags:")

@@ -251,6 +251,35 @@ func TestSubcommandRouting(t *testing.T) {
 			t.Error("expected usage output, got empty stdout")
 		}
 	})
+
+	t.Run("it does not advertise doctor command in help output", func(t *testing.T) {
+		dir := t.TempDir()
+
+		var stdout, stderr bytes.Buffer
+		code := Run([]string{"tick"}, dir, &stdout, &stderr, false)
+
+		if code != 0 {
+			t.Fatalf("expected exit code 0, got %d", code)
+		}
+		if strings.Contains(stdout.String(), "doctor") {
+			t.Error("help output should not advertise the unimplemented doctor command")
+		}
+	})
+
+	t.Run("it returns unknown command error for doctor", func(t *testing.T) {
+		dir := t.TempDir()
+
+		var stdout, stderr bytes.Buffer
+		code := Run([]string{"tick", "doctor"}, dir, &stdout, &stderr, false)
+
+		if code != 1 {
+			t.Errorf("expected exit code 1, got %d", code)
+		}
+		expected := "Error: Unknown command 'doctor'. Run 'tick help' for usage.\n"
+		if stderr.String() != expected {
+			t.Errorf("stderr = %q, want %q", stderr.String(), expected)
+		}
+	})
 }
 
 func TestTTYDetection(t *testing.T) {
