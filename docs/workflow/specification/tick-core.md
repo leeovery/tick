@@ -2,7 +2,7 @@
 topic: tick-core
 status: concluded
 type: feature
-date: 2026-01-25
+date: 2026-02-09
 sources:
   - name: project-fundamentals
     status: incorporated
@@ -19,6 +19,8 @@ sources:
   - name: toon-output-format
     status: incorporated
   - name: tui
+    status: incorporated
+  - name: task-scoping-by-plan
     status: incorporated
 ---
 
@@ -502,11 +504,14 @@ At least one option required. Cannot change `id`, `status`, `created`, or `block
 tick list [options]
 
 Options:
-  --ready       Show only ready tasks (unblocked, no open children)
-  --blocked     Show only blocked tasks
-  --status <s>  Filter by status (open, in_progress, done, cancelled)
+  --ready        Show only ready tasks (unblocked, no open children)
+  --blocked      Show only blocked tasks
+  --status <s>   Filter by status (open, in_progress, done, cancelled)
   --priority <p> Filter by priority (0-4)
+  --parent <id>  Scope to descendants of this task (recursive)
 ```
+
+The `--parent` flag also applies to `tick ready` and `tick blocked` since they are aliases for `tick list --ready` and `tick list --blocked` respectively.
 
 #### Blocked Query Logic
 
@@ -517,6 +522,34 @@ A task appears in `tick blocked` when:
   - Has at least one open child (status `open` or `in_progress`)
 
 In other words: `blocked` = open tasks that are not `ready`.
+
+#### Parent Scoping
+
+The `--parent <id>` flag restricts queries to descendants of the specified task. This enables plan-level scoping — create a top-level parent task per plan, add plan tasks as children, then filter queries to that subtree.
+
+**Behavior:**
+- Collects all descendants of the specified parent (recursive, not just direct children)
+- Applies existing filters (ready, blocked, status, priority) within that set
+- The parent task itself is excluded from results naturally (it has open children, so the leaf-only rule filters it out)
+
+**`--parent` is a pre-filter**: It narrows which tasks are considered. The leaf-only and blocked-by rules are post-filters that determine which of those are workable. They compose cleanly with no special cases.
+
+**Example:**
+```
+Plan: Auth System (tick-p1a2)
+├── Login endpoint (tick-e5f6)
+│   ├── Validation (tick-g7h8)      ← leaf
+│   └── Rate limiting (tick-i9j0)   ← leaf
+└── Logout endpoint (tick-k1l2)     ← leaf
+```
+
+```bash
+tick ready --parent tick-p1a2    # returns tick-g7h8, tick-i9j0, tick-k1l2
+tick ready --parent tick-e5f6    # returns tick-g7h8, tick-i9j0
+tick ready                       # all ready tasks across all plans
+```
+
+**Implementation**: Recursive CTE in SQLite to collect all descendant IDs, then apply existing query filters within that set.
 
 #### Dependency Management
 
