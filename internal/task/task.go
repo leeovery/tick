@@ -168,6 +168,52 @@ func NormalizeID(id string) string {
 	return strings.ToLower(id)
 }
 
+// TransitionResult holds the old and new status after a successful transition,
+// enabling output formatting like "tick-a3f2b7: open -> in_progress".
+type TransitionResult struct {
+	OldStatus Status
+	NewStatus Status
+}
+
+// validTransitions maps each command to its allowed (from -> to) status pairs.
+var validTransitions = map[string]map[Status]Status{
+	"start":  {StatusOpen: StatusInProgress},
+	"done":   {StatusOpen: StatusDone, StatusInProgress: StatusDone},
+	"cancel": {StatusOpen: StatusCancelled, StatusInProgress: StatusCancelled},
+	"reopen": {StatusDone: StatusOpen, StatusCancelled: StatusOpen},
+}
+
+// Transition applies a status transition to the given task based on the command.
+// Valid commands are "start", "done", "cancel", and "reopen". On success the
+// task's status, updated, and closed fields are mutated and a TransitionResult
+// is returned. On failure the task is not modified and an error is returned.
+func Transition(t *Task, command string) (TransitionResult, error) {
+	transitions, ok := validTransitions[command]
+	if !ok {
+		return TransitionResult{}, fmt.Errorf("Cannot %s task %s \u2014 status is '%s'", command, t.ID, t.Status)
+	}
+
+	newStatus, ok := transitions[t.Status]
+	if !ok {
+		return TransitionResult{}, fmt.Errorf("Cannot %s task %s \u2014 status is '%s'", command, t.ID, t.Status)
+	}
+
+	oldStatus := t.Status
+	now := time.Now().UTC().Truncate(time.Second)
+
+	t.Status = newStatus
+	t.Updated = now
+
+	switch newStatus {
+	case StatusDone, StatusCancelled:
+		t.Closed = &now
+	case StatusOpen:
+		t.Closed = nil
+	}
+
+	return TransitionResult{OldStatus: oldStatus, NewStatus: newStatus}, nil
+}
+
 // ValidateTitle validates and normalizes a task title. It trims whitespace,
 // then rejects empty titles, titles exceeding 500 characters, and titles
 // containing newlines. Returns the trimmed title or an error.

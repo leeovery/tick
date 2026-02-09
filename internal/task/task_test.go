@@ -321,6 +321,242 @@ func TestTaskTimestampFormat(t *testing.T) {
 	})
 }
 
+func TestTransition(t *testing.T) {
+	// helper: create a task with a given status, fixed timestamps, and optional closed time
+	makeTask := func(status Status, closed bool) Task {
+		created := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+		updated := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+		tk := Task{
+			ID:       "tick-a3f2b7",
+			Title:    "Test task",
+			Status:   status,
+			Priority: DefaultPriority,
+			Created:  created,
+			Updated:  updated,
+		}
+		if closed {
+			c := time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC)
+			tk.Closed = &c
+		}
+		return tk
+	}
+
+	t.Run("valid transitions", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			from       Status
+			command    string
+			to         Status
+			closed     bool // whether input task has a closed timestamp
+			wantClosed bool // whether output task should have a closed timestamp
+		}{
+			{"it transitions open to in_progress via start", StatusOpen, "start", StatusInProgress, false, false},
+			{"it transitions open to done via done", StatusOpen, "done", StatusDone, false, true},
+			{"it transitions in_progress to done via done", StatusInProgress, "done", StatusDone, false, true},
+			{"it transitions open to cancelled via cancel", StatusOpen, "cancel", StatusCancelled, false, true},
+			{"it transitions in_progress to cancelled via cancel", StatusInProgress, "cancel", StatusCancelled, false, true},
+			{"it transitions done to open via reopen", StatusDone, "reopen", StatusOpen, true, false},
+			{"it transitions cancelled to open via reopen", StatusCancelled, "reopen", StatusOpen, true, false},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				tk := makeTask(tt.from, tt.closed)
+				before := time.Now().UTC().Truncate(time.Second)
+
+				result, err := Transition(&tk, tt.command)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+
+				after := time.Now().UTC().Add(time.Second).Truncate(time.Second)
+
+				// Check returned result
+				if result.OldStatus != tt.from {
+					t.Errorf("OldStatus = %q, want %q", result.OldStatus, tt.from)
+				}
+				if result.NewStatus != tt.to {
+					t.Errorf("NewStatus = %q, want %q", result.NewStatus, tt.to)
+				}
+
+				// Check task was mutated correctly
+				if tk.Status != tt.to {
+					t.Errorf("task.Status = %q, want %q", tk.Status, tt.to)
+				}
+
+				// Check updated timestamp was refreshed
+				if tk.Updated.Before(before) || tk.Updated.After(after) {
+					t.Errorf("Updated %v not between %v and %v", tk.Updated, before, after)
+				}
+
+				// Check closed timestamp
+				if tt.wantClosed {
+					if tk.Closed == nil {
+						t.Fatal("expected Closed to be set, got nil")
+					}
+					if tk.Closed.Before(before) || tk.Closed.After(after) {
+						t.Errorf("Closed %v not between %v and %v", *tk.Closed, before, after)
+					}
+				} else {
+					if tk.Closed != nil {
+						t.Errorf("expected Closed to be nil, got %v", *tk.Closed)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("invalid transitions", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			from    Status
+			command string
+			closed  bool
+		}{
+			{"it rejects start on in_progress task", StatusInProgress, "start", false},
+			{"it rejects start on done task", StatusDone, "start", true},
+			{"it rejects start on cancelled task", StatusCancelled, "start", true},
+			{"it rejects done on done task", StatusDone, "done", true},
+			{"it rejects done on cancelled task", StatusCancelled, "done", true},
+			{"it rejects cancel on done task", StatusDone, "cancel", true},
+			{"it rejects cancel on cancelled task", StatusCancelled, "cancel", true},
+			{"it rejects reopen on open task", StatusOpen, "reopen", false},
+			{"it rejects reopen on in_progress task", StatusInProgress, "reopen", false},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				tk := makeTask(tt.from, tt.closed)
+
+				_, err := Transition(&tk, tt.command)
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+
+				// Error should include command name and current status
+				errMsg := err.Error()
+				if !strings.Contains(errMsg, tt.command) {
+					t.Errorf("error %q should contain command %q", errMsg, tt.command)
+				}
+				if !strings.Contains(errMsg, string(tt.from)) {
+					t.Errorf("error %q should contain status %q", errMsg, tt.from)
+				}
+				// Check the exact format: "Cannot {command} task {id} — status is '{current_status}'"
+				expected := "Cannot " + tt.command + " task tick-a3f2b7 \u2014 status is '" + string(tt.from) + "'"
+				if errMsg != expected {
+					t.Errorf("error message:\ngot:  %q\nwant: %q", errMsg, expected)
+				}
+			})
+		}
+	})
+
+	t.Run("it does not modify task on invalid transition", func(t *testing.T) {
+		tk := makeTask(StatusDone, true)
+		origStatus := tk.Status
+		origUpdated := tk.Updated
+		origClosed := *tk.Closed
+
+		_, err := Transition(&tk, "start")
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+
+		if tk.Status != origStatus {
+			t.Errorf("Status changed from %q to %q", origStatus, tk.Status)
+		}
+		if !tk.Updated.Equal(origUpdated) {
+			t.Errorf("Updated changed from %v to %v", origUpdated, tk.Updated)
+		}
+		if tk.Closed == nil || !tk.Closed.Equal(origClosed) {
+			t.Errorf("Closed changed from %v to %v", origClosed, tk.Closed)
+		}
+	})
+
+	t.Run("it sets closed timestamp when transitioning to done", func(t *testing.T) {
+		tk := makeTask(StatusOpen, false)
+		if tk.Closed != nil {
+			t.Fatal("precondition: Closed should be nil")
+		}
+
+		before := time.Now().UTC().Truncate(time.Second)
+		_, err := Transition(&tk, "done")
+		after := time.Now().UTC().Add(time.Second).Truncate(time.Second)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if tk.Closed == nil {
+			t.Fatal("expected Closed to be set")
+		}
+		if tk.Closed.Before(before) || tk.Closed.After(after) {
+			t.Errorf("Closed %v not between %v and %v", *tk.Closed, before, after)
+		}
+	})
+
+	t.Run("it sets closed timestamp when transitioning to cancelled", func(t *testing.T) {
+		tk := makeTask(StatusOpen, false)
+
+		before := time.Now().UTC().Truncate(time.Second)
+		_, err := Transition(&tk, "cancel")
+		after := time.Now().UTC().Add(time.Second).Truncate(time.Second)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if tk.Closed == nil {
+			t.Fatal("expected Closed to be set")
+		}
+		if tk.Closed.Before(before) || tk.Closed.After(after) {
+			t.Errorf("Closed %v not between %v and %v", *tk.Closed, before, after)
+		}
+	})
+
+	t.Run("it clears closed timestamp when reopening", func(t *testing.T) {
+		tk := makeTask(StatusDone, true)
+		if tk.Closed == nil {
+			t.Fatal("precondition: Closed should be set")
+		}
+
+		_, err := Transition(&tk, "reopen")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if tk.Closed != nil {
+			t.Errorf("expected Closed to be nil after reopen, got %v", *tk.Closed)
+		}
+	})
+
+	t.Run("it updates the updated timestamp on every valid transition", func(t *testing.T) {
+		commands := []struct {
+			from    Status
+			command string
+			closed  bool
+		}{
+			{StatusOpen, "start", false},
+			{StatusOpen, "done", false},
+			{StatusInProgress, "done", false},
+			{StatusOpen, "cancel", false},
+			{StatusInProgress, "cancel", false},
+			{StatusDone, "reopen", true},
+			{StatusCancelled, "reopen", true},
+		}
+		for _, c := range commands {
+			t.Run(c.command+"_from_"+string(c.from), func(t *testing.T) {
+				tk := makeTask(c.from, c.closed)
+				origUpdated := tk.Updated
+
+				before := time.Now().UTC().Truncate(time.Second)
+				_, err := Transition(&tk, c.command)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+
+				if !tk.Updated.After(origUpdated) && !tk.Updated.Equal(before) {
+					t.Errorf("Updated was not refreshed: orig=%v, new=%v", origUpdated, tk.Updated)
+				}
+			})
+		}
+	})
+}
+
 func TestTaskJSONSerialization(t *testing.T) {
 	t.Run("it omits optional fields when empty", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
