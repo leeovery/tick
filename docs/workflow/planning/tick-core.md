@@ -115,7 +115,7 @@ approved_at: 2026-01-30
 | tick-core-3-3 | Ready query & tick ready command                                  | open unblocked no-children (ready), open blocker (not ready), all blockers done/cancelled (ready), parent with open children (not ready), deep nesting, in_progress/done/cancelled excluded, empty  | authored |
 | tick-core-3-4 | Blocked query, tick blocked & cancel-unblocks-dependents          | blocked by open/in_progress dep, parent with open children, cancel unblocks dependents, multiple dependents unblocked, empty result                                                                | authored |
 | tick-core-3-5 | tick list filter flags — --ready, --blocked, --status, --priority | reuses ready/blocked queries, invalid values error, combining filters, no matches, --quiet IDs only                                                                                                | authored |
-| tick-core-3-6 | Parent scoping — --parent flag with recursive descendant CTE      | non-existent parent ID, parent with no descendants (empty result), deep nesting (3+ levels), --parent combined with --status/--priority/--ready/--blocked, parent task itself excluded, --parent on tick ready vs tick blocked vs tick list | pending  |
+| tick-core-3-6 | Parent scoping — --parent flag with recursive descendant CTE      | non-existent parent ID, parent with no descendants (empty result), deep nesting (3+ levels), --parent combined with --status/--priority/--ready/--blocked, parent task itself excluded, --parent on tick ready vs tick blocked vs tick list | authored |
 
 ---
 
