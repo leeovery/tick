@@ -106,31 +106,20 @@ func buildListQuery(f listFilters, descendantIDs []string) (string, []interface{
 }
 
 // buildReadyFilterQuery wraps ReadyQuery with additional AND filters for
-// status and priority. Ordering is provided by the inner ReadyQuery (priority
-// ASC, created ASC) and preserved by the outer select.
+// status and priority.
 func buildReadyFilterQuery(f listFilters, descendantIDs []string) (string, []interface{}) {
-	q := `SELECT id, status, priority, title FROM (` + ReadyQuery + `) AS ready WHERE 1=1`
-	var params []interface{}
-
-	q, params = appendDescendantFilter(q, params, descendantIDs)
-
-	if f.status != "" {
-		q += ` AND status = ?`
-		params = append(params, f.status)
-	}
-	if f.hasPri {
-		q += ` AND priority = ?`
-		params = append(params, f.priority)
-	}
-
-	return q, params
+	return buildWrappedFilterQuery(ReadyQuery, "ready", f, descendantIDs)
 }
 
 // buildBlockedFilterQuery wraps BlockedQuery with additional AND filters.
-// Ordering is provided by the inner BlockedQuery (priority ASC, created ASC)
-// and preserved by the outer select.
 func buildBlockedFilterQuery(f listFilters, descendantIDs []string) (string, []interface{}) {
-	q := `SELECT id, status, priority, title FROM (` + BlockedQuery + `) AS blocked WHERE 1=1`
+	return buildWrappedFilterQuery(BlockedQuery, "blocked", f, descendantIDs)
+}
+
+// buildWrappedFilterQuery wraps an inner query (which provides ordering) with
+// an outer SELECT and optional status, priority, and descendant filters.
+func buildWrappedFilterQuery(innerQuery, alias string, f listFilters, descendantIDs []string) (string, []interface{}) {
+	q := `SELECT id, status, priority, title FROM (` + innerQuery + `) AS ` + alias + ` WHERE 1=1`
 	var params []interface{}
 
 	q, params = appendDescendantFilter(q, params, descendantIDs)

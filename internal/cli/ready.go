@@ -1,13 +1,9 @@
 package cli
 
-// ReadyQuery is the SQL query that returns tasks matching all three ready
-// conditions: status is open, all blockers are closed (done/cancelled), and
-// no children have status open or in_progress. Results are ordered by
-// priority ASC then created ASC for deterministic output.
-const ReadyQuery = `
-SELECT t.id, t.status, t.priority, t.title
-FROM tasks t
-WHERE t.status = 'open'
+// readyWhereClause contains the WHERE conditions for ready tasks: status is
+// open, all blockers are closed (done/cancelled), and no children have status
+// open or in_progress. Shared by ReadyQuery and StatsReadyCountQuery.
+const readyWhereClause = `t.status = 'open'
   AND NOT EXISTS (
     SELECT 1 FROM dependencies d
     JOIN tasks blocker ON blocker.id = d.blocked_by
@@ -18,7 +14,15 @@ WHERE t.status = 'open'
     SELECT 1 FROM tasks child
     WHERE child.parent = t.id
       AND child.status IN ('open', 'in_progress')
-  )
+  )`
+
+// ReadyQuery is the SQL query that returns tasks matching all three ready
+// conditions. Results are ordered by priority ASC then created ASC for
+// deterministic output.
+const ReadyQuery = `
+SELECT t.id, t.status, t.priority, t.title
+FROM tasks t
+WHERE ` + readyWhereClause + `
 ORDER BY t.priority ASC, t.created ASC
 `
 

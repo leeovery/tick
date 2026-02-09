@@ -23,42 +23,18 @@ FROM tasks
 GROUP BY priority
 `
 
-// StatsReadyCountQuery counts open tasks matching the ready criteria:
-// status is open, all blockers closed, no open children.
+// StatsReadyCountQuery counts open tasks matching the ready criteria.
+// It reuses readyWhereClause so that the definition stays in one place.
 const StatsReadyCountQuery = `
 SELECT COUNT(*) FROM tasks t
-WHERE t.status = 'open'
-  AND NOT EXISTS (
-    SELECT 1 FROM dependencies d
-    JOIN tasks blocker ON blocker.id = d.blocked_by
-    WHERE d.task_id = t.id
-      AND blocker.status NOT IN ('done', 'cancelled')
-  )
-  AND NOT EXISTS (
-    SELECT 1 FROM tasks child
-    WHERE child.parent = t.id
-      AND child.status IN ('open', 'in_progress')
-  )
+WHERE ` + readyWhereClause + `
 `
 
-// StatsBlockedCountQuery counts open tasks that are NOT ready: they have an
-// unclosed blocker or open/in_progress children.
+// StatsBlockedCountQuery counts open tasks that are NOT ready.
+// It reuses blockedWhereClause so that the definition stays in one place.
 const StatsBlockedCountQuery = `
 SELECT COUNT(*) FROM tasks t
-WHERE t.status = 'open'
-  AND (
-    EXISTS (
-      SELECT 1 FROM dependencies d
-      JOIN tasks blocker ON blocker.id = d.blocked_by
-      WHERE d.task_id = t.id
-        AND blocker.status NOT IN ('done', 'cancelled')
-    )
-    OR EXISTS (
-      SELECT 1 FROM tasks child
-      WHERE child.parent = t.id
-        AND child.status IN ('open', 'in_progress')
-    )
-  )
+WHERE ` + blockedWhereClause + `
 `
 
 // runStats implements the "tick stats" command. It queries SQLite for counts
