@@ -105,6 +105,7 @@ approved_at: 2026-01-30
 - [ ] `tick ready` returns only tasks that are open, unblocked, and have no open children
 - [ ] `tick blocked` returns open tasks that are not ready
 - [ ] `tick list` supports --ready, --blocked, --status, --priority filters
+- [ ] `tick list --parent <id>` scopes to descendants of the specified task (recursive)
 - [ ] Cancelled tasks unblock their dependents
 
 #### Tasks

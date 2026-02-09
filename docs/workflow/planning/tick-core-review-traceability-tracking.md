@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-09
 phase: Traceability Review
 topic: tick-core
@@ -21,5 +21,5 @@ Phase 3 acceptance criteria lists `tick list` supports `--ready, --blocked, --st
 **Proposed Fix**:
 Add acceptance criterion to Phase 3.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Added acceptance criterion to Phase 3
