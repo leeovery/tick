@@ -62,17 +62,18 @@ func Run(args []string, workDir string, stdout, stderr io.Writer, isTTY bool) in
 
 // commands maps subcommand names to their handler functions.
 var commands = map[string]func(*Context) error{
-	"init":   runInit,
-	"create": runCreate,
-	"update": runUpdate,
-	"list":   runList,
-	"show":   runShow,
-	"start":  runTransition("start"),
-	"done":   runTransition("done"),
-	"cancel": runTransition("cancel"),
-	"reopen": runTransition("reopen"),
-	"dep":    runDep,
-	"ready":  runReady,
+	"init":    runInit,
+	"create":  runCreate,
+	"update":  runUpdate,
+	"list":    runList,
+	"show":    runShow,
+	"start":   runTransition("start"),
+	"done":    runTransition("done"),
+	"cancel":  runTransition("cancel"),
+	"reopen":  runTransition("reopen"),
+	"dep":     runDep,
+	"ready":   runReady,
+	"blocked": runBlocked,
 }
 
 // parseArgs parses global flags from args and returns the context, subcommand
