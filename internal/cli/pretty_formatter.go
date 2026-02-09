@@ -14,13 +14,8 @@ type PrettyFormatter struct{}
 
 // FormatTaskList renders a list of tasks as an aligned column table with
 // a header row. Dynamic column widths adapt to data. Empty lists produce
-// "No tasks found." with no headers. Data must be []TaskRow.
-func (f *PrettyFormatter) FormatTaskList(w io.Writer, data interface{}) error {
-	rows, ok := data.([]TaskRow)
-	if !ok {
-		return fmt.Errorf("FormatTaskList: expected []TaskRow, got %T", data)
-	}
-
+// "No tasks found." with no headers.
+func (f *PrettyFormatter) FormatTaskList(w io.Writer, rows []TaskRow) error {
 	if len(rows) == 0 {
 		_, err := fmt.Fprintln(w, "No tasks found.")
 		return err
@@ -66,13 +61,8 @@ func (f *PrettyFormatter) FormatTaskList(w io.Writer, data interface{}) error {
 
 // FormatTaskDetail renders full details of a single task as key-value pairs
 // with aligned labels. Empty sections (blocked by, children, description)
-// are omitted entirely. Data must be *showData.
-func (f *PrettyFormatter) FormatTaskDetail(w io.Writer, data interface{}) error {
-	d, ok := data.(*showData)
-	if !ok {
-		return fmt.Errorf("FormatTaskDetail: expected *showData, got %T", data)
-	}
-
+// are omitted entirely.
+func (f *PrettyFormatter) FormatTaskDetail(w io.Writer, d *showData) error {
 	// Base fields with aligned labels (10-char label column).
 	fmt.Fprintf(w, "%-10s%s\n", "ID:", d.id)
 	fmt.Fprintf(w, "%-10s%s\n", "Title:", d.title)
@@ -125,26 +115,18 @@ func (f *PrettyFormatter) FormatTaskDetail(w io.Writer, data interface{}) error 
 }
 
 // FormatTransition renders a status transition result as plain text.
-// Data must be *TransitionData.
-func (f *PrettyFormatter) FormatTransition(w io.Writer, data interface{}) error {
+func (f *PrettyFormatter) FormatTransition(w io.Writer, data *TransitionData) error {
 	return formatTransitionText(w, data)
 }
 
 // FormatDepChange renders a dependency change confirmation as plain text.
-// Data must be *DepChangeData.
-func (f *PrettyFormatter) FormatDepChange(w io.Writer, data interface{}) error {
+func (f *PrettyFormatter) FormatDepChange(w io.Writer, data *DepChangeData) error {
 	return formatDepChangeText(w, data)
 }
 
 // FormatStats renders task statistics in three groups: total, status/workflow
 // breakdown, and priority counts with P0-P4 labels. Numbers are right-aligned.
-// Data must be *StatsData.
-func (f *PrettyFormatter) FormatStats(w io.Writer, data interface{}) error {
-	d, ok := data.(*StatsData)
-	if !ok {
-		return fmt.Errorf("FormatStats: expected *StatsData, got %T", data)
-	}
-
+func (f *PrettyFormatter) FormatStats(w io.Writer, d *StatsData) error {
 	// Compute number width for summary group (Total + Status + Workflow).
 	summaryNums := []int{d.Total, d.Open, d.InProgress, d.Done, d.Cancelled, d.Ready, d.Blocked}
 	summaryNumW := numWidth(summaryNums)

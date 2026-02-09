@@ -62,13 +62,7 @@ type toonListWrapper struct {
 type ToonFormatter struct{}
 
 // FormatTaskList renders a list of tasks in TOON tabular format.
-// Data must be []TaskRow.
-func (f *ToonFormatter) FormatTaskList(w io.Writer, data interface{}) error {
-	rows, ok := data.([]TaskRow)
-	if !ok {
-		return fmt.Errorf("FormatTaskList: expected []TaskRow, got %T", data)
-	}
-
+func (f *ToonFormatter) FormatTaskList(w io.Writer, rows []TaskRow) error {
 	if len(rows) == 0 {
 		_, err := fmt.Fprint(w, "tasks[0]{id,title,status,priority}:\n")
 		return err
@@ -89,13 +83,8 @@ func (f *ToonFormatter) FormatTaskList(w io.Writer, data interface{}) error {
 }
 
 // FormatTaskDetail renders full details of a single task in TOON multi-section
-// format. Data must be *showData.
-func (f *ToonFormatter) FormatTaskDetail(w io.Writer, data interface{}) error {
-	d, ok := data.(*showData)
-	if !ok {
-		return fmt.Errorf("FormatTaskDetail: expected *showData, got %T", data)
-	}
-
+// format.
+func (f *ToonFormatter) FormatTaskDetail(w io.Writer, d *showData) error {
 	// Build dynamic schema and values for task section.
 	schema := []string{"id", "title", "status", "priority"}
 	values := []string{
@@ -161,25 +150,18 @@ func (f *ToonFormatter) FormatTaskDetail(w io.Writer, data interface{}) error {
 }
 
 // FormatTransition renders a status transition result as plain text.
-// Data must be *TransitionData.
-func (f *ToonFormatter) FormatTransition(w io.Writer, data interface{}) error {
+func (f *ToonFormatter) FormatTransition(w io.Writer, data *TransitionData) error {
 	return formatTransitionText(w, data)
 }
 
 // FormatDepChange renders a dependency change confirmation as plain text.
-// Data must be *DepChangeData.
-func (f *ToonFormatter) FormatDepChange(w io.Writer, data interface{}) error {
+func (f *ToonFormatter) FormatDepChange(w io.Writer, data *DepChangeData) error {
 	return formatDepChangeText(w, data)
 }
 
 // FormatStats renders task statistics in TOON format with a summary section
-// and a 5-row by_priority section. Data must be *StatsData.
-func (f *ToonFormatter) FormatStats(w io.Writer, data interface{}) error {
-	d, ok := data.(*StatsData)
-	if !ok {
-		return fmt.Errorf("FormatStats: expected *StatsData, got %T", data)
-	}
-
+// and a 5-row by_priority section.
+func (f *ToonFormatter) FormatStats(w io.Writer, d *StatsData) error {
 	// Write stats summary section.
 	if _, err := fmt.Fprintln(w, "stats{total,open,in_progress,done,cancelled,ready,blocked}:"); err != nil {
 		return err

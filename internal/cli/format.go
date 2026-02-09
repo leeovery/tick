@@ -11,15 +11,15 @@ import (
 // tasks 4-2 through 4-4.
 type Formatter interface {
 	// FormatTaskList renders a list of tasks (for tick list, ready, blocked).
-	FormatTaskList(w io.Writer, data interface{}) error
+	FormatTaskList(w io.Writer, rows []TaskRow) error
 	// FormatTaskDetail renders full details of a single task (for tick show, create, update).
-	FormatTaskDetail(w io.Writer, data interface{}) error
+	FormatTaskDetail(w io.Writer, data *showData) error
 	// FormatTransition renders a status transition result (for tick start, done, cancel, reopen).
-	FormatTransition(w io.Writer, data interface{}) error
+	FormatTransition(w io.Writer, data *TransitionData) error
 	// FormatDepChange renders a dependency change confirmation (for tick dep add/rm).
-	FormatDepChange(w io.Writer, data interface{}) error
+	FormatDepChange(w io.Writer, data *DepChangeData) error
 	// FormatStats renders task statistics (for tick stats).
-	FormatStats(w io.Writer, data interface{}) error
+	FormatStats(w io.Writer, data *StatsData) error
 	// FormatMessage renders a simple text message (for tick init, rebuild, etc.).
 	FormatMessage(w io.Writer, msg string)
 }
@@ -91,32 +91,24 @@ func newFormatter(format OutputFormat) Formatter {
 }
 
 // formatTransitionText writes a plain-text status transition line.
-// Data must be *TransitionData. Shared by ToonFormatter and PrettyFormatter.
-func formatTransitionText(w io.Writer, data interface{}) error {
-	d, ok := data.(*TransitionData)
-	if !ok {
-		return fmt.Errorf("FormatTransition: expected *TransitionData, got %T", data)
-	}
-	_, err := fmt.Fprintf(w, "%s: %s \u2192 %s\n", d.ID, d.OldStatus, d.NewStatus)
+// Shared by ToonFormatter and PrettyFormatter.
+func formatTransitionText(w io.Writer, data *TransitionData) error {
+	_, err := fmt.Fprintf(w, "%s: %s \u2192 %s\n", data.ID, data.OldStatus, data.NewStatus)
 	return err
 }
 
 // formatDepChangeText writes a plain-text dependency change confirmation.
-// Data must be *DepChangeData. Shared by ToonFormatter and PrettyFormatter.
-func formatDepChangeText(w io.Writer, data interface{}) error {
-	d, ok := data.(*DepChangeData)
-	if !ok {
-		return fmt.Errorf("FormatDepChange: expected *DepChangeData, got %T", data)
-	}
-	switch d.Action {
+// Shared by ToonFormatter and PrettyFormatter.
+func formatDepChangeText(w io.Writer, data *DepChangeData) error {
+	switch data.Action {
 	case "added":
-		_, err := fmt.Fprintf(w, "Dependency added: %s blocked by %s\n", d.TaskID, d.BlockedByID)
+		_, err := fmt.Fprintf(w, "Dependency added: %s blocked by %s\n", data.TaskID, data.BlockedByID)
 		return err
 	case "removed":
-		_, err := fmt.Fprintf(w, "Dependency removed: %s no longer blocked by %s\n", d.TaskID, d.BlockedByID)
+		_, err := fmt.Fprintf(w, "Dependency removed: %s no longer blocked by %s\n", data.TaskID, data.BlockedByID)
 		return err
 	default:
-		return fmt.Errorf("FormatDepChange: unknown action %q", d.Action)
+		return fmt.Errorf("FormatDepChange: unknown action %q", data.Action)
 	}
 }
 

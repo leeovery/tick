@@ -99,13 +99,8 @@ func writeJSON(w io.Writer, v interface{}) error {
 }
 
 // FormatTaskList renders a list of tasks as a JSON array.
-// Empty lists produce `[]`, never `null`. Data must be []TaskRow.
-func (f *JSONFormatter) FormatTaskList(w io.Writer, data interface{}) error {
-	rows, ok := data.([]TaskRow)
-	if !ok {
-		return fmt.Errorf("FormatTaskList: expected []TaskRow, got %T", data)
-	}
-
+// Empty lists produce `[]`, never `null`.
+func (f *JSONFormatter) FormatTaskList(w io.Writer, rows []TaskRow) error {
 	// Initialize to empty slice to avoid null in JSON output.
 	items := make([]jsonListItem, 0, len(rows))
 	for _, r := range rows {
@@ -117,13 +112,8 @@ func (f *JSONFormatter) FormatTaskList(w io.Writer, data interface{}) error {
 
 // FormatTaskDetail renders full details of a single task as a JSON object.
 // blocked_by/children are always arrays (never null). parent/closed are omitted
-// when empty. description is always present as a string. Data must be *showData.
-func (f *JSONFormatter) FormatTaskDetail(w io.Writer, data interface{}) error {
-	d, ok := data.(*showData)
-	if !ok {
-		return fmt.Errorf("FormatTaskDetail: expected *showData, got %T", data)
-	}
-
+// when empty. description is always present as a string.
+func (f *JSONFormatter) FormatTaskDetail(w io.Writer, d *showData) error {
 	// Initialize blocked_by to empty slice to ensure [] not null.
 	blockedBy := make([]jsonRelatedTask, 0, len(d.blockedBy))
 	for _, rt := range d.blockedBy {
@@ -162,44 +152,29 @@ func (f *JSONFormatter) FormatTaskDetail(w io.Writer, data interface{}) error {
 }
 
 // FormatTransition renders a status transition result as a JSON object with
-// id, from, and to keys. Data must be *TransitionData.
-func (f *JSONFormatter) FormatTransition(w io.Writer, data interface{}) error {
-	d, ok := data.(*TransitionData)
-	if !ok {
-		return fmt.Errorf("FormatTransition: expected *TransitionData, got %T", data)
-	}
-
+// id, from, and to keys.
+func (f *JSONFormatter) FormatTransition(w io.Writer, data *TransitionData) error {
 	return writeJSON(w, jsonTransition{
-		ID:   d.ID,
-		From: d.OldStatus,
-		To:   d.NewStatus,
+		ID:   data.ID,
+		From: data.OldStatus,
+		To:   data.NewStatus,
 	})
 }
 
 // FormatDepChange renders a dependency change confirmation as a JSON object
-// with action, task_id, and blocked_by keys. Data must be *DepChangeData.
-func (f *JSONFormatter) FormatDepChange(w io.Writer, data interface{}) error {
-	d, ok := data.(*DepChangeData)
-	if !ok {
-		return fmt.Errorf("FormatDepChange: expected *DepChangeData, got %T", data)
-	}
-
+// with action, task_id, and blocked_by keys.
+func (f *JSONFormatter) FormatDepChange(w io.Writer, data *DepChangeData) error {
 	return writeJSON(w, jsonDepChange{
-		Action:    d.Action,
-		TaskID:    d.TaskID,
-		BlockedBy: d.BlockedByID,
+		Action:    data.Action,
+		TaskID:    data.TaskID,
+		BlockedBy: data.BlockedByID,
 	})
 }
 
 // FormatStats renders task statistics as a nested JSON object with total,
 // by_status, workflow, and by_priority sections. by_priority always contains
-// 5 entries (P0-P4). Data must be *StatsData.
-func (f *JSONFormatter) FormatStats(w io.Writer, data interface{}) error {
-	d, ok := data.(*StatsData)
-	if !ok {
-		return fmt.Errorf("FormatStats: expected *StatsData, got %T", data)
-	}
-
+// 5 entries (P0-P4).
+func (f *JSONFormatter) FormatStats(w io.Writer, d *StatsData) error {
 	byPriority := make([]jsonPriorityEntry, 5)
 	for i := 0; i < 5; i++ {
 		byPriority[i] = jsonPriorityEntry{
