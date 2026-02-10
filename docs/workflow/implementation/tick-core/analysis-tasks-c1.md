@@ -6,7 +6,7 @@ total_proposed: 7
 # Analysis Tasks: Tick Core (Cycle 1)
 
 ## Task 1: Add dependency validation to create and update --blocked-by/--blocks
-status: pending
+status: approved
 severity: high
 sources: standards
 
@@ -40,7 +40,7 @@ sources: standards
 - Test that valid dependencies through create --blocked-by and --blocks still work correctly
 
 ## Task 2: Move rebuild logic behind Store abstraction
-status: pending
+status: approved
 severity: high
 sources: architecture
 
@@ -70,7 +70,7 @@ sources: architecture
 - Test that RunRebuild integration still produces correct output
 
 ## Task 3: Consolidate cache freshness/recovery logic
-status: pending
+status: approved
 severity: high
 sources: duplication, architecture
 
@@ -100,7 +100,7 @@ sources: duplication, architecture
 - Test Store handles freshness check errors (corrupted metadata)
 
 ## Task 4: Consolidate formatter duplication and fix Unicode arrow
-status: pending
+status: approved
 severity: medium
 sources: duplication, standards
 
@@ -131,7 +131,7 @@ sources: duplication, standards
 - Test that all three formatters produce consistent transition output
 
 ## Task 5: Extract shared helpers for --blocks application and ID parsing
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -163,7 +163,7 @@ sources: duplication
 - Test applyBlocks with non-existent blockIDs (no-op)
 
 ## Task 6: Add end-to-end workflow integration test
-status: pending
+status: approved
 severity: medium
 sources: architecture
 
@@ -198,7 +198,7 @@ sources: architecture
 - The task itself is a test -- one comprehensive integration test covering the full workflow
 
 ## Task 7: Add explanatory second line to child-blocked-by-parent error
-status: pending
+status: approved
 severity: low
 sources: standards
 
