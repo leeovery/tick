@@ -52,10 +52,26 @@ func RunShow(dir string, quiet bool, args []string, stdout io.Writer) error {
 	}
 	defer store.Close()
 
+	data, err := queryShowData(store, id)
+	if err != nil {
+		return err
+	}
+
+	if quiet {
+		fmt.Fprintln(stdout, data.id)
+		return nil
+	}
+
+	printShowOutput(stdout, data)
+	return nil
+}
+
+// queryShowData queries a task by ID from SQLite and returns its full details
+// including blocked_by, children, and parent context.
+func queryShowData(store *storage.Store, id string) (showData, error) {
 	var data showData
 
-	err = store.Query(func(db *sql.DB) error {
-		// Query the task itself.
+	err := store.Query(func(db *sql.DB) error {
 		var descPtr, parentPtr, closedPtr *string
 		err := db.QueryRow(
 			`SELECT id, title, status, priority, description, parent, created, updated, closed FROM tasks WHERE id = ?`,
@@ -128,17 +144,8 @@ func RunShow(dir string, quiet bool, args []string, stdout io.Writer) error {
 		}
 		return childRows.Err()
 	})
-	if err != nil {
-		return err
-	}
 
-	if quiet {
-		fmt.Fprintln(stdout, data.id)
-		return nil
-	}
-
-	printShowOutput(stdout, data)
-	return nil
+	return data, err
 }
 
 // printShowOutput renders the show command output in key-value format.

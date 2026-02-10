@@ -49,6 +49,8 @@ func (a *App) Run(args []string) int {
 		err = a.handleList(flags)
 	case "show":
 		err = a.handleShow(flags, subArgs)
+	case "update":
+		err = a.handleUpdate(flags, subArgs)
 	case "start", "done", "cancel", "reopen":
 		err = a.handleTransition(subcmd, flags, subArgs)
 	default:
@@ -97,6 +99,15 @@ func (a *App) handleShow(flags globalFlags, subArgs []string) error {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 	return RunShow(dir, flags.quiet, subArgs, a.Stdout)
+}
+
+// handleUpdate implements the update subcommand.
+func (a *App) handleUpdate(flags globalFlags, subArgs []string) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunUpdate(dir, flags.quiet, subArgs, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
