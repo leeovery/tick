@@ -6,7 +6,7 @@ Reusable instructions for running a deep task-by-task code comparison of tick-co
 
 ## Prerequisites
 
-1. All implementation branches must be complete (23 tasks each)
+1. All implementation branches must be complete (24 comparable tasks each through Phase 5)
 2. Worktrees must be set up for each version being compared
 3. The `analysis/` directory must exist with `task-reports/` and `phase-reports/` subdirs
 4. Existing reports from prior rounds (round-0, round-1, round-2) do NOT need to be regenerated — they are stable baselines
@@ -63,7 +63,7 @@ Each layer does its OWN code analysis at the appropriate scope:
 
 ---
 
-## Step 1: Task-Level Analysis (23 agents, 8 batches of 3)
+## Step 1: Task-Level Analysis (24 agents, 8 batches of 3)
 
 Run 3 agents in parallel per batch. Wait for all 3 to complete before starting the next batch.
 
@@ -198,9 +198,9 @@ Use this structure:
 | 3 | tick-core-1-7, tick-core-2-1, tick-core-2-2 | 3 |
 | 4 | tick-core-2-3, tick-core-3-1, tick-core-3-2 | 3 |
 | 5 | tick-core-3-3, tick-core-3-4, tick-core-3-5 | 3 |
-| 6 | tick-core-4-1, tick-core-4-2, tick-core-4-3 | 3 |
-| 7 | tick-core-4-4, tick-core-4-5, tick-core-4-6 | 3 |
-| 8 | tick-core-5-1, tick-core-5-2 | 2 |
+| 6 | tick-core-3-6, tick-core-4-1, tick-core-4-2 | 3 |
+| 7 | tick-core-4-3, tick-core-4-4, tick-core-4-5 | 3 |
+| 8 | tick-core-4-6, tick-core-5-1, tick-core-5-2 | 3 |
 
 **After each batch**: Verify all reports were written before proceeding.
 
@@ -322,7 +322,61 @@ Additional V5 commits (not per-task):
 
 ### V6 Commit Mapping
 
-_(Fill in after V6 implementation by running: `git log implementation-v6 --oneline | grep "impl(tick-core)"`)_
+| Task | Commit |
+|------|--------|
+| 1-1 | 6a53c74 |
+| 1-2 | 4278ba0 |
+| 1-3 | 447e040 |
+| 1-4 | 23e0dc0 |
+| 1-5 | 779f0be |
+| 1-6 | 0d26e4b |
+| 1-7 | 72b9e9e |
+| 2-1 | f1238e9 |
+| 2-2 | 12f1739 |
+| 2-3 | 66a2481 |
+| 3-1 | e5ef38e |
+| 3-2 | 865ee65 |
+| 3-3 | 8446512 |
+| 3-4 | 4a3317b |
+| 3-5 | f0f3f3e |
+| 3-6 | 7e94be3 |
+| 4-1 | a85eaba |
+| 4-2 | 627ea36 |
+| 4-3 | c77fa60 |
+| 4-4 | 7f72044 |
+| 4-5 | 26de7e1 |
+| 4-6 | 7647a8a |
+| 5-1 | f011105 |
+| 5-2 | 9bb6b8c |
+
+Additional V6 commits (not per-task):
+| Description | Commit |
+|-------------|--------|
+| Pre-analysis checkpoint 1 | 9577922 |
+| Analysis cycle 1 findings | 6004368 |
+| Analysis phase 6 added | e1787c2 |
+| T6-1: Dependency validation | 414873f |
+| T6-2: Move rebuild behind Store | dce7d58 |
+| T6-3: Consolidate cache logic | bce28c3 |
+| T6-4: Formatter duplication | 0f8aed7 |
+| T6-5: Shared helpers for blocks/ID | 33411d5 |
+| T6-6: E2E workflow test | 04ba95f |
+| T6-7: Child-blocked-by-parent error msg | f51c7b7 |
+| Pre-analysis checkpoint 2 | 85f0b8d |
+| Analysis cycle 2 findings | fb9fdd5 |
+| Analysis phase 7 added | 5bde51e |
+| T7-1: Shared ready-query SQL | 7f1a3c7 |
+| T7-2: Relationship context in create | 687ef3a |
+| T7-3: Store-opening boilerplate | f407ecb |
+| T7-4: Remove dead VerboseLog | 25c7f71 |
+| T7-5: Consolidate relatedTask struct | 630779b |
+| Pre-analysis checkpoint 3 | 401051f |
+| Analysis cycle 3 findings | e31c46e |
+| Analysis phase 8 added | 8c582f9 |
+| T8-1: Prevent duplicate blocked_by | 05a8e7c |
+| T8-2: Extract post-mutation helper | 53c8fbc |
+| Analysis cycle 4 (no findings) | a8d0be6 |
+| Complete implementation | 799cca2 |
 
 ---
 
@@ -407,7 +461,7 @@ You are producing the definitive synthesis comparing V6 against V5 (the current 
 implementation) of a Go task tracker.
 
 You have access to:
-- 23 V6-vs-V5 task reports in /Users/leeovery/Code/tick/analysis/$ROUND/task-reports/
+- 24 V6-vs-V5 task reports in /Users/leeovery/Code/tick/analysis/$ROUND/task-reports/
 - 5 V6-vs-V5 phase reports in /Users/leeovery/Code/tick/analysis/$ROUND/phase-reports/
 - Prior round syntheses at /Users/leeovery/Code/tick/analysis/round-{1,2,3}/final-synthesis.md
 - The analysis log at /Users/leeovery/Code/tick/analysis/analysis-log.md
@@ -482,11 +536,11 @@ After the final synthesis is written, update these files to reflect the complete
 
 | Layer | Agents | Batches | Output |
 |-------|--------|---------|--------|
-| Task analysis | 23 | 8 | 23 task reports in `$ROUND/task-reports/` |
+| Task analysis | 24 | 8 | 24 task reports in `$ROUND/task-reports/` |
 | Phase analysis | 5 | 2 | 5 phase reports in `$ROUND/phase-reports/` |
 | Final synthesis | 1 | 1 | `$ROUND/final-synthesis.md` |
 | Tracking updates | — | — | `index.md`, `analysis-log.md`, `analysis-playbook.md` |
-| **Total** | **29** | **11+1** | **29 files + tracking updates** |
+| **Total** | **30** | **11+1** | **30 files + tracking updates** |
 
 ---
 
