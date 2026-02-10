@@ -445,41 +445,56 @@ func TestTTYDetection(t *testing.T) {
 		defer r.Close()
 		defer w.Close()
 
-		if IsTerminal(w) {
+		if DetectTTY(w) {
 			t.Error("pipe should not be detected as TTY")
 		}
 	})
 
-	t.Run("it defaults to TOON when not TTY", func(t *testing.T) {
-		format := ResolveFormat(globalFlags{}, false)
-		if format != FormatTOON {
-			t.Errorf("format = %d, want FormatTOON (%d)", format, FormatTOON)
+	t.Run("it defaults to Toon when not TTY", func(t *testing.T) {
+		format, err := ResolveFormat(globalFlags{}, false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if format != FormatToon {
+			t.Errorf("format = %d, want FormatToon (%d)", format, FormatToon)
 		}
 	})
 
-	t.Run("it defaults to human-readable when TTY", func(t *testing.T) {
-		format := ResolveFormat(globalFlags{}, true)
-		if format != FormatHuman {
-			t.Errorf("format = %d, want FormatHuman (%d)", format, FormatHuman)
+	t.Run("it defaults to Pretty when TTY", func(t *testing.T) {
+		format, err := ResolveFormat(globalFlags{}, true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if format != FormatPretty {
+			t.Errorf("format = %d, want FormatPretty (%d)", format, FormatPretty)
 		}
 	})
 
 	t.Run("it overrides with --toon flag", func(t *testing.T) {
-		format := ResolveFormat(globalFlags{toon: true}, true)
-		if format != FormatTOON {
-			t.Errorf("format = %d, want FormatTOON (%d)", format, FormatTOON)
+		format, err := ResolveFormat(globalFlags{toon: true}, true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if format != FormatToon {
+			t.Errorf("format = %d, want FormatToon (%d)", format, FormatToon)
 		}
 	})
 
 	t.Run("it overrides with --pretty flag", func(t *testing.T) {
-		format := ResolveFormat(globalFlags{pretty: true}, false)
-		if format != FormatHuman {
-			t.Errorf("format = %d, want FormatHuman (%d)", format, FormatHuman)
+		format, err := ResolveFormat(globalFlags{pretty: true}, false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if format != FormatPretty {
+			t.Errorf("format = %d, want FormatPretty (%d)", format, FormatPretty)
 		}
 	})
 
 	t.Run("it overrides with --json flag", func(t *testing.T) {
-		format := ResolveFormat(globalFlags{json: true}, true)
+		format, err := ResolveFormat(globalFlags{json: true}, true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if format != FormatJSON {
 			t.Errorf("format = %d, want FormatJSON (%d)", format, FormatJSON)
 		}

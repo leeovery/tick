@@ -3,20 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
-)
-
-// OutputFormat represents the selected output format for CLI responses.
-type OutputFormat int
-
-const (
-	// FormatHuman is the human-readable table output for terminals.
-	FormatHuman OutputFormat = iota
-	// FormatTOON is the token-oriented format for agent consumption.
-	FormatTOON
-	// FormatJSON is the standard JSON output format.
-	FormatJSON
 )
 
 // App is the top-level CLI application, testable via injected writers and working directory.
@@ -39,7 +26,13 @@ func (a *App) Run(args []string) int {
 		return 0
 	}
 
-	var err error
+	// Validate format flags before dispatch.
+	_, err := NewFormatConfig(flags, a.IsTTY)
+	if err != nil {
+		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
+		return 1
+	}
+
 	switch subcmd {
 	case "init":
 		err = a.handleInit(flags, subArgs)
@@ -219,30 +212,4 @@ func applyGlobalFlag(flags *globalFlags, arg string) bool {
 		return false
 	}
 	return true
-}
-
-// IsTerminal checks if the given *os.File is connected to a terminal (TTY).
-func IsTerminal(f *os.File) bool {
-	stat, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	return stat.Mode()&os.ModeCharDevice != 0
-}
-
-// ResolveFormat determines the output format based on flags and TTY detection.
-func ResolveFormat(flags globalFlags, isTTY bool) OutputFormat {
-	if flags.toon {
-		return FormatTOON
-	}
-	if flags.pretty {
-		return FormatHuman
-	}
-	if flags.json {
-		return FormatJSON
-	}
-	if isTTY {
-		return FormatHuman
-	}
-	return FormatTOON
 }

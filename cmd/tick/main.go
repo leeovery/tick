@@ -12,7 +12,7 @@ func main() {
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 		Getwd:  os.Getwd,
-		IsTTY:  cli.IsTerminal(os.Stdout),
+		IsTTY:  cli.DetectTTY(os.Stdout),
 	}
 	os.Exit(app.Run(os.Args))
 }
