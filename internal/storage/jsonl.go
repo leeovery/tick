@@ -1,4 +1,4 @@
-// Package storage provides JSONL persistence for Tick tasks with atomic writes.
+// Package storage provides JSONL persistence and SQLite cache management for Tick tasks.
 package storage
 
 import (
