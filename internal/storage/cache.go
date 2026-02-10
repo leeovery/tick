@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"log"
-	"os"
 
 	"github.com/leeovery/tick/internal/task"
 	_ "github.com/mattn/go-sqlite3"
@@ -170,42 +168,6 @@ func (c *Cache) IsFresh(rawJSONL []byte) (bool, error) {
 
 	currentHash := computeHash(rawJSONL)
 	return storedHash == currentHash, nil
-}
-
-// EnsureFresh checks if the cache is up-to-date with the given JSONL content and tasks.
-// If stale (or on any error), it rebuilds the cache. If fresh, it no-ops.
-func EnsureFresh(dbPath string, rawJSONL []byte, tasks []task.Task) (*Cache, error) {
-	cache, err := OpenCache(dbPath)
-	if err != nil {
-		// Cache file might be corrupted — delete and recreate.
-		log.Printf("warning: cache open failed, recreating: %v", err)
-		os.Remove(dbPath)
-		cache, err = OpenCache(dbPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to recreate cache: %w", err)
-		}
-	}
-
-	fresh, err := cache.IsFresh(rawJSONL)
-	if err != nil {
-		// Query error — corrupted schema. Delete and recreate.
-		log.Printf("warning: cache freshness check failed, recreating: %v", err)
-		cache.Close()
-		os.Remove(dbPath)
-		cache, err = OpenCache(dbPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to recreate cache after corruption: %w", err)
-		}
-		fresh = false
-	}
-
-	if !fresh {
-		if err := cache.Rebuild(tasks, rawJSONL); err != nil {
-			return nil, fmt.Errorf("failed to rebuild cache: %w", err)
-		}
-	}
-
-	return cache, nil
 }
 
 // computeHash returns the hex-encoded SHA256 hash of the given data.

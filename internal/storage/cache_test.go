@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -341,80 +340,6 @@ func TestCacheFreshness(t *testing.T) {
 		}
 		if fresh {
 			t.Error("expected cache to be stale, got fresh")
-		}
-	})
-}
-
-func TestEnsureFresh(t *testing.T) {
-	t.Run("it rebuilds from scratch when cache.db is missing", func(t *testing.T) {
-		dir := t.TempDir()
-		dbPath := filepath.Join(dir, "cache.db")
-
-		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
-		tasks := []task.Task{
-			{
-				ID:       "tick-a1b2c3",
-				Title:    "Test task",
-				Status:   task.StatusOpen,
-				Priority: 2,
-				Created:  created,
-				Updated:  created,
-			},
-		}
-		rawJSONL := []byte(`{"id":"tick-a1b2c3","title":"Test task"}`)
-
-		// cache.db does not exist yet — EnsureFresh should create it.
-		cache, err := EnsureFresh(dbPath, rawJSONL, tasks)
-		if err != nil {
-			t.Fatalf("EnsureFresh returned error: %v", err)
-		}
-		defer cache.Close()
-
-		// Verify task was inserted.
-		var count int
-		if err := cache.DB().QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); err != nil {
-			t.Fatalf("querying tasks count: %v", err)
-		}
-		if count != 1 {
-			t.Errorf("expected 1 task in cache, got %d", count)
-		}
-	})
-
-	t.Run("it deletes and recreates cache.db when corrupted", func(t *testing.T) {
-		dir := t.TempDir()
-		dbPath := filepath.Join(dir, "cache.db")
-
-		// Write garbage data to simulate corruption.
-		if err := os.WriteFile(dbPath, []byte("this is not a sqlite database"), 0644); err != nil {
-			t.Fatalf("failed to write corrupted file: %v", err)
-		}
-
-		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
-		tasks := []task.Task{
-			{
-				ID:       "tick-a1b2c3",
-				Title:    "Test task",
-				Status:   task.StatusOpen,
-				Priority: 2,
-				Created:  created,
-				Updated:  created,
-			},
-		}
-		rawJSONL := []byte(`{"id":"tick-a1b2c3","title":"Test task"}`)
-
-		cache, err := EnsureFresh(dbPath, rawJSONL, tasks)
-		if err != nil {
-			t.Fatalf("EnsureFresh returned error for corrupted cache: %v", err)
-		}
-		defer cache.Close()
-
-		// Verify task was inserted into the fresh cache.
-		var count int
-		if err := cache.DB().QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); err != nil {
-			t.Fatalf("querying tasks count: %v", err)
-		}
-		if count != 1 {
-			t.Errorf("expected 1 task in cache, got %d", count)
 		}
 	})
 }

@@ -738,6 +738,233 @@ func TestStoreRebuild(t *testing.T) {
 	})
 }
 
+func TestStoreCacheFreshnessRecovery(t *testing.T) {
+	t.Run("it rebuilds automatically when cache.db is missing", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-aaaaaa",
+				Title:    "Test task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		// Ensure no cache.db exists before Store is used.
+		cachePath := filepath.Join(tickDir, "cache.db")
+		os.Remove(cachePath)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		// Query should trigger ensureFresh which creates the cache from scratch.
+		err = store.Query(func(db *sql.DB) error {
+			var count int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); qErr != nil {
+				return qErr
+			}
+			if count != 1 {
+				t.Errorf("expected 1 task in cache, got %d", count)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query returned error: %v", err)
+		}
+	})
+
+	t.Run("it deletes and rebuilds when cache.db is corrupted", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-aaaaaa",
+				Title:    "Test task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		// Write garbage data to cache.db to simulate corruption.
+		cachePath := filepath.Join(tickDir, "cache.db")
+		if wErr := os.WriteFile(cachePath, []byte("this is not a sqlite database"), 0644); wErr != nil {
+			t.Fatalf("failed to write corrupted file: %v", wErr)
+		}
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		// Query should recover from corruption by deleting and recreating cache.
+		err = store.Query(func(db *sql.DB) error {
+			var count int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); qErr != nil {
+				return qErr
+			}
+			if count != 1 {
+				t.Errorf("expected 1 task in cache after corruption recovery, got %d", count)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query returned error after corrupted cache: %v", err)
+		}
+	})
+
+	t.Run("it detects stale cache via hash mismatch and rebuilds", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		initialTasks := []task.Task{
+			{
+				ID:       "tick-aaaaaa",
+				Title:    "Original task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		tickDir := setupTickDirWithTasks(t, initialTasks)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		// Prime the cache with initial data.
+		err = store.Query(func(db *sql.DB) error { return nil })
+		if err != nil {
+			t.Fatalf("initial Query returned error: %v", err)
+		}
+
+		// Externally modify JSONL to make the cache stale.
+		updatedTasks := []task.Task{
+			{
+				ID:       "tick-aaaaaa",
+				Title:    "Updated task",
+				Status:   task.StatusDone,
+				Priority: 1,
+				Created:  created,
+				Updated:  created,
+			},
+			{
+				ID:       "tick-bbbbbb",
+				Title:    "New external task",
+				Status:   task.StatusOpen,
+				Priority: 3,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+		if wErr := WriteJSONL(jsonlPath, updatedTasks); wErr != nil {
+			t.Fatalf("failed to write updated JSONL: %v", wErr)
+		}
+
+		// Query should detect hash mismatch and rebuild.
+		err = store.Query(func(db *sql.DB) error {
+			var count int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); qErr != nil {
+				return qErr
+			}
+			if count != 2 {
+				t.Errorf("expected 2 tasks after stale rebuild, got %d", count)
+			}
+
+			var title string
+			if qErr := db.QueryRow("SELECT title FROM tasks WHERE id = ?", "tick-aaaaaa").Scan(&title); qErr != nil {
+				return qErr
+			}
+			if title != "Updated task" {
+				t.Errorf("title = %q, want %q", title, "Updated task")
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query returned error: %v", err)
+		}
+	})
+
+	t.Run("it handles freshness check errors from corrupted metadata", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-aaaaaa",
+				Title:    "Test task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		// Prime the cache so the store has an open cache connection.
+		err = store.Query(func(db *sql.DB) error { return nil })
+		if err != nil {
+			t.Fatalf("initial Query returned error: %v", err)
+		}
+
+		// Corrupt the metadata table by dropping and replacing it with an
+		// incompatible schema. This makes IsFresh fail with a scan error
+		// because the column types no longer match the expected query.
+		// We use the store's own cache DB connection so the corruption
+		// is visible on the next ensureFresh call.
+		cachePath := filepath.Join(tickDir, "cache.db")
+		corruptDB, cErr := sql.Open("sqlite3", cachePath)
+		if cErr != nil {
+			t.Fatalf("failed to open cache for corruption: %v", cErr)
+		}
+		_, cErr = corruptDB.Exec("DROP TABLE metadata; CREATE TABLE metadata (broken INTEGER)")
+		if cErr != nil {
+			t.Fatalf("failed to corrupt metadata table: %v", cErr)
+		}
+		corruptDB.Close()
+
+		// Close the store so it drops the cached connection and will reopen
+		// the corrupted file on next use.
+		store.Close()
+
+		store, err = NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		// Query should recover: IsFresh fails on corrupted metadata,
+		// store deletes cache and recreates it, then rebuilds.
+		err = store.Query(func(db *sql.DB) error {
+			var count int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); qErr != nil {
+				return qErr
+			}
+			if count != 1 {
+				t.Errorf("expected 1 task after metadata corruption recovery, got %d", count)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query returned error after metadata corruption: %v", err)
+		}
+	})
+}
+
 func TestStoreStaleCacheRebuild(t *testing.T) {
 	t.Run("it rebuilds stale cache during write before applying mutation", func(t *testing.T) {
 		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
