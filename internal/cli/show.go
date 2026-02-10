@@ -22,15 +22,8 @@ type showData struct {
 	created     string
 	updated     string
 	closed      string
-	blockedBy   []relatedTask
-	children    []relatedTask
-}
-
-// relatedTask represents a task referenced in blocked_by or children sections.
-type relatedTask struct {
-	id     string
-	title  string
-	status string
+	blockedBy   []RelatedTask
+	children    []RelatedTask
 }
 
 // RunShow executes the show command: queries a single task by ID from SQLite and
@@ -112,8 +105,8 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 		defer depRows.Close()
 
 		for depRows.Next() {
-			var r relatedTask
-			if err := depRows.Scan(&r.id, &r.title, &r.status); err != nil {
+			var r RelatedTask
+			if err := depRows.Scan(&r.ID, &r.Title, &r.Status); err != nil {
 				return fmt.Errorf("failed to scan dependency row: %w", err)
 			}
 			data.blockedBy = append(data.blockedBy, r)
@@ -133,8 +126,8 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 		defer childRows.Close()
 
 		for childRows.Next() {
-			var r relatedTask
-			if err := childRows.Scan(&r.id, &r.title, &r.status); err != nil {
+			var r RelatedTask
+			if err := childRows.Scan(&r.ID, &r.Title, &r.Status); err != nil {
 				return fmt.Errorf("failed to scan child row: %w", err)
 			}
 			data.children = append(data.children, r)
@@ -167,28 +160,10 @@ func showDataToTaskDetail(d showData) TaskDetail {
 		t.Closed = &closedTime
 	}
 
-	var blockedBy []RelatedTask
-	for _, r := range d.blockedBy {
-		blockedBy = append(blockedBy, RelatedTask{
-			ID:     r.id,
-			Title:  r.title,
-			Status: r.status,
-		})
-	}
-
-	var children []RelatedTask
-	for _, r := range d.children {
-		children = append(children, RelatedTask{
-			ID:     r.id,
-			Title:  r.title,
-			Status: r.status,
-		})
-	}
-
 	return TaskDetail{
 		Task:        t,
-		BlockedBy:   blockedBy,
-		Children:    children,
+		BlockedBy:   d.blockedBy,
+		Children:    d.children,
 		ParentTitle: d.parentTitle,
 	}
 }

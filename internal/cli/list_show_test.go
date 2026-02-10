@@ -457,4 +457,60 @@ func TestShow(t *testing.T) {
 			t.Errorf("outputs differ: first = %q, second = %q", stdout1, stdout2)
 		}
 	})
+
+	t.Run("queryShowData populates RelatedTask fields for blockers and children", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-parent", Title: "Parent task", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
+			{ID: "tick-child1", Title: "Child one", Status: task.StatusInProgress, Priority: 2, Parent: "tick-parent", Created: now, Updated: now},
+			{ID: "tick-blocker", Title: "Blocker task", Status: task.StatusDone, Priority: 1, Created: now, Updated: now},
+			{ID: "tick-blocked", Title: "Blocked task", Status: task.StatusOpen, Priority: 1, BlockedBy: []string{"tick-blocker"}, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		fc := FormatConfig{Format: FormatPretty}
+		store, err := openStore(dir, fc)
+		if err != nil {
+			t.Fatalf("openStore failed: %v", err)
+		}
+		defer store.Close()
+
+		// Verify children are populated as RelatedTask with exported fields.
+		parentData, err := queryShowData(store, "tick-parent")
+		if err != nil {
+			t.Fatalf("queryShowData for parent failed: %v", err)
+		}
+		if len(parentData.children) != 1 {
+			t.Fatalf("expected 1 child, got %d", len(parentData.children))
+		}
+		child := parentData.children[0]
+		if child.ID != "tick-child1" {
+			t.Errorf("child.ID = %q, want %q", child.ID, "tick-child1")
+		}
+		if child.Title != "Child one" {
+			t.Errorf("child.Title = %q, want %q", child.Title, "Child one")
+		}
+		if child.Status != "in_progress" {
+			t.Errorf("child.Status = %q, want %q", child.Status, "in_progress")
+		}
+
+		// Verify blockedBy are populated as RelatedTask with exported fields.
+		blockedData, err := queryShowData(store, "tick-blocked")
+		if err != nil {
+			t.Fatalf("queryShowData for blocked task failed: %v", err)
+		}
+		if len(blockedData.blockedBy) != 1 {
+			t.Fatalf("expected 1 blocker, got %d", len(blockedData.blockedBy))
+		}
+		blocker := blockedData.blockedBy[0]
+		if blocker.ID != "tick-blocker" {
+			t.Errorf("blocker.ID = %q, want %q", blocker.ID, "tick-blocker")
+		}
+		if blocker.Title != "Blocker task" {
+			t.Errorf("blocker.Title = %q, want %q", blocker.Title, "Blocker task")
+		}
+		if blocker.Status != "done" {
+			t.Errorf("blocker.Status = %q, want %q", blocker.Status, "done")
+		}
+	})
 }
