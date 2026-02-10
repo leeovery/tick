@@ -55,6 +55,8 @@ func (a *App) Run(args []string) int {
 		err = a.handleTransition(subcmd, flags, subArgs)
 	case "ready":
 		err = a.handleReady(flags)
+	case "blocked":
+		err = a.handleBlocked(flags)
 	case "dep":
 		err = a.handleDep(flags, subArgs)
 	default:
@@ -121,6 +123,15 @@ func (a *App) handleReady(flags globalFlags) error {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 	return RunReady(dir, flags.quiet, a.Stdout)
+}
+
+// handleBlocked implements the blocked subcommand (alias for list --blocked).
+func (a *App) handleBlocked(flags globalFlags) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunBlocked(dir, flags.quiet, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
