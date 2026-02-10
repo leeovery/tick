@@ -11,7 +11,9 @@ import (
 
 // ToonFormatter renders CLI output in TOON (Token-Oriented Object Notation) format,
 // optimized for AI agent consumption with 30-60% token savings over JSON.
-type ToonFormatter struct{}
+type ToonFormatter struct {
+	baseFormatter
+}
 
 // Compile-time interface verification.
 var _ Formatter = (*ToonFormatter)(nil)
@@ -84,19 +86,6 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 	}
 
 	return strings.Join(sections, "\n\n")
-}
-
-// FormatTransition renders a status transition as plain text.
-func (f *ToonFormatter) FormatTransition(id string, oldStatus string, newStatus string) string {
-	return fmt.Sprintf("%s: %s -> %s", id, oldStatus, newStatus)
-}
-
-// FormatDepChange renders a dependency add/remove confirmation as plain text.
-func (f *ToonFormatter) FormatDepChange(action string, taskID string, depID string) string {
-	if action == "removed" {
-		return fmt.Sprintf("Dependency removed: %s no longer blocked by %s", taskID, depID)
-	}
-	return fmt.Sprintf("Dependency added: %s blocked by %s", taskID, depID)
 }
 
 // FormatStats renders task statistics in multi-section TOON format.

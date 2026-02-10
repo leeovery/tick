@@ -312,7 +312,7 @@ func TestToonFormatter(t *testing.T) {
 	t.Run("it formats transition as plain text", func(t *testing.T) {
 		f := &ToonFormatter{}
 		result := f.FormatTransition("tick-a3f2b7", "open", "in_progress")
-		expected := "tick-a3f2b7: open -> in_progress"
+		expected := "tick-a3f2b7: open \u2192 in_progress"
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
 		}

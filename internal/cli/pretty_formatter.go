@@ -11,7 +11,9 @@ const maxListTitleLen = 50
 
 // PrettyFormatter renders CLI output in human-readable aligned-column format
 // for terminal display. No borders, no colors, no icons.
-type PrettyFormatter struct{}
+type PrettyFormatter struct {
+	baseFormatter
+}
 
 // Compile-time interface verification.
 var _ Formatter = (*PrettyFormatter)(nil)
@@ -116,19 +118,6 @@ func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
 	}
 
 	return b.String()
-}
-
-// FormatTransition renders a status transition as plain text.
-func (f *PrettyFormatter) FormatTransition(id string, oldStatus string, newStatus string) string {
-	return fmt.Sprintf("%s: %s -> %s", id, oldStatus, newStatus)
-}
-
-// FormatDepChange renders a dependency add/remove confirmation as plain text.
-func (f *PrettyFormatter) FormatDepChange(action string, taskID string, depID string) string {
-	if action == "removed" {
-		return fmt.Sprintf("Dependency removed: %s no longer blocked by %s", taskID, depID)
-	}
-	return fmt.Sprintf("Dependency added: %s blocked by %s", taskID, depID)
 }
 
 // FormatStats renders task statistics in grouped sections with right-aligned numbers.

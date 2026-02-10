@@ -171,7 +171,7 @@ func TestTransitionCommands(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
 
-		expected := "tick-aaa111: open -> in_progress\n"
+		expected := "tick-aaa111: open \u2192 in_progress\n"
 		if stdout != expected {
 			t.Errorf("stdout = %q, want %q", stdout, expected)
 		}

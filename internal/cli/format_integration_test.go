@@ -91,8 +91,8 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--toon",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					if !strings.Contains(stdout, "tick-aaa111: open -> in_progress") {
-						t.Errorf("toon transition should be 'id: old -> new', got %q", stdout)
+					if !strings.Contains(stdout, "tick-aaa111: open \u2192 in_progress") {
+						t.Errorf("toon transition should be 'id: old \u2192 new', got %q", stdout)
 					}
 				},
 			},
@@ -101,8 +101,8 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--pretty",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					if !strings.Contains(stdout, "tick-aaa111: open -> in_progress") {
-						t.Errorf("pretty transition should be 'id: old -> new', got %q", stdout)
+					if !strings.Contains(stdout, "tick-aaa111: open \u2192 in_progress") {
+						t.Errorf("pretty transition should be 'id: old \u2192 new', got %q", stdout)
 					}
 				},
 			},

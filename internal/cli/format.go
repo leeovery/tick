@@ -119,7 +119,7 @@ type Formatter interface {
 	FormatTaskList(tasks []task.Task) string
 	// FormatTaskDetail renders a single task with full details including related context.
 	FormatTaskDetail(detail TaskDetail) string
-	// FormatTransition renders a status transition (e.g., "open -> in_progress").
+	// FormatTransition renders a status transition (e.g., "open \u2192 in_progress").
 	FormatTransition(id string, oldStatus string, newStatus string) string
 	// FormatDepChange renders a dependency add/remove confirmation.
 	FormatDepChange(action string, taskID string, depID string) string
@@ -127,6 +127,23 @@ type Formatter interface {
 	FormatStats(stats Stats) string
 	// FormatMessage renders a general-purpose message.
 	FormatMessage(msg string) string
+}
+
+// baseFormatter provides shared implementations of FormatTransition and FormatDepChange
+// for text-based formatters (Toon and Pretty). Embedded by ToonFormatter and PrettyFormatter.
+type baseFormatter struct{}
+
+// FormatTransition renders a status transition as plain text with the Unicode right arrow.
+func (b *baseFormatter) FormatTransition(id string, oldStatus string, newStatus string) string {
+	return fmt.Sprintf("%s: %s \u2192 %s", id, oldStatus, newStatus)
+}
+
+// FormatDepChange renders a dependency add/remove confirmation as plain text.
+func (b *baseFormatter) FormatDepChange(action string, taskID string, depID string) string {
+	if action == "removed" {
+		return fmt.Sprintf("Dependency removed: %s no longer blocked by %s", taskID, depID)
+	}
+	return fmt.Sprintf("Dependency added: %s blocked by %s", taskID, depID)
 }
 
 // StubFormatter is a placeholder implementation of Formatter.
