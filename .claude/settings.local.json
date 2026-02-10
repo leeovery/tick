@@ -21,7 +21,18 @@
       "Write(/Users/leeovery/Code/tick/analysis/*)",
       "Glob(/private/tmp/tick-analysis-worktrees/*)",
       "Glob(/Users/leeovery/Code/tick/analysis/*)",
-      "Bash(git worktree:*)"
+      "Bash(git worktree:*)",
+      "Bash(go test:*)",
+      "Bash(gofmt:*)",
+      "Bash(go vet:*)",
+      "Bash(~/go/bin/golangci-lint run:*)",
+      "Bash(~/go/bin/staticcheck:*)",
+      "WebFetch(domain:proxy.golang.org)",
+      "Bash(CGO_ENABLED=1 go get:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go clean:*)",
+      "Bash(go get:*)",
+      "Bash(go build:*)"
     ]
   },
   "sandbox": {
