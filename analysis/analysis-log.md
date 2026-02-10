@@ -4,7 +4,7 @@ Tracking document for the ongoing comparison of tick-core implementations produc
 
 ---
 
-## Current State (Feb 8, 2026)
+## Current State (Feb 10, 2026)
 
 ### What We've Done
 
@@ -22,11 +22,20 @@ Tracking document for the ongoing comparison of tick-core implementations produc
 9. **Final synthesis** — V4 vs V2 definitive comparison (`round-2/final-synthesis.md`)
 10. **Playbook update** — added Skill Compliance and Spec-vs-Convention Conflicts dimensions
 
+**Round 3 (Feb 10)**:
+11. **23 comparable task-level reports** comparing V4 vs V5 (`round-3/task-reports/`)
+12. **8 V5-only task assessments** — 1 extra feature (3-6) + 7 Phase 6 refinements (6-1 through 6-7) (`round-3/task-reports/`)
+13. **5 comparable phase-level reports** for V4 vs V5 (`round-3/phase-reports/`)
+14. **1 V5-only phase assessment** — Phase 6 analysis refinements (`round-3/phase-reports/phase-6.md`)
+15. **Final synthesis** — V5 vs V4 definitive comparison (`round-3/final-synthesis.md`)
+
 ### Key Findings
 
 **Round 1**: V2 wins 21/23 tasks, all 5 phases. V3 wins 1/23 (task 1-5). V1 wins 0/23.
 
 **Round 2**: V4 wins 15/23 tasks, all 5 phases. V2 wins 7/23. 1 close call (1-3).
+
+**Round 3**: V5 wins 16/23 comparable tasks, 3/5 comparable phases. V4 wins 6/23. 1 tie. Plus 8 V5-only tasks all rated Excellent.
 
 **Root cause of V3's regression**: PR #79 (integration context + codebase cohesion) created a "convention gravity well" where V3's task 1-1 made unconventional Go choices (string timestamps, bare error returns, no NewTask factory) that got documented as established patterns in the integration context file. Every subsequent executor faithfully propagated these choices because it was instructed to "match conventions" and the reviewer's cohesion dimension actively enforced consistency with them.
 
@@ -49,7 +58,8 @@ V3's integration context mechanism amplifies whatever direction the first few ta
 | V1 | `implementation-v1` | Pre-#73 (monolithic) | Pre-Feb 2 | 0/23 (vs V2) |
 | V2 | `implementation-v2` | v2.1.3 (PR #73) | Feb 3 | 21/23 (vs V3), 7/23 (vs V4) |
 | V3 | `implementation-v3` | v2.1.5 (PRs #77-80) | Feb 5 | 1/23 (vs V2) |
-| V4 | `implementation-v4` | V2 base + PRs #77/#78/#80 (no #79) | Feb 7-8 | 15/23 (vs V2) |
+| V4 | `implementation-v4` | V2 base + PRs #77/#78/#80 (no #79) | Feb 7-8 | 15/23 (vs V2), 6/23 (vs V5) |
+| V5 | `implementation-v5` | V4 base + analysis refinement phase | Feb 9 | 16/23 (vs V4) + 8 V5-only (all Excellent) |
 
 ### Commit Mapping
 
@@ -61,6 +71,8 @@ All commit SHAs for each version's 23 tasks are documented in the plan that prod
 git worktree add /private/tmp/tick-analysis-worktrees/v1 implementation-v1
 git worktree add /private/tmp/tick-analysis-worktrees/v2 implementation-v2
 git worktree add /private/tmp/tick-analysis-worktrees/v3 implementation-v3
+git worktree add /private/tmp/tick-analysis-worktrees/v4 implementation-v4
+git worktree add /private/tmp/tick-analysis-worktrees/v5 implementation-v5
 ```
 
 ---
@@ -88,6 +100,12 @@ analysis/
     phase-reports/            <- 5 cross-task phase reports
       phase-{N}.md
     final-synthesis.md        <- Definitive V4 vs V2 comparison
+  round-3/                    <- V5 vs V4 (2-way comparison, Feb 10 2026)
+    task-reports/             <- 31 task reports (23 comparable + 8 V5-only)
+      tick-core-{P}-{T}.md
+    phase-reports/            <- 6 phase reports (5 comparable + 1 V5-only)
+      phase-{N}.md
+    final-synthesis.md        <- Definitive V5 vs V4 comparison
 ```
 
 External:
@@ -133,11 +151,39 @@ Round 2 did not evaluate project skill compliance (golang-pro MUST DO/MUST NOT D
 
 ---
 
-## Planned Next Step: V5
+## Completed: V5 (Round 3)
 
-No workflow changes decided yet. Pending further discussion before any decisions are made.
+### What Changed in V5's Workflow
 
-After decisions are finalised, update this section with the chosen approach and run `analysis-playbook.md` with `ROUND="round-3"`, baseline `implementation-v4`.
+V5 built on V4's base (V2 + PRs #77/#78/#80) and added a post-implementation analysis refinement phase. The analysis process identified 7 findings across 4 categories:
+- **Validation gap** (6-1): `create --blocked-by/--blocks` and `update --blocks` bypassed cycle detection
+- **Code duplication** (6-2, 6-3, 6-4): Duplicate SQL WHERE clauses, JSONL parsing, formatter methods
+- **Dead code** (6-5, 6-6): Phantom doctor help entry, unreachable StubFormatter
+- **Type safety** (6-7): 15 `interface{}` formatter parameters replaced with concrete types
+
+V5 also implemented one additional plan task (3-6: parent scoping with --parent flag) not present in the V4 plan.
+
+### Result: V5 Exceeds V4
+
+V5 wins 16/23 comparable tasks, 3/5 comparable phases. The margin is the largest in any round. Key V5 advantages: function-based architecture, DRY helpers, spec-compliant ISO 8601 timestamps, exhaustive write-error handling, and self-correction via Phase 6.
+
+V4's remaining advantages: deeper test assertions (timestamp verification, typed JSON deserialization, exact string matching), correctness invariants (blocked = open - ready), spec-exact error messages with "Error:" prefix, and superior function decomposition in dependency validation.
+
+### The Self-Correction Arc
+
+The most significant finding is V5's `interface{}` Formatter — introduced in Phase 4 as a significant anti-pattern, then systematically eliminated in Phase 6 task 6-7. This demonstrates that V5's workflow can identify and fix its own mistakes, a capability no previous version exhibited at this structural level.
+
+---
+
+## Planned Next Step: V6
+
+V5 is now the baseline. Recommendations from Round 3 synthesis for V6:
+1. Restore V4-level test assertion depth (timestamp verification, typed JSON deserialization, exact string matching)
+2. Enforce spec-exact error messages where spec prescribes them
+3. Keep Phase 6 analysis refinement process (proven beneficial)
+4. Fix FormatMessage error swallowing (return error, don't discard)
+5. Derive correctness invariants where possible (blocked = open - ready)
+6. Mandate compile-time type safety from Phase 4 onward (no interface{} Formatter params)
 
 ---
 

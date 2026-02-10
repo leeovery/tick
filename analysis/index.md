@@ -130,23 +130,60 @@ Earlier, lighter comparison before V3 existed. Superseded by round-1 but preserv
 
 ---
 
-### Round 3: V5 vs V4 (Pending)
+### Round 3: V5 vs V4 (Feb 10, 2026)
 
-2-way comparison. V5 = workflow changes TBD based on V4 implementation review findings. V4 = baseline (current best).
-
-**Status**: Awaiting decisions on V5 workflow changes. After V5 implementation, run the playbook with `ROUND="round-3"` and compare V5 branch against `implementation-v4`.
+2-way comparison. V5 = workflow changes based on V4 implementation review findings + analysis refinement phase. V4 = baseline (current best). **Result: V5 wins 16/23 comparable tasks, 3/5 comparable phases, plus 8 V5-only tasks all rated Excellent.**
 
 | Document | Description |
 |----------|-------------|
-| round-3/final-synthesis.md | _(pending)_ |
+| [round-3/final-synthesis.md](round-3/final-synthesis.md) | **Start here.** Executive summary, full scorecard, workflow validation |
 
-#### Task Reports (23)
+#### Task Reports (23 Comparable + 8 V5-Only)
 
-_(To be generated after V5 implementation)_
+| Task | File | Winner |
+|------|------|--------|
+| 1-1: Task model & ID generation | [tick-core-1-1.md](round-3/task-reports/tick-core-1-1.md) | V5 |
+| 1-2: JSONL storage with atomic writes | [tick-core-1-2.md](round-3/task-reports/tick-core-1-2.md) | V5 |
+| 1-3: SQLite cache with freshness detection | [tick-core-1-3.md](round-3/task-reports/tick-core-1-3.md) | V5 |
+| 1-4: Storage engine with file locking | [tick-core-1-4.md](round-3/task-reports/tick-core-1-4.md) | V5 |
+| 1-5: CLI framework & tick init | [tick-core-1-5.md](round-3/task-reports/tick-core-1-5.md) | V5 |
+| 1-6: tick create command | [tick-core-1-6.md](round-3/task-reports/tick-core-1-6.md) | V4 |
+| 1-7: tick list & tick show commands | [tick-core-1-7.md](round-3/task-reports/tick-core-1-7.md) | V5 |
+| 2-1: Status transition validation | [tick-core-2-1.md](round-3/task-reports/tick-core-2-1.md) | Tie |
+| 2-2: tick start, done, cancel, reopen | [tick-core-2-2.md](round-3/task-reports/tick-core-2-2.md) | V4 |
+| 2-3: tick update command | [tick-core-2-3.md](round-3/task-reports/tick-core-2-3.md) | V5 |
+| 3-1: Dependency validation | [tick-core-3-1.md](round-3/task-reports/tick-core-3-1.md) | V4 |
+| 3-2: tick dep add & tick dep rm | [tick-core-3-2.md](round-3/task-reports/tick-core-3-2.md) | V5 |
+| 3-3: Ready query & tick ready | [tick-core-3-3.md](round-3/task-reports/tick-core-3-3.md) | V5 |
+| 3-4: Blocked query & tick blocked | [tick-core-3-4.md](round-3/task-reports/tick-core-3-4.md) | V4 |
+| 3-5: tick list filter flags | [tick-core-3-5.md](round-3/task-reports/tick-core-3-5.md) | V5 |
+| 3-6: Parent scoping (V5 only) | [tick-core-3-6.md](round-3/task-reports/tick-core-3-6.md) | V5 only (Excellent) |
+| 4-1: Formatter abstraction & TTY | [tick-core-4-1.md](round-3/task-reports/tick-core-4-1.md) | V5 |
+| 4-2: TOON formatter | [tick-core-4-2.md](round-3/task-reports/tick-core-4-2.md) | V5 |
+| 4-3: Human-readable formatter | [tick-core-4-3.md](round-3/task-reports/tick-core-4-3.md) | V5 |
+| 4-4: JSON formatter | [tick-core-4-4.md](round-3/task-reports/tick-core-4-4.md) | V4 |
+| 4-5: Integrate formatters | [tick-core-4-5.md](round-3/task-reports/tick-core-4-5.md) | V5 |
+| 4-6: Verbose output | [tick-core-4-6.md](round-3/task-reports/tick-core-4-6.md) | V5 |
+| 5-1: tick stats command | [tick-core-5-1.md](round-3/task-reports/tick-core-5-1.md) | V4 |
+| 5-2: tick rebuild command | [tick-core-5-2.md](round-3/task-reports/tick-core-5-2.md) | V5 |
+| 6-1: Dependency validation gaps (V5 only) | [tick-core-6-1.md](round-3/task-reports/tick-core-6-1.md) | V5 only (Excellent) |
+| 6-2: Shared ready/blocked SQL (V5 only) | [tick-core-6-2.md](round-3/task-reports/tick-core-6-2.md) | V5 only (Excellent) |
+| 6-3: Consolidate JSONL parsing (V5 only) | [tick-core-6-3.md](round-3/task-reports/tick-core-6-3.md) | V5 only (Excellent) |
+| 6-4: Shared formatter methods (V5 only) | [tick-core-6-4.md](round-3/task-reports/tick-core-6-4.md) | V5 only (Excellent) |
+| 6-5: Remove doctor from help (V5 only) | [tick-core-6-5.md](round-3/task-reports/tick-core-6-5.md) | V5 only (Excellent) |
+| 6-6: Remove dead StubFormatter (V5 only) | [tick-core-6-6.md](round-3/task-reports/tick-core-6-6.md) | V5 only (Excellent) |
+| 6-7: Type-safe formatter params (V5 only) | [tick-core-6-7.md](round-3/task-reports/tick-core-6-7.md) | V5 only (Excellent) |
 
-#### Phase Reports (5)
+#### Phase Reports (5 Comparable + 1 V5-Only)
 
-_(To be generated after V5 implementation)_
+| Phase | File | Winner |
+|-------|------|--------|
+| Phase 1: Walking Skeleton | [phase-1.md](round-3/phase-reports/phase-1.md) | V5 (6/7 tasks) |
+| Phase 2: Task Lifecycle | [phase-2.md](round-3/phase-reports/phase-2.md) | Tie |
+| Phase 3: Dependencies | [phase-3.md](round-3/phase-reports/phase-3.md) | V5 (3/5 tasks) |
+| Phase 4: Output Formats | [phase-4.md](round-3/phase-reports/phase-4.md) | V5 (5/6 tasks) |
+| Phase 5: Stats & Cache | [phase-5.md](round-3/phase-reports/phase-5.md) | Tie |
+| Phase 6: Analysis Refinements | [phase-6.md](round-3/phase-reports/phase-6.md) | V5 only (Excellent) |
 
 ---
 
@@ -191,6 +228,15 @@ _(To be generated after V5 implementation)_
 | PR #79: Prescriptive exploration | No | Attention dilution |
 | PR #79: Plan-file access for executor | No | Over-engineering pressure |
 | PR #79: "Same developer" instruction | No | Conflicts with quality standards |
+
+### Round 3: V5 Exceeds V4
+
+- V5 wins 16/23 comparable tasks, 3/5 comparable phases — largest margin in any round
+- Function-based architecture, DRY helpers, spec-compliant timestamps, exhaustive write-error handling
+- Phase 6 analysis refinements (7 tasks, all Excellent) demonstrate self-correction capability unique to V5's workflow
+- V5's `interface{}` Formatter was its biggest early weakness — self-corrected in Phase 6 task 6-7
+- V4 retains edge in test assertion depth, correctness invariants (blocked count derivation), spec-exact error messages, and function decomposition
+- The ideal V6 would combine V5's architecture with V4's verification rigor
 
 ### Methodology Note (Round 2)
 
