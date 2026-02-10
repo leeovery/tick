@@ -20,7 +20,8 @@
       "Read(/private/tmp/tick-analysis-worktrees/*)",
       "Write(/Users/leeovery/Code/tick/analysis/*)",
       "Glob(/private/tmp/tick-analysis-worktrees/*)",
-      "Glob(/Users/leeovery/Code/tick/analysis/*)"
+      "Glob(/Users/leeovery/Code/tick/analysis/*)",
+      "Bash(git worktree:*)"
     ]
   },
   "sandbox": {

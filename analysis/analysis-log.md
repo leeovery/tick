@@ -60,6 +60,7 @@ V3's integration context mechanism amplifies whatever direction the first few ta
 | V3 | `implementation-v3` | v2.1.5 (PRs #77-80) | Feb 5 | 1/23 (vs V2) |
 | V4 | `implementation-v4` | V2 base + PRs #77/#78/#80 (no #79) | Feb 7-8 | 15/23 (vs V2), 6/23 (vs V5) |
 | V5 | `implementation-v5` | V4 base + analysis refinement phase | Feb 9 | 16/23 (vs V4) + 8 V5-only (all Excellent) |
+| V6 | `implementation-v6` | TBD (V5 base + round-3 recommendations) | TBD | Pending |
 
 ### Commit Mapping
 
@@ -73,6 +74,7 @@ git worktree add /private/tmp/tick-analysis-worktrees/v2 implementation-v2
 git worktree add /private/tmp/tick-analysis-worktrees/v3 implementation-v3
 git worktree add /private/tmp/tick-analysis-worktrees/v4 implementation-v4
 git worktree add /private/tmp/tick-analysis-worktrees/v5 implementation-v5
+git worktree add /private/tmp/tick-analysis-worktrees/v6 implementation-v6
 ```
 
 ---
@@ -175,9 +177,13 @@ The most significant finding is V5's `interface{}` Formatter — introduced in P
 
 ---
 
-## Planned Next Step: V6
+## Planned Next Step: V6 (Round 4)
 
-V5 is now the baseline. Recommendations from Round 3 synthesis for V6:
+**Branch**: `implementation-v6` (created from `main`)
+**Baseline**: V5 (current best)
+**Comparison**: Round 4 = V5 vs V6
+
+Recommendations from Round 3 synthesis for V6's workflow:
 1. Restore V4-level test assertion depth (timestamp verification, typed JSON deserialization, exact string matching)
 2. Enforce spec-exact error messages where spec prescribes them
 3. Keep Phase 6 analysis refinement process (proven beneficial)

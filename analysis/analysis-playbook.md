@@ -16,8 +16,8 @@ Reusable instructions for running a deep task-by-task code comparison of tick-co
 
 ```bash
 # Create output directories for this round
-# Increment the round number for each new analysis (round-1 = V1/V2/V3, round-2 = V4 vs V2, round-3 = V5 vs V4)
-ROUND="round-3"
+# Increment the round number for each new analysis (round-1 = V1/V2/V3, round-2 = V4 vs V2, round-3 = V5 vs V4, round-4 = V6 vs V5)
+ROUND="round-4"
 mkdir -p /Users/leeovery/Code/tick/analysis/$ROUND/task-reports
 mkdir -p /Users/leeovery/Code/tick/analysis/$ROUND/phase-reports
 
@@ -25,14 +25,14 @@ mkdir -p /Users/leeovery/Code/tick/analysis/$ROUND/phase-reports
 SCRATCHPAD="/private/tmp/tick-analysis-worktrees"
 mkdir -p "$SCRATCHPAD"
 
-# Baseline (V4 — the current best)
-git worktree add "$SCRATCHPAD/v4" implementation-v4 2>/dev/null || echo "v4 exists"
+# Baseline (V5 — the current best)
+git worktree add "$SCRATCHPAD/v5" implementation-v5 2>/dev/null || echo "v5 exists"
 
 # New version under test (change branch name as needed)
-git worktree add "$SCRATCHPAD/v5" implementation-v5 2>/dev/null || echo "v5 exists"
+git worktree add "$SCRATCHPAD/v6" implementation-v6 2>/dev/null || echo "v6 exists"
 ```
 
-**Verify**: `ls $SCRATCHPAD/v4/internal/task/task.go $SCRATCHPAD/v5/internal/task/task.go`
+**Verify**: `ls $SCRATCHPAD/v5/internal/task/task.go $SCRATCHPAD/v6/internal/task/task.go`
 
 ## Permissions
 
@@ -72,7 +72,7 @@ Run 3 agents in parallel per batch. Wait for all 3 to complete before starting t
 For each task, launch a `general-purpose` subagent with this prompt (fill in the placeholders):
 
 ```
-You are a Go code reviewer producing an EXHAUSTIVE comparison of 2 implementations
+You are a Go code reviewer producing an EXHAUSTIVE comparison of two implementations
 of the same task specification. Your report must be detailed enough that a reader
 can understand exactly what each version did without reading the code themselves.
 
@@ -87,13 +87,13 @@ MUST DO / MUST NOT DO constraints that carry equal weight to spec acceptance cri
 Read: /Users/leeovery/Code/tick/docs/workflow/planning/tick-core/tick-core-{P}-{T}.md
 
 ## Get the diffs (run via Bash)
-- V4: git -C /Users/leeovery/Code/tick show {V4_COMMIT} -- ':!.claude'
 - V5: git -C /Users/leeovery/Code/tick show {V5_COMMIT} -- ':!.claude'
+- V6: git -C /Users/leeovery/Code/tick show {V6_COMMIT} -- ':!.claude'
 
 ## Read resulting source files
 After getting diffs, read the FULL source files created/modified by this task:
-- V4: /private/tmp/tick-analysis-worktrees/v4/{relevant files}
 - V5: /private/tmp/tick-analysis-worktrees/v5/{relevant files}
+- V6: /private/tmp/tick-analysis-worktrees/v6/{relevant files}
 
 Read BOTH implementation AND test files for each version.
 
@@ -108,7 +108,7 @@ Use this structure:
 {What this task requires — from the plan file. Include all acceptance criteria.}
 
 ## Acceptance Criteria Compliance
-| Criterion | V4 | V5 |
+| Criterion | V5 | V6 |
 |-----------|-----|-----|
 {One row per criterion. PASS/FAIL/PARTIAL with specific evidence.}
 
@@ -145,7 +145,7 @@ Use this structure:
  - Exported function documentation
  - Any other MUST DO / MUST NOT DO from the skill file
 
- | Constraint | V4 | V5 |
+ | Constraint | V5 | V6 |
  |------------|-----|-----|
  {One row per applicable constraint. PASS/FAIL with evidence.}}
 
@@ -164,7 +164,7 @@ Use this structure:
  If no conflicts exist for this task, state "No spec-vs-convention conflicts identified."}
 
 ## Diff Stats
-| Metric | V4 | V5 |
+| Metric | V5 | V6 |
 |--------|-----|-----|
 | Files changed | | |
 | Lines added | | |
@@ -204,7 +204,10 @@ Use this structure:
 
 **After each batch**: Verify all reports were written before proceeding.
 
-### V4 Commit Mapping (Baseline — stable)
+### Prior Baseline Commit Mappings (for reference)
+
+<details>
+<summary>V4 Commits</summary>
 
 | Task | Commit |
 |------|--------|
@@ -239,7 +242,7 @@ Additional V4 commits (not per-task):
 | Polish | 199e407 |
 | Complete implementation | cbcbfcb |
 
-### Prior Baseline Commit Mappings (for reference)
+</details>
 
 <details>
 <summary>V2 Commits</summary>
@@ -272,9 +275,54 @@ Additional V4 commits (not per-task):
 
 </details>
 
-### V5 Commit Mapping
+### V5 Commit Mapping (Baseline — stable)
 
-_(Fill in after V5 implementation by running: `git log implementation-v5 --oneline | grep "impl(tick-core)"`)_
+| Task | Commit |
+|------|--------|
+| 1-1 | f6dc11c |
+| 1-2 | fa01548 |
+| 1-3 | 54ee1b6 |
+| 1-4 | 2f697c6 |
+| 1-5 | b0f9e25 |
+| 1-6 | ad45774 |
+| 1-7 | 533ee60 |
+| 2-1 | 8573cbf |
+| 2-2 | 78495c7 |
+| 2-3 | b513b8d |
+| 3-1 | 8329ca5 |
+| 3-2 | fca9a1f |
+| 3-3 | 6fbacef |
+| 3-4 | c66ead3 |
+| 3-5 | f395505 |
+| 3-6 | 730feed |
+| 4-1 | 93d777a |
+| 4-2 | 7784a71 |
+| 4-3 | f13bb9c |
+| 4-4 | 8c0ec68 |
+| 4-5 | 836b86c |
+| 4-6 | 052d542 |
+| 5-1 | fa3fa56 |
+| 5-2 | 90cad53 |
+
+Additional V5 commits (not per-task):
+| Description | Commit |
+|-------------|--------|
+| Pre-analysis checkpoint | 98eff08 |
+| Analysis phase 6 added | 672432e |
+| T6-1: Dependency validation gaps | d9df9f8 |
+| T6-2: Shared ready/blocked SQL | 41e0947 |
+| T6-3: Consolidate JSONL parsing | 245f4cc |
+| T6-4: Shared formatter methods | bba1728 |
+| T6-5: Remove doctor from help | fc0f395 |
+| T6-6: Remove dead StubFormatter | 9a1ae3d |
+| T6-7: Type-safe formatter params | 552624d |
+| Pre-analysis checkpoint 2 | 3fefed0 |
+| Complete implementation | 3d9ca32 |
+| Restructure analysis files | 5c6b457 |
+
+### V6 Commit Mapping
+
+_(Fill in after V6 implementation by running: `git log implementation-v6 --oneline | grep "impl(tick-core)"`)_
 
 ---
 
@@ -285,19 +333,19 @@ Phase agents read task reports AND source code to find cross-task patterns.
 ### Phase Agent Prompt Template
 
 ```
-You are analysing Phase {N} ({Phase Name}) across 2 implementations of a Go task tracker.
+You are analysing Phase {N} ({Phase Name}) across two implementations of a Go task tracker.
 
 Your job is to find CROSS-TASK patterns that individual task analyses miss.
 
 ## Read task reports first
-{list all task report files for this phase — use the round-3 comparison reports}
+{list all task report files for this phase — use the round-4 comparison reports}
 
 ## Read the phase description
 /Users/leeovery/Code/tick/docs/workflow/planning/tick-core.md (Phase {N} section)
 
 ## Read the source files for this phase
-- V4: /private/tmp/tick-analysis-worktrees/v4/{files for this phase}
 - V5: /private/tmp/tick-analysis-worktrees/v5/{files for this phase}
+- V6: /private/tmp/tick-analysis-worktrees/v6/{files for this phase}
 
 Use Glob to discover the actual file layout first.
 
@@ -355,15 +403,15 @@ Use Glob to discover the actual file layout first.
 ### Prompt
 
 ```
-You are producing the definitive synthesis comparing V5 against V4 (the current best
+You are producing the definitive synthesis comparing V6 against V5 (the current best
 implementation) of a Go task tracker.
 
 You have access to:
-- 23 V5-vs-V4 task reports in /Users/leeovery/Code/tick/analysis/$ROUND/task-reports/
-- 5 V5-vs-V4 phase reports in /Users/leeovery/Code/tick/analysis/$ROUND/phase-reports/
-- Prior round syntheses at /Users/leeovery/Code/tick/analysis/round-1/final-synthesis.md and round-2/final-synthesis.md
+- 23 V6-vs-V5 task reports in /Users/leeovery/Code/tick/analysis/$ROUND/task-reports/
+- 5 V6-vs-V5 phase reports in /Users/leeovery/Code/tick/analysis/$ROUND/phase-reports/
+- Prior round syntheses at /Users/leeovery/Code/tick/analysis/round-{1,2,3}/final-synthesis.md
 - The analysis log at /Users/leeovery/Code/tick/analysis/analysis-log.md
-- Source code at /private/tmp/tick-analysis-worktrees/{v4,v5}/
+- Source code at /private/tmp/tick-analysis-worktrees/{v5,v6}/
 
 Read ALL phase reports first. Then scan each task report's Verdict section.
 If you need to verify a claim, read the source code.
@@ -372,32 +420,32 @@ Write to: /Users/leeovery/Code/tick/analysis/$ROUND/final-synthesis.md
 
 ## Structure
 
-# V5 vs V4 Synthesis
+# V6 vs V5 Synthesis
 
 ## Executive Summary
-{Did V5 match, exceed, or fall short of V4? Back with evidence.}
+{Did V6 match, exceed, or fall short of V5? Back with evidence.}
 
 ## Phase-by-Phase Results
 | Phase | Winner | Margin | Key Factor |
 
 ## Full Task Scorecard
-| Task | V4 | V5 | Winner |
+| Task | V5 | V6 | Winner |
 
-## What V5 Did Better Than V4
+## What V6 Did Better Than V5
 {Specific improvements with evidence}
 
-## What V5 Did Worse Than V4
+## What V6 Did Worse Than V5
 {Specific regressions with evidence}
 
 ## What Stayed the Same
 {Patterns that both versions share}
 
 ## Did the Workflow Changes Work?
-{Direct assessment of V5's workflow changes against V4. Evaluate whether each change
+{Direct assessment of V6's workflow changes against V5. Evaluate whether each change
  achieved its goal and whether any had unintended side effects.}
 
 ## Recommendations
-{What to change next based on V5 results.}
+{What to change next based on V6 results.}
 
 Do NOT create any git commits or temporary files.
 ```
@@ -449,7 +497,7 @@ After the final synthesis is written, update these files to reflect the complete
 - Verify each report was written before proceeding
 - If an agent has permission issues reading worktree files, check `.claude/settings.local.json`
 - Each round gets its own directory (`round-2/`, `round-3/`, etc.) — no filename suffixes needed
-- The V4 commit mapping is stable and doesn't change between analysis runs
-- Fill in the V5 commit mapping by running: `git log implementation-v5 --oneline | grep "impl(tick-core)"`
+- The V4 and V5 commit mappings are stable and don't change between analysis runs
+- Fill in the V6 commit mapping by running: `git log implementation-v6 --oneline | grep "impl(tick-core)"`
 - Update the `$ROUND` variable in setup and all path references for each new round
-- For round 3, check the analysis log for any V5-specific evaluation criteria
+- For round 4, check the analysis log for any V6-specific evaluation criteria
