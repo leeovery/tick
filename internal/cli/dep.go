@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
 )
 
@@ -63,12 +62,7 @@ func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 
-	tickDir, err := DiscoverTickDir(dir)
-	if err != nil {
-		return err
-	}
-
-	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
+	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}
@@ -136,12 +130,7 @@ func RunDepRm(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout
 		return err
 	}
 
-	tickDir, err := DiscoverTickDir(dir)
-	if err != nil {
-		return err
-	}
-
-	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
+	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}

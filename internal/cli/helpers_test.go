@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -142,6 +145,56 @@ func TestApplyBlocks(t *testing.T) {
 		}
 		if len(tasks[2].BlockedBy) != 1 || tasks[2].BlockedBy[0] != "tick-src001" {
 			t.Errorf("tasks[2].BlockedBy = %v, want [tick-src001]", tasks[2].BlockedBy)
+		}
+	})
+}
+
+func TestOpenStore(t *testing.T) {
+	t.Run("it returns a valid store for a valid tick directory", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		store, err := openStore(dir, FormatConfig{})
+		if err != nil {
+			t.Fatalf("openStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		if store == nil {
+			t.Fatal("openStore returned nil store")
+		}
+	})
+
+	t.Run("it returns error when no tick directory exists", func(t *testing.T) {
+		dir := t.TempDir()
+
+		store, err := openStore(dir, FormatConfig{})
+		if err == nil {
+			defer store.Close()
+			t.Fatal("openStore should return error for missing .tick directory")
+		}
+
+		if !strings.Contains(err.Error(), "no .tick directory found") {
+			t.Errorf("error = %q, want it to contain %q", err.Error(), "no .tick directory found")
+		}
+	})
+
+	t.Run("it discovers tick directory from subdirectory", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		// Create a subdirectory
+		subDir := filepath.Join(dir, "subdir")
+		if err := os.Mkdir(subDir, 0755); err != nil {
+			t.Fatalf("failed to create subdir: %v", err)
+		}
+
+		store, err := openStore(subDir, FormatConfig{})
+		if err != nil {
+			t.Fatalf("openStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		if store == nil {
+			t.Fatal("openStore returned nil store")
 		}
 	})
 }

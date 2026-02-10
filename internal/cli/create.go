@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
 )
 
@@ -100,13 +99,8 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 
-	// Discover .tick/ directory and open store.
-	tickDir, err := DiscoverTickDir(dir)
-	if err != nil {
-		return err
-	}
-
-	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
+	// Open store.
+	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}

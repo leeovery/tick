@@ -3,20 +3,13 @@ package cli
 import (
 	"fmt"
 	"io"
-
-	"github.com/leeovery/tick/internal/storage"
 )
 
 // RunRebuild executes the rebuild command: forces a complete SQLite cache rebuild
 // from JSONL, bypassing the freshness check. All lock management and file operations
 // are delegated to the Store.
 func RunRebuild(dir string, fc FormatConfig, fmtr Formatter, stdout io.Writer) error {
-	tickDir, err := DiscoverTickDir(dir)
-	if err != nil {
-		return err
-	}
-
-	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
+	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}

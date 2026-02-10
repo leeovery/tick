@@ -4,8 +4,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
 )
+
+// openStore discovers the .tick directory from the given dir and opens a Store.
+// Callers must defer store.Close() themselves since Go defers are scope-bound.
+func openStore(dir string, fc FormatConfig) (*storage.Store, error) {
+	tickDir, err := DiscoverTickDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	return storage.NewStore(tickDir, storeOpts(fc)...)
+}
 
 // parseCommaSeparatedIDs splits a comma-separated string of task IDs,
 // trims whitespace, normalizes to lowercase, and filters empty values.

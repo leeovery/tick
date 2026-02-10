@@ -42,12 +42,7 @@ func RunShow(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout 
 
 	id := task.NormalizeID(args[0])
 
-	tickDir, err := DiscoverTickDir(dir)
-	if err != nil {
-		return err
-	}
-
-	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
+	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}

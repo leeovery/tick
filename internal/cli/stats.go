@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-
-	"github.com/leeovery/tick/internal/storage"
 )
 
 // RunStats executes the stats command: queries aggregate counts by status, priority,
@@ -15,12 +13,7 @@ func RunStats(dir string, fc FormatConfig, fmtr Formatter, stdout io.Writer) err
 		return nil
 	}
 
-	tickDir, err := DiscoverTickDir(dir)
-	if err != nil {
-		return err
-	}
-
-	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
+	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}

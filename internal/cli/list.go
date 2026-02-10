@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
 )
 
@@ -87,12 +86,7 @@ func parseListFlags(args []string) (ListFilter, error) {
 // RunList executes the list command: queries tasks from SQLite with optional filters
 // and outputs them via the Formatter, ordered by priority ASC, then created ASC.
 func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, stdout io.Writer) error {
-	tickDir, err := DiscoverTickDir(dir)
-	if err != nil {
-		return err
-	}
-
-	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
+	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}
