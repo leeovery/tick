@@ -3,6 +3,7 @@ package storage
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -77,8 +78,41 @@ func fromJSONL(jt jsonlTask) (task.Task, error) {
 	return t, nil
 }
 
+// MarshalJSONL serializes tasks to JSONL-formatted bytes (one JSON object per line).
+func MarshalJSONL(tasks []task.Task) ([]byte, error) {
+	if len(tasks) == 0 {
+		return nil, nil
+	}
+
+	var buf bytes.Buffer
+	for _, t := range tasks {
+		data, err := json.Marshal(toJSONL(t))
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal task %s: %w", t.ID, err)
+		}
+		buf.Write(data)
+		buf.WriteByte('\n')
+	}
+	return buf.Bytes(), nil
+}
+
 // WriteJSONL writes tasks to a JSONL file using the atomic temp file + fsync + rename pattern.
 func WriteJSONL(path string, tasks []task.Task) error {
+	data, err := MarshalJSONL(tasks)
+	if err != nil {
+		return err
+	}
+
+	return writeAtomic(path, data)
+}
+
+// WriteJSONLRaw writes pre-marshaled JSONL bytes to a file using atomic write.
+func WriteJSONLRaw(path string, data []byte) error {
+	return writeAtomic(path, data)
+}
+
+// writeAtomic writes data to a file using the temp file + fsync + rename pattern.
+func writeAtomic(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	tmp, err := os.CreateTemp(dir, ".tasks-*.jsonl.tmp")
 	if err != nil {
@@ -95,14 +129,9 @@ func WriteJSONL(path string, tasks []task.Task) error {
 		}
 	}()
 
-	for _, t := range tasks {
-		data, err := json.Marshal(toJSONL(t))
-		if err != nil {
-			return fmt.Errorf("failed to marshal task %s: %w", t.ID, err)
-		}
-		data = append(data, '\n')
+	if data != nil {
 		if _, err := tmp.Write(data); err != nil {
-			return fmt.Errorf("failed to write task %s: %w", t.ID, err)
+			return fmt.Errorf("failed to write data: %w", err)
 		}
 	}
 
@@ -121,17 +150,15 @@ func WriteJSONL(path string, tasks []task.Task) error {
 	return nil
 }
 
-// ReadJSONL reads tasks from a JSONL file, returning one Task per line.
-// Empty files return an empty task list. Missing files return an error.
-func ReadJSONL(path string) ([]task.Task, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %w", path, err)
+// ParseJSONL parses tasks from raw JSONL-formatted bytes, returning one Task per line.
+// Empty input returns an empty task list.
+func ParseJSONL(data []byte) ([]task.Task, error) {
+	if len(data) == 0 {
+		return nil, nil
 	}
-	defer f.Close()
 
 	var tasks []task.Task
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(bytes.NewReader(data))
 	lineNum := 0
 	for scanner.Scan() {
 		lineNum++
@@ -154,8 +181,18 @@ func ReadJSONL(path string) ([]task.Task, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading %s: %w", path, err)
+		return nil, fmt.Errorf("error reading JSONL data: %w", err)
 	}
 
 	return tasks, nil
+}
+
+// ReadJSONL reads tasks from a JSONL file, returning one Task per line.
+// Empty files return an empty task list. Missing files return an error.
+func ReadJSONL(path string) ([]task.Task, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open %s: %w", path, err)
+	}
+	return ParseJSONL(data)
 }

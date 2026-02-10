@@ -423,6 +423,169 @@ func TestAtomicWrite(t *testing.T) {
 	})
 }
 
+func TestParseJSONL(t *testing.T) {
+	t.Run("it parses tasks from raw JSONL bytes", func(t *testing.T) {
+		content := []byte(`{"id":"tick-a1b2c3","title":"First task","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-d4e5f6","title":"Second task","status":"done","priority":1,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+`)
+
+		tasks, err := ParseJSONL(content)
+		if err != nil {
+			t.Fatalf("ParseJSONL returned error: %v", err)
+		}
+
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(tasks))
+		}
+
+		if tasks[0].ID != "tick-a1b2c3" {
+			t.Errorf("tasks[0].ID = %q, want %q", tasks[0].ID, "tick-a1b2c3")
+		}
+		if tasks[1].ID != "tick-d4e5f6" {
+			t.Errorf("tasks[1].ID = %q, want %q", tasks[1].ID, "tick-d4e5f6")
+		}
+	})
+
+	t.Run("it returns empty list for empty bytes", func(t *testing.T) {
+		tasks, err := ParseJSONL([]byte{})
+		if err != nil {
+			t.Fatalf("ParseJSONL returned error for empty input: %v", err)
+		}
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it skips empty lines in byte input", func(t *testing.T) {
+		content := []byte(`{"id":"tick-a1b2c3","title":"Task one","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+
+{"id":"tick-d4e5f6","title":"Task two","status":"open","priority":1,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+`)
+
+		tasks, err := ParseJSONL(content)
+		if err != nil {
+			t.Fatalf("ParseJSONL returned error: %v", err)
+		}
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks (skipping empty line), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it returns error for invalid JSON in bytes", func(t *testing.T) {
+		content := []byte(`{"id":"tick-a1b2c3","title":"Valid task","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+not valid json
+`)
+
+		_, err := ParseJSONL(content)
+		if err == nil {
+			t.Fatal("expected error for invalid JSON, got nil")
+		}
+	})
+}
+
+func TestMarshalJSONL(t *testing.T) {
+	t.Run("it serializes tasks to JSONL bytes", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "First task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+			{
+				ID:       "tick-d4e5f6",
+				Title:    "Second task",
+				Status:   task.StatusDone,
+				Priority: 1,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		data, err := MarshalJSONL(tasks)
+		if err != nil {
+			t.Fatalf("MarshalJSONL returned error: %v", err)
+		}
+
+		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+		if len(lines) != 2 {
+			t.Fatalf("expected 2 lines, got %d", len(lines))
+		}
+
+		// Each line should be a valid JSON object.
+		for i, line := range lines {
+			if !strings.HasPrefix(line, "{") || !strings.HasSuffix(line, "}") {
+				t.Errorf("line %d is not a JSON object: %s", i, line)
+			}
+		}
+	})
+
+	t.Run("it returns empty bytes for empty task list", func(t *testing.T) {
+		data, err := MarshalJSONL(nil)
+		if err != nil {
+			t.Fatalf("MarshalJSONL returned error: %v", err)
+		}
+		if len(data) != 0 {
+			t.Errorf("expected empty bytes for nil tasks, got %d bytes", len(data))
+		}
+	})
+
+	t.Run("it round-trips through ParseJSONL", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		updated := time.Date(2026, 1, 19, 14, 0, 0, 0, time.UTC)
+		closed := time.Date(2026, 1, 19, 16, 0, 0, 0, time.UTC)
+
+		original := []task.Task{
+			{
+				ID:          "tick-a1b2c3",
+				Title:       "Full task",
+				Status:      task.StatusDone,
+				Priority:    1,
+				Description: "Description here",
+				BlockedBy:   []string{"tick-x1y2z3"},
+				Parent:      "tick-p1a2b3",
+				Created:     created,
+				Updated:     updated,
+				Closed:      &closed,
+			},
+		}
+
+		data, err := MarshalJSONL(original)
+		if err != nil {
+			t.Fatalf("MarshalJSONL returned error: %v", err)
+		}
+
+		parsed, err := ParseJSONL(data)
+		if err != nil {
+			t.Fatalf("ParseJSONL returned error: %v", err)
+		}
+
+		if len(parsed) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(parsed))
+		}
+
+		got := parsed[0]
+		if got.ID != original[0].ID {
+			t.Errorf("ID = %q, want %q", got.ID, original[0].ID)
+		}
+		if got.Title != original[0].Title {
+			t.Errorf("Title = %q, want %q", got.Title, original[0].Title)
+		}
+		if got.Status != original[0].Status {
+			t.Errorf("Status = %q, want %q", got.Status, original[0].Status)
+		}
+		if got.Closed == nil {
+			t.Fatal("Closed is nil, want non-nil")
+		}
+		if !got.Closed.Equal(*original[0].Closed) {
+			t.Errorf("Closed = %v, want %v", got.Closed, original[0].Closed)
+		}
+	})
+}
+
 func TestFieldVariations(t *testing.T) {
 	t.Run("it handles tasks with all fields populated", func(t *testing.T) {
 		dir := t.TempDir()
