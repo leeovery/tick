@@ -533,4 +533,158 @@ func TestCreate(t *testing.T) {
 			t.Errorf("title = %q, want %q", tasks[0].Title, "Trimmed title")
 		}
 	})
+
+	t.Run("it rejects --blocked-by that would create child-blocked-by-parent dependency", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parentTask})
+
+		_, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111", "--blocked-by", "tick-ppp111")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "parent") {
+			t.Errorf("stderr should contain 'parent', got %q", stderr)
+		}
+		// Verify no new task was persisted
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted) != 1 {
+			t.Errorf("expected 1 task (only pre-existing), got %d", len(persisted))
+		}
+	})
+
+	t.Run("it rejects --blocked-by that would create a cycle", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		// taskA is blocked by taskB. If we create taskC blocked-by taskA,
+		// then taskC -> taskA is not itself a cycle.
+		// We need: taskA blocked by taskB. Create new task with --blocked-by taskB,
+		// and new task --blocks taskA => taskA would be blocked by both taskB and new task.
+		// Actually, for a direct cycle test via --blocked-by:
+		// taskA exists, blocked by nothing. Create taskB --blocked-by taskA.
+		// That is valid. We need a scenario where the new task's blocked_by creates a cycle.
+		//
+		// Cycle scenario: taskA is already blocked by taskB (which doesn't exist yet).
+		// But we can't reference non-existent tasks...
+		//
+		// For create --blocked-by to create a cycle, the new task must appear in some
+		// existing task's blocked_by chain that leads back to one of the new task's blocked_by.
+		// But the new task doesn't exist yet, so no existing task can reference it.
+		// The only way is via --blocks simultaneously:
+		// Create taskC --blocked-by taskA --blocks taskA
+		// => taskC.blocked_by = [taskA], taskA.blocked_by += [taskC]
+		// => cycle: taskC -> taskA -> taskC
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runCreate(t, dir, "Task C", "--blocked-by", "tick-aaa111", "--blocks", "tick-aaa111")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "cycle") {
+			t.Errorf("stderr should contain 'cycle', got %q", stderr)
+		}
+		// Verify no new task was persisted
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted) != 1 {
+			t.Errorf("expected 1 task (only pre-existing), got %d", len(persisted))
+		}
+	})
+
+	t.Run("it rejects --blocks that would create child-blocked-by-parent dependency", func(t *testing.T) {
+		// For create --blocks, the new task gets a random ID that no existing child
+		// references as parent. So child-blocked-by-parent via create --blocks is
+		// architecturally impossible in current design. The validation code is still
+		// called for defense-in-depth but cannot be triggered through the CLI.
+		t.Skip("child-blocked-by-parent via create --blocks is architecturally impossible: " +
+			"new task gets random ID that no existing child references as parent")
+	})
+
+	t.Run("it rejects --blocks that would create a cycle", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		// taskA blocked by taskB. Create taskC --blocks taskB.
+		// => taskB.blocked_by += [taskC_id]
+		// => chain: taskA -> taskB -> taskC (no cycle, fine)
+		//
+		// For cycle: taskA blocked by taskB. Create taskC --blocked-by taskA --blocks taskB.
+		// => taskC.blocked_by = [taskA], taskB.blocked_by += [taskC]
+		// => chain: taskC -> taskA -> taskB -> taskC => CYCLE
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, BlockedBy: []string{"tick-bbb222"},
+			Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, stderr, exitCode := runCreate(t, dir, "Task C", "--blocked-by", "tick-aaa111", "--blocks", "tick-bbb222")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "cycle") {
+			t.Errorf("stderr should contain 'cycle', got %q", stderr)
+		}
+		// Verify no new task was persisted
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted) != 2 {
+			t.Errorf("expected 2 tasks (only pre-existing), got %d", len(persisted))
+		}
+	})
+
+	t.Run("it allows valid dependencies through create --blocked-by and --blocks", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, stderr, exitCode := runCreate(t, dir, "Task C", "--blocked-by", "tick-aaa111", "--blocks", "tick-bbb222")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted) != 3 {
+			t.Fatalf("expected 3 tasks, got %d", len(persisted))
+		}
+
+		// Find the new task (the one that is neither taskA nor taskB)
+		var newTask task.Task
+		for _, tk := range persisted {
+			if tk.ID != "tick-aaa111" && tk.ID != "tick-bbb222" {
+				newTask = tk
+				break
+			}
+		}
+
+		// New task should be blocked by taskA
+		if len(newTask.BlockedBy) != 1 || newTask.BlockedBy[0] != "tick-aaa111" {
+			t.Errorf("new task blocked_by = %v, want [tick-aaa111]", newTask.BlockedBy)
+		}
+
+		// taskB should be blocked by the new task
+		var targetB task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-bbb222" {
+				targetB = tk
+				break
+			}
+		}
+		if len(targetB.BlockedBy) != 1 || targetB.BlockedBy[0] != newTask.ID {
+			t.Errorf("taskB blocked_by = %v, want [%s]", targetB.BlockedBy, newTask.ID)
+		}
+	})
 }

@@ -202,6 +202,13 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 					}
 				}
 			}
+
+			// Validate dependencies (cycle detection + child-blocked-by-parent) against full task list.
+			for _, blockID := range opts.blocks {
+				if err := task.ValidateDependency(tasks, blockID, opts.id); err != nil {
+					return nil, err
+				}
+			}
 		}
 
 		return tasks, nil

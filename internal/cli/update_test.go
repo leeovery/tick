@@ -482,4 +482,80 @@ func TestUpdate(t *testing.T) {
 			t.Errorf("persisted title = %q, want %q", persisted[0].Title, "New title")
 		}
 	})
+
+	t.Run("it rejects --blocks that would create child-blocked-by-parent dependency", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		childTask := task.Task{
+			ID: "tick-ccc111", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Parent: "tick-ppp111",
+			Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parentTask, childTask})
+
+		// Parent --blocks child => child.blocked_by += [parent_id] => child blocked by parent => rejected
+		_, stderr, exitCode := runUpdate(t, dir, "tick-ppp111", "--blocks", "tick-ccc111", "--title", "Updated parent")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "parent") {
+			t.Errorf("stderr should contain 'parent', got %q", stderr)
+		}
+
+		// Verify child's blocked_by was not modified
+		persisted := readPersistedTasks(t, tickDir)
+		var child task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-ccc111" {
+				child = tk
+				break
+			}
+		}
+		if len(child.BlockedBy) != 0 {
+			t.Errorf("child blocked_by = %v, want empty (no changes persisted)", child.BlockedBy)
+		}
+	})
+
+	t.Run("it rejects --blocks that would create a cycle", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		// taskA is blocked by taskB. Updating taskB --blocks taskA would create:
+		// taskA.blocked_by += [taskB] => but taskA already has taskB in blocked_by.
+		// That's a duplicate, not a cycle.
+		// Better: taskA blocked by taskB. Update taskA --blocks taskB.
+		// => taskB.blocked_by += [taskA] => cycle: taskA -> taskB -> taskA
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, BlockedBy: []string{"tick-bbb222"},
+			Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--blocks", "tick-bbb222", "--title", "Updated A")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "cycle") {
+			t.Errorf("stderr should contain 'cycle', got %q", stderr)
+		}
+
+		// Verify taskB's blocked_by was not modified
+		persisted := readPersistedTasks(t, tickDir)
+		var targetB task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-bbb222" {
+				targetB = tk
+				break
+			}
+		}
+		if len(targetB.BlockedBy) != 0 {
+			t.Errorf("taskB blocked_by = %v, want empty (no changes persisted)", targetB.BlockedBy)
+		}
+	})
 }

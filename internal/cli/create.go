@@ -174,6 +174,19 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		}
 
 		tasks = append(tasks, newTask)
+
+		// Validate dependencies (cycle detection + child-blocked-by-parent) against full task list.
+		if len(opts.blockedBy) > 0 {
+			if err := task.ValidateDependencies(tasks, id, opts.blockedBy); err != nil {
+				return nil, err
+			}
+		}
+		for _, blockID := range opts.blocks {
+			if err := task.ValidateDependency(tasks, blockID, id); err != nil {
+				return nil, err
+			}
+		}
+
 		createdTask = newTask
 		return tasks, nil
 	})
