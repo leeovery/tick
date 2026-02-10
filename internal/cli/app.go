@@ -32,7 +32,27 @@ func (a *App) Run(args []string) int {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
 	}
+
+	// Create verbose logger when --verbose is set.
+	if fc.Verbose {
+		fc.Logger = NewVerboseLogger(a.Stderr)
+	}
+
 	fmtr := NewFormatter(fc.Format)
+
+	// Log format resolution if verbose.
+	if fc.Logger != nil {
+		var formatName string
+		switch fc.Format {
+		case FormatToon:
+			formatName = "toon"
+		case FormatPretty:
+			formatName = "pretty"
+		case FormatJSON:
+			formatName = "json"
+		}
+		fc.Logger.Log("format resolved: " + formatName)
+	}
 
 	switch subcmd {
 	case "init":

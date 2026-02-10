@@ -67,6 +67,8 @@ type FormatConfig struct {
 	Format  Format
 	Quiet   bool
 	Verbose bool
+	// Logger is the verbose logger. Nil when verbose is disabled.
+	Logger *VerboseLogger
 }
 
 // NewFormatConfig builds a FormatConfig from parsed global flags and TTY state.
@@ -164,10 +166,10 @@ func NewFormatter(f Format) Formatter {
 	}
 }
 
-// VerboseLog writes a verbose message to the given writer (intended for stderr).
-// Only writes if verbose is true.
+// VerboseLog writes a verbose-prefixed message to the given writer (intended for stderr).
+// Only writes if verbose is true. All output is prefixed with "verbose: " for grep-ability.
 func VerboseLog(w io.Writer, verbose bool, msg string) {
 	if verbose {
-		fmt.Fprintln(w, msg)
+		fmt.Fprintf(w, "verbose: %s\n", msg)
 	}
 }

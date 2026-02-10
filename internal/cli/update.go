@@ -131,7 +131,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 
-	store, err := storage.NewStore(tickDir)
+	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
 	if err != nil {
 		return err
 	}

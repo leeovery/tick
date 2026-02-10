@@ -92,7 +92,7 @@ func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, std
 		return err
 	}
 
-	store, err := storage.NewStore(tickDir)
+	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
 	if err != nil {
 		return err
 	}

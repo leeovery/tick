@@ -26,6 +26,9 @@ type Store struct {
 	lockTimeout time.Duration
 	fileLock    *flock.Flock
 	cache       *Cache
+	// verboseLog is an optional logging function for verbose debug output.
+	// When non-nil, key operations log debug messages through it.
+	verboseLog func(msg string)
 }
 
 // StoreOption configures a Store.
@@ -35,6 +38,14 @@ type StoreOption func(*Store)
 func WithLockTimeout(d time.Duration) StoreOption {
 	return func(s *Store) {
 		s.lockTimeout = d
+	}
+}
+
+// WithVerbose sets a logging function for verbose debug output.
+// Key operations (lock, cache, hash, write) will call this function.
+func WithVerbose(fn func(msg string)) StoreOption {
+	return func(s *Store) {
+		s.verboseLog = fn
 	}
 }
 
@@ -61,6 +72,13 @@ func NewStore(tickDir string, opts ...StoreOption) (*Store, error) {
 	return s, nil
 }
 
+// verbose logs a message if verbose logging is enabled.
+func (s *Store) verbose(msg string) {
+	if s.verboseLog != nil {
+		s.verboseLog(msg)
+	}
+}
+
 // Close releases any resources held by the Store, including the SQLite cache connection.
 func (s *Store) Close() error {
 	if s.cache != nil {
@@ -75,11 +93,16 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	defer cancel()
 
+	s.verbose("acquiring exclusive lock")
 	locked, err := s.fileLock.TryLockContext(ctx, 50*time.Millisecond)
 	if err != nil || !locked {
 		return errors.New(lockErrMsg)
 	}
-	defer func() { _ = s.fileLock.Unlock() }()
+	s.verbose("lock acquired")
+	defer func() {
+		_ = s.fileLock.Unlock()
+		s.verbose("lock released")
+	}()
 
 	_, tasks, err := s.readAndEnsureFresh()
 	if err != nil {
@@ -99,11 +122,13 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	}
 
 	// Atomic write to JSONL.
+	s.verbose("writing JSONL atomically")
 	if err := WriteJSONLRaw(s.jsonlPath, newRawJSONL); err != nil {
 		return fmt.Errorf("failed to write tasks.jsonl: %w", err)
 	}
 
 	// Rebuild cache from the same bytes that were written — no re-read needed.
+	s.verbose("rebuilding cache from JSONL")
 	if err := s.cache.Rebuild(mutated, newRawJSONL); err != nil {
 		log.Printf("warning: failed to update cache after write: %v", err)
 		// Close the corrupted cache so it will be recreated on next use.
@@ -121,11 +146,16 @@ func (s *Store) Query(fn func(db *sql.DB) error) error {
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	defer cancel()
 
+	s.verbose("acquiring shared lock")
 	locked, err := s.fileLock.TryRLockContext(ctx, 50*time.Millisecond)
 	if err != nil || !locked {
 		return errors.New(lockErrMsg)
 	}
-	defer func() { _ = s.fileLock.Unlock() }()
+	s.verbose("lock acquired")
+	defer func() {
+		_ = s.fileLock.Unlock()
+		s.verbose("lock released")
+	}()
 
 	_, _, err = s.readAndEnsureFresh()
 	if err != nil {
@@ -188,7 +218,12 @@ func (s *Store) ensureFresh(rawJSONL []byte, tasks []task.Task) error {
 		fresh = false
 	}
 
-	if !fresh {
+	if fresh {
+		s.verbose("hash match: yes")
+		s.verbose("cache is fresh")
+	} else {
+		s.verbose("hash match: no")
+		s.verbose("rebuilding cache from JSONL")
 		if err := s.cache.Rebuild(tasks, rawJSONL); err != nil {
 			return fmt.Errorf("failed to rebuild cache: %w", err)
 		}

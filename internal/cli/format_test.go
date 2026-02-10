@@ -379,7 +379,7 @@ func TestVerboseToStderrOnly(t *testing.T) {
 	t.Run("it writes verbose output to the provided writer when verbose is true", func(t *testing.T) {
 		var stderr byteBuffer
 		VerboseLog(&stderr, true, "debug info")
-		expected := "debug info\n"
+		expected := "verbose: debug info\n"
 		if stderr.String() != expected {
 			t.Errorf("stderr = %q, want %q", stderr.String(), expected)
 		}

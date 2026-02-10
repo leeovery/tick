@@ -68,7 +68,7 @@ func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 
-	store, err := storage.NewStore(tickDir)
+	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func RunDepRm(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout
 		return err
 	}
 
-	store, err := storage.NewStore(tickDir)
+	store, err := storage.NewStore(tickDir, storeOpts(fc)...)
 	if err != nil {
 		return err
 	}
