@@ -497,6 +497,247 @@ func TestStoreSQLiteFailure(t *testing.T) {
 	})
 }
 
+func TestStoreRebuild(t *testing.T) {
+	t.Run("it rebuilds cache from JSONL and returns task count", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+			{ID: "tick-bbbbbb", Title: "Task B", Status: task.StatusDone, Priority: 1, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		count, err := store.Rebuild()
+		if err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+		if count != 2 {
+			t.Errorf("Rebuild returned count %d, want 2", count)
+		}
+
+		// Verify cache has the tasks by querying through the store.
+		err = store.Query(func(db *sql.DB) error {
+			var dbCount int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&dbCount); qErr != nil {
+				return qErr
+			}
+			if dbCount != 2 {
+				t.Errorf("cache task count = %d, want 2", dbCount)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query after Rebuild returned error: %v", err)
+		}
+	})
+
+	t.Run("it works when cache.db does not exist", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		// Ensure no cache.db exists.
+		cachePath := filepath.Join(tickDir, "cache.db")
+		os.Remove(cachePath)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		count, err := store.Rebuild()
+		if err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+		if count != 1 {
+			t.Errorf("Rebuild returned count %d, want 1", count)
+		}
+
+		// Verify cache was created.
+		if _, statErr := os.Stat(cachePath); os.IsNotExist(statErr) {
+			t.Error("cache.db should exist after Rebuild")
+		}
+	})
+
+	t.Run("it works when cache.db is corrupted", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		// Write garbage to cache.db to simulate corruption.
+		cachePath := filepath.Join(tickDir, "cache.db")
+		if wErr := os.WriteFile(cachePath, []byte("not a sqlite database"), 0644); wErr != nil {
+			t.Fatalf("failed to write corrupted cache: %v", wErr)
+		}
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		count, err := store.Rebuild()
+		if err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+		if count != 1 {
+			t.Errorf("Rebuild returned count %d, want 1", count)
+		}
+
+		// Verify cache is now valid by querying.
+		err = store.Query(func(db *sql.DB) error {
+			var dbCount int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&dbCount); qErr != nil {
+				return qErr
+			}
+			if dbCount != 1 {
+				t.Errorf("cache task count = %d, want 1", dbCount)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query after Rebuild with corrupted cache returned error: %v", err)
+		}
+	})
+
+	t.Run("it updates hash in metadata after rebuild", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		_, err = store.Rebuild()
+		if err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		// Verify hash is stored by querying via store.
+		err = store.Query(func(db *sql.DB) error {
+			var hash string
+			if qErr := db.QueryRow("SELECT value FROM metadata WHERE key = 'jsonl_hash'").Scan(&hash); qErr != nil {
+				return qErr
+			}
+			if hash == "" {
+				t.Error("hash should not be empty after Rebuild")
+			}
+			if len(hash) != 64 {
+				t.Errorf("hash length = %d, want 64 (SHA256 hex)", len(hash))
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query after Rebuild returned error: %v", err)
+		}
+	})
+
+	t.Run("it acquires exclusive lock during rebuild", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+		lockPath := filepath.Join(tickDir, "lock")
+
+		// Hold an exclusive lock externally.
+		externalLock := flock.New(lockPath)
+		if lErr := externalLock.Lock(); lErr != nil {
+			t.Fatalf("failed to acquire external lock: %v", lErr)
+		}
+		defer func() { _ = externalLock.Unlock() }()
+
+		store, err := NewStore(tickDir, WithLockTimeout(100*time.Millisecond))
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		_, err = store.Rebuild()
+		if err == nil {
+			t.Fatal("expected lock timeout error, got nil")
+		}
+
+		expected := "could not acquire lock on .tick/lock - another process may be using tick"
+		if err.Error() != expected {
+			t.Errorf("error = %q, want %q", err.Error(), expected)
+		}
+	})
+
+	t.Run("it logs verbose messages during rebuild", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		var logged []string
+		store, err := NewStore(tickDir, WithVerbose(func(msg string) {
+			logged = append(logged, msg)
+		}))
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		_, err = store.Rebuild()
+		if err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		// Check for expected verbose messages.
+		expectedMessages := []string{
+			"acquiring exclusive lock",
+			"lock acquired",
+			"deleting cache.db",
+			"reading JSONL",
+			"rebuilding cache with 1 tasks",
+			"hash updated",
+			"lock released",
+		}
+		if len(logged) != len(expectedMessages) {
+			t.Errorf("logged %d messages, want %d: %v", len(logged), len(expectedMessages), logged)
+		}
+		for i, want := range expectedMessages {
+			if i >= len(logged) {
+				break
+			}
+			if logged[i] != want {
+				t.Errorf("log[%d] = %q, want %q", i, logged[i], want)
+			}
+		}
+	})
+
+	t.Run("it handles empty JSONL returning 0 tasks", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		count, err := store.Rebuild()
+		if err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("Rebuild returned count %d, want 0", count)
+		}
+	})
+}
+
 func TestStoreStaleCacheRebuild(t *testing.T) {
 	t.Run("it rebuilds stale cache during write before applying mutation", func(t *testing.T) {
 		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)

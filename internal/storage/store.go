@@ -140,6 +140,63 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	return nil
 }
 
+// Rebuild forces a complete cache rebuild from JSONL. It acquires an exclusive lock,
+// deletes the existing cache.db, reads tasks.jsonl, creates a fresh cache, and populates it.
+// Returns the number of tasks rebuilt.
+func (s *Store) Rebuild() (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
+	defer cancel()
+
+	s.verbose("acquiring exclusive lock")
+	locked, err := s.fileLock.TryLockContext(ctx, 50*time.Millisecond)
+	if err != nil || !locked {
+		return 0, errors.New(lockErrMsg)
+	}
+	s.verbose("lock acquired")
+	defer func() {
+		_ = s.fileLock.Unlock()
+		s.verbose("lock released")
+	}()
+
+	// Close existing cache if open.
+	if s.cache != nil {
+		s.cache.Close()
+		s.cache = nil
+	}
+
+	// Delete existing cache.db.
+	s.verbose("deleting cache.db")
+	os.Remove(s.cachePath)
+
+	// Read JSONL.
+	s.verbose("reading JSONL")
+	rawJSONL, err := os.ReadFile(s.jsonlPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read tasks.jsonl: %w", err)
+	}
+
+	tasks, err := ParseJSONL(rawJSONL)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse tasks.jsonl: %w", err)
+	}
+
+	// Open fresh cache (creates schema).
+	cache, err := OpenCache(s.cachePath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create cache: %w", err)
+	}
+	s.cache = cache
+
+	// Rebuild cache from tasks.
+	s.verbose(fmt.Sprintf("rebuilding cache with %d tasks", len(tasks)))
+	if err := s.cache.Rebuild(tasks, rawJSONL); err != nil {
+		return 0, fmt.Errorf("failed to rebuild cache: %w", err)
+	}
+	s.verbose("hash updated")
+
+	return len(tasks), nil
+}
+
 // Query executes a read query with shared file locking.
 // The full flow: lock -> read JSONL -> freshness check -> query SQLite -> unlock.
 func (s *Store) Query(fn func(db *sql.DB) error) error {
