@@ -519,6 +519,40 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
+	t.Run("it does not duplicate blocked_by when --blocks with existing dependency", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		blocker := task.Task{
+			ID: "tick-aaa111", Title: "Blocker", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		target := task.Task{
+			ID: "tick-bbb222", Title: "Target", Status: task.StatusOpen,
+			Priority: 2, BlockedBy: []string{"tick-aaa111"},
+			Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{blocker, target})
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--blocks", "tick-bbb222", "--title", "Blocker updated")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var persistedTarget task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-bbb222" {
+				persistedTarget = tk
+				break
+			}
+		}
+		if len(persistedTarget.BlockedBy) != 1 {
+			t.Errorf("target blocked_by = %v, want exactly [tick-aaa111] (no duplicate)", persistedTarget.BlockedBy)
+		}
+		if persistedTarget.BlockedBy[0] != "tick-aaa111" {
+			t.Errorf("target blocked_by[0] = %q, want %q", persistedTarget.BlockedBy[0], "tick-aaa111")
+		}
+	})
+
 	t.Run("it rejects --blocks that would create a cycle", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		// taskA is blocked by taskB. Updating taskB --blocks taskA would create:

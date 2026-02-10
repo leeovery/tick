@@ -126,6 +126,28 @@ func TestApplyBlocks(t *testing.T) {
 		}
 	})
 
+	t.Run("it skips duplicate when sourceID already in BlockedBy", func(t *testing.T) {
+		now := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2,
+				BlockedBy: []string{"tick-src001"}, Created: now, Updated: now},
+		}
+
+		applyNow := time.Date(2026, 2, 10, 13, 0, 0, 0, time.UTC)
+		applyBlocks(tasks, "tick-src001", []string{"tick-aaa111"}, applyNow)
+
+		if len(tasks[0].BlockedBy) != 1 {
+			t.Errorf("tasks[0].BlockedBy = %v, want [tick-src001] (no duplicate)", tasks[0].BlockedBy)
+		}
+		if tasks[0].BlockedBy[0] != "tick-src001" {
+			t.Errorf("tasks[0].BlockedBy[0] = %q, want %q", tasks[0].BlockedBy[0], "tick-src001")
+		}
+		// Updated should NOT be changed since no new dependency was added
+		if !tasks[0].Updated.Equal(now) {
+			t.Errorf("tasks[0].Updated = %v, want %v (unchanged)", tasks[0].Updated, now)
+		}
+	})
+
 	t.Run("it handles multiple blockIDs", func(t *testing.T) {
 		now := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
 		tasks := []task.Task{
