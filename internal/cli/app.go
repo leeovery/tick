@@ -73,6 +73,8 @@ func (a *App) Run(args []string) int {
 		err = a.handleBlocked(fc, fmtr, subArgs)
 	case "dep":
 		err = a.handleDep(fc, fmtr, subArgs)
+	case "stats":
+		err = a.handleStats(fc, fmtr)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
@@ -158,6 +160,15 @@ func (a *App) handleBlocked(fc FormatConfig, fmtr Formatter, subArgs []string) e
 		return err
 	}
 	return RunList(dir, fc, fmtr, filter, a.Stdout)
+}
+
+// handleStats implements the stats subcommand.
+func (a *App) handleStats(fc FormatConfig, fmtr Formatter) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunStats(dir, fc, fmtr, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
