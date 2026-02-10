@@ -56,6 +56,7 @@ func readPersistedTasks(t *testing.T, tickDir string) []task.Task {
 }
 
 // runCreate runs the tick create command with the given args and returns stdout, stderr, and exit code.
+// Uses IsTTY=true to default to PrettyFormatter for consistent test output.
 func runCreate(t *testing.T, dir string, args ...string) (stdout string, stderr string, exitCode int) {
 	t.Helper()
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -63,6 +64,7 @@ func runCreate(t *testing.T, dir string, args ...string) (stdout string, stderr 
 		Stdout: &stdoutBuf,
 		Stderr: &stderrBuf,
 		Getwd:  func() (string, error) { return dir, nil },
+		IsTTY:  true,
 	}
 	fullArgs := append([]string{"tick", "create"}, args...)
 	code := app.Run(fullArgs)

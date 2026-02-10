@@ -90,8 +90,8 @@ func parseCreateArgs(args []string) (createOpts, error) {
 }
 
 // RunCreate executes the create command: validates inputs, generates an ID,
-// persists via the storage engine, and outputs the created task.
-func RunCreate(dir string, quiet bool, args []string, stdout io.Writer) error {
+// persists via the storage engine, and outputs the created task via the Formatter.
+func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	opts, err := parseCreateArgs(args)
 	if err != nil {
 		return err
@@ -183,10 +183,11 @@ func RunCreate(dir string, quiet bool, args []string, stdout io.Writer) error {
 	}
 
 	// Output.
-	if quiet {
+	if fc.Quiet {
 		fmt.Fprintln(stdout, createdTask.ID)
 	} else {
-		printTaskDetails(stdout, createdTask)
+		detail := TaskDetail{Task: createdTask}
+		fmt.Fprintln(stdout, fmtr.FormatTaskDetail(detail))
 	}
 
 	return nil
@@ -220,23 +221,4 @@ func validateRefs(newID string, opts createOpts, idSet map[string]bool) error {
 		}
 	}
 	return nil
-}
-
-// printTaskDetails outputs task details in a simple key-value format (Phase 1).
-func printTaskDetails(w io.Writer, t task.Task) {
-	fmt.Fprintf(w, "ID:          %s\n", t.ID)
-	fmt.Fprintf(w, "Title:       %s\n", t.Title)
-	fmt.Fprintf(w, "Status:      %s\n", t.Status)
-	fmt.Fprintf(w, "Priority:    %d\n", t.Priority)
-	if t.Parent != "" {
-		fmt.Fprintf(w, "Parent:      %s\n", t.Parent)
-	}
-	if len(t.BlockedBy) > 0 {
-		fmt.Fprintf(w, "Blocked by:  %s\n", strings.Join(t.BlockedBy, ", "))
-	}
-	fmt.Fprintf(w, "Created:     %s\n", task.FormatTimestamp(t.Created))
-	fmt.Fprintf(w, "Updated:     %s\n", task.FormatTimestamp(t.Updated))
-	if t.Description != "" {
-		fmt.Fprintf(w, "\nDescription:\n  %s\n", t.Description)
-	}
 }

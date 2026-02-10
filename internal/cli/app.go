@@ -26,32 +26,33 @@ func (a *App) Run(args []string) int {
 		return 0
 	}
 
-	// Validate format flags before dispatch.
-	_, err := NewFormatConfig(flags, a.IsTTY)
+	// Resolve format once in dispatcher.
+	fc, err := NewFormatConfig(flags, a.IsTTY)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
 	}
+	fmtr := NewFormatter(fc.Format)
 
 	switch subcmd {
 	case "init":
-		err = a.handleInit(flags, subArgs)
+		err = a.handleInit(fc, fmtr, subArgs)
 	case "create":
-		err = a.handleCreate(flags, subArgs)
+		err = a.handleCreate(fc, fmtr, subArgs)
 	case "list":
-		err = a.handleList(flags, subArgs)
+		err = a.handleList(fc, fmtr, subArgs)
 	case "show":
-		err = a.handleShow(flags, subArgs)
+		err = a.handleShow(fc, fmtr, subArgs)
 	case "update":
-		err = a.handleUpdate(flags, subArgs)
+		err = a.handleUpdate(fc, fmtr, subArgs)
 	case "start", "done", "cancel", "reopen":
-		err = a.handleTransition(subcmd, flags, subArgs)
+		err = a.handleTransition(subcmd, fc, fmtr, subArgs)
 	case "ready":
-		err = a.handleReady(flags, subArgs)
+		err = a.handleReady(fc, fmtr, subArgs)
 	case "blocked":
-		err = a.handleBlocked(flags, subArgs)
+		err = a.handleBlocked(fc, fmtr, subArgs)
 	case "dep":
-		err = a.handleDep(flags, subArgs)
+		err = a.handleDep(fc, fmtr, subArgs)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
@@ -65,25 +66,25 @@ func (a *App) Run(args []string) int {
 }
 
 // handleInit implements the init subcommand.
-func (a *App) handleInit(flags globalFlags, _ []string) error {
+func (a *App) handleInit(fc FormatConfig, fmtr Formatter, _ []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunInit(dir, flags.quiet, a.Stdout)
+	return RunInit(dir, fc, fmtr, a.Stdout)
 }
 
 // handleCreate implements the create subcommand.
-func (a *App) handleCreate(flags globalFlags, subArgs []string) error {
+func (a *App) handleCreate(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunCreate(dir, flags.quiet, subArgs, a.Stdout)
+	return RunCreate(dir, fc, fmtr, subArgs, a.Stdout)
 }
 
 // handleList implements the list subcommand.
-func (a *App) handleList(flags globalFlags, subArgs []string) error {
+func (a *App) handleList(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
@@ -92,29 +93,29 @@ func (a *App) handleList(flags globalFlags, subArgs []string) error {
 	if err != nil {
 		return err
 	}
-	return RunList(dir, flags.quiet, filter, a.Stdout)
+	return RunList(dir, fc, fmtr, filter, a.Stdout)
 }
 
 // handleShow implements the show subcommand.
-func (a *App) handleShow(flags globalFlags, subArgs []string) error {
+func (a *App) handleShow(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunShow(dir, flags.quiet, subArgs, a.Stdout)
+	return RunShow(dir, fc, fmtr, subArgs, a.Stdout)
 }
 
 // handleUpdate implements the update subcommand.
-func (a *App) handleUpdate(flags globalFlags, subArgs []string) error {
+func (a *App) handleUpdate(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunUpdate(dir, flags.quiet, subArgs, a.Stdout)
+	return RunUpdate(dir, fc, fmtr, subArgs, a.Stdout)
 }
 
 // handleReady implements the ready subcommand (alias for list --ready).
-func (a *App) handleReady(flags globalFlags, subArgs []string) error {
+func (a *App) handleReady(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
@@ -123,11 +124,11 @@ func (a *App) handleReady(flags globalFlags, subArgs []string) error {
 	if err != nil {
 		return err
 	}
-	return RunList(dir, flags.quiet, filter, a.Stdout)
+	return RunList(dir, fc, fmtr, filter, a.Stdout)
 }
 
 // handleBlocked implements the blocked subcommand (alias for list --blocked).
-func (a *App) handleBlocked(flags globalFlags, subArgs []string) error {
+func (a *App) handleBlocked(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
@@ -136,16 +137,16 @@ func (a *App) handleBlocked(flags globalFlags, subArgs []string) error {
 	if err != nil {
 		return err
 	}
-	return RunList(dir, flags.quiet, filter, a.Stdout)
+	return RunList(dir, fc, fmtr, filter, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
-func (a *App) handleTransition(command string, flags globalFlags, subArgs []string) error {
+func (a *App) handleTransition(command string, fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunTransition(dir, command, flags.quiet, subArgs, a.Stdout)
+	return RunTransition(dir, command, fc, fmtr, subArgs, a.Stdout)
 }
 
 // printUsage prints basic usage information.

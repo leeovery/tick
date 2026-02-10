@@ -96,8 +96,8 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 }
 
 // RunUpdate executes the update command: validates inputs, applies changes via the storage engine,
-// and outputs the updated task details.
-func RunUpdate(dir string, quiet bool, args []string, stdout io.Writer) error {
+// and outputs the updated task details via the Formatter.
+func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	opts, err := parseUpdateArgs(args)
 	if err != nil {
 		return err
@@ -211,7 +211,7 @@ func RunUpdate(dir string, quiet bool, args []string, stdout io.Writer) error {
 	}
 
 	// Output: quiet mode outputs only the ID.
-	if quiet {
+	if fc.Quiet {
 		fmt.Fprintln(stdout, updatedID)
 		return nil
 	}
@@ -222,6 +222,7 @@ func RunUpdate(dir string, quiet bool, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	printShowOutput(stdout, data)
+	detail := showDataToTaskDetail(data)
+	fmt.Fprintln(stdout, fmtr.FormatTaskDetail(detail))
 	return nil
 }

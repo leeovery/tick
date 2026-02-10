@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
@@ -33,8 +34,8 @@ type relatedTask struct {
 }
 
 // RunShow executes the show command: queries a single task by ID from SQLite and
-// outputs its full details including blocked_by, children, and description sections.
-func RunShow(dir string, quiet bool, args []string, stdout io.Writer) error {
+// outputs its full details via the Formatter, including blocked_by, children, and description sections.
+func RunShow(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	if len(args) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick show <id>")
 	}
@@ -57,12 +58,13 @@ func RunShow(dir string, quiet bool, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	if quiet {
+	if fc.Quiet {
 		fmt.Fprintln(stdout, data.id)
 		return nil
 	}
 
-	printShowOutput(stdout, data)
+	detail := showDataToTaskDetail(data)
+	fmt.Fprintln(stdout, fmtr.FormatTaskDetail(detail))
 	return nil
 }
 
@@ -148,47 +150,50 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 	return data, err
 }
 
-// printShowOutput renders the show command output in key-value format.
-func printShowOutput(w io.Writer, d showData) {
-	fmt.Fprintf(w, "ID:       %s\n", d.id)
-	fmt.Fprintf(w, "Title:    %s\n", d.title)
-	fmt.Fprintf(w, "Status:   %s\n", d.status)
-	fmt.Fprintf(w, "Priority: %d\n", d.priority)
+// showDataToTaskDetail converts a showData struct (from SQL query) to a TaskDetail
+// struct suitable for the Formatter interface.
+func showDataToTaskDetail(d showData) TaskDetail {
+	created, _ := time.Parse(task.TimestampFormat, d.created)
+	updated, _ := time.Parse(task.TimestampFormat, d.updated)
 
-	if d.parentID != "" {
-		if d.parentTitle != "" {
-			fmt.Fprintf(w, "Parent:   %s (%s)\n", d.parentID, d.parentTitle)
-		} else {
-			fmt.Fprintf(w, "Parent:   %s\n", d.parentID)
-		}
+	t := task.Task{
+		ID:          d.id,
+		Title:       d.title,
+		Status:      task.Status(d.status),
+		Priority:    d.priority,
+		Description: d.description,
+		Parent:      d.parentID,
+		Created:     created,
+		Updated:     updated,
 	}
-
-	fmt.Fprintf(w, "Created:  %s\n", d.created)
-	fmt.Fprintf(w, "Updated:  %s\n", d.updated)
 
 	if d.closed != "" {
-		fmt.Fprintf(w, "Closed:   %s\n", d.closed)
+		closedTime, _ := time.Parse(task.TimestampFormat, d.closed)
+		t.Closed = &closedTime
 	}
 
-	if len(d.blockedBy) > 0 {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Blocked by:")
-		for _, r := range d.blockedBy {
-			fmt.Fprintf(w, "  %s  %s (%s)\n", r.id, r.title, r.status)
-		}
+	var blockedBy []RelatedTask
+	for _, r := range d.blockedBy {
+		blockedBy = append(blockedBy, RelatedTask{
+			ID:     r.id,
+			Title:  r.title,
+			Status: r.status,
+		})
 	}
 
-	if len(d.children) > 0 {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Children:")
-		for _, r := range d.children {
-			fmt.Fprintf(w, "  %s  %s (%s)\n", r.id, r.title, r.status)
-		}
+	var children []RelatedTask
+	for _, r := range d.children {
+		children = append(children, RelatedTask{
+			ID:     r.id,
+			Title:  r.title,
+			Status: r.status,
+		})
 	}
 
-	if d.description != "" {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Description:")
-		fmt.Fprintf(w, "  %s\n", d.description)
+	return TaskDetail{
+		Task:        t,
+		BlockedBy:   blockedBy,
+		Children:    children,
+		ParentTitle: d.parentTitle,
 	}
 }

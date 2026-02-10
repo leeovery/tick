@@ -85,8 +85,8 @@ func parseListFlags(args []string) (ListFilter, error) {
 }
 
 // RunList executes the list command: queries tasks from SQLite with optional filters
-// and outputs them in aligned columns ordered by priority ASC, then created ASC.
-func RunList(dir string, quiet bool, filter ListFilter, stdout io.Writer) error {
+// and outputs them via the Formatter, ordered by priority ASC, then created ASC.
+func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, stdout io.Writer) error {
 	tickDir, err := DiscoverTickDir(dir)
 	if err != nil {
 		return err
@@ -149,26 +149,25 @@ func RunList(dir string, quiet bool, filter ListFilter, stdout io.Writer) error 
 		return err
 	}
 
-	if len(rows) == 0 {
-		fmt.Fprintln(stdout, "No tasks found.")
-		return nil
+	// Convert rows to task.Task slice for the formatter.
+	tasks := make([]task.Task, len(rows))
+	for i, r := range rows {
+		tasks[i] = task.Task{
+			ID:       r.id,
+			Title:    r.title,
+			Status:   task.Status(r.status),
+			Priority: r.priority,
+		}
 	}
 
-	if quiet {
-		for _, r := range rows {
-			fmt.Fprintln(stdout, r.id)
+	if fc.Quiet {
+		for _, t := range tasks {
+			fmt.Fprintln(stdout, t.ID)
 		}
 		return nil
 	}
 
-	// Print header
-	fmt.Fprintf(stdout, "%-12s%-13s%-5s%s\n", "ID", "STATUS", "PRI", "TITLE")
-
-	// Print rows
-	for _, r := range rows {
-		fmt.Fprintf(stdout, "%-12s%-13s%-5d%s\n", r.id, r.status, r.priority, r.title)
-	}
-
+	fmt.Fprintln(stdout, fmtr.FormatTaskList(tasks))
 	return nil
 }
 

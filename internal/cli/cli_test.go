@@ -12,7 +12,7 @@ func TestInit(t *testing.T) {
 		dir := t.TempDir()
 		var stdout bytes.Buffer
 
-		err := RunInit(dir, false, &stdout)
+		err := RunInit(dir, FormatConfig{}, &PrettyFormatter{}, &stdout)
 		if err != nil {
 			t.Fatalf("RunInit returned error: %v", err)
 		}
@@ -31,7 +31,7 @@ func TestInit(t *testing.T) {
 		dir := t.TempDir()
 		var stdout bytes.Buffer
 
-		err := RunInit(dir, false, &stdout)
+		err := RunInit(dir, FormatConfig{}, &PrettyFormatter{}, &stdout)
 		if err != nil {
 			t.Fatalf("RunInit returned error: %v", err)
 		}
@@ -53,7 +53,7 @@ func TestInit(t *testing.T) {
 		dir := t.TempDir()
 		var stdout bytes.Buffer
 
-		err := RunInit(dir, false, &stdout)
+		err := RunInit(dir, FormatConfig{}, &PrettyFormatter{}, &stdout)
 		if err != nil {
 			t.Fatalf("RunInit returned error: %v", err)
 		}
@@ -72,7 +72,7 @@ func TestInit(t *testing.T) {
 		dir := t.TempDir()
 		var stdout bytes.Buffer
 
-		err := RunInit(dir, false, &stdout)
+		err := RunInit(dir, FormatConfig{}, &PrettyFormatter{}, &stdout)
 		if err != nil {
 			t.Fatalf("RunInit returned error: %v", err)
 		}
@@ -88,7 +88,7 @@ func TestInit(t *testing.T) {
 		dir := t.TempDir()
 		var stdout bytes.Buffer
 
-		err := RunInit(dir, true, &stdout)
+		err := RunInit(dir, FormatConfig{Quiet: true}, &PrettyFormatter{}, &stdout)
 		if err != nil {
 			t.Fatalf("RunInit returned error: %v", err)
 		}
@@ -106,7 +106,7 @@ func TestInit(t *testing.T) {
 		}
 
 		var stdout bytes.Buffer
-		err := RunInit(dir, false, &stdout)
+		err := RunInit(dir, FormatConfig{}, &PrettyFormatter{}, &stdout)
 		if err == nil {
 			t.Fatal("expected error when .tick/ already exists, got nil")
 		}

@@ -10,8 +10,8 @@ import (
 
 // RunInit initializes a new tick project in the given directory.
 // It creates the .tick/ directory and an empty tasks.jsonl file.
-// If quiet is true, no output is produced on success.
-func RunInit(dir string, quiet bool, stdout io.Writer) error {
+// If quiet, no output is produced on success. Otherwise, a message is formatted via the Formatter.
+func RunInit(dir string, fc FormatConfig, fmtr Formatter, stdout io.Writer) error {
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
 		return fmt.Errorf("could not resolve absolute path: %w", err)
@@ -32,8 +32,9 @@ func RunInit(dir string, quiet bool, stdout io.Writer) error {
 		return fmt.Errorf("could not create tasks.jsonl: %w", err)
 	}
 
-	if !quiet {
-		fmt.Fprintf(stdout, "Initialized tick in %s/.tick/\n", absDir)
+	if !fc.Quiet {
+		msg := fmt.Sprintf("Initialized tick in %s/.tick/", absDir)
+		fmt.Fprintln(stdout, fmtr.FormatMessage(msg))
 	}
 
 	return nil

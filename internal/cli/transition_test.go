@@ -10,7 +10,7 @@ import (
 )
 
 // runTransition runs a tick transition command (start/done/cancel/reopen) and returns
-// stdout, stderr, and exit code.
+// stdout, stderr, and exit code. Uses IsTTY=true to default to PrettyFormatter.
 func runTransition(t *testing.T, dir string, command string, args ...string) (stdout string, stderr string, exitCode int) {
 	t.Helper()
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -18,6 +18,7 @@ func runTransition(t *testing.T, dir string, command string, args ...string) (st
 		Stdout: &stdoutBuf,
 		Stderr: &stderrBuf,
 		Getwd:  func() (string, error) { return dir, nil },
+		IsTTY:  true,
 	}
 	fullArgs := append([]string{"tick", command}, args...)
 	code := app.Run(fullArgs)
@@ -170,7 +171,7 @@ func TestTransitionCommands(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
 
-		expected := "tick-aaa111: open \u2192 in_progress\n"
+		expected := "tick-aaa111: open -> in_progress\n"
 		if stdout != expected {
 			t.Errorf("stdout = %q, want %q", stdout, expected)
 		}

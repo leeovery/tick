@@ -10,6 +10,7 @@ import (
 )
 
 // runUpdate runs the tick update command with the given args and returns stdout, stderr, and exit code.
+// Uses IsTTY=true to default to PrettyFormatter for consistent test output.
 func runUpdate(t *testing.T, dir string, args ...string) (stdout string, stderr string, exitCode int) {
 	t.Helper()
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -17,6 +18,7 @@ func runUpdate(t *testing.T, dir string, args ...string) (stdout string, stderr 
 		Stdout: &stdoutBuf,
 		Stderr: &stderrBuf,
 		Getwd:  func() (string, error) { return dir, nil },
+		IsTTY:  true,
 	}
 	fullArgs := append([]string{"tick", "update"}, args...)
 	code := app.Run(fullArgs)

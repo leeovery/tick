@@ -10,6 +10,7 @@ import (
 )
 
 // runList runs the tick list command with the given args and returns stdout, stderr, and exit code.
+// Uses IsTTY=true to default to PrettyFormatter for consistent test output.
 func runList(t *testing.T, dir string, args ...string) (stdout string, stderr string, exitCode int) {
 	t.Helper()
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -17,6 +18,7 @@ func runList(t *testing.T, dir string, args ...string) (stdout string, stderr st
 		Stdout: &stdoutBuf,
 		Stderr: &stderrBuf,
 		Getwd:  func() (string, error) { return dir, nil },
+		IsTTY:  true,
 	}
 	fullArgs := append([]string{"tick", "list"}, args...)
 	code := app.Run(fullArgs)
@@ -24,6 +26,7 @@ func runList(t *testing.T, dir string, args ...string) (stdout string, stderr st
 }
 
 // runShow runs the tick show command with the given args and returns stdout, stderr, and exit code.
+// Uses IsTTY=true to default to PrettyFormatter for consistent test output.
 func runShow(t *testing.T, dir string, args ...string) (stdout string, stderr string, exitCode int) {
 	t.Helper()
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -31,6 +34,7 @@ func runShow(t *testing.T, dir string, args ...string) (stdout string, stderr st
 		Stdout: &stdoutBuf,
 		Stderr: &stderrBuf,
 		Getwd:  func() (string, error) { return dir, nil },
+		IsTTY:  true,
 	}
 	fullArgs := append([]string{"tick", "show"}, args...)
 	code := app.Run(fullArgs)
@@ -56,20 +60,20 @@ func TestList(t *testing.T) {
 			t.Fatalf("expected 3 lines (header + 2 tasks), got %d: %q", len(lines), stdout)
 		}
 
-		// Check header
+		// Check header (dynamic column widths based on data: ID=14, STATUS=13, PRI=5)
 		header := lines[0]
-		if header != "ID          STATUS       PRI  TITLE" {
-			t.Errorf("header = %q, want %q", header, "ID          STATUS       PRI  TITLE")
+		if header != "ID            STATUS       PRI  TITLE" {
+			t.Errorf("header = %q, want %q", header, "ID            STATUS       PRI  TITLE")
 		}
 
 		// Check first data row
-		if lines[1] != "tick-aaa111 done         1    Setup Sanctum" {
-			t.Errorf("row 1 = %q, want %q", lines[1], "tick-aaa111 done         1    Setup Sanctum")
+		if lines[1] != "tick-aaa111   done         1    Setup Sanctum" {
+			t.Errorf("row 1 = %q, want %q", lines[1], "tick-aaa111   done         1    Setup Sanctum")
 		}
 
 		// Check second data row
-		if lines[2] != "tick-bbb222 in_progress  1    Login endpoint" {
-			t.Errorf("row 2 = %q, want %q", lines[2], "tick-bbb222 in_progress  1    Login endpoint")
+		if lines[2] != "tick-bbb222   in_progress  1    Login endpoint" {
+			t.Errorf("row 2 = %q, want %q", lines[2], "tick-bbb222   in_progress  1    Login endpoint")
 		}
 	})
 

@@ -10,6 +10,7 @@ import (
 )
 
 // runBlocked runs the tick blocked command with the given args and returns stdout, stderr, and exit code.
+// Uses IsTTY=true to default to PrettyFormatter for consistent test output.
 func runBlocked(t *testing.T, dir string, args ...string) (stdout string, stderr string, exitCode int) {
 	t.Helper()
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -17,6 +18,7 @@ func runBlocked(t *testing.T, dir string, args ...string) (stdout string, stderr
 		Stdout: &stdoutBuf,
 		Stderr: &stderrBuf,
 		Getwd:  func() (string, error) { return dir, nil },
+		IsTTY:  true,
 	}
 	fullArgs := append([]string{"tick", "blocked"}, args...)
 	code := app.Run(fullArgs)
@@ -257,18 +259,18 @@ func TestBlocked(t *testing.T) {
 			t.Fatalf("expected 3 lines (header + 2 blocked tasks), got %d: %q", len(lines), stdout)
 		}
 
-		// Check header matches list format
+		// Check header (dynamic column widths: ID=14, STATUS=8, PRI=5)
 		header := lines[0]
-		if header != "ID          STATUS       PRI  TITLE" {
-			t.Errorf("header = %q, want %q", header, "ID          STATUS       PRI  TITLE")
+		if header != "ID            STATUS  PRI  TITLE" {
+			t.Errorf("header = %q, want %q", header, "ID            STATUS  PRI  TITLE")
 		}
 
 		// Check aligned rows
-		if lines[1] != "tick-aaa111 open         1    Setup Sanctum" {
-			t.Errorf("row 1 = %q, want %q", lines[1], "tick-aaa111 open         1    Setup Sanctum")
+		if lines[1] != "tick-aaa111   open    1    Setup Sanctum" {
+			t.Errorf("row 1 = %q, want %q", lines[1], "tick-aaa111   open    1    Setup Sanctum")
 		}
-		if lines[2] != "tick-bbb222 open         2    Login endpoint" {
-			t.Errorf("row 2 = %q, want %q", lines[2], "tick-bbb222 open         2    Login endpoint")
+		if lines[2] != "tick-bbb222   open    2    Login endpoint" {
+			t.Errorf("row 2 = %q, want %q", lines[2], "tick-bbb222   open    2    Login endpoint")
 		}
 	})
 
@@ -350,6 +352,7 @@ func TestCancelUnblocksDependents(t *testing.T) {
 			Stdout: &stdoutBuf,
 			Stderr: &stderrBuf,
 			Getwd:  func() (string, error) { return dir, nil },
+			IsTTY:  true,
 		}
 		exitCode = app.Run([]string{"tick", "cancel", "tick-blk111"})
 		if exitCode != 0 {

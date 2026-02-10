@@ -11,7 +11,7 @@ import (
 )
 
 // handleDep implements the dep subcommand, routing to add/rm sub-subcommands.
-func (a *App) handleDep(flags globalFlags, subArgs []string) error {
+func (a *App) handleDep(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
@@ -26,9 +26,9 @@ func (a *App) handleDep(flags globalFlags, subArgs []string) error {
 
 	switch subCmd {
 	case "add":
-		return RunDepAdd(dir, flags.quiet, rest, a.Stdout)
+		return RunDepAdd(dir, fc, fmtr, rest, a.Stdout)
 	case "rm":
-		return RunDepRm(dir, flags.quiet, rest, a.Stdout)
+		return RunDepRm(dir, fc, fmtr, rest, a.Stdout)
 	default:
 		return fmt.Errorf("unknown dep sub-command '%s'. Usage: tick dep <add|rm> <task_id> <blocked_by_id>", subCmd)
 	}
@@ -56,8 +56,8 @@ func parseDepArgs(args []string, subCmd string) (string, string, error) {
 }
 
 // RunDepAdd executes the dep add command: validates inputs, adds the dependency,
-// persists via the storage engine, and outputs confirmation.
-func RunDepAdd(dir string, quiet bool, args []string, stdout io.Writer) error {
+// persists via the storage engine, and outputs confirmation via the Formatter.
+func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	taskID, blockedByID, err := parseDepArgs(args, "add")
 	if err != nil {
 		return err
@@ -121,16 +121,16 @@ func RunDepAdd(dir string, quiet bool, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	if !quiet {
-		fmt.Fprintf(stdout, "Dependency added: %s blocked by %s\n", taskID, blockedByID)
+	if !fc.Quiet {
+		fmt.Fprintln(stdout, fmtr.FormatDepChange("added", taskID, blockedByID))
 	}
 
 	return nil
 }
 
 // RunDepRm executes the dep rm command: finds the task, removes the dependency
-// from blocked_by, persists via the storage engine, and outputs confirmation.
-func RunDepRm(dir string, quiet bool, args []string, stdout io.Writer) error {
+// from blocked_by, persists via the storage engine, and outputs confirmation via the Formatter.
+func RunDepRm(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	taskID, blockedByID, err := parseDepArgs(args, "rm")
 	if err != nil {
 		return err
@@ -185,8 +185,8 @@ func RunDepRm(dir string, quiet bool, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	if !quiet {
-		fmt.Fprintf(stdout, "Dependency removed: %s no longer blocked by %s\n", taskID, blockedByID)
+	if !fc.Quiet {
+		fmt.Fprintln(stdout, fmtr.FormatDepChange("removed", taskID, blockedByID))
 	}
 
 	return nil

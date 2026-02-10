@@ -152,6 +152,18 @@ func (s *StubFormatter) FormatStats(_ Stats) string { return "" }
 // FormatMessage returns an empty string (stub).
 func (s *StubFormatter) FormatMessage(_ string) string { return "" }
 
+// NewFormatter creates a Formatter for the given Format.
+func NewFormatter(f Format) Formatter {
+	switch f {
+	case FormatPretty:
+		return &PrettyFormatter{}
+	case FormatJSON:
+		return &JSONFormatter{}
+	default:
+		return &ToonFormatter{}
+	}
+}
+
 // VerboseLog writes a verbose message to the given writer (intended for stderr).
 // Only writes if verbose is true.
 func VerboseLog(w io.Writer, verbose bool, msg string) {

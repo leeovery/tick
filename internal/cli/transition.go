@@ -10,8 +10,8 @@ import (
 
 // RunTransition executes a status transition command (start, done, cancel, reopen).
 // It normalizes the task ID, looks up the task, applies the transition, persists the change,
-// and outputs the transition line to stdout.
-func RunTransition(dir string, command string, quiet bool, args []string, stdout io.Writer) error {
+// and outputs the transition via the Formatter.
+func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	if len(args) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick %s <id>", command)
 	}
@@ -48,8 +48,8 @@ func RunTransition(dir string, command string, quiet bool, args []string, stdout
 		return err
 	}
 
-	if !quiet {
-		fmt.Fprintf(stdout, "%s: %s \u2192 %s\n", id, result.OldStatus, result.NewStatus)
+	if !fc.Quiet {
+		fmt.Fprintln(stdout, fmtr.FormatTransition(id, string(result.OldStatus), string(result.NewStatus)))
 	}
 
 	return nil

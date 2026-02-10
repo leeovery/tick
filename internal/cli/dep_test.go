@@ -10,6 +10,7 @@ import (
 )
 
 // runDep runs a tick dep command and returns stdout, stderr, and exit code.
+// Uses IsTTY=true to default to PrettyFormatter for consistent test output.
 func runDep(t *testing.T, dir string, args ...string) (stdout string, stderr string, exitCode int) {
 	t.Helper()
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -17,6 +18,7 @@ func runDep(t *testing.T, dir string, args ...string) (stdout string, stderr str
 		Stdout: &stdoutBuf,
 		Stderr: &stderrBuf,
 		Getwd:  func() (string, error) { return dir, nil },
+		IsTTY:  true,
 	}
 	fullArgs := append([]string{"tick", "dep"}, args...)
 	code := app.Run(fullArgs)
