@@ -6,7 +6,7 @@ total_proposed: 5
 # Analysis Tasks: Tick Core (Cycle 2)
 
 ## Task 1: Extract shared ready-query SQL conditions
-status: pending
+status: approved
 severity: medium
 sources: duplication, architecture
 
@@ -38,7 +38,7 @@ sources: duplication, architecture
 - Test that stats ready/blocked counts remain accurate after refactor
 
 ## Task 2: Add relationship context to create command output
-status: pending
+status: approved
 severity: medium
 sources: standards
 
@@ -70,7 +70,7 @@ sources: standards
 - Test create without relationships still produces correct output (empty blocked_by/children sections)
 
 ## Task 3: Extract store-opening boilerplate into shared helper
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -99,7 +99,7 @@ sources: duplication
 - Test that all commands still function correctly after refactor (covered by existing integration tests)
 
 ## Task 4: Remove dead VerboseLog function
-status: pending
+status: approved
 severity: low
 sources: architecture
 
@@ -127,7 +127,7 @@ sources: architecture
 - All existing tests pass after removal
 
 ## Task 5: Consolidate duplicate relatedTask struct into RelatedTask
-status: pending
+status: approved
 severity: low
 sources: duplication
 

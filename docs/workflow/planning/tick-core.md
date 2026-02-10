@@ -196,6 +196,30 @@ status: pending
 
 ---
 
+### Phase 7: Analysis Fixes — Deduplication, Compliance & Cleanup (Cycle 2)
+status: pending
+
+**Goal**: Address gaps found during cycle 2 implementation analysis: duplicated SQL conditions, missing relationship context in create output, repeated store-opening boilerplate, dead code, and duplicate struct definitions.
+**Why this order**: All prior analysis fixes (Phase 6) are scoped. These are additional improvements found in a second analysis pass.
+
+**Acceptance**:
+- [ ] Ready/blocked SQL conditions defined in exactly one shared location
+- [ ] Create command output includes full relationship context (same as show)
+- [ ] Store-opening boilerplate extracted to shared helper across all 9 call sites
+- [ ] Dead VerboseLog function removed
+- [ ] Duplicate relatedTask struct consolidated into RelatedTask
+
+#### Tasks
+| ID            | Name                                                      | Status  |
+|---------------|-----------------------------------------------------------|---------|
+| tick-core-7-1 | Extract shared ready-query SQL conditions                 | pending |
+| tick-core-7-2 | Add relationship context to create command output         | pending |
+| tick-core-7-3 | Extract store-opening boilerplate into shared helper      | pending |
+| tick-core-7-4 | Remove dead VerboseLog function                           | pending |
+| tick-core-7-5 | Consolidate duplicate relatedTask struct into RelatedTask | pending |
+
+---
+
 ### External Libraries
 
 | Library | Purpose |
@@ -219,3 +243,4 @@ status: pending
 | 2026-01-30 | Phase 5: removed doctor (separate spec), renamed to Stats & Cache Management |
 | 2026-01-30 | Plan review complete, status concluded |
 | 2026-02-10 | Phase 6 added: 7 analysis tasks from cycle 1 implementation analysis |
+| 2026-02-10 | Phase 7 added: 5 analysis tasks from cycle 2 implementation analysis |
