@@ -4,13 +4,81 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.com/leeovery/tick/internal/storage"
+	"github.com/leeovery/tick/internal/task"
 )
 
-// RunList executes the list command: queries all tasks from SQLite and outputs them
-// in aligned columns ordered by priority ASC, then created ASC.
-func RunList(dir string, quiet bool, stdout io.Writer) error {
+// ListFilter holds parsed filter flags for the list command.
+type ListFilter struct {
+	Ready    bool
+	Blocked  bool
+	Status   string
+	Priority int
+	// HasPriority indicates whether --priority was explicitly set.
+	HasPriority bool
+}
+
+// parseListFlags parses list-specific flags from subArgs.
+// Returns the parsed filter and an error if validation fails.
+func parseListFlags(args []string) (ListFilter, error) {
+	var f ListFilter
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--ready":
+			f.Ready = true
+		case "--blocked":
+			f.Blocked = true
+		case "--status":
+			if i+1 >= len(args) {
+				return f, fmt.Errorf("--status requires a value")
+			}
+			i++
+			f.Status = args[i]
+		case "--priority":
+			if i+1 >= len(args) {
+				return f, fmt.Errorf("--priority requires a value")
+			}
+			i++
+			p, err := strconv.Atoi(args[i])
+			if err != nil {
+				return f, fmt.Errorf("invalid priority '%s': must be 0-4", args[i])
+			}
+			f.Priority = p
+			f.HasPriority = true
+		}
+	}
+
+	if f.Ready && f.Blocked {
+		return f, fmt.Errorf("--ready and --blocked are mutually exclusive")
+	}
+
+	if f.Status != "" {
+		valid := map[string]bool{
+			string(task.StatusOpen):       true,
+			string(task.StatusInProgress): true,
+			string(task.StatusDone):       true,
+			string(task.StatusCancelled):  true,
+		}
+		if !valid[f.Status] {
+			return f, fmt.Errorf("invalid status '%s': must be one of open, in_progress, done, cancelled", f.Status)
+		}
+	}
+
+	if f.HasPriority {
+		if f.Priority < 0 || f.Priority > 4 {
+			return f, fmt.Errorf("invalid priority '%d': must be 0-4", f.Priority)
+		}
+	}
+
+	return f, nil
+}
+
+// RunList executes the list command: queries tasks from SQLite with optional filters
+// and outputs them in aligned columns ordered by priority ASC, then created ASC.
+func RunList(dir string, quiet bool, filter ListFilter, stdout io.Writer) error {
 	tickDir, err := DiscoverTickDir(dir)
 	if err != nil {
 		return err
@@ -31,10 +99,10 @@ func RunList(dir string, quiet bool, stdout io.Writer) error {
 
 	var rows []listRow
 
+	query, queryArgs := buildListQuery(filter)
+
 	err = store.Query(func(db *sql.DB) error {
-		sqlRows, err := db.Query(
-			`SELECT id, status, priority, title FROM tasks ORDER BY priority ASC, created ASC`,
-		)
+		sqlRows, err := db.Query(query, queryArgs...)
 		if err != nil {
 			return fmt.Errorf("failed to query tasks: %w", err)
 		}
@@ -74,4 +142,67 @@ func RunList(dir string, quiet bool, stdout io.Writer) error {
 	}
 
 	return nil
+}
+
+// buildListQuery composes a SQL query string and args based on the filter.
+// Uses the same ready/blocked SQL patterns from readySQL and blockedSQL constants.
+func buildListQuery(f ListFilter) (string, []interface{}) {
+	var conditions []string
+	var args []interface{}
+
+	if f.Ready {
+		// Reuse the ready conditions: open, no unclosed blockers, no open children.
+		conditions = append(conditions,
+			`t.status = 'open'`,
+			`NOT EXISTS (
+				SELECT 1 FROM dependencies d
+				JOIN tasks blocker ON blocker.id = d.blocked_by
+				WHERE d.task_id = t.id
+				  AND blocker.status NOT IN ('done', 'cancelled')
+			)`,
+			`NOT EXISTS (
+				SELECT 1 FROM tasks child
+				WHERE child.parent = t.id
+				  AND child.status IN ('open', 'in_progress')
+			)`,
+		)
+	}
+
+	if f.Blocked {
+		// Reuse the blocked conditions: open AND (unclosed blocker OR open children).
+		conditions = append(conditions,
+			`t.status = 'open'`,
+			`(
+				EXISTS (
+					SELECT 1 FROM dependencies d
+					JOIN tasks blocker ON blocker.id = d.blocked_by
+					WHERE d.task_id = t.id
+					  AND blocker.status NOT IN ('done', 'cancelled')
+				)
+				OR EXISTS (
+					SELECT 1 FROM tasks child
+					WHERE child.parent = t.id
+					  AND child.status IN ('open', 'in_progress')
+				)
+			)`,
+		)
+	}
+
+	if f.Status != "" {
+		conditions = append(conditions, `t.status = ?`)
+		args = append(args, f.Status)
+	}
+
+	if f.HasPriority {
+		conditions = append(conditions, `t.priority = ?`)
+		args = append(args, f.Priority)
+	}
+
+	query := `SELECT t.id, t.status, t.priority, t.title FROM tasks t`
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += " ORDER BY t.priority ASC, t.created ASC"
+
+	return query, args
 }

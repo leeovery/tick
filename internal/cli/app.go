@@ -46,7 +46,7 @@ func (a *App) Run(args []string) int {
 	case "create":
 		err = a.handleCreate(flags, subArgs)
 	case "list":
-		err = a.handleList(flags)
+		err = a.handleList(flags, subArgs)
 	case "show":
 		err = a.handleShow(flags, subArgs)
 	case "update":
@@ -90,12 +90,16 @@ func (a *App) handleCreate(flags globalFlags, subArgs []string) error {
 }
 
 // handleList implements the list subcommand.
-func (a *App) handleList(flags globalFlags) error {
+func (a *App) handleList(flags globalFlags, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunList(dir, flags.quiet, a.Stdout)
+	filter, err := parseListFlags(subArgs)
+	if err != nil {
+		return err
+	}
+	return RunList(dir, flags.quiet, filter, a.Stdout)
 }
 
 // handleShow implements the show subcommand.
