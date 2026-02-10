@@ -75,13 +75,7 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 			if i >= len(args) {
 				return opts, fmt.Errorf("--blocks requires a value")
 			}
-			ids := strings.Split(args[i], ",")
-			for _, id := range ids {
-				normalized := task.NormalizeID(strings.TrimSpace(id))
-				if normalized != "" {
-					opts.blocks = append(opts.blocks, normalized)
-				}
-			}
+			opts.blocks = parseCommaSeparatedIDs(args[i])
 		case strings.HasPrefix(arg, "-"):
 			// Unknown flag — skip (global flags already extracted)
 		default:
@@ -194,14 +188,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 		// For --blocks: add this task's ID to target tasks' blocked_by and refresh updated.
 		if len(opts.blocks) > 0 {
-			for i := range tasks {
-				for _, blockID := range opts.blocks {
-					if tasks[i].ID == blockID {
-						tasks[i].BlockedBy = append(tasks[i].BlockedBy, opts.id)
-						tasks[i].Updated = now
-					}
-				}
-			}
+			applyBlocks(tasks, opts.id, opts.blocks, now)
 
 			// Validate dependencies (cycle detection + child-blocked-by-parent) against full task list.
 			for _, blockID := range opts.blocks {

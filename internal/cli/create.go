@@ -51,25 +51,13 @@ func parseCreateArgs(args []string) (createOpts, error) {
 			if i >= len(args) {
 				return opts, fmt.Errorf("--blocked-by requires a value")
 			}
-			ids := strings.Split(args[i], ",")
-			for _, id := range ids {
-				normalized := task.NormalizeID(strings.TrimSpace(id))
-				if normalized != "" {
-					opts.blockedBy = append(opts.blockedBy, normalized)
-				}
-			}
+			opts.blockedBy = parseCommaSeparatedIDs(args[i])
 		case arg == "--blocks":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--blocks requires a value")
 			}
-			ids := strings.Split(args[i], ",")
-			for _, id := range ids {
-				normalized := task.NormalizeID(strings.TrimSpace(id))
-				if normalized != "" {
-					opts.blocks = append(opts.blocks, normalized)
-				}
-			}
+			opts.blocks = parseCommaSeparatedIDs(args[i])
 		case arg == "--parent":
 			i++
 			if i >= len(args) {
@@ -163,14 +151,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 		// For --blocks: add new task's ID to target tasks' blocked_by and refresh updated.
 		if len(opts.blocks) > 0 {
-			for i := range tasks {
-				for _, blockID := range opts.blocks {
-					if tasks[i].ID == blockID {
-						tasks[i].BlockedBy = append(tasks[i].BlockedBy, id)
-						tasks[i].Updated = now
-					}
-				}
-			}
+			applyBlocks(tasks, id, opts.blocks, now)
 		}
 
 		tasks = append(tasks, newTask)
