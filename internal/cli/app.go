@@ -53,6 +53,8 @@ func (a *App) Run(args []string) int {
 		err = a.handleUpdate(flags, subArgs)
 	case "start", "done", "cancel", "reopen":
 		err = a.handleTransition(subcmd, flags, subArgs)
+	case "ready":
+		err = a.handleReady(flags)
 	case "dep":
 		err = a.handleDep(flags, subArgs)
 	default:
@@ -110,6 +112,15 @@ func (a *App) handleUpdate(flags globalFlags, subArgs []string) error {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 	return RunUpdate(dir, flags.quiet, subArgs, a.Stdout)
+}
+
+// handleReady implements the ready subcommand (alias for list --ready).
+func (a *App) handleReady(flags globalFlags) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunReady(dir, flags.quiet, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
