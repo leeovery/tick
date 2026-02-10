@@ -15,7 +15,7 @@ linters:
     command: ~/go/bin/golangci-lint run ./...
   - name: staticcheck
     command: ~/go/bin/staticcheck ./...
-analysis_cycle: 1
+analysis_cycle: 2
 project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro
