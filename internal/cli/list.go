@@ -207,41 +207,11 @@ func buildListQuery(f ListFilter, descendantIDs []string) (string, []interface{}
 	var args []interface{}
 
 	if f.Ready {
-		// Reuse the ready conditions: open, no unclosed blockers, no open children.
-		conditions = append(conditions,
-			`t.status = 'open'`,
-			`NOT EXISTS (
-				SELECT 1 FROM dependencies d
-				JOIN tasks blocker ON blocker.id = d.blocked_by
-				WHERE d.task_id = t.id
-				  AND blocker.status NOT IN ('done', 'cancelled')
-			)`,
-			`NOT EXISTS (
-				SELECT 1 FROM tasks child
-				WHERE child.parent = t.id
-				  AND child.status IN ('open', 'in_progress')
-			)`,
-		)
+		conditions = append(conditions, ReadyConditions()...)
 	}
 
 	if f.Blocked {
-		// Reuse the blocked conditions: open AND (unclosed blocker OR open children).
-		conditions = append(conditions,
-			`t.status = 'open'`,
-			`(
-				EXISTS (
-					SELECT 1 FROM dependencies d
-					JOIN tasks blocker ON blocker.id = d.blocked_by
-					WHERE d.task_id = t.id
-					  AND blocker.status NOT IN ('done', 'cancelled')
-				)
-				OR EXISTS (
-					SELECT 1 FROM tasks child
-					WHERE child.parent = t.id
-					  AND child.status IN ('open', 'in_progress')
-				)
-			)`,
-		)
+		conditions = append(conditions, BlockedConditions()...)
 	}
 
 	if f.Status != "" {

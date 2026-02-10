@@ -83,20 +83,7 @@ func RunStats(dir string, fc FormatConfig, fmtr Formatter, stdout io.Writer) err
 		}
 
 		// Ready count: open, no unclosed blockers, no open children.
-		readyQuery := `
-			SELECT COUNT(*) FROM tasks t
-			WHERE t.status = 'open'
-			  AND NOT EXISTS (
-				SELECT 1 FROM dependencies d
-				JOIN tasks blocker ON blocker.id = d.blocked_by
-				WHERE d.task_id = t.id
-				  AND blocker.status NOT IN ('done', 'cancelled')
-			  )
-			  AND NOT EXISTS (
-				SELECT 1 FROM tasks child
-				WHERE child.parent = t.id
-				  AND child.status IN ('open', 'in_progress')
-			  )`
+		readyQuery := "\n\t\t\tSELECT COUNT(*) FROM tasks t\n\t\t\tWHERE " + ReadyWhereClause()
 		if err := db.QueryRow(readyQuery).Scan(&stats.Ready); err != nil {
 			return fmt.Errorf("failed to query ready count: %w", err)
 		}
