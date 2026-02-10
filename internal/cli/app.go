@@ -53,6 +53,8 @@ func (a *App) Run(args []string) int {
 		err = a.handleUpdate(flags, subArgs)
 	case "start", "done", "cancel", "reopen":
 		err = a.handleTransition(subcmd, flags, subArgs)
+	case "dep":
+		err = a.handleDep(flags, subArgs)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
