@@ -639,6 +639,144 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
+	t.Run("it shows blocker title and status in output when created with --blocked-by", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		blocker := task.Task{
+			ID: "tick-aaa111", Title: "Blocker task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{blocker})
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Blocked task", "--blocked-by", "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		// Output should show the blocker's title and status in the blocked_by section
+		if !strings.Contains(stdout, "Blocked by:") {
+			t.Errorf("stdout should contain 'Blocked by:' section, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "Blocker task") {
+			t.Errorf("stdout should contain blocker title 'Blocker task', got %q", stdout)
+		}
+		if !strings.Contains(stdout, "tick-aaa111") {
+			t.Errorf("stdout should contain blocker ID 'tick-aaa111', got %q", stdout)
+		}
+		if !strings.Contains(stdout, "open") {
+			t.Errorf("stdout should contain blocker status 'open', got %q", stdout)
+		}
+	})
+
+	t.Run("it shows parent title in output when created with --parent", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		parent := task.Task{
+			ID: "tick-ppp111", Title: "Parent task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent})
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		// Output should show the parent ID and title
+		if !strings.Contains(stdout, "Parent:") {
+			t.Errorf("stdout should contain 'Parent:' field, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "tick-ppp111") {
+			t.Errorf("stdout should contain parent ID 'tick-ppp111', got %q", stdout)
+		}
+		if !strings.Contains(stdout, "Parent task") {
+			t.Errorf("stdout should contain parent title 'Parent task', got %q", stdout)
+		}
+	})
+
+	t.Run("it shows relationship context when created with --blocks", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		target := task.Task{
+			ID: "tick-aaa111", Title: "Target task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{target})
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Blocking task", "--blocks", "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		// The new task should appear in output (verify it was created)
+		persisted := readPersistedTasks(t, tickDir)
+		var newTask task.Task
+		for _, tk := range persisted {
+			if tk.ID != "tick-aaa111" {
+				newTask = tk
+			}
+		}
+		if !strings.Contains(stdout, newTask.ID) {
+			t.Errorf("stdout should contain new task ID %q, got %q", newTask.ID, stdout)
+		}
+		if !strings.Contains(stdout, "Blocking task") {
+			t.Errorf("stdout should contain task title 'Blocking task', got %q", stdout)
+		}
+	})
+
+	t.Run("it outputs only task ID with --quiet flag after create with relationships", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		blocker := task.Task{
+			ID: "tick-aaa111", Title: "Blocker", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{blocker})
+
+		stdout, stderr, exitCode := runCreate(t, dir, "--quiet", "Quiet blocked", "--blocked-by", "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var newTask task.Task
+		for _, tk := range persisted {
+			if tk.ID != "tick-aaa111" {
+				newTask = tk
+			}
+		}
+
+		expected := newTask.ID + "\n"
+		if stdout != expected {
+			t.Errorf("stdout = %q, want %q", stdout, expected)
+		}
+	})
+
+	t.Run("it produces correct output without relationships (empty blocked_by/children)", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		stdout, stderr, exitCode := runCreate(t, dir, "Simple task")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		// Output should contain standard fields
+		if !strings.Contains(stdout, "ID:") {
+			t.Errorf("stdout should contain 'ID:' field, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "Simple task") {
+			t.Errorf("stdout should contain title 'Simple task', got %q", stdout)
+		}
+		if !strings.Contains(stdout, "Status:") {
+			t.Errorf("stdout should contain 'Status:' field, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "Priority:") {
+			t.Errorf("stdout should contain 'Priority:' field, got %q", stdout)
+		}
+		// Should NOT contain relationship sections when none exist
+		if strings.Contains(stdout, "Blocked by:") {
+			t.Errorf("stdout should not contain 'Blocked by:' section when no blockers, got %q", stdout)
+		}
+		if strings.Contains(stdout, "Children:") {
+			t.Errorf("stdout should not contain 'Children:' section when no children, got %q", stdout)
+		}
+	})
+
 	t.Run("it allows valid dependencies through create --blocked-by and --blocks", func(t *testing.T) {
 		now := time.Now().UTC().Truncate(time.Second)
 		taskA := task.Task{

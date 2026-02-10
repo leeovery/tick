@@ -176,13 +176,20 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 
-	// Output.
+	// Output: quiet mode outputs only the ID.
 	if fc.Quiet {
 		fmt.Fprintln(stdout, createdTask.ID)
-	} else {
-		detail := TaskDetail{Task: createdTask}
-		fmt.Fprintln(stdout, fmtr.FormatTaskDetail(detail))
+		return nil
 	}
+
+	// Full output: query the task with relationships like `tick show`.
+	data, err := queryShowData(store, createdTask.ID)
+	if err != nil {
+		return err
+	}
+
+	detail := showDataToTaskDetail(data)
+	fmt.Fprintln(stdout, fmtr.FormatTaskDetail(detail))
 
 	return nil
 }
