@@ -33,7 +33,7 @@ func validateChildBlockedByParent(tasks []Task, taskID, newBlockedByID string) e
 	for i := range tasks {
 		if tasks[i].ID == taskID && tasks[i].Parent == newBlockedByID && newBlockedByID != "" {
 			return fmt.Errorf(
-				"cannot add dependency - %s cannot be blocked by its parent %s",
+				"cannot add dependency - %s cannot be blocked by its parent %s\n(would create unworkable task due to leaf-only ready rule)",
 				taskID, newBlockedByID,
 			)
 		}

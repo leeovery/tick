@@ -83,7 +83,7 @@ func TestValidateDependency(t *testing.T) {
 			t.Fatal("expected error for child blocked by parent, got nil")
 		}
 
-		expected := "cannot add dependency - tick-child cannot be blocked by its parent tick-parent"
+		expected := "cannot add dependency - tick-child cannot be blocked by its parent tick-parent\n(would create unworkable task due to leaf-only ready rule)"
 		if err.Error() != expected {
 			t.Errorf("expected error %q, got %q", expected, err.Error())
 		}
