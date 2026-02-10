@@ -75,6 +75,8 @@ func (a *App) Run(args []string) int {
 		err = a.handleDep(fc, fmtr, subArgs)
 	case "stats":
 		err = a.handleStats(fc, fmtr)
+	case "rebuild":
+		err = a.handleRebuild(fc, fmtr)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
@@ -169,6 +171,15 @@ func (a *App) handleStats(fc FormatConfig, fmtr Formatter) error {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 	return RunStats(dir, fc, fmtr, a.Stdout)
+}
+
+// handleRebuild implements the rebuild subcommand.
+func (a *App) handleRebuild(fc FormatConfig, fmtr Formatter) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunRebuild(dir, fc, fmtr, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
