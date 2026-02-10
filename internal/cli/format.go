@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/leeovery/tick/internal/task"
@@ -180,13 +179,5 @@ func NewFormatter(f Format) Formatter {
 		return &JSONFormatter{}
 	default:
 		return &ToonFormatter{}
-	}
-}
-
-// VerboseLog writes a verbose-prefixed message to the given writer (intended for stderr).
-// Only writes if verbose is true. All output is prefixed with "verbose: " for grep-ability.
-func VerboseLog(w io.Writer, verbose bool, msg string) {
-	if verbose {
-		fmt.Fprintf(w, "verbose: %s\n", msg)
 	}
 }

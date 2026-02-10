@@ -374,35 +374,3 @@ func (b *byteBuffer) Write(p []byte) (int, error) {
 func (b *byteBuffer) String() string {
 	return string(b.data)
 }
-
-func TestVerboseToStderrOnly(t *testing.T) {
-	t.Run("it writes verbose output to the provided writer when verbose is true", func(t *testing.T) {
-		var stderr byteBuffer
-		VerboseLog(&stderr, true, "debug info")
-		expected := "verbose: debug info\n"
-		if stderr.String() != expected {
-			t.Errorf("stderr = %q, want %q", stderr.String(), expected)
-		}
-	})
-
-	t.Run("it writes nothing when verbose is false", func(t *testing.T) {
-		var stderr byteBuffer
-		VerboseLog(&stderr, false, "debug info")
-		if stderr.String() != "" {
-			t.Errorf("stderr should be empty when verbose=false, got %q", stderr.String())
-		}
-	})
-
-	t.Run("it never writes to stdout", func(t *testing.T) {
-		// VerboseLog writes to the given writer (intended for stderr).
-		// Stdout is never passed; this confirms the design: verbose goes only to stderr.
-		var stdout, stderr byteBuffer
-		VerboseLog(&stderr, true, "verbose message")
-		if stdout.String() != "" {
-			t.Errorf("stdout should be empty, got %q", stdout.String())
-		}
-		if stderr.String() == "" {
-			t.Error("stderr should have verbose output")
-		}
-	})
-}
