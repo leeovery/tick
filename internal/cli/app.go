@@ -49,6 +49,8 @@ func (a *App) Run(args []string) int {
 		err = a.handleList(flags)
 	case "show":
 		err = a.handleShow(flags, subArgs)
+	case "start", "done", "cancel", "reopen":
+		err = a.handleTransition(subcmd, flags, subArgs)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
@@ -95,6 +97,15 @@ func (a *App) handleShow(flags globalFlags, subArgs []string) error {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 	return RunShow(dir, flags.quiet, subArgs, a.Stdout)
+}
+
+// handleTransition implements the start/done/cancel/reopen subcommands.
+func (a *App) handleTransition(command string, flags globalFlags, subArgs []string) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunTransition(dir, command, flags.quiet, subArgs, a.Stdout)
 }
 
 // printUsage prints basic usage information.
