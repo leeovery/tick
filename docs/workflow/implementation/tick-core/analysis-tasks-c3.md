@@ -6,7 +6,7 @@ total_proposed: 2
 # Analysis Tasks: Tick Core (Cycle 3)
 
 ## Task 1: Prevent duplicate blocked_by entries in applyBlocks
-status: pending
+status: approved
 severity: medium
 sources: standards
 
@@ -32,7 +32,7 @@ sources: standards
 - Integration test: `tick create "A" --blocks T1` where A already blocks T1 (via prior dep add); verify T1's `blocked_by` has no duplicates
 
 ## Task 2: Extract post-mutation output helper from create.go and update.go
-status: pending
+status: approved
 severity: medium
 sources: duplication
 

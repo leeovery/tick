@@ -220,6 +220,24 @@ status: pending
 
 ---
 
+### Phase 8: Analysis Fixes — Deduplication & Correctness (Cycle 3)
+status: pending
+
+**Goal**: Address gaps found during cycle 3 implementation analysis: duplicate blocked_by entries from applyBlocks, and duplicated post-mutation output logic across create and update commands.
+**Why this order**: All prior analysis fixes (Phases 6-7) are scoped. These are additional improvements found in a third analysis pass.
+
+**Acceptance**:
+- [ ] `applyBlocks` does not create duplicate entries in `BlockedBy` slices
+- [ ] Post-mutation output logic extracted to a single shared helper used by both create and update
+
+#### Tasks
+| ID            | Name                                                             | Status  |
+|---------------|------------------------------------------------------------------|---------|
+| tick-core-8-1 | Prevent duplicate blocked_by entries in applyBlocks              | pending |
+| tick-core-8-2 | Extract post-mutation output helper from create.go and update.go | pending |
+
+---
+
 ### External Libraries
 
 | Library | Purpose |
@@ -244,3 +262,4 @@ status: pending
 | 2026-01-30 | Plan review complete, status concluded |
 | 2026-02-10 | Phase 6 added: 7 analysis tasks from cycle 1 implementation analysis |
 | 2026-02-10 | Phase 7 added: 5 analysis tasks from cycle 2 implementation analysis |
+| 2026-02-10 | Phase 8 added: 2 analysis tasks from cycle 3 implementation analysis |
