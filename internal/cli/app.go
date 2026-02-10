@@ -45,6 +45,10 @@ func (a *App) Run(args []string) int {
 		err = a.handleInit(flags, subArgs)
 	case "create":
 		err = a.handleCreate(flags, subArgs)
+	case "list":
+		err = a.handleList(flags)
+	case "show":
+		err = a.handleShow(flags, subArgs)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
@@ -73,6 +77,24 @@ func (a *App) handleCreate(flags globalFlags, subArgs []string) error {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 	return RunCreate(dir, flags.quiet, subArgs, a.Stdout)
+}
+
+// handleList implements the list subcommand.
+func (a *App) handleList(flags globalFlags) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunList(dir, flags.quiet, a.Stdout)
+}
+
+// handleShow implements the show subcommand.
+func (a *App) handleShow(flags globalFlags, subArgs []string) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunShow(dir, flags.quiet, subArgs, a.Stdout)
 }
 
 // printUsage prints basic usage information.
