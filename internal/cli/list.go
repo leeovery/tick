@@ -19,6 +19,8 @@ type ListFilter struct {
 	Priority int
 	// HasPriority indicates whether --priority was explicitly set.
 	HasPriority bool
+	// Parent restricts results to descendants of the specified task ID.
+	Parent string
 }
 
 // parseListFlags parses list-specific flags from subArgs.
@@ -48,6 +50,12 @@ func parseListFlags(args []string) (ListFilter, error) {
 			}
 			f.Priority = p
 			f.HasPriority = true
+		case "--parent":
+			if i+1 >= len(args) {
+				return f, fmt.Errorf("--parent requires a value")
+			}
+			i++
+			f.Parent = task.NormalizeID(args[i])
 		}
 	}
 
@@ -99,9 +107,29 @@ func RunList(dir string, quiet bool, filter ListFilter, stdout io.Writer) error 
 
 	var rows []listRow
 
-	query, queryArgs := buildListQuery(filter)
-
 	err = store.Query(func(db *sql.DB) error {
+		var descendantIDs []string
+
+		if filter.Parent != "" {
+			// Validate parent exists.
+			var exists int
+			err := db.QueryRow("SELECT COUNT(*) FROM tasks WHERE id = ?", filter.Parent).Scan(&exists)
+			if err != nil {
+				return fmt.Errorf("failed to check parent task: %w", err)
+			}
+			if exists == 0 {
+				return fmt.Errorf("task '%s' not found", filter.Parent)
+			}
+
+			// Collect descendant IDs via recursive CTE.
+			descendantIDs, err = queryDescendantIDs(db, filter.Parent)
+			if err != nil {
+				return err
+			}
+		}
+
+		query, queryArgs := buildListQuery(filter, descendantIDs)
+
 		sqlRows, err := db.Query(query, queryArgs...)
 		if err != nil {
 			return fmt.Errorf("failed to query tasks: %w", err)
@@ -144,9 +172,38 @@ func RunList(dir string, quiet bool, filter ListFilter, stdout io.Writer) error 
 	return nil
 }
 
+// queryDescendantIDs executes a recursive CTE to collect all descendant task IDs
+// of the given parent ID. The parent itself is excluded from results.
+func queryDescendantIDs(db *sql.DB, parentID string) ([]string, error) {
+	const descendantCTE = `
+		WITH RECURSIVE descendants(id) AS (
+			SELECT id FROM tasks WHERE parent = ?
+			UNION ALL
+			SELECT t.id FROM tasks t
+			JOIN descendants d ON t.parent = d.id
+		)
+		SELECT id FROM descendants`
+
+	rows, err := db.Query(descendantCTE, parentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query descendants: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("failed to scan descendant ID: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 // buildListQuery composes a SQL query string and args based on the filter.
-// Uses the same ready/blocked SQL patterns from readySQL and blockedSQL constants.
-func buildListQuery(f ListFilter) (string, []interface{}) {
+// When descendantIDs is non-empty, results are restricted to those IDs.
+func buildListQuery(f ListFilter, descendantIDs []string) (string, []interface{}) {
 	var conditions []string
 	var args []interface{}
 
@@ -196,6 +253,18 @@ func buildListQuery(f ListFilter) (string, []interface{}) {
 	if f.HasPriority {
 		conditions = append(conditions, `t.priority = ?`)
 		args = append(args, f.Priority)
+	}
+
+	if len(descendantIDs) > 0 {
+		placeholders := make([]string, len(descendantIDs))
+		for i, id := range descendantIDs {
+			placeholders[i] = "?"
+			args = append(args, id)
+		}
+		conditions = append(conditions, `t.id IN (`+strings.Join(placeholders, ",")+`)`)
+	} else if f.Parent != "" {
+		// Parent exists but has no descendants: use impossible condition.
+		conditions = append(conditions, `1 = 0`)
 	}
 
 	query := `SELECT t.id, t.status, t.priority, t.title FROM tasks t`

@@ -1,7 +1,7 @@
 ---
 id: tick-core-3-6
 phase: 3
-status: pending
+status: completed
 created: 2026-02-09
 ---
 
