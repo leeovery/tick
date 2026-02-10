@@ -43,6 +43,8 @@ func (a *App) Run(args []string) int {
 	switch subcmd {
 	case "init":
 		err = a.handleInit(flags, subArgs)
+	case "create":
+		err = a.handleCreate(flags, subArgs)
 	default:
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", subcmd)
 		return 1
@@ -62,6 +64,15 @@ func (a *App) handleInit(flags globalFlags, _ []string) error {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 	return RunInit(dir, flags.quiet, a.Stdout)
+}
+
+// handleCreate implements the create subcommand.
+func (a *App) handleCreate(flags globalFlags, subArgs []string) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunCreate(dir, flags.quiet, subArgs, a.Stdout)
 }
 
 // printUsage prints basic usage information.
