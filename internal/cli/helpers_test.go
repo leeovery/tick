@@ -171,6 +171,95 @@ func TestApplyBlocks(t *testing.T) {
 	})
 }
 
+func TestOutputMutationResult(t *testing.T) {
+	t.Run("it outputs only the ID in quiet mode", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Test task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		store, err := openStore(dir, FormatConfig{})
+		if err != nil {
+			t.Fatalf("openStore error: %v", err)
+		}
+		defer store.Close()
+
+		var buf strings.Builder
+		fc := FormatConfig{Quiet: true}
+		fmtr := &PrettyFormatter{}
+
+		err = outputMutationResult(store, "tick-aaa111", fc, fmtr, &buf)
+		if err != nil {
+			t.Fatalf("outputMutationResult error: %v", err)
+		}
+
+		expected := "tick-aaa111\n"
+		if buf.String() != expected {
+			t.Errorf("output = %q, want %q", buf.String(), expected)
+		}
+	})
+
+	t.Run("it outputs full task detail in non-quiet mode", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Test task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		store, err := openStore(dir, FormatConfig{})
+		if err != nil {
+			t.Fatalf("openStore error: %v", err)
+		}
+		defer store.Close()
+
+		var buf strings.Builder
+		fc := FormatConfig{Quiet: false}
+		fmtr := &PrettyFormatter{}
+
+		err = outputMutationResult(store, "tick-aaa111", fc, fmtr, &buf)
+		if err != nil {
+			t.Fatalf("outputMutationResult error: %v", err)
+		}
+
+		output := buf.String()
+		if !strings.Contains(output, "tick-aaa111") {
+			t.Errorf("output should contain task ID, got %q", output)
+		}
+		if !strings.Contains(output, "Test task") {
+			t.Errorf("output should contain task title, got %q", output)
+		}
+		if !strings.Contains(output, "ID:") {
+			t.Errorf("output should contain 'ID:' field, got %q", output)
+		}
+		if !strings.Contains(output, "Status:") {
+			t.Errorf("output should contain 'Status:' field, got %q", output)
+		}
+	})
+
+	t.Run("it returns error for non-existent task ID", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		store, err := openStore(dir, FormatConfig{})
+		if err != nil {
+			t.Fatalf("openStore error: %v", err)
+		}
+		defer store.Close()
+
+		var buf strings.Builder
+		fc := FormatConfig{Quiet: false}
+		fmtr := &PrettyFormatter{}
+
+		err = outputMutationResult(store, "tick-nonexist", fc, fmtr, &buf)
+		if err == nil {
+			t.Fatal("expected error for non-existent task ID")
+		}
+		if !strings.Contains(err.Error(), "not found") {
+			t.Errorf("error = %q, want to contain 'not found'", err.Error())
+		}
+	})
+}
+
 func TestOpenStore(t *testing.T) {
 	t.Run("it returns a valid store for a valid tick directory", func(t *testing.T) {
 		dir, _ := setupTickProject(t)

@@ -1,12 +1,33 @@
 package cli
 
 import (
+	"fmt"
+	"io"
 	"strings"
 	"time"
 
 	"github.com/leeovery/tick/internal/storage"
 	"github.com/leeovery/tick/internal/task"
 )
+
+// outputMutationResult handles post-mutation output for create and update commands.
+// In quiet mode it prints only the task ID; otherwise it queries the full task detail
+// from the store and formats it via the Formatter.
+func outputMutationResult(store *storage.Store, id string, fc FormatConfig, fmtr Formatter, stdout io.Writer) error {
+	if fc.Quiet {
+		fmt.Fprintln(stdout, id)
+		return nil
+	}
+
+	data, err := queryShowData(store, id)
+	if err != nil {
+		return err
+	}
+
+	detail := showDataToTaskDetail(data)
+	fmt.Fprintln(stdout, fmtr.FormatTaskDetail(detail))
+	return nil
+}
 
 // openStore discovers the .tick directory from the given dir and opens a Store.
 // Callers must defer store.Close() themselves since Go defers are scope-bound.
