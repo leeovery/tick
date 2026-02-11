@@ -128,10 +128,10 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	var updatedID string
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
-		// Build ID set for reference validation.
+		// Build ID set for reference validation with normalized keys.
 		idSet := make(map[string]bool, len(tasks))
 		for _, t := range tasks {
-			idSet[t.ID] = true
+			idSet[task.NormalizeID(t.ID)] = true
 		}
 
 		// Validate referenced IDs exist.
@@ -154,7 +154,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		// Find and update the target task.
 		found := false
 		for i := range tasks {
-			if tasks[i].ID != opts.id {
+			if task.NormalizeID(tasks[i].ID) != opts.id {
 				continue
 			}
 			found = true

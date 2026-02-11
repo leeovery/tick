@@ -1,6 +1,7 @@
 package task
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -163,6 +164,51 @@ func TestValidateDependency(t *testing.T) {
 		expected := "cannot add dependency - creates cycle: tick-d \u2192 tick-a \u2192 tick-b \u2192 tick-c \u2192 tick-d"
 		if err.Error() != expected {
 			t.Errorf("expected error %q, got %q", expected, err.Error())
+		}
+	})
+}
+
+func TestValidateDependencyMixedCase(t *testing.T) {
+	t.Run("it detects cycle with mixed-case IDs", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: []string{"tick-bbb"}},
+			{ID: "tick-bbb", BlockedBy: nil},
+		}
+
+		// Pass mixed-case IDs — should still detect the cycle.
+		err := ValidateDependency(tasks, "TICK-BBB", "TICK-AAA")
+		if err == nil {
+			t.Fatal("expected error for mixed-case cycle, got nil")
+		}
+		if !strings.Contains(err.Error(), "creates cycle") {
+			t.Errorf("expected cycle error, got: %v", err)
+		}
+	})
+
+	t.Run("it detects child-blocked-by-parent with mixed-case IDs", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-parent"},
+			{ID: "tick-child", Parent: "tick-parent"},
+		}
+
+		err := ValidateDependency(tasks, "TICK-CHILD", "TICK-PARENT")
+		if err == nil {
+			t.Fatal("expected error for mixed-case child-blocked-by-parent, got nil")
+		}
+		if !strings.Contains(err.Error(), "cannot be blocked by its parent") {
+			t.Errorf("expected parent error, got: %v", err)
+		}
+	})
+
+	t.Run("it allows valid dependency with mixed-case IDs", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: nil},
+			{ID: "tick-bbb", BlockedBy: nil},
+		}
+
+		err := ValidateDependency(tasks, "TICK-AAA", "TICK-BBB")
+		if err != nil {
+			t.Errorf("expected no error for valid mixed-case dependency, got: %v", err)
 		}
 	})
 }

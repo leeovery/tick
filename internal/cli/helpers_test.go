@@ -148,6 +148,35 @@ func TestApplyBlocks(t *testing.T) {
 		}
 	})
 
+	t.Run("it matches blockIDs case-insensitively", func(t *testing.T) {
+		now := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+
+		applyNow := time.Date(2026, 2, 10, 13, 0, 0, 0, time.UTC)
+		applyBlocks(tasks, "tick-src001", []string{"TICK-AAA111"}, applyNow)
+
+		if len(tasks[0].BlockedBy) != 1 || tasks[0].BlockedBy[0] != "tick-src001" {
+			t.Errorf("tasks[0].BlockedBy = %v, want [tick-src001]", tasks[0].BlockedBy)
+		}
+	})
+
+	t.Run("it detects existing dep case-insensitively", func(t *testing.T) {
+		now := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2,
+				BlockedBy: []string{"TICK-SRC001"}, Created: now, Updated: now},
+		}
+
+		applyNow := time.Date(2026, 2, 10, 13, 0, 0, 0, time.UTC)
+		applyBlocks(tasks, "tick-src001", []string{"tick-aaa111"}, applyNow)
+
+		if len(tasks[0].BlockedBy) != 1 {
+			t.Errorf("tasks[0].BlockedBy = %v, want [TICK-SRC001] (no duplicate)", tasks[0].BlockedBy)
+		}
+	})
+
 	t.Run("it handles multiple blockIDs", func(t *testing.T) {
 		now := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
 		tasks := []task.Task{

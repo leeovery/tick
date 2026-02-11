@@ -59,10 +59,10 @@ func parseCommaSeparatedIDs(s string) []string {
 func applyBlocks(tasks []task.Task, sourceID string, blockIDs []string, now time.Time) {
 	for i := range tasks {
 		for _, blockID := range blockIDs {
-			if tasks[i].ID == blockID {
+			if task.NormalizeID(tasks[i].ID) == task.NormalizeID(blockID) {
 				alreadyPresent := false
 				for _, dep := range tasks[i].BlockedBy {
-					if dep == sourceID {
+					if task.NormalizeID(dep) == task.NormalizeID(sourceID) {
 						alreadyPresent = true
 						break
 					}

@@ -109,10 +109,10 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	var createdTask task.Task
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
-		// Build an ID existence checker.
+		// Build an ID existence checker with normalized keys.
 		idSet := make(map[string]bool, len(tasks))
 		for _, t := range tasks {
-			idSet[t.ID] = true
+			idSet[task.NormalizeID(t.ID)] = true
 		}
 		exists := func(id string) bool {
 			return idSet[id]
