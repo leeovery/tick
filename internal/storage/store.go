@@ -87,22 +87,56 @@ func (s *Store) Close() error {
 	return nil
 }
 
-// Mutate executes a write mutation with exclusive file locking.
-// The full flow: lock -> read JSONL -> freshness check -> mutate -> atomic write -> update cache -> unlock.
-func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
+// acquireExclusive acquires an exclusive file lock and returns an unlock function.
+func (s *Store) acquireExclusive() (func(), error) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	defer cancel()
 
 	s.verbose("acquiring exclusive lock")
 	locked, err := s.fileLock.TryLockContext(ctx, 50*time.Millisecond)
 	if err != nil || !locked {
-		return errors.New(lockErrMsg)
+		return nil, errors.New(lockErrMsg)
 	}
 	s.verbose("lock acquired")
-	defer func() {
+	return func() {
 		_ = s.fileLock.Unlock()
 		s.verbose("lock released")
-	}()
+	}, nil
+}
+
+// acquireShared acquires a shared file lock and returns an unlock function.
+func (s *Store) acquireShared() (func(), error) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
+	defer cancel()
+
+	s.verbose("acquiring shared lock")
+	locked, err := s.fileLock.TryRLockContext(ctx, 50*time.Millisecond)
+	if err != nil || !locked {
+		return nil, errors.New(lockErrMsg)
+	}
+	s.verbose("lock acquired")
+	return func() {
+		_ = s.fileLock.Unlock()
+		s.verbose("lock released")
+	}, nil
+}
+
+// removeCache removes the cache file, ignoring not-exist errors.
+func (s *Store) removeCache() error {
+	if err := os.Remove(s.cachePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing cache: %w", err)
+	}
+	return nil
+}
+
+// Mutate executes a write mutation with exclusive file locking.
+// The full flow: lock -> read JSONL -> freshness check -> mutate -> atomic write -> update cache -> unlock.
+func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
+	unlock, err := s.acquireExclusive()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 
 	_, tasks, err := s.readAndEnsureFresh()
 	if err != nil {
@@ -144,19 +178,11 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 // deletes the existing cache.db, reads tasks.jsonl, creates a fresh cache, and populates it.
 // Returns the number of tasks rebuilt.
 func (s *Store) Rebuild() (int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
-	defer cancel()
-
-	s.verbose("acquiring exclusive lock")
-	locked, err := s.fileLock.TryLockContext(ctx, 50*time.Millisecond)
-	if err != nil || !locked {
-		return 0, errors.New(lockErrMsg)
+	unlock, err := s.acquireExclusive()
+	if err != nil {
+		return 0, err
 	}
-	s.verbose("lock acquired")
-	defer func() {
-		_ = s.fileLock.Unlock()
-		s.verbose("lock released")
-	}()
+	defer unlock()
 
 	// Close existing cache if open.
 	if s.cache != nil {
@@ -166,7 +192,9 @@ func (s *Store) Rebuild() (int, error) {
 
 	// Delete existing cache.db.
 	s.verbose("deleting cache.db")
-	os.Remove(s.cachePath)
+	if err := s.removeCache(); err != nil {
+		return 0, err
+	}
 
 	// Read JSONL.
 	s.verbose("reading JSONL")
@@ -200,19 +228,11 @@ func (s *Store) Rebuild() (int, error) {
 // Query executes a read query with shared file locking.
 // The full flow: lock -> read JSONL -> freshness check -> query SQLite -> unlock.
 func (s *Store) Query(fn func(db *sql.DB) error) error {
-	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
-	defer cancel()
-
-	s.verbose("acquiring shared lock")
-	locked, err := s.fileLock.TryRLockContext(ctx, 50*time.Millisecond)
-	if err != nil || !locked {
-		return errors.New(lockErrMsg)
+	unlock, err := s.acquireShared()
+	if err != nil {
+		return err
 	}
-	s.verbose("lock acquired")
-	defer func() {
-		_ = s.fileLock.Unlock()
-		s.verbose("lock released")
-	}()
+	defer unlock()
 
 	_, _, err = s.readAndEnsureFresh()
 	if err != nil {
@@ -251,7 +271,9 @@ func (s *Store) ensureFresh(rawJSONL []byte, tasks []task.Task) error {
 		if err != nil {
 			// Cache file might be corrupted — delete and recreate.
 			log.Printf("warning: cache open failed, recreating: %v", err)
-			os.Remove(s.cachePath)
+			if rmErr := s.removeCache(); rmErr != nil {
+				return rmErr
+			}
 			cache, err = OpenCache(s.cachePath)
 			if err != nil {
 				return fmt.Errorf("failed to recreate cache: %w", err)
@@ -266,7 +288,9 @@ func (s *Store) ensureFresh(rawJSONL []byte, tasks []task.Task) error {
 		log.Printf("warning: cache freshness check failed, recreating: %v", err)
 		s.cache.Close()
 		s.cache = nil
-		os.Remove(s.cachePath)
+		if rmErr := s.removeCache(); rmErr != nil {
+			return rmErr
+		}
 		cache, err := OpenCache(s.cachePath)
 		if err != nil {
 			return fmt.Errorf("failed to recreate cache after corruption: %w", err)
