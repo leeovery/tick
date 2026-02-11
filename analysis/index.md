@@ -187,6 +187,74 @@ Earlier, lighter comparison before V3 existed. Superseded by round-1 but preserv
 
 ---
 
+### Round 4: V6 vs V5 (Feb 10, 2026)
+
+2-way comparison. V6 = V5 base + round-3 recommendations (typed Formatter from day one, multi-cycle analysis, shared CLI helpers). V5 = baseline (current best). **Result: V6 wins 13/24 comparable tasks, 2/5 comparable phases, plus 14 V6-only analysis tasks (12 Excellent, 2 Good/Strong).**
+
+| Document | Description |
+|----------|-------------|
+| [round-4/final-synthesis.md](round-4/final-synthesis.md) | **Start here.** Executive summary, full scorecard, recommendation compliance |
+| [round-4/phase-reports/analysis-comparison.md](round-4/phase-reports/analysis-comparison.md) | V5 1-cycle vs V6 3-cycle analysis process comparison |
+| [round-4/phase-reports/phase-6-v5.md](round-4/phase-reports/phase-6-v5.md) | V5 Phase 6 cross-reference (analyzed in Round 3) |
+
+#### Task Reports (24 Comparable + 14 V6-Only)
+
+| Task | File | Winner |
+|------|------|--------|
+| 1-1: Task model & ID generation | [tick-core-1-1.md](round-4/task-reports/tick-core-1-1.md) | V5 |
+| 1-2: JSONL storage with atomic writes | [tick-core-1-2.md](round-4/task-reports/tick-core-1-2.md) | V5 |
+| 1-3: SQLite cache with freshness detection | [tick-core-1-3.md](round-4/task-reports/tick-core-1-3.md) | Near-tie (V6 slight) |
+| 1-4: Storage engine with file locking | [tick-core-1-4.md](round-4/task-reports/tick-core-1-4.md) | V6 |
+| 1-5: CLI framework & tick init | [tick-core-1-5.md](round-4/task-reports/tick-core-1-5.md) | V6 |
+| 1-6: tick create command | [tick-core-1-6.md](round-4/task-reports/tick-core-1-6.md) | V5 |
+| 1-7: tick list & tick show commands | [tick-core-1-7.md](round-4/task-reports/tick-core-1-7.md) | V5 |
+| 2-1: Status transition validation | [tick-core-2-1.md](round-4/task-reports/tick-core-2-1.md) | V5 |
+| 2-2: tick start, done, cancel, reopen | [tick-core-2-2.md](round-4/task-reports/tick-core-2-2.md) | V6 |
+| 2-3: tick update command | [tick-core-2-3.md](round-4/task-reports/tick-core-2-3.md) | V6 |
+| 3-1: Dependency validation | [tick-core-3-1.md](round-4/task-reports/tick-core-3-1.md) | V5 |
+| 3-2: tick dep add & tick dep rm | [tick-core-3-2.md](round-4/task-reports/tick-core-3-2.md) | V6 |
+| 3-3: Ready query & tick ready | [tick-core-3-3.md](round-4/task-reports/tick-core-3-3.md) | V5 |
+| 3-4: Blocked query & cancel-unblocks | [tick-core-3-4.md](round-4/task-reports/tick-core-3-4.md) | V5 |
+| 3-5: tick list filter flags | [tick-core-3-5.md](round-4/task-reports/tick-core-3-5.md) | V6 |
+| 3-6: Parent scoping | [tick-core-3-6.md](round-4/task-reports/tick-core-3-6.md) | V6 |
+| 4-1: Formatter abstraction & TTY | [tick-core-4-1.md](round-4/task-reports/tick-core-4-1.md) | V6 |
+| 4-2: TOON formatter | [tick-core-4-2.md](round-4/task-reports/tick-core-4-2.md) | V6 |
+| 4-3: Human-readable formatter | [tick-core-4-3.md](round-4/task-reports/tick-core-4-3.md) | V6 |
+| 4-4: JSON formatter | [tick-core-4-4.md](round-4/task-reports/tick-core-4-4.md) | V6 |
+| 4-5: Integrate formatters | [tick-core-4-5.md](round-4/task-reports/tick-core-4-5.md) | V6 |
+| 4-6: Verbose output | [tick-core-4-6.md](round-4/task-reports/tick-core-4-6.md) | V5 |
+| 5-1: tick stats command | [tick-core-5-1.md](round-4/task-reports/tick-core-5-1.md) | V6 |
+| 5-2: tick rebuild command | [tick-core-5-2.md](round-4/task-reports/tick-core-5-2.md) | V5 |
+| 6-1: Dependency validation gaps (V6 only) | [tick-core-v6-6-1.md](round-4/task-reports/tick-core-v6-6-1.md) | V6 only (Excellent) |
+| 6-2: Move rebuild behind Store (V6 only) | [tick-core-v6-6-2.md](round-4/task-reports/tick-core-v6-6-2.md) | V6 only (Excellent) |
+| 6-3: Consolidate cache freshness (V6 only) | [tick-core-v6-6-3.md](round-4/task-reports/tick-core-v6-6-3.md) | V6 only (Excellent) |
+| 6-4: Formatter duplication + Unicode (V6 only) | [tick-core-v6-6-4.md](round-4/task-reports/tick-core-v6-6-4.md) | V6 only (Excellent) |
+| 6-5: Shared CLI helpers (V6 only) | [tick-core-v6-6-5.md](round-4/task-reports/tick-core-v6-6-5.md) | V6 only (Excellent) |
+| 6-6: E2E workflow test (V6 only) | [tick-core-v6-6-6.md](round-4/task-reports/tick-core-v6-6-6.md) | V6 only (Excellent) |
+| 6-7: Error message clarity (V6 only) | [tick-core-v6-6-7.md](round-4/task-reports/tick-core-v6-6-7.md) | V6 only (Good/Excellent) |
+| 7-1: Shared ready-query SQL (V6 only) | [tick-core-v6-7-1.md](round-4/task-reports/tick-core-v6-7-1.md) | V6 only (Good) |
+| 7-2: Create output enrichment (V6 only) | [tick-core-v6-7-2.md](round-4/task-reports/tick-core-v6-7-2.md) | V6 only (Strong) |
+| 7-3: Extract openStore helper (V6 only) | [tick-core-v6-7-3.md](round-4/task-reports/tick-core-v6-7-3.md) | V6 only (Excellent) |
+| 7-4: Remove dead VerboseLog (V6 only) | [tick-core-v6-7-4.md](round-4/task-reports/tick-core-v6-7-4.md) | V6 only (Excellent) |
+| 7-5: Consolidate relatedTask struct (V6 only) | [tick-core-v6-7-5.md](round-4/task-reports/tick-core-v6-7-5.md) | V6 only (Excellent) |
+| 8-1: Prevent duplicate blocked_by (V6 only) | [tick-core-v6-8-1.md](round-4/task-reports/tick-core-v6-8-1.md) | V6 only (Excellent) |
+| 8-2: Extract post-mutation output helper (V6 only) | [tick-core-v6-8-2.md](round-4/task-reports/tick-core-v6-8-2.md) | V6 only (Excellent) |
+
+#### Phase Reports (5 Comparable + 3 V6-Only + Analysis Comparison)
+
+| Phase | File | Winner |
+|-------|------|--------|
+| Phase 1: Walking Skeleton | [phase-1.md](round-4/phase-reports/phase-1.md) | V5 (4-2, 1 near-tie) |
+| Phase 2: Task Lifecycle | [phase-2.md](round-4/phase-reports/phase-2.md) | V6 (2-1) |
+| Phase 3: Hierarchy & Dependencies | [phase-3.md](round-4/phase-reports/phase-3.md) | V5 (3.5-2.5) |
+| Phase 4: Output Formats | [phase-4.md](round-4/phase-reports/phase-4.md) | V6 (5-1) |
+| Phase 5: Stats & Cache | [phase-5.md](round-4/phase-reports/phase-5.md) | Split |
+| Phase 6: Analysis Cycle 1 (V6 only) | [phase-6-v6.md](round-4/phase-reports/phase-6-v6.md) | V6 only (Excellent) |
+| Phase 7: Analysis Cycle 2 (V6 only) | [phase-7-v6.md](round-4/phase-reports/phase-7-v6.md) | V6 only (Good-to-Strong) |
+| Phase 8: Analysis Cycle 3 (V6 only) | [phase-8-v6.md](round-4/phase-reports/phase-8-v6.md) | V6 only (Strong) |
+
+---
+
 ## Key Findings Summary
 
 ### Round 1: Why V2 Won (vs V3)
@@ -237,6 +305,16 @@ Earlier, lighter comparison before V3 existed. Superseded by round-1 but preserv
 - V5's `interface{}` Formatter was its biggest early weakness — self-corrected in Phase 6 task 6-7
 - V4 retains edge in test assertion depth, correctness invariants (blocked count derivation), spec-exact error messages, and function decomposition
 - The ideal V6 would combine V5's architecture with V4's verification rigor
+
+### Round 4: V6 Narrowly Exceeds V5
+
+- V6 wins 13/24 tasks, V5 wins 10, 1 near-tie — narrowest margin in any round
+- V6's signature win: typed Formatter interface from Phase 4 onward (never introduced `interface{}` anti-pattern)
+- V5's signature win: custom `MarshalJSON`/`UnmarshalJSON` serialization architecture — 75 lines leaner storage layer
+- V6 swept Phase 4 (5/6 tasks) on type safety; V5 won Phases 1 and 3 on serialization + normalization discipline
+- Multi-cycle analysis: ~80% value from cycle 1, ~15% from cycle 2, ~5% from cycle 3; self-termination works
+- 3 of 6 Round 3 recommendations achieved (typed params, multi-cycle analysis, blocked derivation); 3 not achieved (spec-exact errors, FormatMessage error handling, full test depth)
+- 10 recommendations for V7, top 3: adopt V5 serialization, adopt V6 Formatter design, adopt V5 ID normalization discipline
 
 ### Methodology Note (Round 2)
 

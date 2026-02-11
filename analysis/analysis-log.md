@@ -29,6 +29,15 @@ Tracking document for the ongoing comparison of tick-core implementations produc
 14. **1 V5-only phase assessment** — Phase 6 analysis refinements (`round-3/phase-reports/phase-6.md`)
 15. **Final synthesis** — V5 vs V4 definitive comparison (`round-3/final-synthesis.md`)
 
+**Round 4 (Feb 10)**:
+16. **24 comparable task-level reports** comparing V5 vs V6 (`round-4/task-reports/`)
+17. **14 V6-only task assessments** — 7 Phase 6 + 5 Phase 7 + 2 Phase 8 analysis refinements (`round-4/task-reports/`)
+18. **5 comparable phase-level reports** for V5 vs V6 (`round-4/phase-reports/`)
+19. **3 V6-only phase assessments** — Phases 6, 7, 8 analysis cycles (`round-4/phase-reports/`)
+20. **Analysis comparison** — V5 1-cycle vs V6 3-cycle process meta-analysis (`round-4/phase-reports/analysis-comparison.md`)
+21. **V5 Phase 6 reference** — Cross-reference to Round 3's existing analysis (`round-4/phase-reports/phase-6-v5.md`)
+22. **Final synthesis** — V6 vs V5 definitive comparison (`round-4/final-synthesis.md`)
+
 ### Key Findings
 
 **Round 1**: V2 wins 21/23 tasks, all 5 phases. V3 wins 1/23 (task 1-5). V1 wins 0/23.
@@ -36,6 +45,8 @@ Tracking document for the ongoing comparison of tick-core implementations produc
 **Round 2**: V4 wins 15/23 tasks, all 5 phases. V2 wins 7/23. 1 close call (1-3).
 
 **Round 3**: V5 wins 16/23 comparable tasks, 3/5 comparable phases. V4 wins 6/23. 1 tie. Plus 8 V5-only tasks all rated Excellent.
+
+**Round 4**: V6 wins 13/24 comparable tasks, 2/5 comparable phases. V5 wins 10/24. 1 near-tie. 2 phases split/tie. Plus 14 V6-only tasks (12 Excellent, 2 Good/Strong). Narrowest margin in any round. V6's typed Formatter swept Phase 4 (5/6). V5's serialization architecture swept Phase 1 (4/7). Multi-cycle analysis validated: ~80%/~15%/~5% value curve with correct self-termination. 3 of 6 Round 3 recommendations achieved.
 
 **Root cause of V3's regression**: PR #79 (integration context + codebase cohesion) created a "convention gravity well" where V3's task 1-1 made unconventional Go choices (string timestamps, bare error returns, no NewTask factory) that got documented as established patterns in the integration context file. Every subsequent executor faithfully propagated these choices because it was instructed to "match conventions" and the reviewer's cohesion dimension actively enforced consistency with them.
 
@@ -60,7 +71,7 @@ V3's integration context mechanism amplifies whatever direction the first few ta
 | V3 | `implementation-v3` | v2.1.5 (PRs #77-80) | Feb 5 | 1/23 (vs V2) |
 | V4 | `implementation-v4` | V2 base + PRs #77/#78/#80 (no #79) | Feb 7-8 | 15/23 (vs V2), 6/23 (vs V5) |
 | V5 | `implementation-v5` | V4 base + analysis refinement phase | Feb 9 | 16/23 (vs V4) + 8 V5-only (all Excellent) |
-| V6 | `implementation-v6` | TBD (V5 base + round-3 recommendations) | TBD | Pending |
+| V6 | `implementation-v6` | V5 base + 3-cycle analysis + typed Formatter | Feb 10 | 13/24 (vs V5) + 14 V6-only (12 Excellent) |
 
 ### Commit Mapping
 
@@ -108,6 +119,16 @@ analysis/
     phase-reports/            <- 6 phase reports (5 comparable + 1 V5-only)
       phase-{N}.md
     final-synthesis.md        <- Definitive V5 vs V4 comparison
+  round-4/                    <- V6 vs V5 (2-way comparison, Feb 10 2026)
+    task-reports/             <- 38 task reports (24 comparable + 14 V6-only)
+      tick-core-{P}-{T}.md         (comparable)
+      tick-core-v6-{P}-{T}.md      (V6-only)
+    phase-reports/            <- 9 reports (5 comparable + 3 V6-only + 1 analysis comparison)
+      phase-{N}.md                  (comparable)
+      phase-{N}-v6.md               (V6-only)
+      phase-6-v5.md                 (V5 Phase 6 cross-reference)
+      analysis-comparison.md        (V5 1-cycle vs V6 3-cycle meta-analysis)
+    final-synthesis.md        <- Definitive V6 vs V5 comparison
 ```
 
 External:
@@ -177,19 +198,51 @@ The most significant finding is V5's `interface{}` Formatter — introduced in P
 
 ---
 
-## Planned Next Step: V6 (Round 4)
+## Completed: V6 (Round 4)
 
-**Branch**: `implementation-v6` (created from `main`)
-**Baseline**: V5 (current best)
-**Comparison**: Round 4 = V5 vs V6
+### What Changed in V6's Workflow
 
-Recommendations from Round 3 synthesis for V6's workflow:
-1. Restore V4-level test assertion depth (timestamp verification, typed JSON deserialization, exact string matching)
-2. Enforce spec-exact error messages where spec prescribes them
-3. Keep Phase 6 analysis refinement process (proven beneficial)
-4. Fix FormatMessage error swallowing (return error, don't discard)
-5. Derive correctness invariants where possible (blocked = open - ready)
-6. Mandate compile-time type safety from Phase 4 onward (no interface{} Formatter params)
+V6 built on V5's base with targeted changes from Round 3's 6 recommendations:
+- **Typed Formatter from Phase 4 onward** (rec #6): Fully achieved. Zero `interface{}`. V6's signature improvement.
+- **Multi-cycle analysis** (rec #3): Fully achieved and extended. 3 cycles + self-termination (14 tasks total).
+- **Blocked = open - ready derivation** (rec #5): Achieved for current spec.
+- **Test assertion depth** (rec #1): Partially achieved — improved in Phases 4-5, regressed in Phase 2-1.
+- **Spec-exact error messages** (rec #2): Not achieved — V6 chose Go convention (lowercase) consistently.
+- **FormatMessage error handling** (rec #4): Not achieved — sidestepped via string-return Formatter interface.
+
+V6 also introduced: App struct with injected Getwd for testability, shared CLI helpers (openStore, outputMutationResult, parseCommaSeparatedIDs, applyBlocks), baseFormatter embedding, Go generics in TOON formatter, composable SQL query architecture, and deterministic time.Date test fixtures.
+
+### Result: V6 Narrowly Exceeds V5
+
+V6 wins 13/24 comparable tasks, 2/5 comparable phases. Narrowest margin in any round. V6's typed Formatter swept Phase 4 (5/6 tasks). V5's serialization architecture swept Phase 1 (4/7 tasks). Phase 3 went to V5 on normalization discipline. Phase 2 went to V6 on shared helpers. Phase 5 split.
+
+**V6's key advantages over V5**: compile-time type safety (no `interface{}` anywhere), composable SQL with `ReadyConditions()`/`BlockedConditions()`, shared CLI helpers that compound across 8+ commands, App struct testability, deterministic test fixtures, cross-formatter consistency tests, Go generics usage.
+
+**V5's remaining advantages**: custom MarshalJSON/UnmarshalJSON serialization (75 LOC leaner storage), defense-in-depth ID normalization (5 NormalizeID calls in dependency.go), Store boundary discipline (Rebuild existed from start), os.Remove error checking, 3-layer verbose test coverage, spec-exact error message casing.
+
+### The Multi-Cycle Analysis Finding
+
+V6's 3-cycle analysis is the first empirical measurement of diminishing returns: ~80% of value from cycle 1, ~15% from cycle 2, ~5% from cycle 3. Self-termination (cycle 4 = 0 findings) validated. Recommendation: default to 2 cycles.
+
+---
+
+## Planned Next Step: V7 (Round 5)
+
+**Branch**: TBD
+**Baseline**: V6 (current best)
+**Comparison**: Round 5 = V6 vs V7
+
+Recommendations from Round 4 synthesis for V7's workflow (top 10):
+1. Adopt V5's serialization architecture (MarshalJSON/UnmarshalJSON on Task type)
+2. Adopt V6's Formatter interface design (concrete typed params returning string)
+3. Adopt V5's ID normalization discipline (NormalizeID at every comparison point)
+4. Fix os.Remove error handling (check !os.IsNotExist before propagating)
+5. Restore verbose test depth (add store-level verbose tests)
+6. Adopt V6's test infrastructure (per-command helpers, deterministic fixtures, App struct)
+7. Keep 2-cycle analysis refinement as default (3rd only if cycle 2 finds medium+ issues)
+8. Resolve spec-vs-Go-idiom tension on error messages (Go convention for values, spec format at display boundary)
+9. Extract acquireExclusive() as shared lock helper (V5's DRY pattern)
+10. Test all 7 valid transition paths for updated timestamps
 
 ---
 
