@@ -4,6 +4,7 @@ package task
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -47,9 +48,79 @@ type Task struct {
 	Description string     `json:"description,omitempty"`
 	BlockedBy   []string   `json:"blocked_by,omitempty"`
 	Parent      string     `json:"parent,omitempty"`
-	Created     time.Time  `json:"created"`
-	Updated     time.Time  `json:"updated"`
-	Closed      *time.Time `json:"closed,omitempty"`
+	Created     time.Time  `json:"-"`
+	Updated     time.Time  `json:"-"`
+	Closed      *time.Time `json:"-"`
+}
+
+// taskJSON is the JSON serialization form with string timestamps and string status.
+type taskJSON struct {
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Status      string   `json:"status"`
+	Priority    int      `json:"priority"`
+	Description string   `json:"description,omitempty"`
+	BlockedBy   []string `json:"blocked_by,omitempty"`
+	Parent      string   `json:"parent,omitempty"`
+	Created     string   `json:"created"`
+	Updated     string   `json:"updated"`
+	Closed      string   `json:"closed,omitempty"`
+}
+
+// MarshalJSON serializes a Task with timestamps formatted as ISO 8601 strings.
+func (t Task) MarshalJSON() ([]byte, error) {
+	jt := taskJSON{
+		ID:          t.ID,
+		Title:       t.Title,
+		Status:      string(t.Status),
+		Priority:    t.Priority,
+		Description: t.Description,
+		BlockedBy:   t.BlockedBy,
+		Parent:      t.Parent,
+		Created:     FormatTimestamp(t.Created),
+		Updated:     FormatTimestamp(t.Updated),
+	}
+	if t.Closed != nil {
+		jt.Closed = FormatTimestamp(*t.Closed)
+	}
+	return json.Marshal(jt)
+}
+
+// UnmarshalJSON deserializes a Task, parsing ISO 8601 timestamp strings.
+func (t *Task) UnmarshalJSON(data []byte) error {
+	var jt taskJSON
+	if err := json.Unmarshal(data, &jt); err != nil {
+		return err
+	}
+
+	created, err := time.Parse(TimestampFormat, jt.Created)
+	if err != nil {
+		return fmt.Errorf("invalid created timestamp %q: %w", jt.Created, err)
+	}
+	updated, err := time.Parse(TimestampFormat, jt.Updated)
+	if err != nil {
+		return fmt.Errorf("invalid updated timestamp %q: %w", jt.Updated, err)
+	}
+
+	t.ID = jt.ID
+	t.Title = jt.Title
+	t.Status = Status(jt.Status)
+	t.Priority = jt.Priority
+	t.Description = jt.Description
+	t.BlockedBy = jt.BlockedBy
+	t.Parent = jt.Parent
+	t.Created = created
+	t.Updated = updated
+
+	if jt.Closed != "" {
+		closed, err := time.Parse(TimestampFormat, jt.Closed)
+		if err != nil {
+			return fmt.Errorf("invalid closed timestamp %q: %w", jt.Closed, err)
+		}
+		t.Closed = &closed
+	}
+
+	return nil
 }
 
 // GenerateID creates a new task ID in the format tick-{6 hex chars} using crypto/rand.

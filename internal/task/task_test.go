@@ -1,6 +1,7 @@
 package task
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -300,6 +301,133 @@ func TestTimestampFormat(t *testing.T) {
 		expected := "2026-01-19T10:00:00Z"
 		if formatted != expected {
 			t.Errorf("FormatTimestamp = %q, want %q", formatted, expected)
+		}
+	})
+}
+
+func TestTaskMarshalJSON(t *testing.T) {
+	t.Run("it round-trips minimal task through JSON", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		original := Task{
+			ID:       "tick-a1b2c3",
+			Title:    "Test task",
+			Status:   StatusOpen,
+			Priority: 2,
+			Created:  created,
+			Updated:  created,
+		}
+
+		data, err := json.Marshal(original)
+		if err != nil {
+			t.Fatalf("Marshal error: %v", err)
+		}
+
+		var got Task
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("Unmarshal error: %v", err)
+		}
+
+		if got.ID != original.ID {
+			t.Errorf("ID = %q, want %q", got.ID, original.ID)
+		}
+		if got.Status != original.Status {
+			t.Errorf("Status = %q, want %q", got.Status, original.Status)
+		}
+		if !got.Created.Equal(original.Created) {
+			t.Errorf("Created = %v, want %v", got.Created, original.Created)
+		}
+		if got.Closed != nil {
+			t.Errorf("Closed = %v, want nil", got.Closed)
+		}
+	})
+
+	t.Run("it round-trips full task with closed timestamp", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		updated := time.Date(2026, 1, 19, 14, 0, 0, 0, time.UTC)
+		closed := time.Date(2026, 1, 19, 16, 0, 0, 0, time.UTC)
+		original := Task{
+			ID:          "tick-c3d4e5",
+			Title:       "Full task",
+			Status:      StatusDone,
+			Priority:    1,
+			Description: "Details here",
+			BlockedBy:   []string{"tick-a1b2c3"},
+			Parent:      "tick-e5f6a7",
+			Created:     created,
+			Updated:     updated,
+			Closed:      &closed,
+		}
+
+		data, err := json.Marshal(original)
+		if err != nil {
+			t.Fatalf("Marshal error: %v", err)
+		}
+
+		var got Task
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("Unmarshal error: %v", err)
+		}
+
+		if got.Status != StatusDone {
+			t.Errorf("Status = %q, want %q", got.Status, StatusDone)
+		}
+		if !got.Updated.Equal(updated) {
+			t.Errorf("Updated = %v, want %v", got.Updated, updated)
+		}
+		if got.Closed == nil {
+			t.Fatal("Closed is nil, want non-nil")
+		}
+		if !got.Closed.Equal(closed) {
+			t.Errorf("Closed = %v, want %v", got.Closed, closed)
+		}
+	})
+
+	t.Run("it produces correct timestamp format in JSON output", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		t1 := Task{
+			ID:       "tick-a1b2c3",
+			Title:    "Test",
+			Status:   StatusOpen,
+			Priority: 2,
+			Created:  created,
+			Updated:  created,
+		}
+
+		data, err := json.Marshal(t1)
+		if err != nil {
+			t.Fatalf("Marshal error: %v", err)
+		}
+
+		s := string(data)
+		if !strings.Contains(s, `"created":"2026-01-19T10:00:00Z"`) {
+			t.Errorf("JSON should contain ISO 8601 created timestamp, got: %s", s)
+		}
+		if !strings.Contains(s, `"updated":"2026-01-19T10:00:00Z"`) {
+			t.Errorf("JSON should contain ISO 8601 updated timestamp, got: %s", s)
+		}
+	})
+
+	t.Run("it omits optional fields when empty", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		t1 := Task{
+			ID:       "tick-a1b2c3",
+			Title:    "Minimal",
+			Status:   StatusOpen,
+			Priority: 2,
+			Created:  created,
+			Updated:  created,
+		}
+
+		data, err := json.Marshal(t1)
+		if err != nil {
+			t.Fatalf("Marshal error: %v", err)
+		}
+
+		s := string(data)
+		for _, field := range []string{"description", "blocked_by", "parent", "closed"} {
+			if strings.Contains(s, `"`+field+`"`) {
+				t.Errorf("optional field %q should be omitted, got: %s", field, s)
+			}
 		}
 	})
 }
