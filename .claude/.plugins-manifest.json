@@ -1,7 +1,7 @@
 {
   "plugins": {
     "@leeovery/claude-technical-workflows": {
-      "version": "2.1.20",
+      "version": "2.1.21",
       "files": [
         "skills/link-dependencies",
         "skills/migrate",
