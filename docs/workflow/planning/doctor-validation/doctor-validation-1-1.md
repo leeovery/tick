@@ -1,7 +1,7 @@
 ---
 id: doctor-validation-1-1
 phase: 1
-status: pending
+status: completed
 created: 2026-01-30
 ---
 
