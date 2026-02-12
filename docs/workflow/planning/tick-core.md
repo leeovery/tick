@@ -168,6 +168,76 @@ approved_at: 2026-01-30
 
 ---
 
+### Phase 6: Analysis Fixes — Validation, Deduplication & Compliance
+status: pending
+
+**Goal**: Address gaps found during implementation analysis: missing dependency validation on write paths, duplicated logic, spec compliance issues, and missing integration test coverage.
+**Why this order**: All core functionality is implemented. These tasks fix correctness gaps, reduce duplication, and align with the specification.
+
+**Acceptance**:
+- [ ] All write paths that modify blocked_by arrays enforce cycle detection and child-blocked-by-parent validation
+- [ ] Rebuild logic flows through Store abstraction
+- [ ] Cache freshness/recovery has a single code path
+- [ ] Formatter duplication consolidated, Unicode arrow matches spec
+- [ ] Shared helpers extracted for --blocks application and ID parsing
+- [ ] End-to-end workflow integration test passes
+- [ ] Child-blocked-by-parent error message matches spec exactly
+
+#### Tasks
+| ID            | Name                                                                     | Status  |
+|---------------|--------------------------------------------------------------------------|---------|
+| tick-core-6-1 | Add dependency validation to create and update --blocked-by/--blocks      | pending |
+| tick-core-6-2 | Move rebuild logic behind Store abstraction                               | pending |
+| tick-core-6-3 | Consolidate cache freshness/recovery logic                                | pending |
+| tick-core-6-4 | Consolidate formatter duplication and fix Unicode arrow                   | pending |
+| tick-core-6-5 | Extract shared helpers for --blocks application and ID parsing            | pending |
+| tick-core-6-6 | Add end-to-end workflow integration test                                  | pending |
+| tick-core-6-7 | Add explanatory second line to child-blocked-by-parent error              | pending |
+
+---
+
+### Phase 7: Analysis Fixes — Deduplication, Compliance & Cleanup (Cycle 2)
+status: pending
+
+**Goal**: Address gaps found during cycle 2 implementation analysis: duplicated SQL conditions, missing relationship context in create output, repeated store-opening boilerplate, dead code, and duplicate struct definitions.
+**Why this order**: All prior analysis fixes (Phase 6) are scoped. These are additional improvements found in a second analysis pass.
+
+**Acceptance**:
+- [ ] Ready/blocked SQL conditions defined in exactly one shared location
+- [ ] Create command output includes full relationship context (same as show)
+- [ ] Store-opening boilerplate extracted to shared helper across all 9 call sites
+- [ ] Dead VerboseLog function removed
+- [ ] Duplicate relatedTask struct consolidated into RelatedTask
+
+#### Tasks
+| ID            | Name                                                      | Status  |
+|---------------|-----------------------------------------------------------|---------|
+| tick-core-7-1 | Extract shared ready-query SQL conditions                 | pending |
+| tick-core-7-2 | Add relationship context to create command output         | pending |
+| tick-core-7-3 | Extract store-opening boilerplate into shared helper      | pending |
+| tick-core-7-4 | Remove dead VerboseLog function                           | pending |
+| tick-core-7-5 | Consolidate duplicate relatedTask struct into RelatedTask | pending |
+
+---
+
+### Phase 8: Analysis Fixes — Deduplication & Correctness (Cycle 3)
+status: pending
+
+**Goal**: Address gaps found during cycle 3 implementation analysis: duplicate blocked_by entries from applyBlocks, and duplicated post-mutation output logic across create and update commands.
+**Why this order**: All prior analysis fixes (Phases 6-7) are scoped. These are additional improvements found in a third analysis pass.
+
+**Acceptance**:
+- [ ] `applyBlocks` does not create duplicate entries in `BlockedBy` slices
+- [ ] Post-mutation output logic extracted to a single shared helper used by both create and update
+
+#### Tasks
+| ID            | Name                                                             | Status  |
+|---------------|------------------------------------------------------------------|---------|
+| tick-core-8-1 | Prevent duplicate blocked_by entries in applyBlocks              | pending |
+| tick-core-8-2 | Extract post-mutation output helper from create.go and update.go | pending |
+
+---
+
 ### External Libraries
 
 | Library | Purpose |
@@ -190,3 +260,6 @@ approved_at: 2026-01-30
 | 2026-01-30 | Migrated to updated plan format (Plan Index + task files) |
 | 2026-01-30 | Phase 5: removed doctor (separate spec), renamed to Stats & Cache Management |
 | 2026-01-30 | Plan review complete, status concluded |
+| 2026-02-10 | Phase 6 added: 7 analysis tasks from cycle 1 implementation analysis |
+| 2026-02-10 | Phase 7 added: 5 analysis tasks from cycle 2 implementation analysis |
+| 2026-02-10 | Phase 8 added: 2 analysis tasks from cycle 3 implementation analysis |
