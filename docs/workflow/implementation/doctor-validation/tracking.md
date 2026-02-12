@@ -3,7 +3,7 @@ topic: doctor-validation
 plan: ../../planning/doctor-validation.md
 format: local-markdown
 status: in-progress
-task_gate_mode: gated
+task_gate_mode: auto
 fix_gate_mode: gated
 fix_attempts: 0
 linters:
@@ -16,9 +16,9 @@ linters:
 analysis_cycle: 0
 project_skills: [golang-pro]
 current_phase: 2
-current_task: doctor-validation-2-1
+current_task: doctor-validation-2-2
 completed_phases: [1]
-completed_tasks: [doctor-validation-1-1, doctor-validation-1-2, doctor-validation-1-3, doctor-validation-1-4]
+completed_tasks: [doctor-validation-1-1, doctor-validation-1-2, doctor-validation-1-3, doctor-validation-1-4, doctor-validation-2-1]
 started: 2026-02-12
 updated: 2026-02-12
 completed: ~
