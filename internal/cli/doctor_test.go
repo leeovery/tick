@@ -322,10 +322,10 @@ func TestDoctorFourChecks(t *testing.T) {
 
 		stdout, _, _ := runDoctor(t, dir)
 
-		// Count check marks — should have 4 passing checks.
+		// Count check marks — should have 10 passing checks (4 original + 6 relationship/hierarchy).
 		checkCount := strings.Count(stdout, "\u2713")
-		if checkCount != 4 {
-			t.Errorf("expected 4 check marks, got %d; stdout = %q", checkCount, stdout)
+		if checkCount != 10 {
+			t.Errorf("expected 10 check marks, got %d; stdout = %q", checkCount, stdout)
 		}
 	})
 
@@ -534,6 +534,303 @@ func TestDoctorFourChecks(t *testing.T) {
 		}
 		if string(cacheBefore) != string(cacheAfter) {
 			t.Error("cache.db was modified by doctor with four checks")
+		}
+	})
+}
+
+// healthyTenCheckContent returns tasks.jsonl content that passes all 10 checks:
+// valid IDs, no duplicates, valid JSON, no orphaned parents/deps, no self-refs,
+// no cycles, no child-blocked-by-parent, and no done parent with open children.
+func healthyTenCheckContent() string {
+	return `{"id":"tick-aaa111","title":"Parent","status":"open"}
+{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Independent","status":"done"}`
+}
+
+func TestDoctorTenChecks(t *testing.T) {
+	allLabels := []string{
+		"Cache", "JSONL syntax", "ID format", "ID uniqueness",
+		"Orphaned parents", "Orphaned dependencies",
+		"Self-referential dependencies", "Dependency cycles",
+		"Child blocked by parent", "Parent done with open children",
+	}
+
+	t.Run("it registers all 10 checks (4 existing + 6 new relationship/hierarchy checks)", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		for _, label := range allLabels {
+			if !strings.Contains(stdout, label) {
+				t.Errorf("stdout should contain check label %q, got %q", label, stdout)
+			}
+		}
+	})
+
+	t.Run("it runs all 10 checks in a single tick doctor invocation", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		checkCount := strings.Count(stdout, "\u2713")
+		if checkCount != 10 {
+			t.Errorf("expected 10 check marks, got %d; stdout = %q", checkCount, stdout)
+		}
+	})
+
+	t.Run("it exits 0 when all 10 checks pass (healthy store)", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when only the orphaned parent check fails (other 9 pass)", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Task","status":"open","parent":"tick-ffffff"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when only the orphaned dependency check fails (other 9 pass)", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Task","status":"open","blocked_by":["tick-ffffff"]}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when only the self-referential dependency check fails (other 9 pass)", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Task","status":"open","blocked_by":["tick-aaa111"]}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when only the dependency cycle check fails (other 9 pass)", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Task A","status":"open","blocked_by":["tick-bbb222"]}
+{"id":"tick-bbb222","title":"Task B","status":"open","blocked_by":["tick-aaa111"]}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when only the child-blocked-by-parent check fails (other 9 pass)", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Parent","status":"open"}
+{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111","blocked_by":["tick-aaa111"]}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 0 when only the parent-done-with-open-children warning fires (all 9 error checks pass)", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
+{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		stdout, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stdout = %q", exitCode, stdout)
+		}
+	})
+
+	t.Run("it exits 1 when both error checks and warning check produce failures", func(t *testing.T) {
+		// Orphaned parent (error) + done parent with open child (warning).
+		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
+{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Orphan","status":"open","parent":"tick-ffffff"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when a Phase 1 error (cache stale) and a Phase 3 error (orphaned parent) both fire", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Task","status":"open","parent":"tick-ffffff"}`
+		dir, _ := setupDoctorProjectWithContentStale(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when a Phase 2 error (duplicate ID) and a Phase 3 error (dependency cycle) both fire", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Task A","status":"open","blocked_by":["tick-bbb222"]}
+{"id":"tick-bbb222","title":"Task B","status":"open","blocked_by":["tick-aaa111"]}
+{"id":"tick-aaa111","title":"Dup","status":"open"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it reports mixed results correctly - passing checks show checkmark, failing error checks show cross with details, warning check shows cross with details", func(t *testing.T) {
+		// Orphaned parent (error) + done parent with open child (warning).
+		// All other checks pass.
+		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
+{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Orphan","status":"open","parent":"tick-ffffff"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		// Passing checks should show checkmarks.
+		if !strings.Contains(stdout, "\u2713 Cache: OK") {
+			t.Errorf("stdout should contain passing Cache check, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "\u2713 JSONL syntax: OK") {
+			t.Errorf("stdout should contain passing JSONL syntax check, got %q", stdout)
+		}
+		// Orphaned parent should fail with cross.
+		if !strings.Contains(stdout, "\u2717 Orphaned parents:") {
+			t.Errorf("stdout should contain failing Orphaned parents check, got %q", stdout)
+		}
+		// Warning check should fail with cross.
+		if !strings.Contains(stdout, "\u2717 Parent done with open children:") {
+			t.Errorf("stdout should contain failing warning check, got %q", stdout)
+		}
+	})
+
+	t.Run("it displays results for all 10 checks in output (10 check labels visible when all pass)", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		for _, label := range allLabels {
+			if !strings.Contains(stdout, label) {
+				t.Errorf("stdout should contain %q, got %q", label, stdout)
+			}
+		}
+	})
+
+	t.Run("it shows correct summary count reflecting errors and warnings from all checks combined", func(t *testing.T) {
+		// Orphaned parent (1 error) + done parent with open child (1 warning) = 2 issues.
+		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
+{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Orphan","status":"open","parent":"tick-ffffff"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		if !strings.Contains(stdout, "2 issues found.") {
+			t.Errorf("stdout should contain '2 issues found.', got %q", stdout)
+		}
+	})
+
+	t.Run("it shows summary count including warnings (e.g., 1 error + 1 warning = '2 issues found.')", func(t *testing.T) {
+		// Same scenario: 1 error + 1 warning.
+		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
+{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Orphan","status":"open","parent":"tick-ffffff"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		if !strings.Contains(stdout, "2 issues found.") {
+			t.Errorf("stdout should contain '2 issues found.', got %q", stdout)
+		}
+	})
+
+	t.Run("it runs all 10 checks even when early checks fail (no short-circuit)", func(t *testing.T) {
+		// Stale cache (first check fails), but all 10 should still run.
+		dir, _ := setupDoctorProjectWithContentStale(t, healthyTenCheckContent())
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		for _, label := range allLabels {
+			if !strings.Contains(stdout, label) {
+				t.Errorf("stdout should contain %q even when earlier check fails, got %q", label, stdout)
+			}
+		}
+	})
+
+	t.Run("it handles empty tasks.jsonl - all 10 checks report their respective passing/failing results", func(t *testing.T) {
+		dir, _ := setupDoctorProject(t) // Empty tasks.jsonl, fresh cache.
+
+		stdout, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+		for _, label := range allLabels {
+			if !strings.Contains(stdout, label) {
+				t.Errorf("stdout should contain %q for empty file, got %q", label, stdout)
+			}
+		}
+	})
+
+	t.Run("it does not modify tasks.jsonl or cache.db (read-only invariant preserved with 10 checks)", func(t *testing.T) {
+		dir, tickDir := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+
+		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+		cachePath := filepath.Join(tickDir, "cache.db")
+
+		jsonlBefore, err := os.ReadFile(jsonlPath)
+		if err != nil {
+			t.Fatalf("failed to read tasks.jsonl before: %v", err)
+		}
+		cacheBefore, err := os.ReadFile(cachePath)
+		if err != nil {
+			t.Fatalf("failed to read cache.db before: %v", err)
+		}
+
+		runDoctor(t, dir)
+
+		jsonlAfter, err := os.ReadFile(jsonlPath)
+		if err != nil {
+			t.Fatalf("failed to read tasks.jsonl after: %v", err)
+		}
+		cacheAfter, err := os.ReadFile(cachePath)
+		if err != nil {
+			t.Fatalf("failed to read cache.db after: %v", err)
+		}
+
+		if string(jsonlBefore) != string(jsonlAfter) {
+			t.Error("tasks.jsonl was modified by doctor with 10 checks")
+		}
+		if string(cacheBefore) != string(cacheAfter) {
+			t.Error("cache.db was modified by doctor with 10 checks")
+		}
+	})
+
+	t.Run("it shows 'No issues found.' summary when all 10 checks pass", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		if !strings.Contains(stdout, "No issues found.") {
+			t.Errorf("stdout should contain 'No issues found.', got %q", stdout)
 		}
 	})
 }
