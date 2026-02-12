@@ -5,6 +5,13 @@ package doctor
 
 import "context"
 
+// tickDirKeyType is an unexported type for context keys in the doctor package,
+// preventing collisions with keys defined in other packages.
+type tickDirKeyType struct{}
+
+// TickDirKey is the context key used to pass the .tick directory path to checks.
+var TickDirKey = tickDirKeyType{}
+
 // Severity indicates whether a check failure is an error or a warning.
 // Errors affect exit code; warnings do not.
 type Severity string
