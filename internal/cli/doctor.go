@@ -9,11 +9,15 @@ import (
 )
 
 // RunDoctor executes the doctor diagnostic command. It creates a DiagnosticRunner,
-// registers the CacheStalenessCheck, runs all checks, formats the output to stdout,
-// and returns the appropriate exit code. Doctor is read-only and never modifies data.
+// registers CacheStalenessCheck, JsonlSyntaxCheck, IdFormatCheck, and DuplicateIdCheck,
+// runs all checks, formats the output to stdout, and returns the appropriate exit code.
+// Doctor is read-only and never modifies data.
 func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
 	runner := doctor.NewDiagnosticRunner()
 	runner.Register(&doctor.CacheStalenessCheck{})
+	runner.Register(&doctor.JsonlSyntaxCheck{})
+	runner.Register(&doctor.IdFormatCheck{})
+	runner.Register(&doctor.DuplicateIdCheck{})
 
 	ctx := context.WithValue(context.Background(), doctor.TickDirKey, tickDir)
 	report := runner.RunAll(ctx)

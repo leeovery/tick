@@ -265,3 +265,275 @@ func TestDoctor(t *testing.T) {
 		}
 	})
 }
+
+// setupDoctorProjectWithContent creates a .tick/ directory with the given tasks.jsonl content
+// and a cache.db whose hash matches the content (fresh cache).
+func setupDoctorProjectWithContent(t *testing.T, content string) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	tickDir := filepath.Join(dir, ".tick")
+	if err := os.Mkdir(tickDir, 0755); err != nil {
+		t.Fatalf("failed to create .tick/: %v", err)
+	}
+	raw := []byte(content)
+	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+	if err := os.WriteFile(jsonlPath, raw, 0644); err != nil {
+		t.Fatalf("failed to create tasks.jsonl: %v", err)
+	}
+	h := sha256.Sum256(raw)
+	hash := hex.EncodeToString(h[:])
+	createDoctorCache(t, tickDir, hash)
+	return dir, tickDir
+}
+
+// setupDoctorProjectWithContentStale creates a .tick/ directory with the given tasks.jsonl
+// content and a cache.db whose hash does NOT match (stale cache).
+func setupDoctorProjectWithContentStale(t *testing.T, content string) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	tickDir := filepath.Join(dir, ".tick")
+	if err := os.Mkdir(tickDir, 0755); err != nil {
+		t.Fatalf("failed to create .tick/: %v", err)
+	}
+	raw := []byte(content)
+	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+	if err := os.WriteFile(jsonlPath, raw, 0644); err != nil {
+		t.Fatalf("failed to create tasks.jsonl: %v", err)
+	}
+	createDoctorCache(t, tickDir, "stale-hash-value")
+	return dir, tickDir
+}
+
+func TestDoctorFourChecks(t *testing.T) {
+	t.Run("it registers all four checks (cache staleness, JSONL syntax, ID format, duplicate ID)", func(t *testing.T) {
+		dir, _ := setupDoctorProject(t)
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		for _, label := range []string{"Cache", "JSONL syntax", "ID format", "ID uniqueness"} {
+			if !strings.Contains(stdout, label) {
+				t.Errorf("stdout should contain check label %q, got %q", label, stdout)
+			}
+		}
+	})
+
+	t.Run("it runs all four checks in a single tick doctor invocation", func(t *testing.T) {
+		dir, _ := setupDoctorProject(t)
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		// Count check marks — should have 4 passing checks.
+		checkCount := strings.Count(stdout, "\u2713")
+		if checkCount != 4 {
+			t.Errorf("expected 4 check marks, got %d; stdout = %q", checkCount, stdout)
+		}
+	})
+
+	t.Run("it exits 0 when all four checks pass", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, `{"id":"tick-aaa111","title":"Test"}`)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when only the JSONL syntax check fails (other three pass)", func(t *testing.T) {
+		// Invalid JSON but valid cache hash (cache sees the raw bytes and hashes them).
+		dir, _ := setupDoctorProjectWithContent(t, "not valid json")
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when only the ID format check fails (other three pass)", func(t *testing.T) {
+		// Valid JSON, valid cache hash, but invalid ID format.
+		dir, _ := setupDoctorProjectWithContent(t, `{"id":"bad-id","title":"Test"}`)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when only the duplicate ID check fails (other three pass)", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Test1"}
+{"id":"tick-aaa111","title":"Test2"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when all three new checks fail but cache check passes", func(t *testing.T) {
+		// Line 1: invalid JSON (syntax fails, id format skips, dup skips).
+		// Line 2: valid JSON, bad ID (id format fails).
+		// Line 3 & 4: valid JSON, duplicate IDs (dup check fails).
+		content := `not valid json
+{"id":"bad-id","title":"Test"}
+{"id":"tick-bbb222","title":"Dup1"}
+{"id":"tick-bbb222","title":"Dup2"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when all four checks fail", func(t *testing.T) {
+		// Invalid JSON + bad ID + duplicates + stale cache.
+		content := `not valid json
+{"id":"bad-id","title":"Test"}
+{"id":"tick-bbb222","title":"Dup1"}
+{"id":"tick-bbb222","title":"Dup2"}`
+		dir, _ := setupDoctorProjectWithContentStale(t, content)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it exits 1 when cache check fails but all three new checks pass", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContentStale(t, `{"id":"tick-aaa111","title":"Test"}`)
+
+		_, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+	})
+
+	t.Run("it reports mixed results correctly — passing checks show checkmark, failing checks show details", func(t *testing.T) {
+		// Only ID format fails: valid JSON, fresh cache, no duplicates, but bad ID.
+		dir, _ := setupDoctorProjectWithContent(t, `{"id":"bad-id","title":"Test"}`)
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		// Cache, JSONL syntax, and ID uniqueness should pass with checkmarks.
+		if !strings.Contains(stdout, "\u2713 Cache: OK") {
+			t.Errorf("stdout should contain passing Cache check, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "\u2713 JSONL syntax: OK") {
+			t.Errorf("stdout should contain passing JSONL syntax check, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "\u2713 ID uniqueness: OK") {
+			t.Errorf("stdout should contain passing ID uniqueness check, got %q", stdout)
+		}
+		// ID format should fail with cross mark and details.
+		if !strings.Contains(stdout, "\u2717 ID format:") {
+			t.Errorf("stdout should contain failing ID format check, got %q", stdout)
+		}
+	})
+
+	t.Run("it displays results for all four checks in output (four check labels visible)", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, `{"id":"tick-aaa111","title":"Test"}`)
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		labels := []string{"Cache", "JSONL syntax", "ID format", "ID uniqueness"}
+		for _, label := range labels {
+			if !strings.Contains(stdout, label) {
+				t.Errorf("stdout should contain %q, got %q", label, stdout)
+			}
+		}
+	})
+
+	t.Run("it shows correct summary count reflecting errors from all checks combined", func(t *testing.T) {
+		// Line 1: invalid JSON (1 syntax error) + bad ID skipped by id check + skipped by dup.
+		// Line 2: valid JSON, bad ID (1 id format error).
+		// Line 3 & 4: valid JSON, duplicate IDs (1 dup error).
+		// Cache: fresh.
+		// Total: 3 errors (syntax=1, id=1, dup=1).
+		content := `not valid json
+{"id":"bad-id","title":"Test"}
+{"id":"tick-bbb222","title":"Dup1"}
+{"id":"tick-bbb222","title":"Dup2"}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		if !strings.Contains(stdout, "3 issues found.") {
+			t.Errorf("stdout should contain '3 issues found.', got %q", stdout)
+		}
+	})
+
+	t.Run("it runs all four checks even when the first check fails (no short-circuit)", func(t *testing.T) {
+		// Stale cache (first check fails), but the other three checks should still run.
+		dir, _ := setupDoctorProjectWithContentStale(t, `{"id":"tick-aaa111","title":"Test"}`)
+
+		stdout, _, _ := runDoctor(t, dir)
+
+		// All four check labels should be present in output.
+		labels := []string{"Cache", "JSONL syntax", "ID format", "ID uniqueness"}
+		for _, label := range labels {
+			if !strings.Contains(stdout, label) {
+				t.Errorf("stdout should contain %q even when earlier check fails, got %q", label, stdout)
+			}
+		}
+	})
+
+	t.Run("it handles empty tasks.jsonl — all checks report their respective results", func(t *testing.T) {
+		dir, _ := setupDoctorProject(t) // Empty tasks.jsonl, fresh cache.
+
+		stdout, _, exitCode := runDoctor(t, dir)
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+		// All four checks should produce results.
+		labels := []string{"Cache", "JSONL syntax", "ID format", "ID uniqueness"}
+		for _, label := range labels {
+			if !strings.Contains(stdout, label) {
+				t.Errorf("stdout should contain %q for empty file, got %q", label, stdout)
+			}
+		}
+	})
+
+	t.Run("it does not modify tasks.jsonl or cache.db (read-only invariant preserved with four checks)", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"Test1"}
+{"id":"tick-bbb222","title":"Test2"}`
+		dir, tickDir := setupDoctorProjectWithContent(t, content)
+
+		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+		cachePath := filepath.Join(tickDir, "cache.db")
+
+		jsonlBefore, err := os.ReadFile(jsonlPath)
+		if err != nil {
+			t.Fatalf("failed to read tasks.jsonl before: %v", err)
+		}
+		cacheBefore, err := os.ReadFile(cachePath)
+		if err != nil {
+			t.Fatalf("failed to read cache.db before: %v", err)
+		}
+
+		runDoctor(t, dir)
+
+		jsonlAfter, err := os.ReadFile(jsonlPath)
+		if err != nil {
+			t.Fatalf("failed to read tasks.jsonl after: %v", err)
+		}
+		cacheAfter, err := os.ReadFile(cachePath)
+		if err != nil {
+			t.Fatalf("failed to read cache.db after: %v", err)
+		}
+
+		if string(jsonlBefore) != string(jsonlAfter) {
+			t.Error("tasks.jsonl was modified by doctor with four checks")
+		}
+		if string(cacheBefore) != string(cacheAfter) {
+			t.Error("cache.db was modified by doctor with four checks")
+		}
+	})
+}
