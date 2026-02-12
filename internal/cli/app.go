@@ -26,6 +26,11 @@ func (a *App) Run(args []string) int {
 		return 0
 	}
 
+	// Doctor bypasses format/formatter machinery — always human-readable text.
+	if subcmd == "doctor" {
+		return a.handleDoctor()
+	}
+
 	// Resolve format once in dispatcher.
 	fc, err := NewFormatConfig(flags, a.IsTTY)
 	if err != nil {
