@@ -3,7 +3,9 @@ topic: doctor-validation
 status: concluded
 type: feature
 date: 2026-01-24
-sources: []
+sources:
+  - name: doctor-command-validation
+    status: incorporated
 ---
 
 # Specification: Doctor Validation
