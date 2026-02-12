@@ -10,7 +10,7 @@ external_dependencies:
   - topic: tick-core
     description: Doctor validates against data schema, ID format, hierarchy rules, and cache structure
     state: resolved
-    task_id: tick-core plan
+    task_id: tick-core-1-1
   - topic: tick-core
     description: `tick rebuild` command referenced in cache staleness suggestion
     state: resolved
