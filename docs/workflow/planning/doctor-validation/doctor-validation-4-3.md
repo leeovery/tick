@@ -1,7 +1,7 @@
 ---
 id: doctor-validation-4-3
 phase: 4
-status: pending
+status: approved
 created: 2026-02-13
 ---
 
