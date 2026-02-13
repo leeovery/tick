@@ -23,11 +23,7 @@ func (c *DependencyCycleCheck) Run(ctx context.Context, tickDir string) []CheckR
 		return fileNotFoundResult("Dependency cycles")
 	}
 
-	// Build set of known task IDs.
-	knownIDs := make(map[string]struct{}, len(tasks))
-	for _, task := range tasks {
-		knownIDs[task.ID] = struct{}{}
-	}
+	knownIDs := buildKnownIDs(tasks)
 
 	// Build adjacency list, excluding self-references and orphaned targets.
 	adj := make(map[string][]string, len(tasks))

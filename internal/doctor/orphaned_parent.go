@@ -20,10 +20,7 @@ func (c *OrphanedParentCheck) Run(ctx context.Context, tickDir string) []CheckRe
 		return fileNotFoundResult("Orphaned parents")
 	}
 
-	knownIDs := make(map[string]struct{}, len(tasks))
-	for _, task := range tasks {
-		knownIDs[task.ID] = struct{}{}
-	}
+	knownIDs := buildKnownIDs(tasks)
 
 	var failures []CheckResult
 	for _, task := range tasks {
