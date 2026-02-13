@@ -1,13 +1,9 @@
 package doctor
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 // JsonlSyntaxCheck validates that every non-blank line in tasks.jsonl is
@@ -16,15 +12,14 @@ import (
 type JsonlSyntaxCheck struct{}
 
 // Run executes the JSONL syntax check. It reads the tick directory path from
-// the context (via TickDirKey), opens tasks.jsonl, and validates each line.
+// the context (via TickDirKey), calls ScanJSONLines, and validates each line.
 // Blank and whitespace-only lines are silently skipped but still count in
 // line numbering. Returns a single passing result if all non-blank lines are
 // valid JSON, or one failing result per malformed line.
 func (c *JsonlSyntaxCheck) Run(ctx context.Context) []CheckResult {
 	tickDir, _ := ctx.Value(TickDirKey).(string)
-	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
 
-	f, err := os.Open(jsonlPath)
+	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{
 			Name:       "JSONL syntax",
@@ -34,23 +29,18 @@ func (c *JsonlSyntaxCheck) Run(ctx context.Context) []CheckResult {
 			Suggestion: "Run tick init or verify .tick directory",
 		}}
 	}
-	defer f.Close()
 
 	var failures []CheckResult
-	scanner := bufio.NewScanner(f)
-	lineNum := 0
-
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
-
-		// Skip blank and whitespace-only lines.
-		if strings.TrimSpace(line) == "" {
+	for _, line := range lines {
+		if line.Parsed != nil {
 			continue
 		}
-
-		if !json.Valid([]byte(line)) {
-			preview := line
+		// Parsed is nil — check if the raw line is syntactically valid JSON.
+		// ScanJSONLines only parses into map[string]interface{}, so valid JSON
+		// arrays or primitives will have nil Parsed. Use json.Valid to confirm
+		// actual syntax errors.
+		if !json.Valid([]byte(line.Raw)) {
+			preview := line.Raw
 			if len(preview) > 80 {
 				preview = preview[:80] + "..."
 			}
@@ -58,7 +48,7 @@ func (c *JsonlSyntaxCheck) Run(ctx context.Context) []CheckResult {
 				Name:       "JSONL syntax",
 				Passed:     false,
 				Severity:   SeverityError,
-				Details:    fmt.Sprintf("Line %d: invalid JSON — %s", lineNum, preview),
+				Details:    fmt.Sprintf("Line %d: invalid JSON — %s", line.LineNum, preview),
 				Suggestion: "Manual fix required",
 			})
 		}

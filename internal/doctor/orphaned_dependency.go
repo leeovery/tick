@@ -17,7 +17,7 @@ type OrphanedDependencyCheck struct{}
 func (c *OrphanedDependencyCheck) Run(ctx context.Context) []CheckResult {
 	tickDir, _ := ctx.Value(TickDirKey).(string)
 
-	tasks, err := ParseTaskRelationships(tickDir)
+	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{
 			Name:       "Orphaned dependencies",

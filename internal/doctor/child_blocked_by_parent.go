@@ -22,7 +22,7 @@ type ChildBlockedByParentCheck struct{}
 func (c *ChildBlockedByParentCheck) Run(ctx context.Context) []CheckResult {
 	tickDir, _ := ctx.Value(TickDirKey).(string)
 
-	tasks, err := ParseTaskRelationships(tickDir)
+	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{
 			Name:       "Child blocked by parent",

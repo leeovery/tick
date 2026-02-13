@@ -28,6 +28,17 @@ func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
 	runner.Register(&doctor.ParentDoneWithOpenChildrenCheck{})
 
 	ctx := context.WithValue(context.Background(), doctor.TickDirKey, tickDir)
+
+	lines, err := doctor.ScanJSONLines(tickDir)
+	if err == nil {
+		ctx = context.WithValue(ctx, doctor.JSONLinesKey, lines)
+	}
+
+	tasks, err := doctor.ParseTaskRelationships(tickDir)
+	if err == nil {
+		ctx = context.WithValue(ctx, doctor.TaskRelationshipsKey, tasks)
+	}
+
 	report := runner.RunAll(ctx)
 
 	doctor.FormatReport(stdout, report)

@@ -20,7 +20,7 @@ type DependencyCycleCheck struct{}
 func (c *DependencyCycleCheck) Run(ctx context.Context) []CheckResult {
 	tickDir, _ := ctx.Value(TickDirKey).(string)
 
-	tasks, err := ParseTaskRelationships(tickDir)
+	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{
 			Name:       "Dependency cycles",

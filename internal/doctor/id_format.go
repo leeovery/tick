@@ -1,14 +1,9 @@
 package doctor
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
-	"strings"
 )
 
 // idFormatRegex matches valid tick IDs: tick- followed by exactly 6 lowercase hex chars.
@@ -20,15 +15,14 @@ var idFormatRegex = regexp.MustCompile(`^tick-[0-9a-f]{6}$`)
 type IdFormatCheck struct{}
 
 // Run executes the ID format check. It reads the tick directory path from
-// the context (via TickDirKey), opens tasks.jsonl, and validates each task's id field.
+// the context (via TickDirKey), calls ScanJSONLines, and validates each task's id field.
 // Blank and whitespace-only lines are silently skipped but still count in
 // line numbering. Unparseable JSON lines are skipped silently (syntax check handles those).
 // Returns a single passing result if all IDs are valid, or one failing result per invalid ID.
 func (c *IdFormatCheck) Run(ctx context.Context) []CheckResult {
 	tickDir, _ := ctx.Value(TickDirKey).(string)
-	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
 
-	f, err := os.Open(jsonlPath)
+	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{
 			Name:       "ID format",
@@ -38,36 +32,21 @@ func (c *IdFormatCheck) Run(ctx context.Context) []CheckResult {
 			Suggestion: "Run tick init or verify .tick directory",
 		}}
 	}
-	defer f.Close()
 
 	var failures []CheckResult
-	scanner := bufio.NewScanner(f)
-	lineNum := 0
-
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
-
-		// Skip blank and whitespace-only lines.
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-
-		// Attempt JSON parse to map[string]interface{}.
-		var obj map[string]interface{}
-		if err := json.Unmarshal([]byte(line), &obj); err != nil {
-			// Unparseable JSON — skip silently (syntax check handles those).
+	for _, line := range lines {
+		if line.Parsed == nil {
 			continue
 		}
 
 		// Extract the id field.
-		idVal, exists := obj["id"]
+		idVal, exists := line.Parsed["id"]
 		if !exists {
 			failures = append(failures, CheckResult{
 				Name:       "ID format",
 				Passed:     false,
 				Severity:   SeverityError,
-				Details:    fmt.Sprintf("Line %d: missing id field", lineNum),
+				Details:    fmt.Sprintf("Line %d: missing id field", line.LineNum),
 				Suggestion: "Manual fix required",
 			})
 			continue
@@ -76,13 +55,12 @@ func (c *IdFormatCheck) Run(ctx context.Context) []CheckResult {
 		// Check if id is a string.
 		idStr, ok := idVal.(string)
 		if !ok {
-			// Non-string value (null, number, etc.)
 			display := formatNonStringID(idVal)
 			failures = append(failures, CheckResult{
 				Name:       "ID format",
 				Passed:     false,
 				Severity:   SeverityError,
-				Details:    fmt.Sprintf("Line %d: invalid ID '%s' — expected format tick-{6 hex}", lineNum, display),
+				Details:    fmt.Sprintf("Line %d: invalid ID '%s' — expected format tick-{6 hex}", line.LineNum, display),
 				Suggestion: "Manual fix required",
 			})
 			continue
@@ -94,7 +72,7 @@ func (c *IdFormatCheck) Run(ctx context.Context) []CheckResult {
 				Name:       "ID format",
 				Passed:     false,
 				Severity:   SeverityError,
-				Details:    fmt.Sprintf("Line %d: invalid ID '%s' — expected format tick-{6 hex}", lineNum, idStr),
+				Details:    fmt.Sprintf("Line %d: invalid ID '%s' — expected format tick-{6 hex}", line.LineNum, idStr),
 				Suggestion: "Manual fix required",
 			})
 			continue

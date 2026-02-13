@@ -1,12 +1,8 @@
 package doctor
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -23,15 +19,13 @@ type idOccurrence struct {
 type DuplicateIdCheck struct{}
 
 // Run executes the duplicate ID check. It reads the tick directory path from
-// the context (via TickDirKey), opens tasks.jsonl, and groups IDs by their
+// the context (via TickDirKey), calls ScanJSONLines, and groups IDs by their
 // lowercase-normalized form. Any group with more than one entry produces a
-// failing result. Blank lines, unparseable JSON, and missing/empty IDs are
-// silently skipped.
+// failing result. Unparseable JSON and missing/empty IDs are silently skipped.
 func (c *DuplicateIdCheck) Run(ctx context.Context) []CheckResult {
 	tickDir, _ := ctx.Value(TickDirKey).(string)
-	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
 
-	f, err := os.Open(jsonlPath)
+	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{
 			Name:       "ID uniqueness",
@@ -41,30 +35,18 @@ func (c *DuplicateIdCheck) Run(ctx context.Context) []CheckResult {
 			Suggestion: "Run tick init or verify .tick directory",
 		}}
 	}
-	defer f.Close()
 
 	// Map from lowercase(id) to list of occurrences.
 	groups := make(map[string][]idOccurrence)
 	// Track insertion order of keys for deterministic output.
 	var keyOrder []string
 
-	scanner := bufio.NewScanner(f)
-	lineNum := 0
-
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
-
-		if strings.TrimSpace(line) == "" {
+	for _, line := range lines {
+		if line.Parsed == nil {
 			continue
 		}
 
-		var obj map[string]interface{}
-		if err := json.Unmarshal([]byte(line), &obj); err != nil {
-			continue
-		}
-
-		idVal, exists := obj["id"]
+		idVal, exists := line.Parsed["id"]
 		if !exists {
 			continue
 		}
@@ -80,7 +62,7 @@ func (c *DuplicateIdCheck) Run(ctx context.Context) []CheckResult {
 		}
 		groups[key] = append(groups[key], idOccurrence{
 			originalID: idStr,
-			lineNumber: lineNum,
+			lineNumber: line.LineNum,
 		})
 	}
 
