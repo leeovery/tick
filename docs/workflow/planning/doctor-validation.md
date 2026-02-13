@@ -16,7 +16,7 @@ external_dependencies:
     state: resolved
     task_id: tick-core-5-2
 planning:
-  phase: 3
+  phase: 6
   task: ~
 ---
 
@@ -138,6 +138,16 @@ status: approved
 | doctor-validation-5-1 | Derive ParseTaskRelationships from ScanJSONLines output | — | approved |
 | doctor-validation-5-2 | Extract assertReadOnly test helper | — | approved |
 | doctor-validation-5-3 | Use DiagnosticReport methods for issue count in FormatReport | — | approved |
+
+### Phase 6: Analysis (cycle 3 — extract buildKnownIDs helper)
+status: approved
+
+**Goal**: Address findings from implementation analysis cycle 3.
+
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| doctor-validation-6-1 | Extract buildKnownIDs helper to eliminate 3-file duplication | — | authored |
 
 ---
 

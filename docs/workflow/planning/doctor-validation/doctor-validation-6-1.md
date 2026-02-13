@@ -1,14 +1,11 @@
 ---
-topic: doctor-validation
-cycle: 3
-total_proposed: 1
+id: doctor-validation-6-1
+phase: 6
+status: pending
+created: 2026-02-13
 ---
-# Analysis Tasks: Doctor Validation (Cycle 3)
 
-## Task 1: Extract buildKnownIDs helper to eliminate 3-file duplication
-status: approved
-severity: medium
-sources: duplication
+# Extract buildKnownIDs helper to eliminate 3-file duplication
 
 **Problem**: The identical 3-line knownIDs map construction (`make(map[string]struct{}, len(tasks))` + range loop) is copy-pasted in `orphaned_parent.go`, `orphaned_dependency.go`, and `dependency_cycle.go`. The two orphaned-reference checks also share ~25 lines of near-identical scaffolding beyond knownIDs, but extracting a fully generic check would over-abstract for two callers.
 
