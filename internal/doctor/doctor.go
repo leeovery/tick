@@ -5,13 +5,6 @@ package doctor
 
 import "context"
 
-// tickDirKeyType is an unexported type for context keys in the doctor package,
-// preventing collisions with keys defined in other packages.
-type tickDirKeyType struct{}
-
-// TickDirKey is the context key used to pass the .tick directory path to checks.
-var TickDirKey = tickDirKeyType{}
-
 // Severity indicates whether a check failure is an error or a warning.
 // Errors affect exit code; warnings do not.
 type Severity string
@@ -41,11 +34,11 @@ type CheckResult struct {
 }
 
 // Check is the interface that all diagnostic checks implement.
-// Run executes the check and returns one or more results.
-// A passing check returns exactly one result with Passed true.
+// Run executes the check against the given tick directory and returns one or
+// more results. A passing check returns exactly one result with Passed true.
 // A failing check returns one or more results with Passed false.
 type Check interface {
-	Run(ctx context.Context) []CheckResult
+	Run(ctx context.Context, tickDir string) []CheckResult
 }
 
 // DiagnosticReport collects all check results from a diagnostic run.
@@ -105,10 +98,10 @@ func (d *DiagnosticRunner) Register(check Check) {
 // RunAll executes every registered check and collects all CheckResult entries
 // into a DiagnosticReport. It never short-circuits — all checks run regardless
 // of prior failures. With zero registered checks, it returns an empty report.
-func (d *DiagnosticRunner) RunAll(ctx context.Context) DiagnosticReport {
+func (d *DiagnosticRunner) RunAll(ctx context.Context, tickDir string) DiagnosticReport {
 	var results []CheckResult
 	for _, check := range d.checks {
-		results = append(results, check.Run(ctx)...)
+		results = append(results, check.Run(ctx, tickDir)...)
 	}
 	return DiagnosticReport{Results: results}
 }

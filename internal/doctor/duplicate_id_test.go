@@ -13,7 +13,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-a1b2c3\"}\n{\"id\":\"tick-d4e5f6\"}\n"))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -28,7 +28,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-a1b2c3\"}\n"))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -43,7 +43,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte{})
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -58,7 +58,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-abc123\"}\n{\"id\":\"tick-abc123\"}\n"))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -73,7 +73,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-ABC123\"}\n{\"id\":\"tick-abc123\"}\n"))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -89,7 +89,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result for single duplicate group, got %d", len(results))
@@ -115,7 +115,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 2 {
 			t.Fatalf("expected 2 results (one per duplicate group), got %d", len(results))
@@ -132,7 +132,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-abc123\"}\n{\"id\":\"tick-d4e5f6\"}\n{\"id\":\"tick-abc123\"}\n"))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -150,7 +150,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-ABC123\"}\n{\"id\":\"tick-abc123\"}\n"))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -169,7 +169,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -185,7 +185,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -201,7 +201,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -216,7 +216,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		// No tasks.jsonl created
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -237,7 +237,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-abc123\"}\n{\"id\":\"tick-abc123\"}\n"))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -280,7 +280,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &DuplicateIdCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				for i, r := range results {
 					if r.Name != "ID uniqueness" {
@@ -316,7 +316,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &DuplicateIdCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				for i, r := range results {
 					if r.Passed {
@@ -337,7 +337,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DuplicateIdCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -362,7 +362,7 @@ func TestDuplicateIdCheck(t *testing.T) {
 		}
 
 		check := &DuplicateIdCheck{}
-		check.Run(ctxWithTickDir(tickDir))
+		check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		after, err := os.ReadFile(jsonlPath)
 		if err != nil {

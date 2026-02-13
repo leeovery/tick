@@ -70,9 +70,10 @@ func computeTestHash(data []byte) string {
 	return hex.EncodeToString(h[:])
 }
 
-// ctxWithTickDir returns a context with the tick directory set.
-func ctxWithTickDir(tickDir string) context.Context {
-	return context.WithValue(context.Background(), TickDirKey, tickDir)
+// ctxWithTickDir returns a background context. Retained for test compatibility.
+// tickDir is now passed as an explicit parameter to Run.
+func ctxWithTickDir(_ string) context.Context {
+	return context.Background()
 }
 
 func TestCacheStalenessCheck(t *testing.T) {
@@ -83,7 +84,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		createCacheWithHash(t, tickDir, computeTestHash(content))
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -100,7 +101,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		createCacheWithHash(t, tickDir, "stale-hash-value")
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -118,7 +119,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(`{"id":"abc"}`))
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -136,7 +137,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		// No tasks.jsonl created
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -155,7 +156,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		createCacheWithoutHash(t, tickDir)
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -176,7 +177,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		createCacheWithHash(t, tickDir, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -192,7 +193,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		createCacheWithHash(t, tickDir, "wrong-hash")
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -208,7 +209,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(`{"id":"abc"}`))
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -263,7 +264,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &CacheStalenessCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				if len(results) != 1 {
 					t.Fatalf("expected 1 result, got %d", len(results))
@@ -318,7 +319,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &CacheStalenessCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				if len(results) != 1 {
 					t.Fatalf("expected 1 result, got %d", len(results))
@@ -352,7 +353,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		}
 
 		check := &CacheStalenessCheck{}
-		check.Run(ctxWithTickDir(tickDir))
+		check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		jsonlAfter, err := os.ReadFile(jsonlPath)
 		if err != nil {
@@ -415,7 +416,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &CacheStalenessCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				if len(results) != 1 {
 					t.Errorf("expected exactly 1 result, got %d", len(results))
@@ -434,7 +435,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		}
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -447,24 +448,18 @@ func TestCacheStalenessCheck(t *testing.T) {
 		}
 	})
 
-	t.Run("it returns failing result when tick directory not set in context", func(t *testing.T) {
+	t.Run("it returns failing result when tick directory is empty string", func(t *testing.T) {
 		check := &CacheStalenessCheck{}
-		results := check.Run(context.Background())
+		results := check.Run(context.Background(), "")
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
 		}
 		if results[0].Passed {
-			t.Error("expected Passed false when tick directory not set")
+			t.Error("expected Passed false when tick directory is empty")
 		}
 		if results[0].Severity != SeverityError {
 			t.Errorf("expected SeverityError, got %q", results[0].Severity)
-		}
-		if results[0].Details != "tick directory path not set in context" {
-			t.Errorf("unexpected Details: %s", results[0].Details)
-		}
-		if results[0].Suggestion != "Run tick init or verify .tick directory" {
-			t.Errorf("unexpected Suggestion: %s", results[0].Suggestion)
 		}
 		if results[0].Name != "Cache" {
 			t.Errorf("expected Name %q, got %q", "Cache", results[0].Name)
@@ -486,7 +481,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		db.Close()
 
 		check := &CacheStalenessCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))

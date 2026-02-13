@@ -14,14 +14,11 @@ import (
 // the file.
 type ChildBlockedByParentCheck struct{}
 
-// Run executes the child-blocked-by-parent check. It reads the tick directory
-// path from the context (via TickDirKey), parses task relationships, and checks
-// that no task's blocked_by list contains its own parent. Returns a single
-// passing result if no violations are found, or one failing result per child
-// task that has its parent in blocked_by.
-func (c *ChildBlockedByParentCheck) Run(ctx context.Context) []CheckResult {
-	tickDir, _ := ctx.Value(TickDirKey).(string)
-
+// Run executes the child-blocked-by-parent check. It parses task relationships
+// from the given tick directory and checks that no task's blocked_by list
+// contains its own parent. Returns a single passing result if no violations are
+// found, or one failing result per child task that has its parent in blocked_by.
+func (c *ChildBlockedByParentCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{

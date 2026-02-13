@@ -11,14 +11,12 @@ import (
 // its 1-based line number. It is read-only and never modifies the file.
 type JsonlSyntaxCheck struct{}
 
-// Run executes the JSONL syntax check. It reads the tick directory path from
-// the context (via TickDirKey), calls ScanJSONLines, and validates each line.
-// Blank and whitespace-only lines are silently skipped but still count in
-// line numbering. Returns a single passing result if all non-blank lines are
-// valid JSON, or one failing result per malformed line.
-func (c *JsonlSyntaxCheck) Run(ctx context.Context) []CheckResult {
-	tickDir, _ := ctx.Value(TickDirKey).(string)
-
+// Run executes the JSONL syntax check. It reads tasks.jsonl from the given
+// tick directory and validates each line. Blank and whitespace-only lines are
+// silently skipped but still count in line numbering. Returns a single passing
+// result if all non-blank lines are valid JSON, or one failing result per
+// malformed line.
+func (c *JsonlSyntaxCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{

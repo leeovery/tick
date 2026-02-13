@@ -13,7 +13,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-a1b2c3\"}\n{\"id\":\"tick-d4e5f6\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -28,7 +28,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte{})
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -43,7 +43,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -61,7 +61,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"title\":\"no id here\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -79,7 +79,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-A1B2C3\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -97,7 +97,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-a1B2c3\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -115,7 +115,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-a1b2c3d4\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -133,7 +133,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-a1b\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -151,7 +151,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"task-a1b2c3\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -169,7 +169,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"a1b2c3\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -187,7 +187,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-123456\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -203,7 +203,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 2 {
 			t.Fatalf("expected 2 failing results, got %d", len(results))
@@ -221,7 +221,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 3 {
 			t.Fatalf("expected 3 results (one per invalid ID), got %d", len(results))
@@ -234,7 +234,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -250,7 +250,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -265,7 +265,7 @@ func TestIdFormatCheck(t *testing.T) {
 		// No tasks.jsonl created
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -286,7 +286,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"WRONG-FORMAT\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -302,7 +302,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		for i, r := range results {
 			if r.Suggestion != "Manual fix required" {
@@ -344,7 +344,7 @@ func TestIdFormatCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &IdFormatCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				for i, r := range results {
 					if r.Name != "ID format" {
@@ -388,7 +388,7 @@ func TestIdFormatCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &IdFormatCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				for i, r := range results {
 					if r.Passed {
@@ -408,7 +408,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-A1b2C3\"}\n"))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -424,7 +424,7 @@ func TestIdFormatCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &IdFormatCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 2 {
 			t.Fatalf("expected 2 results, got %d", len(results))
@@ -455,7 +455,7 @@ func TestIdFormatCheck(t *testing.T) {
 		}
 
 		check := &IdFormatCheck{}
-		check.Run(ctxWithTickDir(tickDir))
+		check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		after, err := os.ReadFile(jsonlPath)
 		if err != nil {

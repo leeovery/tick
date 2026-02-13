@@ -14,7 +14,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -29,7 +29,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte{})
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -47,7 +47,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -64,7 +64,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -81,7 +81,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -103,7 +103,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -126,7 +126,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -149,7 +149,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 2 {
 			t.Fatalf("expected 2 results, got %d", len(results))
@@ -169,7 +169,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -185,7 +185,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -203,7 +203,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result (self-ref excluded from graph), got %d", len(results))
@@ -225,7 +225,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -251,7 +251,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 2 {
 			t.Fatalf("expected 2 results (two cycles), got %d", len(results))
@@ -272,7 +272,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 2 {
 			t.Fatalf("expected 2 results, got %d", len(results))
@@ -295,7 +295,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result (deduplicated), got %d", len(results))
@@ -313,7 +313,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -333,7 +333,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -352,7 +352,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -366,7 +366,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		tickDir := setupTickDir(t)
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -389,7 +389,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(content))
 
 		check := &DependencyCycleCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -434,7 +434,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &DependencyCycleCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				for i, r := range results {
 					if r.Name != "Dependency cycles" {
@@ -472,7 +472,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &DependencyCycleCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				for i, r := range results {
 					if r.Passed {
@@ -499,7 +499,7 @@ func TestDependencyCycleCheck(t *testing.T) {
 		}
 
 		check := &DependencyCycleCheck{}
-		check.Run(ctxWithTickDir(tickDir))
+		check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		after, err := os.ReadFile(jsonlPath)
 		if err != nil {

@@ -11,7 +11,7 @@ type stubCheck struct {
 	called  bool
 }
 
-func (s *stubCheck) Run(_ context.Context) []CheckResult {
+func (s *stubCheck) Run(_ context.Context, _ string) []CheckResult {
 	s.called = true
 	return s.results
 }
@@ -49,7 +49,7 @@ func newMultiResultCheck(name string, count int) *stubCheck {
 func TestDiagnosticRunner(t *testing.T) {
 	t.Run("it returns empty report when zero checks are registered", func(t *testing.T) {
 		runner := NewDiagnosticRunner()
-		report := runner.RunAll(context.Background())
+		report := runner.RunAll(context.Background(), "")
 
 		if len(report.Results) != 0 {
 			t.Errorf("expected 0 results, got %d", len(report.Results))
@@ -68,7 +68,7 @@ func TestDiagnosticRunner(t *testing.T) {
 	t.Run("it runs a single passing check and returns one result with Passed true", func(t *testing.T) {
 		runner := NewDiagnosticRunner()
 		runner.Register(newPassingCheck("Cache"))
-		report := runner.RunAll(context.Background())
+		report := runner.RunAll(context.Background(), "")
 
 		if len(report.Results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(report.Results))
@@ -84,7 +84,7 @@ func TestDiagnosticRunner(t *testing.T) {
 	t.Run("it runs a single failing check and returns one result with Passed false", func(t *testing.T) {
 		runner := NewDiagnosticRunner()
 		runner.Register(newFailingCheck("JSONL syntax", SeverityError))
-		report := runner.RunAll(context.Background())
+		report := runner.RunAll(context.Background(), "")
 
 		if len(report.Results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(report.Results))
@@ -105,7 +105,7 @@ func TestDiagnosticRunner(t *testing.T) {
 		runner.Register(newPassingCheck("Cache"))
 		runner.Register(newPassingCheck("JSONL syntax"))
 		runner.Register(newPassingCheck("ID uniqueness"))
-		report := runner.RunAll(context.Background())
+		report := runner.RunAll(context.Background(), "")
 
 		if len(report.Results) != 3 {
 			t.Fatalf("expected 3 results, got %d", len(report.Results))
@@ -120,7 +120,7 @@ func TestDiagnosticRunner(t *testing.T) {
 		runner.Register(newFailingCheck("Cache", SeverityError))
 		runner.Register(newFailingCheck("JSONL syntax", SeverityError))
 		runner.Register(newFailingCheck("ID uniqueness", SeverityError))
-		report := runner.RunAll(context.Background())
+		report := runner.RunAll(context.Background(), "")
 
 		if len(report.Results) != 3 {
 			t.Fatalf("expected 3 results, got %d", len(report.Results))
@@ -138,7 +138,7 @@ func TestDiagnosticRunner(t *testing.T) {
 		runner.Register(newPassingCheck("Cache"))
 		runner.Register(newFailingCheck("JSONL syntax", SeverityError))
 		runner.Register(newPassingCheck("ID uniqueness"))
-		report := runner.RunAll(context.Background())
+		report := runner.RunAll(context.Background(), "")
 
 		if len(report.Results) != 3 {
 			t.Fatalf("expected 3 results, got %d", len(report.Results))
@@ -170,7 +170,7 @@ func TestDiagnosticRunner(t *testing.T) {
 		runner.Register(first)
 		runner.Register(second)
 		runner.Register(third)
-		runner.RunAll(context.Background())
+		runner.RunAll(context.Background(), "")
 
 		if !first.called {
 			t.Error("expected first check to be called")
@@ -188,7 +188,7 @@ func TestDiagnosticRunner(t *testing.T) {
 		runner.Register(newPassingCheck("Alpha"))
 		runner.Register(newPassingCheck("Beta"))
 		runner.Register(newPassingCheck("Gamma"))
-		report := runner.RunAll(context.Background())
+		report := runner.RunAll(context.Background(), "")
 
 		expected := []string{"Alpha", "Beta", "Gamma"}
 		if len(report.Results) != len(expected) {
@@ -204,7 +204,7 @@ func TestDiagnosticRunner(t *testing.T) {
 	t.Run("it collects multiple results from a single check", func(t *testing.T) {
 		runner := NewDiagnosticRunner()
 		runner.Register(newMultiResultCheck("Orphaned references", 3))
-		report := runner.RunAll(context.Background())
+		report := runner.RunAll(context.Background(), "")
 
 		if len(report.Results) != 3 {
 			t.Fatalf("expected 3 results from single check, got %d", len(report.Results))

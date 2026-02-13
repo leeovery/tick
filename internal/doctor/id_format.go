@@ -14,14 +14,12 @@ var idFormatRegex = regexp.MustCompile(`^tick-[0-9a-f]{6}$`)
 // error with its 1-based line number. It is read-only and never modifies the file.
 type IdFormatCheck struct{}
 
-// Run executes the ID format check. It reads the tick directory path from
-// the context (via TickDirKey), calls ScanJSONLines, and validates each task's id field.
-// Blank and whitespace-only lines are silently skipped but still count in
-// line numbering. Unparseable JSON lines are skipped silently (syntax check handles those).
-// Returns a single passing result if all IDs are valid, or one failing result per invalid ID.
-func (c *IdFormatCheck) Run(ctx context.Context) []CheckResult {
-	tickDir, _ := ctx.Value(TickDirKey).(string)
-
+// Run executes the ID format check. It reads tasks.jsonl from the given tick
+// directory and validates each task's id field. Blank and whitespace-only lines
+// are silently skipped but still count in line numbering. Unparseable JSON
+// lines are skipped silently (syntax check handles those). Returns a single
+// passing result if all IDs are valid, or one failing result per invalid ID.
+func (c *IdFormatCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{

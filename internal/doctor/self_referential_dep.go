@@ -10,14 +10,11 @@ import (
 // It is read-only and never modifies the file.
 type SelfReferentialDepCheck struct{}
 
-// Run executes the self-referential dependency check. It reads the tick directory
-// path from the context (via TickDirKey), parses task relationships, and checks
-// that no task references itself in its blocked_by list. Returns a single passing
-// result if no self-references are found, or one failing result per self-referential
-// task.
-func (c *SelfReferentialDepCheck) Run(ctx context.Context) []CheckResult {
-	tickDir, _ := ctx.Value(TickDirKey).(string)
-
+// Run executes the self-referential dependency check. It parses task
+// relationships from the given tick directory and checks that no task references
+// itself in its blocked_by list. Returns a single passing result if no
+// self-references are found, or one failing result per self-referential task.
+func (c *SelfReferentialDepCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{

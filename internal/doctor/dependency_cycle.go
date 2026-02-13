@@ -13,13 +13,11 @@ import (
 // It is read-only and never modifies the file.
 type DependencyCycleCheck struct{}
 
-// Run executes the dependency cycle check. It reads the tick directory path from
-// the context (via TickDirKey), parses task relationships, builds a dependency
-// graph, and runs DFS with three-color marking to detect cycles. Returns a single
-// passing result if no cycles are found, or one failing result per unique cycle.
-func (c *DependencyCycleCheck) Run(ctx context.Context) []CheckResult {
-	tickDir, _ := ctx.Value(TickDirKey).(string)
-
+// Run executes the dependency cycle check. It parses task relationships from
+// the given tick directory, builds a dependency graph, and runs DFS with
+// three-color marking to detect cycles. Returns a single passing result if no
+// cycles are found, or one failing result per unique cycle.
+func (c *DependencyCycleCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{

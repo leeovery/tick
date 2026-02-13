@@ -18,13 +18,11 @@ type idOccurrence struct {
 // and never modifies the file.
 type DuplicateIdCheck struct{}
 
-// Run executes the duplicate ID check. It reads the tick directory path from
-// the context (via TickDirKey), calls ScanJSONLines, and groups IDs by their
-// lowercase-normalized form. Any group with more than one entry produces a
-// failing result. Unparseable JSON and missing/empty IDs are silently skipped.
-func (c *DuplicateIdCheck) Run(ctx context.Context) []CheckResult {
-	tickDir, _ := ctx.Value(TickDirKey).(string)
-
+// Run executes the duplicate ID check. It reads tasks.jsonl from the given tick
+// directory and groups IDs by their lowercase-normalized form. Any group with
+// more than one entry produces a failing result. Unparseable JSON and
+// missing/empty IDs are silently skipped.
+func (c *DuplicateIdCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{

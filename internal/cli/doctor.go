@@ -27,7 +27,7 @@ func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
 	runner.Register(&doctor.ChildBlockedByParentCheck{})
 	runner.Register(&doctor.ParentDoneWithOpenChildrenCheck{})
 
-	ctx := context.WithValue(context.Background(), doctor.TickDirKey, tickDir)
+	ctx := context.Background()
 
 	lines, err := doctor.ScanJSONLines(tickDir)
 	if err == nil {
@@ -39,7 +39,7 @@ func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
 		ctx = context.WithValue(ctx, doctor.TaskRelationshipsKey, tasks)
 	}
 
-	report := runner.RunAll(ctx)
+	report := runner.RunAll(ctx, tickDir)
 
 	doctor.FormatReport(stdout, report)
 

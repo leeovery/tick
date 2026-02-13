@@ -17,22 +17,9 @@ import (
 // It implements the Check interface and is read-only — it never modifies any files.
 type CacheStalenessCheck struct{}
 
-// Run executes the cache staleness check. It reads the tick directory path from
-// the context (via TickDirKey), computes the SHA256 hash of tasks.jsonl, and
-// compares it to the hash stored in cache.db's metadata table.
-func (c *CacheStalenessCheck) Run(ctx context.Context) []CheckResult {
-	tickDir, _ := ctx.Value(TickDirKey).(string)
-
-	if tickDir == "" {
-		return []CheckResult{{
-			Name:       "Cache",
-			Passed:     false,
-			Severity:   SeverityError,
-			Details:    "tick directory path not set in context",
-			Suggestion: "Run tick init or verify .tick directory",
-		}}
-	}
-
+// Run executes the cache staleness check. It computes the SHA256 hash of
+// tasks.jsonl and compares it to the hash stored in cache.db's metadata table.
+func (c *CacheStalenessCheck) Run(_ context.Context, tickDir string) []CheckResult {
 	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
 	cachePath := filepath.Join(tickDir, "cache.db")
 

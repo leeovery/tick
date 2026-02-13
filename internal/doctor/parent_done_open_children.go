@@ -12,14 +12,12 @@ import (
 // but allowed states. It is read-only and never modifies the file.
 type ParentDoneWithOpenChildrenCheck struct{}
 
-// Run executes the parent-done-with-open-children check. It reads the tick
-// directory path from the context (via TickDirKey), parses task relationships,
-// and checks that no done parent has open or in_progress children. Returns a
-// single passing result if no issues are found, or one failing result per
-// done-parent + open-child pair with SeverityWarning.
-func (c *ParentDoneWithOpenChildrenCheck) Run(ctx context.Context) []CheckResult {
-	tickDir, _ := ctx.Value(TickDirKey).(string)
-
+// Run executes the parent-done-with-open-children check. It parses task
+// relationships from the given tick directory and checks that no done parent
+// has open or in_progress children. Returns a single passing result if no
+// issues are found, or one failing result per done-parent + open-child pair
+// with SeverityWarning.
+func (c *ParentDoneWithOpenChildrenCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{

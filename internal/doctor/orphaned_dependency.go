@@ -10,13 +10,11 @@ import (
 // reported as an individual error. It is read-only and never modifies the file.
 type OrphanedDependencyCheck struct{}
 
-// Run executes the orphaned dependency check. It reads the tick directory path
-// from the context (via TickDirKey), parses task relationships, and checks that
-// every blocked_by entry points to a known task ID. Returns a single passing
-// result if no orphans are found, or one failing result per orphaned reference.
-func (c *OrphanedDependencyCheck) Run(ctx context.Context) []CheckResult {
-	tickDir, _ := ctx.Value(TickDirKey).(string)
-
+// Run executes the orphaned dependency check. It parses task relationships from
+// the given tick directory and checks that every blocked_by entry points to a
+// known task ID. Returns a single passing result if no orphans are found, or
+// one failing result per orphaned reference.
+func (c *OrphanedDependencyCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
 		return []CheckResult{{

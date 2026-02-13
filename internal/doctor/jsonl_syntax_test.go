@@ -13,7 +13,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n{\"id\":\"def\"}\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -28,7 +28,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte{})
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -43,7 +43,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("\n\n\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -58,7 +58,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("   \n\t\n  \t  \n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -73,7 +73,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\nnot json\n{\"id\":\"def\"}\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -91,7 +91,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("bad1\nbad2\nbad3\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 3 {
 			t.Fatalf("expected 3 results, got %d", len(results))
@@ -108,7 +108,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\nnot json\n{\"id\":\"def\"}\nalso bad\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 2 {
 			t.Fatalf("expected 2 failing results, got %d", len(results))
@@ -126,7 +126,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n\nnot json\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		// Only the invalid line should produce a result
 		if len(results) != 1 {
@@ -146,7 +146,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -161,7 +161,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		// No tasks.jsonl created
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -179,7 +179,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("not json\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -193,7 +193,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		tickDir := setupTickDir(t)
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -237,7 +237,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &JsonlSyntaxCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				for i, r := range results {
 					if r.Name != "JSONL syntax" {
@@ -273,7 +273,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				tickDir := tc.setup(t)
 				check := &JsonlSyntaxCheck{}
-				results := check.Run(ctxWithTickDir(tickDir))
+				results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 				for i, r := range results {
 					if r.Passed {
@@ -293,7 +293,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n\n\nnot json\n{\"id\":\"def\"}\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -309,7 +309,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(longLine+"\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -330,7 +330,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte("{}\n[]\n{\"bogus_field\":999}\n"))
 
 		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir))
+		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))
@@ -352,7 +352,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		}
 
 		check := &JsonlSyntaxCheck{}
-		check.Run(ctxWithTickDir(tickDir))
+		check.Run(ctxWithTickDir(tickDir), tickDir)
 
 		after, err := os.ReadFile(jsonlPath)
 		if err != nil {
