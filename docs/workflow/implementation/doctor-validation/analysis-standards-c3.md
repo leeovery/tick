@@ -1,0 +1,3 @@
+AGENT: standards
+FINDINGS: none
+SUMMARY: Implementation conforms to specification and project conventions. All 9 error checks and 1 warning check from the spec are implemented with correct severity levels. The output format matches the spec (checkmark/cross markers, suggestion lines, summary count). Exit codes conform (0 for no errors/warnings-only, 1 for errors). Fix suggestions match the spec table (cache stale suggests `tick rebuild`, all others suggest manual fix). Doctor is read-only and never modifies data. The `tick doctor` command correctly bypasses format/formatter machinery as specified for human-readable-only output. Tests use table-driven patterns with subtests per the golang-pro skill requirements. All exported types and functions are documented.

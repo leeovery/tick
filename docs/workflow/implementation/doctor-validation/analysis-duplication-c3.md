@@ -1,0 +1,15 @@
+AGENT: duplication
+FINDINGS:
+- FINDING: OrphanedParentCheck and OrphanedDependencyCheck share near-identical structure
+  SEVERITY: medium
+  FILES: internal/doctor/orphaned_parent.go:17-52, internal/doctor/orphaned_dependency.go:17-51
+  DESCRIPTION: These two checks follow the same 35-line structural template: call getTaskRelationships, build a knownIDs set with an identical 3-line loop, iterate tasks checking whether a reference ID exists in knownIDs, and produce a failing CheckResult per missing reference. The only meaningful differences are (a) orphaned_parent checks task.Parent (single value), while orphaned_dependency iterates task.BlockedBy (slice), and (b) the check Name, Details format string, and Suggestion differ. The knownIDs construction (3 lines) is also shared with dependency_cycle.go:27-30 as noted in prior cycles. Together, the two orphaned-reference checks duplicate approximately 25 lines of scaffolding.
+  RECOMMENDATION: Extract a helper like checkReferencesExist(tasks []TaskRelationshipData, extractRefs func(TaskRelationshipData) []string, checkName string, detailFmt string) []CheckResult that builds knownIDs once, iterates tasks, calls extractRefs to get the IDs to validate, and produces failures. OrphanedParentCheck passes a function returning []string{task.Parent} (when non-empty), OrphanedDependencyCheck passes a function returning task.BlockedBy. This also absorbs the knownIDs duplication from dependency_cycle.go if the knownIDs set is exposed as a reusable value. Alternatively, a simpler approach: extract buildKnownIDs(tasks []TaskRelationshipData) map[string]struct{} and use it in all three files to at least eliminate the 3-line loop x 3 occurrences.
+
+- FINDING: Pass/fail result return epilogue repeated across 8 check files
+  SEVERITY: low
+  FILES: internal/doctor/jsonl_syntax.go:49-57, internal/doctor/duplicate_id.go:84-92, internal/doctor/id_format.go:74-82, internal/doctor/orphaned_parent.go:44-52, internal/doctor/orphaned_dependency.go:43-51, internal/doctor/self_referential_dep.go:43-51, internal/doctor/child_blocked_by_parent.go:51-59, internal/doctor/parent_done_open_children.go:70-78
+  DESCRIPTION: Eight checks end with the identical 5-line pattern: if len(failures) > 0 { return failures } followed by return []CheckResult{{Name: "...", Passed: true}}. The only variance is the Name string. At 5 lines x 8 files = 40 lines total. This is a recognizable pattern but each instance is small.
+  RECOMMENDATION: Low priority. A helper like passOrFail(checkName string, failures []CheckResult) []CheckResult would reduce each call site to one line but the extraction benefit is modest for such a small block. The current form is clear and idiomatic. Consider only if a future refactor touches all checks.
+
+SUMMARY: The primary remaining duplication is between OrphanedParentCheck and OrphanedDependencyCheck, which share ~25 lines of near-identical reference-existence validation scaffolding including the knownIDs construction also used by DependencyCycleCheck. Other patterns (result return epilogue, test scaffolding) remain at low severity from prior cycles.
