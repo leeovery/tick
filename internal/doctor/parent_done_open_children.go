@@ -20,13 +20,7 @@ type ParentDoneWithOpenChildrenCheck struct{}
 func (c *ParentDoneWithOpenChildrenCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return []CheckResult{{
-			Name:       "Parent done with open children",
-			Passed:     false,
-			Severity:   SeverityError,
-			Details:    "tasks.jsonl not found",
-			Suggestion: "Run tick init or verify .tick directory",
-		}}
+		return fileNotFoundResult("Parent done with open children")
 	}
 
 	statusMap := make(map[string]string, len(tasks))

@@ -21,13 +21,7 @@ type ChildBlockedByParentCheck struct{}
 func (c *ChildBlockedByParentCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return []CheckResult{{
-			Name:       "Child blocked by parent",
-			Passed:     false,
-			Severity:   SeverityError,
-			Details:    "tasks.jsonl not found",
-			Suggestion: "Run tick init or verify .tick directory",
-		}}
+		return fileNotFoundResult("Child blocked by parent")
 	}
 
 	var failures []CheckResult

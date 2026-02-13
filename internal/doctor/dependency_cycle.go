@@ -20,13 +20,7 @@ type DependencyCycleCheck struct{}
 func (c *DependencyCycleCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return []CheckResult{{
-			Name:       "Dependency cycles",
-			Passed:     false,
-			Severity:   SeverityError,
-			Details:    "tasks.jsonl not found",
-			Suggestion: "Run tick init or verify .tick directory",
-		}}
+		return fileNotFoundResult("Dependency cycles")
 	}
 
 	// Build set of known task IDs.

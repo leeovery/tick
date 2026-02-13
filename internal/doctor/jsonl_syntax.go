@@ -19,13 +19,7 @@ type JsonlSyntaxCheck struct{}
 func (c *JsonlSyntaxCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
-		return []CheckResult{{
-			Name:       "JSONL syntax",
-			Passed:     false,
-			Severity:   SeverityError,
-			Details:    "tasks.jsonl not found",
-			Suggestion: "Run tick init or verify .tick directory",
-		}}
+		return fileNotFoundResult("JSONL syntax")
 	}
 
 	var failures []CheckResult

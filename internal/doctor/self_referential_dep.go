@@ -17,13 +17,7 @@ type SelfReferentialDepCheck struct{}
 func (c *SelfReferentialDepCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return []CheckResult{{
-			Name:       "Self-referential dependencies",
-			Passed:     false,
-			Severity:   SeverityError,
-			Details:    "tasks.jsonl not found",
-			Suggestion: "Run tick init or verify .tick directory",
-		}}
+		return fileNotFoundResult("Self-referential dependencies")
 	}
 
 	var failures []CheckResult

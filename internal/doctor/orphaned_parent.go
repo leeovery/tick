@@ -17,13 +17,7 @@ type OrphanedParentCheck struct{}
 func (c *OrphanedParentCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return []CheckResult{{
-			Name:       "Orphaned parents",
-			Passed:     false,
-			Severity:   SeverityError,
-			Details:    "tasks.jsonl not found",
-			Suggestion: "Run tick init or verify .tick directory",
-		}}
+		return fileNotFoundResult("Orphaned parents")
 	}
 
 	knownIDs := make(map[string]struct{}, len(tasks))

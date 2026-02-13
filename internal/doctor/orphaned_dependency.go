@@ -17,13 +17,7 @@ type OrphanedDependencyCheck struct{}
 func (c *OrphanedDependencyCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return []CheckResult{{
-			Name:       "Orphaned dependencies",
-			Passed:     false,
-			Severity:   SeverityError,
-			Details:    "tasks.jsonl not found",
-			Suggestion: "Run tick init or verify .tick directory",
-		}}
+		return fileNotFoundResult("Orphaned dependencies")
 	}
 
 	knownIDs := make(map[string]struct{}, len(tasks))

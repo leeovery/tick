@@ -22,13 +22,7 @@ type IdFormatCheck struct{}
 func (c *IdFormatCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
-		return []CheckResult{{
-			Name:       "ID format",
-			Passed:     false,
-			Severity:   SeverityError,
-			Details:    "tasks.jsonl not found",
-			Suggestion: "Run tick init or verify .tick directory",
-		}}
+		return fileNotFoundResult("ID format")
 	}
 
 	var failures []CheckResult
