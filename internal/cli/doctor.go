@@ -34,11 +34,6 @@ func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
 		ctx = context.WithValue(ctx, doctor.JSONLinesKey, lines)
 	}
 
-	tasks, err := doctor.ParseTaskRelationships(tickDir)
-	if err == nil {
-		ctx = context.WithValue(ctx, doctor.TaskRelationshipsKey, tasks)
-	}
-
 	report := runner.RunAll(ctx, tickDir)
 
 	doctor.FormatReport(stdout, report)

@@ -82,19 +82,13 @@ func getJSONLines(ctx context.Context, tickDir string) ([]JSONLine, error) {
 	return ScanJSONLines(tickDir)
 }
 
-// taskRelationshipsKeyType is an unexported type for the context key used to
-// pass pre-parsed task relationship data to checks.
-type taskRelationshipsKeyType struct{}
-
-// TaskRelationshipsKey is the context key used to pass pre-parsed
-// TaskRelationshipData to relationship checks.
-var TaskRelationshipsKey = taskRelationshipsKeyType{}
-
-// getTaskRelationships returns task relationship data, first checking the
-// context for pre-parsed data and falling back to ParseTaskRelationships.
+// getTaskRelationships returns task relationship data derived from JSONLine
+// data. It first attempts to get cached lines from the context via
+// getJSONLines, then converts them to TaskRelationshipData.
 func getTaskRelationships(ctx context.Context, tickDir string) ([]TaskRelationshipData, error) {
-	if tasks, ok := ctx.Value(TaskRelationshipsKey).([]TaskRelationshipData); ok {
-		return tasks, nil
+	lines, err := getJSONLines(ctx, tickDir)
+	if err != nil {
+		return nil, err
 	}
-	return ParseTaskRelationships(tickDir)
+	return taskRelationshipsFromLines(lines), nil
 }

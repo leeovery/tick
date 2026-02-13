@@ -175,13 +175,13 @@ func TestGetJSONLines(t *testing.T) {
 }
 
 func TestGetTaskRelationships(t *testing.T) {
-	t.Run("it returns data from context when present", func(t *testing.T) {
+	t.Run("it derives data from cached JSONLines in context", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		// No file needed - context should provide the data.
-		preloaded := []TaskRelationshipData{
-			{ID: "tick-aaa111", Parent: "", BlockedBy: []string{}, Status: "open", Line: 1},
+		// No file needed - context should provide the JSONLine data.
+		preloaded := []JSONLine{
+			{LineNum: 1, Raw: `{"id":"tick-aaa111","status":"open"}`, Parsed: map[string]interface{}{"id": "tick-aaa111", "status": "open"}},
 		}
-		ctx := context.WithValue(ctxWithTickDir(tickDir), TaskRelationshipsKey, preloaded)
+		ctx := context.WithValue(ctxWithTickDir(tickDir), JSONLinesKey, preloaded)
 
 		tasks, err := getTaskRelationships(ctx, tickDir)
 
@@ -194,13 +194,16 @@ func TestGetTaskRelationships(t *testing.T) {
 		if tasks[0].ID != "tick-aaa111" {
 			t.Errorf("expected ID %q, got %q", "tick-aaa111", tasks[0].ID)
 		}
+		if tasks[0].Status != "open" {
+			t.Errorf("expected Status %q, got %q", "open", tasks[0].Status)
+		}
 	})
 
-	t.Run("it falls back to ParseTaskRelationships when context key missing", func(t *testing.T) {
+	t.Run("it falls back to ScanJSONLines when context key missing", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-bbb222\",\"status\":\"open\"}\n"))
 
-		ctx := ctxWithTickDir(tickDir) // No TaskRelationshipsKey set.
+		ctx := ctxWithTickDir(tickDir) // No JSONLinesKey set.
 
 		tasks, err := getTaskRelationships(ctx, tickDir)
 

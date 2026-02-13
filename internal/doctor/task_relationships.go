@@ -1,14 +1,5 @@
 package doctor
 
-import (
-	"bufio"
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-)
-
 // TaskRelationshipData holds the fields extracted from a single task line
 // that are needed by relationship and hierarchy checks.
 type TaskRelationshipData struct {
@@ -24,38 +15,19 @@ type TaskRelationshipData struct {
 	Line int
 }
 
-// ParseTaskRelationships reads tasks.jsonl from the given tick directory and
-// extracts relationship data for each valid task line. Blank lines, unparseable
-// JSON, and lines with missing or non-string id fields are silently skipped.
-// Returns an error if the file cannot be opened. Returns an empty slice for an
-// empty file. This function is read-only and never modifies the file.
-func ParseTaskRelationships(tickDir string) ([]TaskRelationshipData, error) {
-	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
-
-	f, err := os.Open(jsonlPath)
-	if err != nil {
-		return nil, fmt.Errorf("open tasks.jsonl: %w", err)
-	}
-	defer f.Close()
-
+// taskRelationshipsFromLines converts a slice of JSONLine into
+// TaskRelationshipData entries. Lines where Parsed is nil, or where the id
+// field is missing or non-string, are skipped. This is a pure function with
+// no I/O.
+func taskRelationshipsFromLines(lines []JSONLine) []TaskRelationshipData {
 	var result []TaskRelationshipData
-	scanner := bufio.NewScanner(f)
-	lineNum := 0
 
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
-
-		if strings.TrimSpace(line) == "" {
+	for _, jl := range lines {
+		if jl.Parsed == nil {
 			continue
 		}
 
-		var obj map[string]interface{}
-		if err := json.Unmarshal([]byte(line), &obj); err != nil {
-			continue
-		}
-
-		idVal, exists := obj["id"]
+		idVal, exists := jl.Parsed["id"]
 		if !exists {
 			continue
 		}
@@ -66,17 +38,17 @@ func ParseTaskRelationships(tickDir string) ([]TaskRelationshipData, error) {
 
 		entry := TaskRelationshipData{
 			ID:        idStr,
-			Line:      lineNum,
+			Line:      jl.LineNum,
 			BlockedBy: []string{},
 		}
 
-		if parentVal, exists := obj["parent"]; exists {
+		if parentVal, exists := jl.Parsed["parent"]; exists {
 			if parentStr, ok := parentVal.(string); ok {
 				entry.Parent = parentStr
 			}
 		}
 
-		if blockedVal, exists := obj["blocked_by"]; exists {
+		if blockedVal, exists := jl.Parsed["blocked_by"]; exists {
 			if blockedArr, ok := blockedVal.([]interface{}); ok {
 				for _, item := range blockedArr {
 					if s, ok := item.(string); ok {
@@ -86,7 +58,7 @@ func ParseTaskRelationships(tickDir string) ([]TaskRelationshipData, error) {
 			}
 		}
 
-		if statusVal, exists := obj["status"]; exists {
+		if statusVal, exists := jl.Parsed["status"]; exists {
 			if statusStr, ok := statusVal.(string); ok {
 				entry.Status = statusStr
 			}
@@ -99,5 +71,19 @@ func ParseTaskRelationships(tickDir string) ([]TaskRelationshipData, error) {
 		result = []TaskRelationshipData{}
 	}
 
-	return result, nil
+	return result
+}
+
+// ParseTaskRelationships reads tasks.jsonl from the given tick directory and
+// extracts relationship data for each valid task line. Blank lines, unparseable
+// JSON, and lines with missing or non-string id fields are silently skipped.
+// Returns an error if the file cannot be opened. Returns an empty slice for an
+// empty file. This function is read-only and never modifies the file.
+func ParseTaskRelationships(tickDir string) ([]TaskRelationshipData, error) {
+	lines, err := ScanJSONLines(tickDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return taskRelationshipsFromLines(lines), nil
 }

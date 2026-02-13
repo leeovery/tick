@@ -249,3 +249,123 @@ func TestParseTaskRelationships(t *testing.T) {
 		}
 	})
 }
+
+func TestTaskRelationshipsFromLines(t *testing.T) {
+	t.Run("it skips entries where Parsed is nil", func(t *testing.T) {
+		lines := []JSONLine{
+			{LineNum: 1, Raw: `{"id":"tick-aaa111","status":"open"}`, Parsed: map[string]interface{}{"id": "tick-aaa111", "status": "open"}},
+			{LineNum: 2, Raw: "not json", Parsed: nil},
+			{LineNum: 3, Raw: `{"id":"tick-bbb222"}`, Parsed: map[string]interface{}{"id": "tick-bbb222"}},
+		}
+
+		result := taskRelationshipsFromLines(lines)
+
+		if len(result) != 2 {
+			t.Fatalf("expected 2 entries (skipping nil Parsed), got %d", len(result))
+		}
+		if result[0].ID != "tick-aaa111" {
+			t.Errorf("expected first ID %q, got %q", "tick-aaa111", result[0].ID)
+		}
+		if result[0].Line != 1 {
+			t.Errorf("expected first Line 1, got %d", result[0].Line)
+		}
+		if result[0].Status != "open" {
+			t.Errorf("expected first Status %q, got %q", "open", result[0].Status)
+		}
+		if result[1].ID != "tick-bbb222" {
+			t.Errorf("expected second ID %q, got %q", "tick-bbb222", result[1].ID)
+		}
+		if result[1].Line != 3 {
+			t.Errorf("expected second Line 3, got %d", result[1].Line)
+		}
+	})
+
+	t.Run("it skips entries with missing id field", func(t *testing.T) {
+		lines := []JSONLine{
+			{LineNum: 1, Raw: `{"title":"no id"}`, Parsed: map[string]interface{}{"title": "no id"}},
+		}
+
+		result := taskRelationshipsFromLines(lines)
+
+		if len(result) != 0 {
+			t.Fatalf("expected 0 entries for missing id, got %d", len(result))
+		}
+	})
+
+	t.Run("it skips entries with non-string id", func(t *testing.T) {
+		lines := []JSONLine{
+			{LineNum: 1, Raw: `{"id":42}`, Parsed: map[string]interface{}{"id": float64(42)}},
+		}
+
+		result := taskRelationshipsFromLines(lines)
+
+		if len(result) != 0 {
+			t.Fatalf("expected 0 entries for non-string id, got %d", len(result))
+		}
+	})
+
+	t.Run("it extracts all fields correctly", func(t *testing.T) {
+		lines := []JSONLine{
+			{
+				LineNum: 5,
+				Raw:     `{"id":"tick-aaa111","parent":"tick-bbb222","blocked_by":["tick-ccc333"],"status":"open"}`,
+				Parsed: map[string]interface{}{
+					"id":         "tick-aaa111",
+					"parent":     "tick-bbb222",
+					"blocked_by": []interface{}{"tick-ccc333"},
+					"status":     "open",
+				},
+			},
+		}
+
+		result := taskRelationshipsFromLines(lines)
+
+		if len(result) != 1 {
+			t.Fatalf("expected 1 entry, got %d", len(result))
+		}
+		if result[0].ID != "tick-aaa111" {
+			t.Errorf("expected ID %q, got %q", "tick-aaa111", result[0].ID)
+		}
+		if result[0].Parent != "tick-bbb222" {
+			t.Errorf("expected Parent %q, got %q", "tick-bbb222", result[0].Parent)
+		}
+		if len(result[0].BlockedBy) != 1 || result[0].BlockedBy[0] != "tick-ccc333" {
+			t.Errorf("expected BlockedBy [tick-ccc333], got %v", result[0].BlockedBy)
+		}
+		if result[0].Status != "open" {
+			t.Errorf("expected Status %q, got %q", "open", result[0].Status)
+		}
+		if result[0].Line != 5 {
+			t.Errorf("expected Line 5, got %d", result[0].Line)
+		}
+	})
+
+	t.Run("it returns empty slice for empty input", func(t *testing.T) {
+		result := taskRelationshipsFromLines([]JSONLine{})
+
+		if result == nil {
+			t.Fatal("expected non-nil empty slice, got nil")
+		}
+		if len(result) != 0 {
+			t.Errorf("expected 0 entries, got %d", len(result))
+		}
+	})
+
+	t.Run("it initializes BlockedBy to empty slice when absent", func(t *testing.T) {
+		lines := []JSONLine{
+			{LineNum: 1, Raw: `{"id":"tick-aaa111"}`, Parsed: map[string]interface{}{"id": "tick-aaa111"}},
+		}
+
+		result := taskRelationshipsFromLines(lines)
+
+		if len(result) != 1 {
+			t.Fatalf("expected 1 entry, got %d", len(result))
+		}
+		if result[0].BlockedBy == nil {
+			t.Fatal("expected non-nil empty slice for absent blocked_by")
+		}
+		if len(result[0].BlockedBy) != 0 {
+			t.Errorf("expected empty BlockedBy, got %v", result[0].BlockedBy)
+		}
+	})
+}
