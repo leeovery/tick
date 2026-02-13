@@ -9,8 +9,6 @@ import (
 // to the provided writer. Each result is formatted as a pass (✓) or fail (✗)
 // line, followed by a summary count of issues.
 func FormatReport(w io.Writer, report DiagnosticReport) {
-	issueCount := 0
-
 	for _, r := range report.Results {
 		if r.Passed {
 			fmt.Fprintf(w, "✓ %s: OK\n", r.Name)
@@ -19,13 +17,14 @@ func FormatReport(w io.Writer, report DiagnosticReport) {
 			if r.Suggestion != "" {
 				fmt.Fprintf(w, "  → %s\n", r.Suggestion)
 			}
-			issueCount++
 		}
 	}
 
 	if len(report.Results) > 0 {
 		fmt.Fprint(w, "\n")
 	}
+
+	issueCount := report.ErrorCount() + report.WarningCount()
 
 	switch issueCount {
 	case 0:
