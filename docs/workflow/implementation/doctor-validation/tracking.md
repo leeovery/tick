@@ -2,7 +2,7 @@
 topic: doctor-validation
 plan: ../../planning/doctor-validation.md
 format: local-markdown
-status: in-progress
+status: completed
 task_gate_mode: auto
 fix_gate_mode: gated
 fix_attempts: 0
@@ -20,8 +20,8 @@ current_task: ~
 completed_phases: [1, 2, 3, 4, 5, 6]
 completed_tasks: [doctor-validation-1-1, doctor-validation-1-2, doctor-validation-1-3, doctor-validation-1-4, doctor-validation-2-1, doctor-validation-2-2, doctor-validation-2-3, doctor-validation-2-4, doctor-validation-3-1, doctor-validation-3-2, doctor-validation-3-3, doctor-validation-3-4, doctor-validation-3-5, doctor-validation-3-6, doctor-validation-3-7, doctor-validation-4-1, doctor-validation-4-2, doctor-validation-4-3, doctor-validation-5-1, doctor-validation-5-2, doctor-validation-5-3, doctor-validation-6-1]
 started: 2026-02-12
-updated: 2026-02-12
-completed: ~
+updated: 2026-02-13
+completed: 2026-02-13
 ---
 
 # Implementation: Doctor Validation
