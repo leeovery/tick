@@ -115,6 +115,18 @@ approved_at: 2026-01-30
 | doctor-validation-3-6 | Parent Done With Open Children Warning | missing tasks.jsonl, empty file, parent done with one open child, parent done with multiple open children, parent done with all children done, parent done with cancelled children only, parent open with open children (not flagged), parent done with in_progress child, warnings-only produces exit code 0 | authored |
 | doctor-validation-3-7 | Relationship Check Registration | all 10 checks pass (healthy store), mixed errors and warnings, warnings-only exit code 0, errors from relationship checks combine with earlier phase errors in summary count | authored |
 
+### Phase 4: Analysis (cycle 1 — reduce duplication and improve architecture)
+status: approved
+
+**Goal**: Address findings from implementation analysis cycle 1.
+
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| doctor-validation-4-1 | Extract shared JSONL line iterator and parse tasks.jsonl once per doctor run | — | authored |
+| doctor-validation-4-2 | Make tickDir an explicit parameter on the Check interface | — | authored |
+| doctor-validation-4-3 | Extract fileNotFoundResult helper for repeated tasks.jsonl-not-found error | — | authored |
+
 ---
 
 ## Log

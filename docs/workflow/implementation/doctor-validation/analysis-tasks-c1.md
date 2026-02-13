@@ -6,7 +6,7 @@ total_proposed: 3
 # Analysis Tasks: Doctor Validation (Cycle 1)
 
 ## Task 1: Extract shared JSONL line iterator and parse tasks.jsonl once per doctor run
-status: pending
+status: approved
 severity: high
 sources: duplication, architecture
 
@@ -39,7 +39,7 @@ sources: duplication, architecture
 - Verify relationship checks work both with pre-parsed context data and with fallback (missing context key)
 
 ## Task 2: Make tickDir an explicit parameter on the Check interface
-status: pending
+status: approved
 severity: medium
 sources: architecture
 
@@ -72,7 +72,7 @@ sources: architecture
 - Verify that passing empty string to RunAll produces consistent error behavior across all checks
 
 ## Task 3: Extract fileNotFoundResult helper for repeated tasks.jsonl-not-found error
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
