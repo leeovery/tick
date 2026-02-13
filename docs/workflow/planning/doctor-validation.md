@@ -135,9 +135,9 @@ status: approved
 #### Tasks
 | ID | Name | Edge Cases | Status |
 |----|------|------------|--------|
-| doctor-validation-5-1 | Derive ParseTaskRelationships from ScanJSONLines output | — | authored |
-| doctor-validation-5-2 | Extract assertReadOnly test helper | — | authored |
-| doctor-validation-5-3 | Use DiagnosticReport methods for issue count in FormatReport | — | authored |
+| doctor-validation-5-1 | Derive ParseTaskRelationships from ScanJSONLines output | — | approved |
+| doctor-validation-5-2 | Extract assertReadOnly test helper | — | approved |
+| doctor-validation-5-3 | Use DiagnosticReport methods for issue count in FormatReport | — | approved |
 
 ---
 
