@@ -147,7 +147,7 @@ status: approved
 #### Tasks
 | ID | Name | Edge Cases | Status |
 |----|------|------------|--------|
-| doctor-validation-6-1 | Extract buildKnownIDs helper to eliminate 3-file duplication | — | authored |
+| doctor-validation-6-1 | Extract buildKnownIDs helper to eliminate 3-file duplication | — | approved |
 
 ---
 
