@@ -76,6 +76,30 @@ func ctxWithTickDir(_ string) context.Context {
 	return context.Background()
 }
 
+// assertReadOnly verifies that tasks.jsonl is not modified by runCheck.
+// It writes content to tasks.jsonl, reads the file before and after running the
+// check, and fails the test if the file contents differ.
+func assertReadOnly(t *testing.T, tickDir string, content []byte, runCheck func()) {
+	t.Helper()
+	writeJSONL(t, tickDir, content)
+
+	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+	before, err := os.ReadFile(jsonlPath)
+	if err != nil {
+		t.Fatalf("failed to read tasks.jsonl before: %v", err)
+	}
+
+	runCheck()
+
+	after, err := os.ReadFile(jsonlPath)
+	if err != nil {
+		t.Fatalf("failed to read tasks.jsonl after: %v", err)
+	}
+	if string(before) != string(after) {
+		t.Error("tasks.jsonl was modified")
+	}
+}
+
 func TestCacheStalenessCheck(t *testing.T) {
 	t.Run("it returns passing result when tasks.jsonl and cache.db hashes match", func(t *testing.T) {
 		tickDir := setupTickDir(t)

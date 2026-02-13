@@ -2,8 +2,6 @@ package doctor
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -465,24 +463,10 @@ func TestParentDoneWithOpenChildrenCheck(t *testing.T) {
 		tickDir := setupTickDir(t)
 		content := []byte(`{"id":"tick-aaa111","status":"done"}` + "\n" +
 			`{"id":"tick-bbb222","parent":"tick-aaa111","status":"open"}` + "\n")
-		writeJSONL(t, tickDir, content)
-
-		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
-		before, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl before: %v", err)
-		}
-
-		check := &ParentDoneWithOpenChildrenCheck{}
-		check.Run(ctxWithTickDir(tickDir), tickDir)
-
-		after, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl after: %v", err)
-		}
-		if string(before) != string(after) {
-			t.Error("tasks.jsonl was modified by ParentDoneWithOpenChildrenCheck")
-		}
+		assertReadOnly(t, tickDir, content, func() {
+			check := &ParentDoneWithOpenChildrenCheck{}
+			check.Run(ctxWithTickDir(tickDir), tickDir)
+		})
 	})
 
 	t.Run("warnings-only report produces exit code 0 when combined with DiagnosticRunner (integration)", func(t *testing.T) {

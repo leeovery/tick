@@ -1,8 +1,6 @@
 package doctor
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -490,23 +488,9 @@ func TestDependencyCycleCheck(t *testing.T) {
 		tickDir := setupTickDir(t)
 		content := []byte(`{"id":"tick-aaa111","blocked_by":["tick-bbb222"]}` + "\n" +
 			`{"id":"tick-bbb222","blocked_by":["tick-aaa111"]}` + "\n")
-		writeJSONL(t, tickDir, content)
-
-		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
-		before, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl before: %v", err)
-		}
-
-		check := &DependencyCycleCheck{}
-		check.Run(ctxWithTickDir(tickDir), tickDir)
-
-		after, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl after: %v", err)
-		}
-		if string(before) != string(after) {
-			t.Error("tasks.jsonl was modified by DependencyCycleCheck")
-		}
+		assertReadOnly(t, tickDir, content, func() {
+			check := &DependencyCycleCheck{}
+			check.Run(ctxWithTickDir(tickDir), tickDir)
+		})
 	})
 }

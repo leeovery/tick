@@ -1,8 +1,6 @@
 package doctor
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -446,24 +444,9 @@ func TestIdFormatCheck(t *testing.T) {
 	t.Run("it does not modify tasks.jsonl (read-only verification)", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 		content := []byte("{\"id\":\"tick-a1b2c3\"}\n{\"id\":\"bad\"}\n{\"id\":\"tick-d4e5f6\"}\n")
-		writeJSONL(t, tickDir, content)
-
-		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
-		before, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl before check: %v", err)
-		}
-
-		check := &IdFormatCheck{}
-		check.Run(ctxWithTickDir(tickDir), tickDir)
-
-		after, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl after check: %v", err)
-		}
-
-		if string(before) != string(after) {
-			t.Error("tasks.jsonl was modified by the check")
-		}
+		assertReadOnly(t, tickDir, content, func() {
+			check := &IdFormatCheck{}
+			check.Run(ctxWithTickDir(tickDir), tickDir)
+		})
 	})
 }

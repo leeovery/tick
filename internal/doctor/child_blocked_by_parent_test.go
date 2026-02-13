@@ -1,8 +1,6 @@
 package doctor
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -388,23 +386,9 @@ func TestChildBlockedByParentCheck(t *testing.T) {
 		tickDir := setupTickDir(t)
 		content := []byte(`{"id":"tick-aaa111","parent":"tick-bbb222","blocked_by":["tick-bbb222"]}` + "\n" +
 			`{"id":"tick-bbb222"}` + "\n")
-		writeJSONL(t, tickDir, content)
-
-		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
-		before, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl before: %v", err)
-		}
-
-		check := &ChildBlockedByParentCheck{}
-		check.Run(ctxWithTickDir(tickDir), tickDir)
-
-		after, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl after: %v", err)
-		}
-		if string(before) != string(after) {
-			t.Error("tasks.jsonl was modified by ChildBlockedByParentCheck")
-		}
+		assertReadOnly(t, tickDir, content, func() {
+			check := &ChildBlockedByParentCheck{}
+			check.Run(ctxWithTickDir(tickDir), tickDir)
+		})
 	})
 }

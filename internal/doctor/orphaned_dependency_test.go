@@ -1,8 +1,6 @@
 package doctor
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -375,23 +373,9 @@ func TestOrphanedDependencyCheck(t *testing.T) {
 	t.Run("it does not modify tasks.jsonl (read-only verification)", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 		content := []byte(`{"id":"tick-aaa111","blocked_by":["tick-missing"]}` + "\n")
-		writeJSONL(t, tickDir, content)
-
-		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
-		before, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl before: %v", err)
-		}
-
-		check := &OrphanedDependencyCheck{}
-		check.Run(ctxWithTickDir(tickDir), tickDir)
-
-		after, err := os.ReadFile(jsonlPath)
-		if err != nil {
-			t.Fatalf("failed to read tasks.jsonl after: %v", err)
-		}
-		if string(before) != string(after) {
-			t.Error("tasks.jsonl was modified by OrphanedDependencyCheck")
-		}
+		assertReadOnly(t, tickDir, content, func() {
+			check := &OrphanedDependencyCheck{}
+			check.Run(ctxWithTickDir(tickDir), tickDir)
+		})
 	})
 }
