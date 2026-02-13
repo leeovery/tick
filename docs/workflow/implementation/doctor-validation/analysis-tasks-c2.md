@@ -6,7 +6,7 @@ total_proposed: 3
 # Analysis Tasks: Doctor Validation (Cycle 2)
 
 ## Task 1: Derive ParseTaskRelationships from ScanJSONLines output
-status: pending
+status: approved
 severity: medium
 sources: architecture
 
@@ -38,7 +38,7 @@ sources: architecture
 - Verify taskRelationshipsFromLines correctly skips JSONLine entries with nil Parsed (matching current behavior of skipping unparseable lines).
 
 ## Task 2: Extract assertReadOnly test helper
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -65,7 +65,7 @@ sources: duplication
 - No other tests are affected.
 
 ## Task 3: Use DiagnosticReport methods for issue count in FormatReport
-status: pending
+status: approved
 severity: low
 sources: architecture
 
