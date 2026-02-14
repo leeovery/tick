@@ -1,14 +1,11 @@
 ---
-topic: installation
-cycle: 2
-total_proposed: 2
+id: installation-4-1
+phase: 4
+status: pending
+created: 2026-02-14
 ---
-# Analysis Tasks: Installation (Cycle 2)
 
-## Task 1: Move release workflow tests to a go-test-discoverable location
-status: approved
-severity: high
-sources: architecture
+# Move release workflow tests to a go-test-discoverable location
 
 **Problem**: `release_test.go` lives in `.github/workflows/` which Go's `./...` pattern skips (dot-prefixed directories are excluded by `go list ./...`). The 14 test cases validating the release workflow — tag patterns, permissions, goreleaser config, checkout depth, and an 80-line glob matcher — are never executed by `go test ./...`. They silently rot unless someone explicitly runs `go test ./.github/workflows/`.
 
@@ -34,37 +31,3 @@ sources: architecture
 **Tests**:
 - All existing release workflow tests pass in their new location
 - `go test ./...` output includes release workflow test cases (verify with `-v` flag)
-
-## Task 2: Extract loadScript helper in install_test.go
-status: approved
-severity: medium
-sources: duplication
-
-**Problem**: Eight tests in `scripts/install_test.go` independently read install.sh contents using the same 4-line sequence: `path := scriptPath(t); data, err := os.ReadFile(path); if err != nil { t.Fatalf(...) }; content := string(data)`. This appears in TestInstallScript (shebang, set -euo checks), TestTrapCleanup, and TestErrorHandlingHardening. The pattern violates the Rule of Three at 8 occurrences.
-
-**Solution**: Extract a `loadScript(t *testing.T) string` helper in `install_test.go` (following the same pattern as `loadFormula` and `loadWorkflow` in their respective test files). All 8 call sites reduce to `content := loadScript(t)`.
-
-**Outcome**: Single function for loading install.sh contents in tests. Adding new content-inspection tests requires one line instead of four.
-
-**Do**:
-1. Add a `loadScript` function in `scripts/install_test.go`:
-   ```go
-   func loadScript(t *testing.T) string {
-       t.Helper()
-       data, err := os.ReadFile(scriptPath(t))
-       if err != nil {
-           t.Fatalf("cannot read install.sh: %v", err)
-       }
-       return string(data)
-   }
-   ```
-2. Replace all 8 occurrences of the read-file-to-string pattern with `content := loadScript(t)`
-3. Run `go test ./scripts/...` to verify no regressions
-
-**Acceptance Criteria**:
-- A single `loadScript` helper exists in install_test.go
-- No inline os.ReadFile calls for install.sh remain in install_test.go
-- All existing tests pass unchanged
-
-**Tests**:
-- All existing tests in scripts/install_test.go pass after the refactor

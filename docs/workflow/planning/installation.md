@@ -12,8 +12,8 @@ external_dependencies:
     state: resolved
     task_id: tick-core-1-5
 planning:
-  phase: 3
-  task: 4
+  phase: 4
+  task: 2
 ---
 
 # Plan: Installation
@@ -101,6 +101,19 @@ status: approved
 
 ---
 
+### Phase 4: Analysis (cycle 2)
+status: approved
+
+**Goal**: Address findings from implementation analysis cycle 2.
+
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| installation-4-1 | Move release workflow tests to a go-test-discoverable location | — | authored |
+| installation-4-2 | Extract loadScript helper in install_test.go | — | authored |
+
+---
+
 ## Log
 
 | Date | Change |
@@ -108,3 +121,4 @@ status: approved
 | 2026-01-31 | Created from specification |
 | 2026-01-31 | Plan concluded — 2 phases, 8 tasks |
 | 2026-02-14 | Phase 3 added — 4 analysis tasks from cycle 1 |
+| 2026-02-14 | Phase 4 added — 2 analysis tasks from cycle 2 |
