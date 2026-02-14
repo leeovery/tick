@@ -7,31 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-)
 
-// findRepoRoot walks up from the test file to find go.mod.
-func findRepoRoot(t *testing.T) string {
-	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("cannot get working directory: %v", err)
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("could not find repository root (no go.mod found)")
-		}
-		dir = parent
-	}
-}
+	"github.com/leeovery/tick/internal/testutil"
+)
 
 // scriptPath returns the absolute path to install.sh.
 func scriptPath(t *testing.T) string {
 	t.Helper()
-	return filepath.Join(findRepoRoot(t), "scripts", "install.sh")
+	return filepath.Join(testutil.FindRepoRoot(t), "scripts", "install.sh")
 }
 
 // runScript executes install.sh with the given environment variables and returns

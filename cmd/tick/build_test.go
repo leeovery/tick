@@ -6,11 +6,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/leeovery/tick/internal/testutil"
 )
 
 func TestBuild(t *testing.T) {
 	// Build once for all subtests.
-	repoRoot := findRepoRoot(t)
+	repoRoot := testutil.FindRepoRoot(t)
 	binary := filepath.Join(t.TempDir(), "tick")
 
 	cmd := exec.Command("go", "build", "-o", binary, "./cmd/tick/")
@@ -50,23 +52,4 @@ func TestBuild(t *testing.T) {
 			t.Errorf("expected exit code 0, got error: %v", err)
 		}
 	})
-}
-
-// findRepoRoot walks up from the test file to find go.mod.
-func findRepoRoot(t *testing.T) string {
-	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("cannot get working directory: %v", err)
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("could not find repository root (no go.mod found)")
-		}
-		dir = parent
-	}
 }

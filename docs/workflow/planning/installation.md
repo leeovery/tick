@@ -94,7 +94,7 @@ status: approved
 #### Tasks
 | ID | Name | Edge Cases | Status |
 |----|------|------------|--------|
-| installation-3-1 | Extract shared findRepoRoot test utility | — | authored |
+| installation-3-1 | Extract shared findRepoRoot test utility | — | completed |
 | installation-3-2 | Extract step-search helper in release_test.go | — | authored |
 | installation-3-3 | Document Homebrew tap repository requirement | — | authored |
 | installation-3-4 | Add cross-component asset naming contract test | — | authored |

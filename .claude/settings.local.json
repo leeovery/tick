@@ -32,7 +32,10 @@
       "Bash(go mod tidy:*)",
       "Bash(go clean:*)",
       "Bash(go get:*)",
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "Bash(goreleaser:*)",
+      "Bash(chmod:*)",
+      "Bash(~/go/bin/goreleaser release:*)"
     ]
   },
   "sandbox": {

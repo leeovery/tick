@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/leeovery/tick/internal/testutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -42,23 +43,8 @@ type step struct {
 func loadWorkflow(t *testing.T) workflow {
 	t.Helper()
 
-	// Find repo root by walking up from test file location.
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("cannot get working directory: %v", err)
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			break
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("could not find repository root (no go.mod found)")
-		}
-		dir = parent
-	}
-
-	path := filepath.Join(dir, ".github", "workflows", "release.yml")
+	root := testutil.FindRepoRoot(t)
+	path := filepath.Join(root, ".github", "workflows", "release.yml")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("cannot read release.yml: %v", err)

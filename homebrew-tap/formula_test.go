@@ -5,31 +5,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-)
 
-// findRepoRoot walks up from the test file to find go.mod.
-func findRepoRoot(t *testing.T) string {
-	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("cannot get working directory: %v", err)
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("could not find repository root (no go.mod found)")
-		}
-		dir = parent
-	}
-}
+	"github.com/leeovery/tick/internal/testutil"
+)
 
 // loadFormula reads the tick.rb formula file and returns its content.
 func loadFormula(t *testing.T) string {
 	t.Helper()
-	root := findRepoRoot(t)
+	root := testutil.FindRepoRoot(t)
 	path := filepath.Join(root, "homebrew-tap", "Formula", "tick.rb")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -41,7 +24,7 @@ func loadFormula(t *testing.T) string {
 // loadREADME reads the homebrew-tap README.md and returns its content.
 func loadREADME(t *testing.T) string {
 	t.Helper()
-	root := findRepoRoot(t)
+	root := testutil.FindRepoRoot(t)
 	path := filepath.Join(root, "homebrew-tap", "README.md")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -52,7 +35,7 @@ func loadREADME(t *testing.T) string {
 
 func TestFormula(t *testing.T) {
 	t.Run("formula file exists at homebrew-tap/Formula/tick.rb", func(t *testing.T) {
-		root := findRepoRoot(t)
+		root := testutil.FindRepoRoot(t)
 		path := filepath.Join(root, "homebrew-tap", "Formula", "tick.rb")
 		info, err := os.Stat(path)
 		if err != nil {
