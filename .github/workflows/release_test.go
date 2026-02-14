@@ -1,0 +1,322 @@
+package workflows_test
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"gopkg.in/yaml.v3"
+)
+
+// workflow represents the subset of a GitHub Actions workflow file
+// that we need to validate for the release pipeline.
+type workflow struct {
+	Name        string `yaml:"name"`
+	Permissions struct {
+		Contents string `yaml:"contents"`
+	} `yaml:"permissions"`
+	On struct {
+		Push struct {
+			Tags     []string `yaml:"tags"`
+			Branches []string `yaml:"branches"`
+		} `yaml:"push"`
+		PullRequest *struct{} `yaml:"pull_request"`
+	} `yaml:"on"`
+	Jobs map[string]job `yaml:"jobs"`
+}
+
+type job struct {
+	RunsOn string `yaml:"runs-on"`
+	Steps  []step `yaml:"steps"`
+}
+
+type step struct {
+	Name string            `yaml:"name"`
+	Uses string            `yaml:"uses"`
+	With map[string]string `yaml:"with"`
+	Env  map[string]string `yaml:"env"`
+}
+
+// loadWorkflow parses the release.yml workflow file and returns the parsed structure.
+func loadWorkflow(t *testing.T) workflow {
+	t.Helper()
+
+	// Find repo root by walking up from test file location.
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("cannot get working directory: %v", err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("could not find repository root (no go.mod found)")
+		}
+		dir = parent
+	}
+
+	path := filepath.Join(dir, ".github", "workflows", "release.yml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("cannot read release.yml: %v", err)
+	}
+
+	var w workflow
+	if err := yaml.Unmarshal(data, &w); err != nil {
+		t.Fatalf("cannot parse release.yml: %v", err)
+	}
+	return w
+}
+
+// matchesGitHubActionsPattern checks whether a tag matches a GitHub Actions
+// filter pattern. GitHub Actions uses a custom glob-like syntax:
+//   - * matches any character except /
+//   - ** matches any character including /
+//   - ? matches a single character
+//   - [abc] matches any character in the set
+//   - [a-z] matches any character in the range
+//
+// Note: + is NOT special in GitHub Actions patterns (it is literal).
+func matchesGitHubActionsPattern(pattern, tag string) bool {
+	return matchPattern(pattern, tag, 0, 0)
+}
+
+func matchPattern(pattern, text string, pi, ti int) bool {
+	for pi < len(pattern) && ti < len(text) {
+		switch {
+		case pattern[pi] == '*':
+			if pi+1 < len(pattern) && pattern[pi+1] == '*' {
+				// ** matches everything including /
+				pi += 2
+				// Try matching rest from every position.
+				for k := ti; k <= len(text); k++ {
+					if matchPattern(pattern, text, pi, k) {
+						return true
+					}
+				}
+				return false
+			}
+			// * matches everything except /
+			pi++
+			for k := ti; k <= len(text); k++ {
+				if k > ti && text[k-1] == '/' {
+					break
+				}
+				if matchPattern(pattern, text, pi, k) {
+					return true
+				}
+			}
+			return false
+		case pattern[pi] == '?':
+			if text[ti] == '/' {
+				return false
+			}
+			pi++
+			ti++
+		case pattern[pi] == '[':
+			// Character class.
+			pi++ // skip [
+			negate := false
+			if pi < len(pattern) && pattern[pi] == '!' {
+				negate = true
+				pi++
+			}
+			matched := false
+			for pi < len(pattern) && pattern[pi] != ']' {
+				lo := pattern[pi]
+				pi++
+				if pi+1 < len(pattern) && pattern[pi] == '-' {
+					pi++ // skip -
+					hi := pattern[pi]
+					pi++
+					if text[ti] >= lo && text[ti] <= hi {
+						matched = true
+					}
+				} else {
+					if text[ti] == lo {
+						matched = true
+					}
+				}
+			}
+			if pi < len(pattern) {
+				pi++ // skip ]
+			}
+			if matched == negate {
+				return false
+			}
+			ti++
+		default:
+			if pattern[pi] != text[ti] {
+				return false
+			}
+			pi++
+			ti++
+		}
+	}
+	// Handle trailing stars.
+	for pi < len(pattern) && pattern[pi] == '*' {
+		pi++
+	}
+	return pi == len(pattern) && ti == len(text)
+}
+
+func TestReleaseWorkflow(t *testing.T) {
+	w := loadWorkflow(t)
+
+	t.Run("workflow triggers on valid semver tag v1.0.0", func(t *testing.T) {
+		assertTagMatches(t, w.On.Push.Tags, "v1.0.0", true)
+	})
+
+	t.Run("workflow triggers on valid semver tag v0.1.0", func(t *testing.T) {
+		assertTagMatches(t, w.On.Push.Tags, "v0.1.0", true)
+	})
+
+	t.Run("workflow triggers on valid semver tag v12.34.56", func(t *testing.T) {
+		assertTagMatches(t, w.On.Push.Tags, "v12.34.56", true)
+	})
+
+	t.Run("workflow does not trigger on pre-release tag v1.0.0-beta", func(t *testing.T) {
+		assertTagMatches(t, w.On.Push.Tags, "v1.0.0-beta", false)
+	})
+
+	t.Run("workflow does not trigger on pre-release tag v1.0.0-rc.1", func(t *testing.T) {
+		assertTagMatches(t, w.On.Push.Tags, "v1.0.0-rc.1", false)
+	})
+
+	t.Run("workflow does not trigger on non-version tag latest", func(t *testing.T) {
+		assertTagMatches(t, w.On.Push.Tags, "latest", false)
+	})
+
+	t.Run("workflow does not trigger on branch push to main", func(t *testing.T) {
+		if len(w.On.Push.Branches) > 0 {
+			t.Errorf("expected no branch triggers, got: %v", w.On.Push.Branches)
+		}
+	})
+
+	t.Run("workflow does not trigger on pull requests", func(t *testing.T) {
+		if w.On.PullRequest != nil {
+			t.Error("expected no pull_request trigger")
+		}
+	})
+
+	t.Run("workflow does not trigger on tag without v prefix like 1.0.0", func(t *testing.T) {
+		assertTagMatches(t, w.On.Push.Tags, "1.0.0", false)
+	})
+
+	t.Run("checkout step uses fetch-depth 0 for full history", func(t *testing.T) {
+		found := false
+		for _, j := range w.Jobs {
+			for _, s := range j.Steps {
+				if strings.Contains(s.Uses, "actions/checkout") {
+					if s.With["fetch-depth"] == "0" {
+						found = true
+					}
+				}
+			}
+		}
+		if !found {
+			t.Error("checkout step must use fetch-depth: 0")
+		}
+	})
+
+	t.Run("goreleaser step has GITHUB_TOKEN configured", func(t *testing.T) {
+		found := false
+		for _, j := range w.Jobs {
+			for _, s := range j.Steps {
+				if strings.Contains(s.Uses, "goreleaser/goreleaser-action") {
+					if v, ok := s.Env["GITHUB_TOKEN"]; ok && v == "${{ secrets.GITHUB_TOKEN }}" {
+						found = true
+					}
+				}
+			}
+		}
+		if !found {
+			t.Error("goreleaser step must have GITHUB_TOKEN set to ${{ secrets.GITHUB_TOKEN }}")
+		}
+	})
+
+	t.Run("workflow has contents write permission", func(t *testing.T) {
+		if w.Permissions.Contents != "write" {
+			t.Errorf("expected permissions.contents to be 'write', got %q", w.Permissions.Contents)
+		}
+	})
+
+	t.Run("go setup uses go-version-file go.mod", func(t *testing.T) {
+		found := false
+		for _, j := range w.Jobs {
+			for _, s := range j.Steps {
+				if strings.Contains(s.Uses, "actions/setup-go") {
+					if s.With["go-version-file"] == "go.mod" {
+						found = true
+					}
+				}
+			}
+		}
+		if !found {
+			t.Error("setup-go step must use go-version-file: go.mod")
+		}
+	})
+
+	t.Run("workflow runs on ubuntu-latest", func(t *testing.T) {
+		for _, j := range w.Jobs {
+			if j.RunsOn == "ubuntu-latest" {
+				return
+			}
+		}
+		t.Error("expected at least one job to run on ubuntu-latest")
+	})
+
+	t.Run("goreleaser invoked with release --clean", func(t *testing.T) {
+		found := false
+		for _, j := range w.Jobs {
+			for _, s := range j.Steps {
+				if strings.Contains(s.Uses, "goreleaser/goreleaser-action") {
+					if s.With["args"] == "release --clean" {
+						found = true
+					}
+				}
+			}
+		}
+		if !found {
+			t.Error("goreleaser step must use args: release --clean")
+		}
+	})
+}
+
+// assertTagMatches checks whether the workflow tag patterns match (or don't match) the given tag.
+// GitHub Actions evaluates filter patterns in order: positive patterns include, negative
+// patterns (prefixed with !) exclude. A tag matches if it matches at least one positive
+// pattern and is not excluded by any negative pattern.
+func assertTagMatches(t *testing.T, patterns []string, tag string, shouldMatch bool) {
+	t.Helper()
+	if len(patterns) == 0 {
+		t.Fatal("workflow has no tag patterns configured")
+	}
+
+	included := false
+	excluded := false
+	for _, p := range patterns {
+		if len(p) > 0 && p[0] == '!' {
+			// Negative pattern — excludes matching tags.
+			if matchesGitHubActionsPattern(p[1:], tag) {
+				excluded = true
+			}
+		} else {
+			// Positive pattern — includes matching tags.
+			if matchesGitHubActionsPattern(p, tag) {
+				included = true
+			}
+		}
+	}
+
+	matched := included && !excluded
+	if shouldMatch && !matched {
+		t.Errorf("expected tag %q to match patterns %v, but it did not", tag, patterns)
+	}
+	if !shouldMatch && matched {
+		t.Errorf("expected tag %q to NOT match patterns %v, but it did", tag, patterns)
+	}
+}
