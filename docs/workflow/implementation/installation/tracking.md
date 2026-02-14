@@ -13,7 +13,7 @@ linters:
     command: go vet ./...
   - name: golangci-lint
     command: ~/go/bin/golangci-lint run ./...
-analysis_cycle: 3
+analysis_cycle: 4
 project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro/SKILL.md
