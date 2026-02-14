@@ -56,8 +56,8 @@ construct_url() {
 
 install_macos() {
     if ! command -v brew &> /dev/null; then
-        echo "Error: Homebrew is required to install ${BINARY_NAME} on macOS." >&2
-        echo "Install Homebrew from https://brew.sh and try again." >&2
+        echo "Please install via Homebrew:" >&2
+        echo "brew tap leeovery/tick && brew install tick" >&2
         return 1
     fi
 

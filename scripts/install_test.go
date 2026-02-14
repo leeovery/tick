@@ -1,6 +1,7 @@
 package scripts_test
 
 import (
+	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -770,6 +771,109 @@ func TestMacOSInstall(t *testing.T) {
 		out, err, _ := runScriptWithFakeBrew(t, "already-installed", nil)
 		if err != nil {
 			t.Fatalf("expected success when tick already installed, got error: %v\noutput: %s", err, out)
+		}
+	})
+}
+
+// runScriptSeparateOutputs executes install.sh and returns stdout and stderr
+// as separate strings, plus the exit error.
+func runScriptSeparateOutputs(t *testing.T, env map[string]string) (stdout, stderr string, err error) {
+	t.Helper()
+	script := scriptPath(t)
+	cmd := exec.Command("bash", script)
+	cmd.Env = os.Environ()
+	for k, v := range env {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+	err = cmd.Run()
+	return stdoutBuf.String(), stderrBuf.String(), err
+}
+
+func TestMacOSNoBrewError(t *testing.T) {
+	// Environment that simulates macOS with no brew on PATH.
+	// PATH is set to a minimal value that excludes any real brew.
+	noBrew := map[string]string{
+		"TICK_TEST_UNAME_S": "Darwin",
+		"TICK_TEST_MODE":    "install_macos",
+		"PATH":              "/usr/bin:/bin",
+	}
+
+	t.Run("it exits with code 1 on macOS when brew is not found", func(t *testing.T) {
+		_, err := runScript(t, noBrew)
+		if err == nil {
+			t.Fatal("expected non-zero exit when brew is not found, got success")
+		}
+		exitErr, ok := err.(*exec.ExitError)
+		if !ok {
+			t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+		}
+		if exitErr.ExitCode() != 1 {
+			t.Errorf("expected exit code 1, got %d", exitErr.ExitCode())
+		}
+	})
+
+	t.Run("it prints the Homebrew install instructions on macOS without brew", func(t *testing.T) {
+		out, err := runScript(t, noBrew)
+		if err == nil {
+			t.Fatal("expected error, got success")
+		}
+		if !strings.Contains(out, "brew tap leeovery/tick && brew install tick") {
+			t.Errorf("expected Homebrew install instructions, got: %q", out)
+		}
+	})
+
+	t.Run("it prints the Please install via Homebrew message", func(t *testing.T) {
+		out, err := runScript(t, noBrew)
+		if err == nil {
+			t.Fatal("expected error, got success")
+		}
+		if !strings.Contains(out, "Please install via Homebrew:") {
+			t.Errorf("expected 'Please install via Homebrew:' in output, got: %q", out)
+		}
+	})
+
+	t.Run("it does not attempt a binary download on macOS without brew", func(t *testing.T) {
+		out, err := runScript(t, noBrew)
+		if err == nil {
+			t.Fatal("expected error, got success")
+		}
+		if strings.Contains(out, "Downloading") {
+			t.Errorf("should not attempt download on macOS without brew, got: %q", out)
+		}
+		if strings.Contains(out, "curl") {
+			t.Errorf("should not invoke curl on macOS without brew, got: %q", out)
+		}
+	})
+
+	t.Run("it does not create a temporary directory on macOS without brew", func(t *testing.T) {
+		out, err := runScript(t, noBrew)
+		if err == nil {
+			t.Fatal("expected error, got success")
+		}
+		if strings.Contains(out, "TICK_TMPDIR=") {
+			t.Errorf("should not create temp dir on macOS without brew, got: %q", out)
+		}
+		if strings.Contains(out, "mktemp") {
+			t.Errorf("should not invoke mktemp on macOS without brew, got: %q", out)
+		}
+	})
+
+	t.Run("it outputs the error message to stderr not stdout", func(t *testing.T) {
+		stdout, stderr, err := runScriptSeparateOutputs(t, noBrew)
+		if err == nil {
+			t.Fatal("expected error, got success")
+		}
+		if !strings.Contains(stderr, "Please install via Homebrew:") {
+			t.Errorf("expected error message on stderr, got stderr: %q", stderr)
+		}
+		if !strings.Contains(stderr, "brew tap leeovery/tick && brew install tick") {
+			t.Errorf("expected install instructions on stderr, got stderr: %q", stderr)
+		}
+		if strings.Contains(stdout, "Please install via Homebrew:") {
+			t.Errorf("error message should not appear on stdout, got stdout: %q", stdout)
 		}
 	})
 }
