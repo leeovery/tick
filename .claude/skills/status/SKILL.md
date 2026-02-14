@@ -27,32 +27,37 @@ docs/workflow/research/
 docs/workflow/discussion/
 docs/workflow/specification/
 docs/workflow/planning/
+docs/workflow/implementation/
 ```
+
+For implementation, check `docs/workflow/implementation/{topic}/tracking.md` files and extract frontmatter fields: `status`, `current_phase`, `current_task`, `completed_tasks`, `completed_phases`.
 
 ## Step 2: Present Status
 
 Research is project-wide exploration. From discussion onwards, work is organised by **topic** - different topics may be at different stages.
 
-Show a summary like this:
+> *Output the next fenced block as markdown (not a code block):*
 
 ```
-## Workflow Status
+**Workflow Overview**
 
-**Research:** 2 files (exploration.md, market-analysis.md)
+**Research:** {count} files ({filenames})
 
-**Topics:**
-
-| Topic        | Discussion | Spec | Plan | Implemented |
-|--------------|------------|------|------|-------------|
-| auth-system  | ✓          | ✓    | ✓    | in progress |
-| payment-flow | ✓          | ✓    | -    | -           |
-| notifications| ✓          | -    | -    | -           |
+| Topic | Discussion | Spec | Plan | Implemented |
+|-------|------------|------|------|-------------|
+| {topic} | {discussion_status} | {spec_status} | {plan_status} | {impl_status} |
+| ... | | | | |
 ```
 
 Adapt based on what exists:
-- If a directory is empty or missing, show "Not started"
+- If a directory is empty or missing, show `-`
 - For planning, note the output format if specified in frontmatter
 - Match topics across phases by filename
+- For implementation, derive the Implemented column from tracking file data:
+  - No tracking file → `-`
+  - `status: not-started` → `not started`
+  - `status: in-progress` → `phase {current_phase} ({n}/{total} tasks done)` — count `completed_tasks` for n; use total task count from `completed_tasks` + remaining if available, otherwise just show completed count
+  - `status: completed` → `completed`
 
 ## Step 3: Suggest Next Steps
 
@@ -74,6 +79,8 @@ Keep suggestions brief - the user knows their project's dependencies better than
 ## Step 4: Mention Plan Viewing
 
 If planning files exist, let the user know they can view plan details:
+
+> *Output the next fenced block as a code block:*
 
 ```
 To view a plan's tasks and progress, use /view-plan
