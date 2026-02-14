@@ -18,9 +18,10 @@ project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro/SKILL.md
 current_phase: 2
-current_task: installation-2-4
+current_task: ~
 completed_phases:
   - 1
+  - 2
 completed_tasks:
   - installation-1-1
   - installation-1-2
@@ -29,6 +30,7 @@ completed_tasks:
   - installation-2-1
   - installation-2-2
   - installation-2-3
+  - installation-2-4
 started: 2026-02-14
 updated: 2026-02-14
 completed: ~

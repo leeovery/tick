@@ -82,7 +82,7 @@ approved_at: 2026-01-31
 | installation-2-1 | Homebrew Tap Repository and Formula | formula must handle both Intel and Apple Silicon macOS, version in formula URL must strip leading v | completed |
 | installation-2-2 | macOS Install Script: Homebrew Delegation | brew tap or brew install failure should propagate exit code, tick already installed via Homebrew (idempotent re-install) | completed |
 | installation-2-3 | macOS Install Script: No Homebrew Error Path | none | completed |
-| installation-2-4 | Install Script Error Handling Hardening | script piped via curl with server error, partial download, OS value that is neither Linux nor Darwin (e.g. FreeBSD) | authored |
+| installation-2-4 | Install Script Error Handling Hardening | script piped via curl with server error, partial download, OS value that is neither Linux nor Darwin (e.g. FreeBSD) | completed |
 
 ---
 

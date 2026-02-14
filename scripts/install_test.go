@@ -877,3 +877,254 @@ func TestMacOSNoBrewError(t *testing.T) {
 		}
 	})
 }
+
+func TestErrorHandlingHardening(t *testing.T) {
+	t.Run("script body is wrapped in a main function", func(t *testing.T) {
+		path := scriptPath(t)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("cannot read install.sh: %v", err)
+		}
+		content := string(data)
+		// Check for main() or main () function declaration
+		hasMainFunc := strings.Contains(content, "main()") || strings.Contains(content, "main ()")
+		if !hasMainFunc {
+			t.Error("install.sh must define a main() function")
+		}
+	})
+
+	t.Run("main function call is the last line", func(t *testing.T) {
+		path := scriptPath(t)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("cannot read install.sh: %v", err)
+		}
+		content := string(data)
+		lines := strings.Split(strings.TrimRight(content, "\n"), "\n")
+		lastLine := strings.TrimSpace(lines[len(lines)-1])
+		if lastLine != `main "$@"` {
+			t.Errorf("expected last line to be 'main \"$@\"', got: %q", lastLine)
+		}
+	})
+
+	t.Run("curl uses -f flag for version resolution API call", func(t *testing.T) {
+		path := scriptPath(t)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("cannot read install.sh: %v", err)
+		}
+		content := string(data)
+		// Find the curl call in resolve_version
+		lines := strings.Split(content, "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "curl") && strings.Contains(line, "GITHUB_API") {
+				if !strings.Contains(line, "-f") {
+					t.Errorf("curl call for version resolution must use -f flag: %q", line)
+				}
+				return
+			}
+		}
+		t.Error("could not find curl call for version resolution")
+	})
+
+	t.Run("curl uses -f flag for archive download", func(t *testing.T) {
+		path := scriptPath(t)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("cannot read install.sh: %v", err)
+		}
+		content := string(data)
+		lines := strings.Split(content, "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "curl") && strings.Contains(line, "BINARY_NAME") && strings.Contains(line, "tar.gz") {
+				if !strings.Contains(line, "-f") {
+					t.Errorf("curl call for archive download must use -f flag: %q", line)
+				}
+				return
+			}
+		}
+		t.Error("could not find curl call for archive download")
+	})
+
+	t.Run("script exits with error for empty downloaded archive", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		installDir := filepath.Join(tmpDir, "bin")
+		if err := os.MkdirAll(installDir, 0755); err != nil {
+			t.Fatalf("cannot create install dir: %v", err)
+		}
+
+		// Create a zero-byte tarball
+		emptyTarball := filepath.Join(tmpDir, "empty.tar.gz")
+		if err := os.WriteFile(emptyTarball, []byte{}, 0644); err != nil {
+			t.Fatalf("cannot create empty tarball: %v", err)
+		}
+
+		out, err := runScript(t, map[string]string{
+			"TICK_TEST_UNAME_S": "Linux",
+			"TICK_TEST_UNAME_M": "x86_64",
+			"TICK_TEST_MODE":    "full_install",
+			"TICK_TEST_VERSION": "v1.0.0",
+			"TICK_TEST_TARBALL": emptyTarball,
+			"TICK_INSTALL_DIR":  installDir,
+			"TICK_FALLBACK_DIR": filepath.Join(tmpDir, "fallback"),
+		})
+		if err == nil {
+			t.Fatal("expected failure with empty tarball, got success")
+		}
+		if !strings.Contains(out, "empty or missing") {
+			t.Errorf("expected 'empty or missing' in error output, got: %q", out)
+		}
+	})
+
+	t.Run("script exits with error for corrupt archive", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		installDir := filepath.Join(tmpDir, "bin")
+		if err := os.MkdirAll(installDir, 0755); err != nil {
+			t.Fatalf("cannot create install dir: %v", err)
+		}
+
+		// Create a non-gzip file that looks like content but isn't valid
+		corruptTarball := filepath.Join(tmpDir, "corrupt.tar.gz")
+		if err := os.WriteFile(corruptTarball, []byte("this is not a gzip file"), 0644); err != nil {
+			t.Fatalf("cannot create corrupt tarball: %v", err)
+		}
+
+		out, err := runScript(t, map[string]string{
+			"TICK_TEST_UNAME_S": "Linux",
+			"TICK_TEST_UNAME_M": "x86_64",
+			"TICK_TEST_MODE":    "full_install",
+			"TICK_TEST_VERSION": "v1.0.0",
+			"TICK_TEST_TARBALL": corruptTarball,
+			"TICK_INSTALL_DIR":  installDir,
+			"TICK_FALLBACK_DIR": filepath.Join(tmpDir, "fallback"),
+		})
+		if err == nil {
+			t.Fatal("expected failure with corrupt tarball, got success")
+		}
+		if !strings.Contains(out, "Failed to extract") {
+			t.Errorf("expected 'Failed to extract' in error output, got: %q", out)
+		}
+	})
+
+	t.Run("script exits with error when binary not found in archive", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		installDir := filepath.Join(tmpDir, "bin")
+		if err := os.MkdirAll(installDir, 0755); err != nil {
+			t.Fatalf("cannot create install dir: %v", err)
+		}
+
+		// Create a valid tar.gz that does NOT contain a "tick" binary
+		fakeDir := filepath.Join(tmpDir, "fakearchive")
+		if err := os.MkdirAll(fakeDir, 0755); err != nil {
+			t.Fatalf("cannot create fake dir: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(fakeDir, "notick"), []byte("wrong binary"), 0755); err != nil {
+			t.Fatalf("cannot write fake file: %v", err)
+		}
+		tarball := filepath.Join(tmpDir, "notick.tar.gz")
+		tarCmd := exec.Command("tar", "czf", tarball, "-C", fakeDir, "notick")
+		if out, err := tarCmd.CombinedOutput(); err != nil {
+			t.Fatalf("cannot create tarball: %v\n%s", err, out)
+		}
+
+		out, err := runScript(t, map[string]string{
+			"TICK_TEST_UNAME_S": "Linux",
+			"TICK_TEST_UNAME_M": "x86_64",
+			"TICK_TEST_MODE":    "full_install",
+			"TICK_TEST_VERSION": "v1.0.0",
+			"TICK_TEST_TARBALL": tarball,
+			"TICK_INSTALL_DIR":  installDir,
+			"TICK_FALLBACK_DIR": filepath.Join(tmpDir, "fallback"),
+		})
+		if err == nil {
+			t.Fatal("expected failure when binary not in archive, got success")
+		}
+		if !strings.Contains(out, "not found in archive") {
+			t.Errorf("expected 'not found in archive' in error output, got: %q", out)
+		}
+	})
+
+	t.Run("script exits with error for FreeBSD", func(t *testing.T) {
+		out, err := runScript(t, map[string]string{
+			"TICK_TEST_UNAME_S": "FreeBSD",
+			"TICK_TEST_MODE":    "detect_os",
+		})
+		if err == nil {
+			t.Fatal("expected non-zero exit for FreeBSD, got success")
+		}
+		if !strings.Contains(out, "FreeBSD") {
+			t.Errorf("expected error mentioning FreeBSD, got: %q", out)
+		}
+	})
+
+	t.Run("script exits with error for CYGWIN", func(t *testing.T) {
+		out, err := runScript(t, map[string]string{
+			"TICK_TEST_UNAME_S": "CYGWIN_NT-10.0",
+			"TICK_TEST_MODE":    "detect_os",
+		})
+		if err == nil {
+			t.Fatal("expected non-zero exit for CYGWIN, got success")
+		}
+		if !strings.Contains(out, "CYGWIN") {
+			t.Errorf("expected error mentioning CYGWIN, got: %q", out)
+		}
+	})
+
+	t.Run("script exits with error for unknown OS", func(t *testing.T) {
+		out, err := runScript(t, map[string]string{
+			"TICK_TEST_UNAME_S": "SomeFutureOS",
+			"TICK_TEST_MODE":    "detect_os",
+		})
+		if err == nil {
+			t.Fatal("expected non-zero exit for unknown OS, got success")
+		}
+		if !strings.Contains(out, "SomeFutureOS") {
+			t.Errorf("expected error mentioning SomeFutureOS, got: %q", out)
+		}
+	})
+
+	t.Run("unsupported OS error message includes the detected OS name", func(t *testing.T) {
+		out, err := runScript(t, map[string]string{
+			"TICK_TEST_UNAME_S": "HaikuOS",
+			"TICK_TEST_MODE":    "detect_os",
+		})
+		if err == nil {
+			t.Fatal("expected non-zero exit for HaikuOS, got success")
+		}
+		if !strings.Contains(out, "Unsupported operating system") {
+			t.Errorf("expected 'Unsupported operating system' in error, got: %q", out)
+		}
+		if !strings.Contains(out, "HaikuOS") {
+			t.Errorf("expected 'HaikuOS' in error, got: %q", out)
+		}
+		if !strings.Contains(out, "Linux") || !strings.Contains(out, "macOS") {
+			t.Errorf("expected error to mention supported OSes (Linux and macOS), got: %q", out)
+		}
+	})
+
+	t.Run("script does not contain read or select commands", func(t *testing.T) {
+		path := scriptPath(t)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("cannot read install.sh: %v", err)
+		}
+		content := string(data)
+		lines := strings.Split(content, "\n")
+		for i, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			// Skip comments and empty lines
+			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+				continue
+			}
+			// Check for interactive 'read' commands (not 'read' inside variable names or strings)
+			// Look for 'read ' at the start of a statement
+			if strings.HasPrefix(trimmed, "read ") || trimmed == "read" {
+				t.Errorf("line %d contains interactive 'read' command: %q", i+1, trimmed)
+			}
+			// Check for 'select' keyword used for interactive menus
+			if strings.HasPrefix(trimmed, "select ") {
+				t.Errorf("line %d contains interactive 'select' command: %q", i+1, trimmed)
+			}
+		}
+	})
+}

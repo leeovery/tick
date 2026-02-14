@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+main() {
+
 REPO="leeovery/tick"
 BINARY_NAME="tick"
 GITHUB_API="${GITHUB_API:-https://api.github.com/repos/${REPO}/releases/latest}"
@@ -13,7 +15,7 @@ detect_os() {
         Linux)  echo "linux" ;;
         Darwin) echo "darwin" ;;
         *)
-            echo "Error: unsupported operating system '${uname_s}'. Only Linux and macOS are supported." >&2
+            echo "Error: Unsupported operating system: ${uname_s}. This installer supports Linux and macOS only." >&2
             return 1
             ;;
     esac
@@ -165,7 +167,20 @@ else
     curl -fsSL "${URL}" -o "${TMPDIR_INSTALL}/${BINARY_NAME}.tar.gz"
 fi
 
-tar xzf "${TMPDIR_INSTALL}/${BINARY_NAME}.tar.gz" -C "${TMPDIR_INSTALL}"
+if [[ ! -s "${TMPDIR_INSTALL}/${BINARY_NAME}.tar.gz" ]]; then
+    echo "Error: Downloaded archive is empty or missing." >&2
+    exit 1
+fi
+
+if ! tar xzf "${TMPDIR_INSTALL}/${BINARY_NAME}.tar.gz" -C "${TMPDIR_INSTALL}"; then
+    echo "Error: Failed to extract archive. The download may be corrupt." >&2
+    exit 1
+fi
+
+if [[ ! -f "${TMPDIR_INSTALL}/${BINARY_NAME}" ]]; then
+    echo "Error: Binary 'tick' not found in archive." >&2
+    exit 1
+fi
 
 INSTALL_DIR=$(select_install_dir)
 
@@ -173,3 +188,7 @@ cp "${TMPDIR_INSTALL}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
 chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 
 echo "Successfully installed ${BINARY_NAME} ${VERSION} to ${INSTALL_DIR}/${BINARY_NAME}"
+
+}
+
+main "$@"
