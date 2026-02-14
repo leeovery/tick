@@ -17,6 +17,16 @@ func scriptPath(t *testing.T) string {
 	return filepath.Join(testutil.FindRepoRoot(t), "scripts", "install.sh")
 }
 
+// loadScript reads install.sh and returns its contents as a string.
+func loadScript(t *testing.T) string {
+	t.Helper()
+	data, err := os.ReadFile(scriptPath(t))
+	if err != nil {
+		t.Fatalf("cannot read install.sh: %v", err)
+	}
+	return string(data)
+}
+
 // runScript executes install.sh with the given environment variables and returns
 // combined output plus the exit error (nil on success).
 func runScript(t *testing.T, env map[string]string) (string, error) {
@@ -55,24 +65,16 @@ func TestInstallScript(t *testing.T) {
 	})
 
 	t.Run("script has correct shebang", func(t *testing.T) {
-		path := scriptPath(t)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("cannot read install.sh: %v", err)
-		}
-		firstLine := strings.SplitN(string(data), "\n", 2)[0]
+		content := loadScript(t)
+		firstLine := strings.SplitN(content, "\n", 2)[0]
 		if firstLine != "#!/usr/bin/env bash" {
 			t.Errorf("expected shebang '#!/usr/bin/env bash', got %q", firstLine)
 		}
 	})
 
 	t.Run("script uses set -euo pipefail", func(t *testing.T) {
-		path := scriptPath(t)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("cannot read install.sh: %v", err)
-		}
-		if !strings.Contains(string(data), "set -euo pipefail") {
+		content := loadScript(t)
+		if !strings.Contains(content, "set -euo pipefail") {
 			t.Error("install.sh must contain 'set -euo pipefail'")
 		}
 	})
@@ -394,12 +396,7 @@ func TestPATHWarning(t *testing.T) {
 
 func TestTrapCleanup(t *testing.T) {
 	t.Run("script contains trap for cleanup", func(t *testing.T) {
-		path := scriptPath(t)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("cannot read install.sh: %v", err)
-		}
-		content := string(data)
+		content := loadScript(t)
 		if !strings.Contains(content, "trap") {
 			t.Error("install.sh must contain a trap for cleanup")
 		}
@@ -863,12 +860,7 @@ func TestMacOSNoBrewError(t *testing.T) {
 
 func TestErrorHandlingHardening(t *testing.T) {
 	t.Run("script body is wrapped in a main function", func(t *testing.T) {
-		path := scriptPath(t)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("cannot read install.sh: %v", err)
-		}
-		content := string(data)
+		content := loadScript(t)
 		// Check for main() or main () function declaration
 		hasMainFunc := strings.Contains(content, "main()") || strings.Contains(content, "main ()")
 		if !hasMainFunc {
@@ -877,12 +869,7 @@ func TestErrorHandlingHardening(t *testing.T) {
 	})
 
 	t.Run("main function call is the last line", func(t *testing.T) {
-		path := scriptPath(t)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("cannot read install.sh: %v", err)
-		}
-		content := string(data)
+		content := loadScript(t)
 		lines := strings.Split(strings.TrimRight(content, "\n"), "\n")
 		lastLine := strings.TrimSpace(lines[len(lines)-1])
 		if lastLine != `main "$@"` {
@@ -891,12 +878,7 @@ func TestErrorHandlingHardening(t *testing.T) {
 	})
 
 	t.Run("curl uses -f flag for version resolution API call", func(t *testing.T) {
-		path := scriptPath(t)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("cannot read install.sh: %v", err)
-		}
-		content := string(data)
+		content := loadScript(t)
 		// Find the curl call in resolve_version
 		lines := strings.Split(content, "\n")
 		for _, line := range lines {
@@ -911,12 +893,7 @@ func TestErrorHandlingHardening(t *testing.T) {
 	})
 
 	t.Run("curl uses -f flag for archive download", func(t *testing.T) {
-		path := scriptPath(t)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("cannot read install.sh: %v", err)
-		}
-		content := string(data)
+		content := loadScript(t)
 		lines := strings.Split(content, "\n")
 		for _, line := range lines {
 			if strings.Contains(line, "curl") && strings.Contains(line, "BINARY_NAME") && strings.Contains(line, "tar.gz") {
@@ -1086,12 +1063,7 @@ func TestErrorHandlingHardening(t *testing.T) {
 	})
 
 	t.Run("script does not contain read or select commands", func(t *testing.T) {
-		path := scriptPath(t)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("cannot read install.sh: %v", err)
-		}
-		content := string(data)
+		content := loadScript(t)
 		lines := strings.Split(content, "\n")
 		for i, line := range lines {
 			trimmed := strings.TrimSpace(line)
