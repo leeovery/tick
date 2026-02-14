@@ -1,14 +1,11 @@
 ---
-topic: installation
-cycle: 3
-total_proposed: 1
+id: installation-5-1
+phase: 5
+status: pending
+created: 2026-02-14
 ---
-# Analysis Tasks: Installation (Cycle 3)
 
-## Task 1: Extract TMPDIR extraction helper in install_test.go
-status: approved
-severity: medium
-sources: duplication
+# Extract TMPDIR extraction helper in install_test.go
 
 **Problem**: Two tests in `scripts/install_test.go` ("cleans up temp directory on failure" at lines 602-612 and "cleans up temp directory on success" at lines 643-653) contain an identical 8-line block that parses script output to find the `TICK_TMPDIR=` line, strips the prefix, and fatals if not found. This is verbatim duplication within the same file.
 

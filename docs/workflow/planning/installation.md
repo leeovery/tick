@@ -114,6 +114,18 @@ status: approved
 
 ---
 
+### Phase 5: Analysis (cycle 3)
+status: approved
+
+**Goal**: Address findings from implementation analysis cycle 3.
+
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| installation-5-1 | Extract TMPDIR extraction helper in install_test.go | — | authored |
+
+---
+
 ## Log
 
 | Date | Change |
@@ -122,3 +134,4 @@ status: approved
 | 2026-01-31 | Plan concluded — 2 phases, 8 tasks |
 | 2026-02-14 | Phase 3 added — 4 analysis tasks from cycle 1 |
 | 2026-02-14 | Phase 4 added — 2 analysis tasks from cycle 2 |
+| 2026-02-14 | Phase 5 added — 1 analysis task from cycle 3 |
