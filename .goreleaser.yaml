@@ -1,0 +1,32 @@
+version: 2
+
+project_name: tick
+
+builds:
+  - id: tick
+    main: ./cmd/tick/
+    binary: tick
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - id: tick
+    formats:
+      - tar.gz
+    name_template: "tick_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - none*
+
+changelog:
+  disable: true
+
+release:
+  draft: false

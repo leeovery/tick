@@ -1,7 +1,7 @@
 ---
 id: installation-1-2
 phase: 1
-status: pending
+status: completed
 created: 2026-01-31
 ---
 
