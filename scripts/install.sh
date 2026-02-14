@@ -10,9 +10,10 @@ GITHUB_API="${GITHUB_API:-https://api.github.com/repos/${REPO}/releases/latest}"
 detect_os() {
     local uname_s="${TICK_TEST_UNAME_S:-$(uname -s)}"
     case "${uname_s}" in
-        Linux) echo "linux" ;;
+        Linux)  echo "linux" ;;
+        Darwin) echo "darwin" ;;
         *)
-            echo "Error: unsupported operating system '${uname_s}'. Only Linux is supported." >&2
+            echo "Error: unsupported operating system '${uname_s}'. Only Linux and macOS are supported." >&2
             return 1
             ;;
     esac
@@ -51,6 +52,19 @@ construct_url() {
     local arch="$3"
     local version_no_v="${version#v}"
     echo "https://github.com/${REPO}/releases/download/${version}/${BINARY_NAME}_${version_no_v}_${os}_${arch}.tar.gz"
+}
+
+install_macos() {
+    if ! command -v brew &> /dev/null; then
+        echo "Error: Homebrew is required to install ${BINARY_NAME} on macOS." >&2
+        echo "Install Homebrew from https://brew.sh and try again." >&2
+        return 1
+    fi
+
+    brew tap leeovery/tick
+    brew install tick
+
+    echo "Successfully installed ${BINARY_NAME} via Homebrew."
 }
 
 select_install_dir() {
@@ -108,6 +122,10 @@ if [[ -n "${TICK_TEST_MODE:-}" ]]; then
             resolve_version
             exit $?
             ;;
+        install_macos)
+            install_macos
+            exit $?
+            ;;
         full_install)
             # Fall through to main install flow below.
             ;;
@@ -123,6 +141,12 @@ fi
 echo "Installing ${BINARY_NAME}..."
 
 OS=$(detect_os)
+
+if [[ "${OS}" == "darwin" ]]; then
+    install_macos
+    exit 0
+fi
+
 ARCH=$(detect_arch)
 VERSION=$(resolve_version)
 URL=$(construct_url "${VERSION}" "${OS}" "${ARCH}")

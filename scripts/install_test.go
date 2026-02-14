@@ -95,16 +95,29 @@ func TestInstallScript(t *testing.T) {
 }
 
 func TestOSDetection(t *testing.T) {
-	t.Run("rejects non-Linux OS with clear error", func(t *testing.T) {
+	t.Run("detects macOS via uname -s returning Darwin", func(t *testing.T) {
 		out, err := runScript(t, map[string]string{
 			"TICK_TEST_UNAME_S": "Darwin",
 			"TICK_TEST_MODE":    "detect_os",
 		})
-		if err == nil {
-			t.Fatal("expected non-zero exit for Darwin, got success")
+		if err != nil {
+			t.Fatalf("expected success for Darwin, got error: %v\noutput: %s", err, out)
 		}
-		if !strings.Contains(out, "Linux") || !strings.Contains(out, "Darwin") {
-			t.Errorf("expected error message mentioning Linux and Darwin, got: %q", out)
+		if strings.TrimSpace(out) != "darwin" {
+			t.Errorf("expected output 'darwin', got: %q", strings.TrimSpace(out))
+		}
+	})
+
+	t.Run("rejects unsupported OS with clear error", func(t *testing.T) {
+		out, err := runScript(t, map[string]string{
+			"TICK_TEST_UNAME_S": "Windows_NT",
+			"TICK_TEST_MODE":    "detect_os",
+		})
+		if err == nil {
+			t.Fatal("expected non-zero exit for Windows_NT, got success")
+		}
+		if !strings.Contains(out, "Windows_NT") {
+			t.Errorf("expected error message mentioning Windows_NT, got: %q", out)
 		}
 	})
 
@@ -409,6 +422,89 @@ func TestTrapCleanup(t *testing.T) {
 	})
 }
 
+// createFakeBrew creates a fake brew script in a temp dir and returns the
+// directory (to prepend to PATH) and a log file path where invocations are
+// recorded. The behavior parameter controls exit codes:
+//
+//	"success"       — all commands succeed
+//	"tap-fail"      — brew tap exits 1
+//	"install-fail"  — brew install exits 1
+//	"already-installed" — brew install prints "already installed" warning and exits 0
+func createFakeBrew(t *testing.T, behavior string) (binDir, logFile string) {
+	t.Helper()
+	tmpDir := t.TempDir()
+	binDir = filepath.Join(tmpDir, "bin")
+	if err := os.MkdirAll(binDir, 0755); err != nil {
+		t.Fatalf("cannot create fake brew bin dir: %v", err)
+	}
+	logFile = filepath.Join(tmpDir, "brew.log")
+
+	var script string
+	switch behavior {
+	case "success":
+		script = `#!/usr/bin/env bash
+echo "$@" >> "` + logFile + `"
+echo "brew $@"
+exit 0
+`
+	case "tap-fail":
+		script = `#!/usr/bin/env bash
+echo "$@" >> "` + logFile + `"
+if [[ "$1" == "tap" ]]; then
+    echo "Error: tap failed" >&2
+    exit 1
+fi
+echo "brew $@"
+exit 0
+`
+	case "install-fail":
+		script = `#!/usr/bin/env bash
+echo "$@" >> "` + logFile + `"
+if [[ "$1" == "install" ]]; then
+    echo "Error: install failed" >&2
+    exit 1
+fi
+echo "brew $@"
+exit 0
+`
+	case "already-installed":
+		script = `#!/usr/bin/env bash
+echo "$@" >> "` + logFile + `"
+if [[ "$1" == "install" ]]; then
+    echo "Warning: tick is already installed" >&2
+fi
+echo "brew $@"
+exit 0
+`
+	default:
+		t.Fatalf("unknown fake brew behavior: %s", behavior)
+	}
+
+	brewPath := filepath.Join(binDir, "brew")
+	if err := os.WriteFile(brewPath, []byte(script), 0755); err != nil {
+		t.Fatalf("cannot write fake brew: %v", err)
+	}
+	return binDir, logFile
+}
+
+// runScriptWithFakeBrew runs install.sh with a fake brew on PATH and Darwin uname.
+func runScriptWithFakeBrew(t *testing.T, brewBehavior string, extraEnv map[string]string) (string, error, string) {
+	t.Helper()
+	brewDir, logFile := createFakeBrew(t, brewBehavior)
+
+	env := map[string]string{
+		"TICK_TEST_UNAME_S": "Darwin",
+		"TICK_TEST_MODE":    "install_macos",
+		"PATH":              brewDir + ":/usr/bin:/bin",
+	}
+	for k, v := range extraEnv {
+		env[k] = v
+	}
+
+	out, err := runScript(t, env)
+	return out, err, logFile
+}
+
 // createFakeTarball creates a tar.gz containing a fake tick binary with the
 // given content. Returns the path to the tarball.
 func createFakeTarball(t *testing.T, dir string, content string) string {
@@ -578,6 +674,102 @@ func TestFullInstallFlow(t *testing.T) {
 		// Verify the temp directory was cleaned up.
 		if _, err := os.Stat(tmpDirPath); !os.IsNotExist(err) {
 			t.Errorf("temp directory %q was not cleaned up", tmpDirPath)
+		}
+	})
+}
+
+func TestMacOSInstall(t *testing.T) {
+	t.Run("it runs brew tap and brew install when brew is available on macOS", func(t *testing.T) {
+		out, err, logFile := runScriptWithFakeBrew(t, "success", nil)
+		if err != nil {
+			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
+		}
+
+		logData, readErr := os.ReadFile(logFile)
+		if readErr != nil {
+			t.Fatalf("cannot read brew log: %v", readErr)
+		}
+		log := string(logData)
+		if !strings.Contains(log, "tap leeovery/tick") {
+			t.Errorf("expected brew tap leeovery/tick in log, got: %q", log)
+		}
+		if !strings.Contains(log, "install tick") {
+			t.Errorf("expected brew install tick in log, got: %q", log)
+		}
+	})
+
+	t.Run("it exits 0 on successful Homebrew install", func(t *testing.T) {
+		_, err, _ := runScriptWithFakeBrew(t, "success", nil)
+		if err != nil {
+			t.Fatalf("expected exit 0 on successful brew install, got error: %v", err)
+		}
+	})
+
+	t.Run("it prints a success message after Homebrew install", func(t *testing.T) {
+		out, err, _ := runScriptWithFakeBrew(t, "success", nil)
+		if err != nil {
+			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
+		}
+		if !strings.Contains(strings.ToLower(out), "success") || !strings.Contains(strings.ToLower(out), "homebrew") {
+			t.Errorf("expected success message mentioning Homebrew, got: %q", out)
+		}
+	})
+
+	t.Run("it propagates exit code when brew tap fails", func(t *testing.T) {
+		out, err, logFile := runScriptWithFakeBrew(t, "tap-fail", nil)
+		if err == nil {
+			t.Fatal("expected non-zero exit when brew tap fails, got success")
+		}
+		if !strings.Contains(out, "tap failed") && !strings.Contains(strings.ToLower(out), "error") {
+			t.Errorf("expected error output when brew tap fails, got: %q", out)
+		}
+		logData, readErr := os.ReadFile(logFile)
+		if readErr != nil {
+			t.Fatalf("cannot read brew log: %v", readErr)
+		}
+		if strings.Contains(string(logData), "install tick") {
+			t.Error("brew install should not be called when brew tap fails")
+		}
+	})
+
+	t.Run("it propagates exit code when brew install fails", func(t *testing.T) {
+		out, err, _ := runScriptWithFakeBrew(t, "install-fail", nil)
+		if err == nil {
+			t.Fatal("expected non-zero exit when brew install fails, got success")
+		}
+		if !strings.Contains(out, "install failed") && !strings.Contains(strings.ToLower(out), "error") {
+			t.Errorf("expected error output when brew install fails, got: %q", out)
+		}
+	})
+
+	t.Run("it does not run Linux download logic on macOS", func(t *testing.T) {
+		out, err, _ := runScriptWithFakeBrew(t, "success", nil)
+		if err != nil {
+			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
+		}
+		// Linux flow prints "Downloading" — macOS should not.
+		if strings.Contains(out, "Downloading") {
+			t.Errorf("macOS path should not run Linux download logic, but output contains 'Downloading': %q", out)
+		}
+	})
+
+	t.Run("it does not suppress brew output", func(t *testing.T) {
+		out, err, _ := runScriptWithFakeBrew(t, "success", nil)
+		if err != nil {
+			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
+		}
+		if !strings.Contains(out, "brew tap leeovery/tick") {
+			t.Errorf("expected brew tap output to be visible, got: %q", out)
+		}
+		if !strings.Contains(out, "brew install tick") {
+			t.Errorf("expected brew install output to be visible, got: %q", out)
+		}
+	})
+
+	t.Run("it handles tick already installed via Homebrew (idempotent)", func(t *testing.T) {
+		out, err, _ := runScriptWithFakeBrew(t, "already-installed", nil)
+		if err != nil {
+			t.Fatalf("expected success when tick already installed, got error: %v\noutput: %s", err, out)
 		}
 	})
 }
