@@ -6,7 +6,7 @@ total_proposed: 4
 # Analysis Tasks: Installation (Cycle 1)
 
 ## Task 1: Extract shared findRepoRoot test utility
-status: pending
+status: approved
 severity: high
 sources: duplication
 
@@ -34,7 +34,7 @@ sources: duplication
 - internal/testutil.FindRepoRoot returns a path containing go.mod when called from any subdirectory of the repo
 
 ## Task 2: Extract step-search helper in release_test.go
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -59,7 +59,7 @@ sources: duplication
 - All existing tests in .github/workflows/release_test.go pass unchanged
 
 ## Task 3: Document Homebrew tap repository requirement
-status: pending
+status: approved
 severity: medium
 sources: standards
 
@@ -82,7 +82,7 @@ sources: standards
 - No automated tests required; this is a documentation task
 
 ## Task 4: Add cross-component asset naming contract test
-status: pending
+status: approved
 severity: medium
 sources: architecture
 

@@ -12,7 +12,7 @@ external_dependencies:
     state: resolved
     task_id: tick-core-1-5
 planning:
-  phase: 2
+  phase: 3
   task: 4
 ---
 
@@ -86,9 +86,25 @@ approved_at: 2026-01-31
 
 ---
 
+### Phase 3: Analysis (cycle 1)
+status: approved
+
+**Goal**: Address findings from implementation analysis cycle 1.
+
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| installation-3-1 | Extract shared findRepoRoot test utility | — | authored |
+| installation-3-2 | Extract step-search helper in release_test.go | — | authored |
+| installation-3-3 | Document Homebrew tap repository requirement | — | authored |
+| installation-3-4 | Add cross-component asset naming contract test | — | authored |
+
+---
+
 ## Log
 
 | Date | Change |
 |------|--------|
 | 2026-01-31 | Created from specification |
 | 2026-01-31 | Plan concluded — 2 phases, 8 tasks |
+| 2026-02-14 | Phase 3 added — 4 analysis tasks from cycle 1 |
