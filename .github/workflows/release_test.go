@@ -193,33 +193,15 @@ func TestReleaseWorkflow(t *testing.T) {
 	})
 
 	t.Run("checkout step uses fetch-depth 0 for full history", func(t *testing.T) {
-		found := false
-		for _, j := range w.Jobs {
-			for _, s := range j.Steps {
-				if strings.Contains(s.Uses, "actions/checkout") {
-					if s.With["fetch-depth"] == "0" {
-						found = true
-					}
-				}
-			}
-		}
-		if !found {
+		s, ok := findStepByUses(w, "actions/checkout")
+		if !ok || s.With["fetch-depth"] != "0" {
 			t.Error("checkout step must use fetch-depth: 0")
 		}
 	})
 
 	t.Run("goreleaser step has GITHUB_TOKEN configured", func(t *testing.T) {
-		found := false
-		for _, j := range w.Jobs {
-			for _, s := range j.Steps {
-				if strings.Contains(s.Uses, "goreleaser/goreleaser-action") {
-					if v, ok := s.Env["GITHUB_TOKEN"]; ok && v == "${{ secrets.GITHUB_TOKEN }}" {
-						found = true
-					}
-				}
-			}
-		}
-		if !found {
+		s, ok := findStepByUses(w, "goreleaser/goreleaser-action")
+		if !ok || s.Env["GITHUB_TOKEN"] != "${{ secrets.GITHUB_TOKEN }}" {
 			t.Error("goreleaser step must have GITHUB_TOKEN set to ${{ secrets.GITHUB_TOKEN }}")
 		}
 	})
@@ -231,17 +213,8 @@ func TestReleaseWorkflow(t *testing.T) {
 	})
 
 	t.Run("go setup uses go-version-file go.mod", func(t *testing.T) {
-		found := false
-		for _, j := range w.Jobs {
-			for _, s := range j.Steps {
-				if strings.Contains(s.Uses, "actions/setup-go") {
-					if s.With["go-version-file"] == "go.mod" {
-						found = true
-					}
-				}
-			}
-		}
-		if !found {
+		s, ok := findStepByUses(w, "actions/setup-go")
+		if !ok || s.With["go-version-file"] != "go.mod" {
 			t.Error("setup-go step must use go-version-file: go.mod")
 		}
 	})
@@ -256,20 +229,25 @@ func TestReleaseWorkflow(t *testing.T) {
 	})
 
 	t.Run("goreleaser invoked with release --clean", func(t *testing.T) {
-		found := false
-		for _, j := range w.Jobs {
-			for _, s := range j.Steps {
-				if strings.Contains(s.Uses, "goreleaser/goreleaser-action") {
-					if s.With["args"] == "release --clean" {
-						found = true
-					}
-				}
-			}
-		}
-		if !found {
+		s, ok := findStepByUses(w, "goreleaser/goreleaser-action")
+		if !ok || s.With["args"] != "release --clean" {
 			t.Error("goreleaser step must use args: release --clean")
 		}
 	})
+}
+
+// findStepByUses searches all jobs in the workflow for a step whose Uses field
+// contains usesSubstring. Returns the first matching step and true, or a zero
+// step and false if none matched.
+func findStepByUses(w workflow, usesSubstring string) (step, bool) {
+	for _, j := range w.Jobs {
+		for _, s := range j.Steps {
+			if strings.Contains(s.Uses, usesSubstring) {
+				return s, true
+			}
+		}
+	}
+	return step{}, false
 }
 
 // assertTagMatches checks whether the workflow tag patterns match (or don't match) the given tag.
