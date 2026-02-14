@@ -97,7 +97,7 @@ status: approved
 | installation-3-1 | Extract shared findRepoRoot test utility | — | completed |
 | installation-3-2 | Extract step-search helper in release_test.go | — | completed |
 | installation-3-3 | Document Homebrew tap repository requirement | — | completed |
-| installation-3-4 | Add cross-component asset naming contract test | — | authored |
+| installation-3-4 | Add cross-component asset naming contract test | — | completed |
 
 ---
 
