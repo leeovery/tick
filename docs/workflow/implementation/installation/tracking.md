@@ -2,7 +2,7 @@
 topic: installation
 plan: ../../planning/installation.md
 format: local-markdown
-status: in-progress
+status: completed
 task_gate_mode: auto
 fix_gate_mode: auto
 fix_attempts: 0
@@ -43,7 +43,7 @@ completed_tasks:
   - installation-5-1
 started: 2026-02-14
 updated: 2026-02-14
-completed: ~
+completed: 2026-02-14
 ---
 
 # Implementation: Installation
