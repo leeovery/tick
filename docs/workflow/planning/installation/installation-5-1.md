@@ -1,7 +1,7 @@
 ---
 id: installation-5-1
 phase: 5
-status: pending
+status: completed
 created: 2026-02-14
 ---
 

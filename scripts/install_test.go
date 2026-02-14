@@ -41,6 +41,19 @@ func runScript(t *testing.T, env map[string]string) (string, error) {
 	return string(out), err
 }
 
+// extractTmpDir parses script output to find the TICK_TMPDIR= line and returns
+// the path. Fatals if not found.
+func extractTmpDir(t *testing.T, output string) string {
+	t.Helper()
+	for _, line := range strings.Split(output, "\n") {
+		if strings.HasPrefix(line, "TICK_TMPDIR=") {
+			return strings.TrimPrefix(line, "TICK_TMPDIR=")
+		}
+	}
+	t.Fatal("could not find TICK_TMPDIR in output")
+	return ""
+}
+
 func TestInstallScript(t *testing.T) {
 	t.Run("script file exists", func(t *testing.T) {
 		path := scriptPath(t)
@@ -599,17 +612,7 @@ func TestFullInstallFlow(t *testing.T) {
 			t.Fatal("expected failure with nonexistent tarball, got success")
 		}
 
-		// Extract the temp dir path from output.
-		var tmpDirPath string
-		for _, line := range strings.Split(out, "\n") {
-			if strings.HasPrefix(line, "TICK_TMPDIR=") {
-				tmpDirPath = strings.TrimPrefix(line, "TICK_TMPDIR=")
-				break
-			}
-		}
-		if tmpDirPath == "" {
-			t.Fatal("could not find TICK_TMPDIR in output")
-		}
+		tmpDirPath := extractTmpDir(t, out)
 
 		// Verify the temp directory was cleaned up even on failure.
 		if _, err := os.Stat(tmpDirPath); !os.IsNotExist(err) {
@@ -640,17 +643,7 @@ func TestFullInstallFlow(t *testing.T) {
 			t.Fatalf("install failed: %v\noutput: %s", err, out)
 		}
 
-		// Extract the temp dir path from output.
-		var tmpDirPath string
-		for _, line := range strings.Split(out, "\n") {
-			if strings.HasPrefix(line, "TICK_TMPDIR=") {
-				tmpDirPath = strings.TrimPrefix(line, "TICK_TMPDIR=")
-				break
-			}
-		}
-		if tmpDirPath == "" {
-			t.Fatal("could not find TICK_TMPDIR in output")
-		}
+		tmpDirPath := extractTmpDir(t, out)
 
 		// Verify the temp directory was cleaned up.
 		if _, err := os.Stat(tmpDirPath); !os.IsNotExist(err) {

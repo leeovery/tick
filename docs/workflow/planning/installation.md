@@ -122,7 +122,7 @@ status: approved
 #### Tasks
 | ID | Name | Edge Cases | Status |
 |----|------|------------|--------|
-| installation-5-1 | Extract TMPDIR extraction helper in install_test.go | — | authored |
+| installation-5-1 | Extract TMPDIR extraction helper in install_test.go | — | completed |
 
 ---
 
