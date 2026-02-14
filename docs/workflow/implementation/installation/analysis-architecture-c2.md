@@ -1,0 +1,8 @@
+AGENT: architecture
+FINDINGS:
+- FINDING: Release workflow tests invisible to go test ./...
+  SEVERITY: high
+  FILES: .github/workflows/release_test.go:1
+  DESCRIPTION: Go's ./... pattern does not descend into directories starting with a dot. The release workflow tests in .github/workflows/release_test.go are never executed by "go test ./..." -- they require an explicit "go test ./.github/workflows/" invocation. Verified empirically: "go list ./..." omits the package entirely. This means the 14 test cases validating the release workflow (tag patterns, permissions, goreleaser configuration, checkout depth) will silently rot. Any developer or CI pipeline using the standard Go test command will not know these tests exist or that they are failing. The tests contain a non-trivial 80-line GitHub Actions glob pattern matcher whose correctness cannot be validated through normal test sweeps.
+  RECOMMENDATION: Move the test file from .github/workflows/release_test.go to a visible package such as scripts/ or a new top-level ci/ directory that go test ./... discovers. The test only needs os.ReadFile access to .github/workflows/release.yml (which it already resolves via testutil.FindRepoRoot), so it has no dependency on its current location. Alternatively, if keeping tests co-located with their subject files is preferred, add a Makefile target or CI step that explicitly runs "go test ./.github/workflows/" alongside the standard test sweep.
+SUMMARY: The only architectural issue is that release workflow tests live in a dot-prefixed directory (.github/workflows/) which Go's ./... glob excludes, making them invisible to the standard test command and prone to silent rot.
