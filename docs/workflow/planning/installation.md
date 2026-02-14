@@ -109,7 +109,7 @@ status: approved
 #### Tasks
 | ID | Name | Edge Cases | Status |
 |----|------|------------|--------|
-| installation-4-1 | Move release workflow tests to a go-test-discoverable location | — | authored |
+| installation-4-1 | Move release workflow tests to a go-test-discoverable location | — | completed |
 | installation-4-2 | Extract loadScript helper in install_test.go | — | authored |
 
 ---

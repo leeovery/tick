@@ -1,4 +1,4 @@
-package workflows_test
+package scripts_test
 
 import (
 	"os"
@@ -264,12 +264,12 @@ func assertTagMatches(t *testing.T, patterns []string, tag string, shouldMatch b
 	excluded := false
 	for _, p := range patterns {
 		if len(p) > 0 && p[0] == '!' {
-			// Negative pattern — excludes matching tags.
+			// Negative pattern -- excludes matching tags.
 			if matchesGitHubActionsPattern(p[1:], tag) {
 				excluded = true
 			}
 		} else {
-			// Positive pattern — includes matching tags.
+			// Positive pattern -- includes matching tags.
 			if matchesGitHubActionsPattern(p, tag) {
 				included = true
 			}
