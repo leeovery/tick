@@ -1,7 +1,6 @@
 package scripts_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -102,42 +101,6 @@ func extractInstallScriptFilename(t *testing.T, root, version, goos, arch string
 	return result
 }
 
-// extractHomebrewFilename parses the Homebrew formula and returns the asset
-// filename for a given version, os, and arch.
-func extractHomebrewFilename(t *testing.T, root, version, goos, arch string) string {
-	t.Helper()
-
-	data, err := os.ReadFile(filepath.Join(root, "homebrew-tap", "Formula", "tick.rb"))
-	if err != nil {
-		t.Fatalf("cannot read tick.rb: %v", err)
-	}
-
-	content := string(data)
-
-	// Extract all URL patterns. The formula uses patterns like:
-	//   url "https://github.com/.../tick_#{version}_darwin_arm64.tar.gz"
-	// We need to find the one matching our os/arch.
-	urlRe := regexp.MustCompile(`url\s+"[^"]*/([\w#\{\}_]+\.tar\.gz)"`)
-	allMatches := urlRe.FindAllStringSubmatch(content, -1)
-	if len(allMatches) == 0 {
-		t.Fatal("cannot find URL patterns in tick.rb")
-	}
-
-	// Look for a URL that matches our os and arch.
-	target := fmt.Sprintf("_%s_%s.tar.gz", goos, arch)
-	for _, m := range allMatches {
-		if strings.HasSuffix(m[1], target) {
-			// Substitute #{version} with our version.
-			filename := m[1]
-			filename = strings.ReplaceAll(filename, "#{version}", version)
-			return filename
-		}
-	}
-
-	t.Fatalf("no Homebrew URL found for %s/%s", goos, arch)
-	return ""
-}
-
 func TestAssetNamingContract(t *testing.T) {
 	root := testutil.FindRepoRoot(t)
 
@@ -167,17 +130,6 @@ func TestAssetNamingContract(t *testing.T) {
 			}
 			if goreleaser != installScript {
 				t.Errorf("goreleaser (%q) and install script (%q) disagree on filename", goreleaser, installScript)
-			}
-
-			// Homebrew only has darwin URLs, so only check for darwin tuples.
-			if tt.goos == "darwin" {
-				homebrew := extractHomebrewFilename(t, root, tt.version, tt.goos, tt.arch)
-				if homebrew != tt.want {
-					t.Errorf("homebrew produces %q, want %q", homebrew, tt.want)
-				}
-				if goreleaser != homebrew {
-					t.Errorf("goreleaser (%q) and homebrew (%q) disagree on filename", goreleaser, homebrew)
-				}
 			}
 		})
 	}

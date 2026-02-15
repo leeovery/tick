@@ -37,6 +37,8 @@ type step struct {
 	Uses string            `yaml:"uses"`
 	With map[string]string `yaml:"with"`
 	Env  map[string]string `yaml:"env"`
+	Run  string            `yaml:"run"`
+	ID   string            `yaml:"id"`
 }
 
 // loadWorkflow parses the release.yml workflow file and returns the parsed structure.
@@ -248,6 +250,66 @@ func findStepByUses(w workflow, usesSubstring string) (step, bool) {
 		}
 	}
 	return step{}, false
+}
+
+// findStepByName searches all jobs for a step whose Name contains nameSubstring.
+func findStepByName(w workflow, nameSubstring string) (step, bool) {
+	for _, j := range w.Jobs {
+		for _, s := range j.Steps {
+			if strings.Contains(s.Name, nameSubstring) {
+				return s, true
+			}
+		}
+	}
+	return step{}, false
+}
+
+func TestReleaseWorkflowHomebrewDispatch(t *testing.T) {
+	w := loadWorkflow(t)
+
+	t.Run("workflow has checksum extraction step", func(t *testing.T) {
+		s, ok := findStepByName(w, "Extract checksums")
+		if !ok {
+			t.Fatal("expected an 'Extract checksums' step in the workflow")
+		}
+		if s.ID != "checksums" {
+			t.Errorf("expected checksum step id 'checksums', got %q", s.ID)
+		}
+		if !strings.Contains(s.Run, "checksums.txt") {
+			t.Error("checksum step must reference checksums.txt")
+		}
+		if !strings.Contains(s.Run, "darwin_arm64") {
+			t.Error("checksum step must extract darwin_arm64 hash")
+		}
+		if !strings.Contains(s.Run, "darwin_amd64") {
+			t.Error("checksum step must extract darwin_amd64 hash")
+		}
+	})
+
+	t.Run("workflow has homebrew dispatch step", func(t *testing.T) {
+		s, ok := findStepByName(w, "Dispatch to homebrew-tools")
+		if !ok {
+			t.Fatal("expected a 'Dispatch to homebrew-tools' step in the workflow")
+		}
+		if !strings.Contains(s.Run, "homebrew-tools") {
+			t.Error("dispatch step must target homebrew-tools repo")
+		}
+		if !strings.Contains(s.Run, "update-formula") {
+			t.Error("dispatch step must use update-formula event type")
+		}
+		if !strings.Contains(s.Run, `"tool": "tick"`) {
+			t.Error("dispatch step must include tool=tick in payload")
+		}
+		if !strings.Contains(s.Run, "sha256_arm64") {
+			t.Error("dispatch step must include sha256_arm64 in payload")
+		}
+		if !strings.Contains(s.Run, "sha256_amd64") {
+			t.Error("dispatch step must include sha256_amd64 in payload")
+		}
+		if !strings.Contains(s.Run, "CICD_PAT") {
+			t.Error("dispatch step must use CICD_PAT secret")
+		}
+	})
 }
 
 // assertTagMatches checks whether the workflow tag patterns match (or don't match) the given tag.
