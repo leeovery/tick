@@ -178,6 +178,23 @@ func TestMigrateCommand(t *testing.T) {
 		}
 	})
 
+	t.Run("migrate output omits Failures section when all tasks succeed", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		content := `{"id":"b-001","title":"Task A","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-002","title":"Task B","status":"pending","priority":1,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`
+		setupBeadsFixture(t, dir, content)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		// Should NOT contain Failures: section
+		if strings.Contains(stdout, "Failures:") {
+			t.Errorf("stdout should not contain Failures: section when all tasks succeed, got:\n%s", stdout)
+		}
+	})
+
 	t.Run("migrate command exits 1 when provider cannot be read", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
 		// No .beads directory → provider.Tasks() will fail
@@ -481,6 +498,90 @@ func TestMigratePendingOnly(t *testing.T) {
 		}
 	})
 }
+
+// stubProvider is a test Provider that returns preconfigured tasks.
+type stubProvider struct {
+	name  string
+	tasks []migrate.MigratedTask
+	err   error
+}
+
+func (s *stubProvider) Name() string                           { return s.name }
+func (s *stubProvider) Tasks() ([]migrate.MigratedTask, error) { return s.tasks, s.err }
+
+func TestRunMigrateFailureDetail(t *testing.T) {
+	t.Run("output includes Failures detail section when tasks fail validation", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		provider := &stubProvider{
+			name: "test",
+			tasks: []migrate.MigratedTask{
+				{Title: "Good task", Status: "open"},
+				{Title: "", Status: "open"},                                   // empty title — will fail validation
+				{Title: "Bad priority", Status: "open", Priority: intPtr(99)}, // invalid priority
+			},
+		}
+
+		var buf bytes.Buffer
+		err := RunMigrate(dir, provider, true, false, &buf)
+
+		if err != nil {
+			t.Fatalf("RunMigrate returned error: %v", err)
+		}
+
+		stdout := buf.String()
+
+		// Should contain cross-mark lines for failed tasks
+		if !strings.Contains(stdout, "\u2717") {
+			t.Errorf("stdout missing cross-mark for failed task, got:\n%s", stdout)
+		}
+		// Should contain Failures: detail section
+		if !strings.Contains(stdout, "Failures:\n") {
+			t.Errorf("stdout missing Failures: detail section, got:\n%s", stdout)
+		}
+		// Should contain per-task error messages in the failures section
+		if !strings.Contains(stdout, "title is required") {
+			t.Errorf("stdout missing title validation error in failures section, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "priority must be") {
+			t.Errorf("stdout missing priority validation error in failures section, got:\n%s", stdout)
+		}
+		// Should show correct summary counts
+		if !strings.Contains(stdout, "Done: 1 imported, 2 failed") {
+			t.Errorf("stdout missing correct summary, got:\n%s", stdout)
+		}
+	})
+
+	t.Run("output omits Failures section when all tasks succeed", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		provider := &stubProvider{
+			name: "test",
+			tasks: []migrate.MigratedTask{
+				{Title: "Task A", Status: "open"},
+				{Title: "Task B", Status: "open"},
+			},
+		}
+
+		var buf bytes.Buffer
+		err := RunMigrate(dir, provider, true, false, &buf)
+
+		if err != nil {
+			t.Fatalf("RunMigrate returned error: %v", err)
+		}
+
+		stdout := buf.String()
+
+		// Should NOT contain Failures: section
+		if strings.Contains(stdout, "Failures:") {
+			t.Errorf("stdout should not contain Failures: section when all tasks succeed, got:\n%s", stdout)
+		}
+		// Should show correct summary
+		if !strings.Contains(stdout, "Done: 2 imported, 0 failed") {
+			t.Errorf("stdout missing correct summary, got:\n%s", stdout)
+		}
+	})
+}
+
+func intPtr(v int) *int { return &v }
 
 // setupBeadsFixture creates a .beads/issues.jsonl file in the given directory.
 func setupBeadsFixture(t *testing.T, dir string, content string) {

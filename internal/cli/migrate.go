@@ -120,17 +120,11 @@ func RunMigrate(dir string, provider migrate.Provider, dryRun bool, pendingOnly 
 
 	engine := migrate.NewEngine(creator, migrate.Options{PendingOnly: pendingOnly})
 
-	// Print header.
-	migrate.WriteHeader(stdout, provider.Name(), dryRun)
-
 	// Run migration.
 	results, runErr := engine.Run(provider)
 
-	// Print results and summary regardless of error (partial results on failure).
-	for _, r := range results {
-		migrate.WriteResult(stdout, r)
-	}
-	migrate.WriteSummary(stdout, results)
+	// Present results regardless of error (partial results on failure).
+	migrate.Present(stdout, provider.Name(), dryRun, results)
 
 	return runErr
 }
