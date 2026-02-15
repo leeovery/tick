@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -55,14 +56,39 @@ func TestWriteResult(t *testing.T) {
 		}
 	})
 
-	t.Run("does not print checkmark for unsuccessful result", func(t *testing.T) {
+	t.Run("prints cross mark and skip reason for failed result", func(t *testing.T) {
 		var buf bytes.Buffer
-		r := Result{Title: "Failed task", Success: false}
+		r := Result{Title: "Broken entry", Success: false, Err: fmt.Errorf("missing title")}
 		WriteResult(&buf, r)
 
 		got := buf.String()
-		if strings.Contains(got, "\u2713") {
-			t.Errorf("expected no checkmark for unsuccessful result, got %q", got)
+		want := "  ✗ Task: Broken entry (skipped: missing title)\n"
+		if got != want {
+			t.Errorf("WriteResult() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("prints checkmark for successful result", func(t *testing.T) {
+		var buf bytes.Buffer
+		r := Result{Title: "Good task", Success: true}
+		WriteResult(&buf, r)
+
+		got := buf.String()
+		want := "  ✓ Task: Good task\n"
+		if got != want {
+			t.Errorf("WriteResult() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("prints (unknown) as title when failed result has empty title", func(t *testing.T) {
+		var buf bytes.Buffer
+		r := Result{Title: "", Success: false, Err: fmt.Errorf("missing title")}
+		WriteResult(&buf, r)
+
+		got := buf.String()
+		want := "  ✗ Task: (unknown) (skipped: missing title)\n"
+		if got != want {
+			t.Errorf("WriteResult() = %q, want %q", got, want)
 		}
 	})
 
@@ -109,6 +135,135 @@ func TestWriteSummary(t *testing.T) {
 		want := "\nDone: 2 imported, 1 failed\n"
 		if got != want {
 			t.Errorf("WriteSummary() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("counts failures correctly in summary line", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "A", Success: true},
+			{Title: "B", Success: false, Err: fmt.Errorf("bad")},
+			{Title: "C", Success: false, Err: fmt.Errorf("bad")},
+			{Title: "D", Success: true},
+		}
+		WriteSummary(&buf, results)
+
+		got := buf.String()
+		want := "\nDone: 2 imported, 2 failed\n"
+		if got != want {
+			t.Errorf("WriteSummary() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("prints Done: 2 imported, 1 failed for mixed results", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "A", Success: true},
+			{Title: "B", Success: true},
+			{Title: "C", Success: false, Err: fmt.Errorf("bad")},
+		}
+		WriteSummary(&buf, results)
+
+		got := buf.String()
+		want := "\nDone: 2 imported, 1 failed\n"
+		if got != want {
+			t.Errorf("WriteSummary() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("prints Done: 0 imported, 3 failed when all tasks fail", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "A", Success: false, Err: fmt.Errorf("bad")},
+			{Title: "B", Success: false, Err: fmt.Errorf("bad")},
+			{Title: "C", Success: false, Err: fmt.Errorf("bad")},
+		}
+		WriteSummary(&buf, results)
+
+		got := buf.String()
+		want := "\nDone: 0 imported, 3 failed\n"
+		if got != want {
+			t.Errorf("WriteSummary() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("prints Done: 3 imported, 0 failed when no failures", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "A", Success: true},
+			{Title: "B", Success: true},
+			{Title: "C", Success: true},
+		}
+		WriteSummary(&buf, results)
+
+		got := buf.String()
+		want := "\nDone: 3 imported, 0 failed\n"
+		if got != want {
+			t.Errorf("WriteSummary() = %q, want %q", got, want)
+		}
+	})
+}
+
+func TestWriteFailures(t *testing.T) {
+	t.Run("prints failure detail section with each failure listed", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "A", Success: true},
+			{Title: "foo", Success: false, Err: fmt.Errorf("Missing required field")},
+			{Title: "bar", Success: false, Err: fmt.Errorf("Invalid date format")},
+		}
+		WriteFailures(&buf, results)
+
+		got := buf.String()
+		want := "\nFailures:\n" +
+			"- Task \"foo\": Missing required field\n" +
+			"- Task \"bar\": Invalid date format\n"
+		if got != want {
+			t.Errorf("WriteFailures() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("prints nothing when there are zero failures", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "A", Success: true},
+			{Title: "B", Success: true},
+		}
+		WriteFailures(&buf, results)
+
+		got := buf.String()
+		if got != "" {
+			t.Errorf("WriteFailures() = %q, want empty string", got)
+		}
+	})
+
+	t.Run("uses (unknown) for failures with empty title", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "", Success: false, Err: fmt.Errorf("missing title")},
+		}
+		WriteFailures(&buf, results)
+
+		got := buf.String()
+		want := "\nFailures:\n" +
+			"- Task \"(unknown)\": missing title\n"
+		if got != want {
+			t.Errorf("WriteFailures() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("preserves special characters in failure reason", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "task", Success: false, Err: fmt.Errorf("field <name> has \"quotes\" & symbols")},
+		}
+		WriteFailures(&buf, results)
+
+		got := buf.String()
+		want := "\nFailures:\n" +
+			"- Task \"task\": field <name> has \"quotes\" & symbols\n"
+		if got != want {
+			t.Errorf("WriteFailures() = %q, want %q", got, want)
 		}
 	})
 }
@@ -200,6 +355,72 @@ func TestPresent(t *testing.T) {
 		// The output should contain the pattern: task line\n\nDone:
 		if !strings.Contains(got, "Task A\n\nDone:") {
 			t.Errorf("expected blank line between task lines and summary, got:\n%s", got)
+		}
+	})
+
+	t.Run("renders full output with failures: header, results, summary, failure detail", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "Implement login flow", Success: true},
+			{Title: "Fix database connection", Success: true},
+			{Title: "Broken entry", Success: false, Err: fmt.Errorf("missing title")},
+		}
+		Present(&buf, "beads", results)
+
+		got := buf.String()
+		want := "Importing from beads...\n" +
+			"  ✓ Task: Implement login flow\n" +
+			"  ✓ Task: Fix database connection\n" +
+			"  ✗ Task: Broken entry (skipped: missing title)\n" +
+			"\n" +
+			"Done: 2 imported, 1 failed\n" +
+			"\n" +
+			"Failures:\n" +
+			"- Task \"Broken entry\": missing title\n"
+		if got != want {
+			t.Errorf("Present() =\n%s\nwant:\n%s", got, want)
+		}
+	})
+
+	t.Run("omits failure detail section when all results are successful", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "Task A", Success: true},
+			{Title: "Task B", Success: true},
+		}
+		Present(&buf, "beads", results)
+
+		got := buf.String()
+		want := "Importing from beads...\n" +
+			"  ✓ Task: Task A\n" +
+			"  ✓ Task: Task B\n" +
+			"\n" +
+			"Done: 2 imported, 0 failed\n"
+		if got != want {
+			t.Errorf("Present() =\n%s\nwant:\n%s", got, want)
+		}
+	})
+
+	t.Run("with all failures shows zero imported and failure detail section", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "foo", Success: false, Err: fmt.Errorf("bad data")},
+			{Title: "bar", Success: false, Err: fmt.Errorf("invalid format")},
+		}
+		Present(&buf, "beads", results)
+
+		got := buf.String()
+		want := "Importing from beads...\n" +
+			"  ✗ Task: foo (skipped: bad data)\n" +
+			"  ✗ Task: bar (skipped: invalid format)\n" +
+			"\n" +
+			"Done: 0 imported, 2 failed\n" +
+			"\n" +
+			"Failures:\n" +
+			"- Task \"foo\": bad data\n" +
+			"- Task \"bar\": invalid format\n"
+		if got != want {
+			t.Errorf("Present() =\n%s\nwant:\n%s", got, want)
 		}
 	})
 }
