@@ -177,6 +177,47 @@ func TestHelp(t *testing.T) {
 		}
 	})
 
+	t.Run("tick help --all shows all commands with flags", func(t *testing.T) {
+		stdout, _, code := runHelp(t, "help", "--all")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0", code)
+		}
+		// Every command's usage line should appear.
+		for _, cmd := range commands {
+			if !strings.Contains(stdout, cmd.Usage) {
+				t.Errorf("--all output missing usage for %q", cmd.Name)
+			}
+		}
+		// Spot-check flags from different commands appear.
+		for _, flag := range []string{"--priority", "--status", "--from", "--dry-run"} {
+			if !strings.Contains(stdout, flag) {
+				t.Errorf("--all output missing flag %q", flag)
+			}
+		}
+	})
+
+	t.Run("tick help --all includes global flags", func(t *testing.T) {
+		stdout, _, code := runHelp(t, "help", "--all")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0", code)
+		}
+		for _, flag := range []string{"--quiet", "--verbose", "--toon", "--pretty", "--json", "--help"} {
+			if !strings.Contains(stdout, flag) {
+				t.Errorf("--all output missing global flag %q", flag)
+			}
+		}
+	})
+
+	t.Run("tick help --all is more compact than concatenated per-command help", func(t *testing.T) {
+		allOut, _, _ := runHelp(t, "help", "--all")
+		// --all should not contain the verbose "Usage:" prefix per command
+		// that printCommandHelp uses, instead it uses the bare usage line.
+		if strings.Contains(allOut, "Usage: tick") {
+			// The top-level "Usage:" header should not appear in --all output.
+			t.Error("--all should use compact format without 'Usage:' prefix")
+		}
+	})
+
 	t.Run("help output goes to stdout not stderr", func(t *testing.T) {
 		_, stderr, code := runHelp(t, "help")
 		if code != 0 {

@@ -199,6 +199,28 @@ func printTopLevelHelp(w io.Writer) {
 	fmt.Fprintln(w, "  --json          Force JSON output format")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run 'tick help <command>' for detailed help on a command.")
+	fmt.Fprintln(w, "Run 'tick help --all' for complete reference of all commands and flags.")
+}
+
+// printAllHelp writes compact, concatenated help for every command to w.
+// Designed for AI agents to discover the full CLI surface in one call.
+func printAllHelp(w io.Writer) {
+	fmt.Fprintln(w, "Global flags: --help/-h --quiet/-q --verbose/-v --toon --pretty --json")
+	fmt.Fprintln(w)
+	for i, cmd := range commands {
+		fmt.Fprintln(w, cmd.Usage)
+		fmt.Fprintf(w, "  %s\n", cmd.Summary)
+		for _, f := range cmd.Flags {
+			label := f.Name
+			if f.Arg != "" {
+				label += " " + f.Arg
+			}
+			fmt.Fprintf(w, "  %-24s%s\n", label, f.Desc)
+		}
+		if i < len(commands)-1 {
+			fmt.Fprintln(w)
+		}
+	}
 }
 
 // printCommandHelp writes detailed help for a single command to w.

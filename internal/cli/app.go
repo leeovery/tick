@@ -213,6 +213,10 @@ func (a *App) handleHelp(args []string) int {
 		printTopLevelHelp(a.Stdout)
 		return 0
 	}
+	if args[0] == "--all" {
+		printAllHelp(a.Stdout)
+		return 0
+	}
 	cmd := findCommand(args[0])
 	if cmd == nil {
 		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", args[0])
