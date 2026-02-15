@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/leeovery/tick/internal/task"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func TestCacheSchema(t *testing.T) {

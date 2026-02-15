@@ -927,7 +927,7 @@ func TestStoreCacheFreshnessRecovery(t *testing.T) {
 		// We use the store's own cache DB connection so the corruption
 		// is visible on the next ensureFresh call.
 		cachePath := filepath.Join(tickDir, "cache.db")
-		corruptDB, cErr := sql.Open("sqlite3", cachePath)
+		corruptDB, cErr := sql.Open("sqlite", cachePath)
 		if cErr != nil {
 			t.Fatalf("failed to open cache for corruption: %v", cErr)
 		}

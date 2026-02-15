@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/leeovery/tick/internal/task"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 const schemaSQL = `
@@ -47,7 +47,7 @@ type Cache struct {
 
 // OpenCache opens or creates a SQLite cache at the given path and ensures the schema exists.
 func OpenCache(path string) (*Cache, error) {
-	db, err := sql.Open("sqlite3", path)
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open cache database: %w", err)
 	}

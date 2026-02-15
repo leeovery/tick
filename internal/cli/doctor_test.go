@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // setupDoctorProject creates a .tick/ directory with an empty tasks.jsonl
@@ -55,7 +55,7 @@ func setupDoctorProjectStale(t *testing.T) (string, string) {
 func createDoctorCache(t *testing.T, tickDir string, hash string) {
 	t.Helper()
 	cachePath := filepath.Join(tickDir, "cache.db")
-	db, err := sql.Open("sqlite3", cachePath)
+	db, err := sql.Open("sqlite", cachePath)
 	if err != nil {
 		t.Fatalf("failed to open cache.db: %v", err)
 	}
