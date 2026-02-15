@@ -229,6 +229,17 @@ Force a full SQLite cache rebuild from the JSONL source file, bypassing the fres
 tick rebuild
 ```
 
+### `help`
+
+Show usage information. With no argument, lists all commands and global flags. With a command name, shows detailed help including flags.
+
+```bash
+tick help                           # list all commands
+tick help create                    # detailed help for create
+tick create --help                  # same as tick help create
+tick -h                             # same as tick help
+```
+
 ### `migrate`
 
 Import tasks from external tools.
@@ -353,6 +364,7 @@ Add to `.gitignore`:
 ## Global Flags
 
 ```
+--help, -h        Show help (tick --help or tick <command> --help)
 --quiet, -q       Minimal output (IDs only where applicable)
 --verbose, -v     Debug logging to stderr
 --toon            Force TOON format
