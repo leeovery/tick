@@ -2,9 +2,10 @@
 
 # Tick
 
-**Task management for AI-assisted development**
+**Task management for agentic engineering**
 
-A CLI that gives AI agents deterministic, token-efficient task tracking — without the complexity of full project management tools.
+A CLI that gives AI agents deterministic, token-efficient task tracking.
+<br>Without the complexity of full project management tools.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25+-00ADD8.svg)](https://go.dev)
@@ -15,36 +16,9 @@ A CLI that gives AI agents deterministic, token-efficient task tracking — with
 
 ---
 
-When called by an agent or piped, output defaults to [TOON](https://github.com/toon-format/spec) — a format that uses 30-60% fewer tokens than JSON. In a terminal, it switches to a clean human-readable table. JSON is also available.
+Tick is a lightweight CLI for tracking tasks, dependencies, and status transitions inside your project. It stores everything in a plain JSONL file (human-readable, git-friendly) with a SQLite cache for fast queries. Run `tick init`, and you're set.
 
-<table>
-<tr>
-<td>
-
-**Agent / pipe** (TOON — default)
-```
-$ tick list
-tasks[3]{id,title,status,priority}:
-  tick-a1b2,Auth middleware,in_progress,1
-  tick-f3e4,Write tests,open,2
-  tick-d5c6,Update docs,open,3
-```
-
-</td>
-<td>
-
-**Terminal** (Pretty — auto-detected)
-```
-$ tick list
-ID          STATUS        PRI   TITLE
-tick-a1b2   in_progress   1     Auth middleware
-tick-f3e4   open          2     Write tests
-tick-d5c6   open          3     Update docs
-```
-
-</td>
-</tr>
-</table>
+It's built to be used by AI agents as much as by humans. Output auto-switches between a token-efficient format for agents and clean tables for terminals, so the same commands work in both contexts.
 
 ## Why Tick?
 
@@ -176,6 +150,35 @@ Tick auto-detects the context and picks the right format:
 |---|---|---|
 | Terminal (TTY) | `--pretty` | `--toon`, `--json` |
 | Pipe / agent | `--toon` | `--pretty`, `--json` |
+
+<table>
+<tr>
+<td>
+
+**Agent / pipe** (TOON)
+```
+$ tick list
+tasks[3]{id,title,status,priority}:
+  tick-a1b2,Auth middleware,in_progress,1
+  tick-f3e4,Write tests,open,2
+  tick-d5c6,Update docs,open,3
+```
+
+</td>
+<td>
+
+**Terminal** (Pretty)
+```
+$ tick list
+ID          STATUS        PRI   TITLE
+tick-a1b2   in_progress   1     Auth middleware
+tick-f3e4   open          2     Write tests
+tick-d5c6   open          3     Update docs
+```
+
+</td>
+</tr>
+</table>
 
 ### TOON (Token-Oriented Object Notation)
 
