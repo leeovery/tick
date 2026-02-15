@@ -2,11 +2,13 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/leeovery/tick/internal/migrate"
 	"github.com/leeovery/tick/internal/migrate/beads"
 	"github.com/leeovery/tick/internal/task"
 )
@@ -28,14 +30,57 @@ func TestNewMigrateProvider(t *testing.T) {
 		}
 	})
 
-	t.Run("registry returns error for unknown provider name", func(t *testing.T) {
+	t.Run("NewProvider returns UnknownProviderError for unrecognized name", func(t *testing.T) {
 		_, err := newMigrateProvider("jira", "/tmp/claude/fake")
 		if err == nil {
 			t.Fatal("expected error for unknown provider, got nil")
 		}
-		want := `unknown provider "jira"`
-		if err.Error() != want {
-			t.Errorf("error = %q, want %q", err.Error(), want)
+		var upe *migrate.UnknownProviderError
+		if !errors.As(err, &upe) {
+			t.Fatalf("expected *migrate.UnknownProviderError, got %T: %v", err, err)
+		}
+		if upe.Name != "jira" {
+			t.Errorf("UnknownProviderError.Name = %q, want %q", upe.Name, "jira")
+		}
+		if len(upe.Available) == 0 {
+			t.Fatal("UnknownProviderError.Available should not be empty")
+		}
+	})
+
+	t.Run("NewProvider still returns BeadsProvider for name beads (regression)", func(t *testing.T) {
+		provider, err := newMigrateProvider("beads", "/tmp/claude/fake")
+		if err != nil {
+			t.Fatalf("newMigrateProvider(beads) returned error: %v", err)
+		}
+		if provider == nil {
+			t.Fatal("expected non-nil provider")
+		}
+		if provider.Name() != "beads" {
+			t.Errorf("provider.Name() = %q, want %q", provider.Name(), "beads")
+		}
+	})
+
+	t.Run("AvailableProviders returns sorted list of registered provider names", func(t *testing.T) {
+		providers := availableProviders()
+		if len(providers) == 0 {
+			t.Fatal("availableProviders() returned empty list")
+		}
+		// Must contain "beads"
+		found := false
+		for _, p := range providers {
+			if p == "beads" {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("availableProviders() = %v, want to contain %q", providers, "beads")
+		}
+		// Must be sorted
+		for i := 1; i < len(providers); i++ {
+			if providers[i] < providers[i-1] {
+				t.Errorf("availableProviders() not sorted: %v", providers)
+				break
+			}
 		}
 	})
 }
@@ -80,16 +125,24 @@ func TestMigrateCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("migrate command with unknown provider returns error", func(t *testing.T) {
+	t.Run("CLI prints Error Unknown provider followed by available providers to stderr", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
-		_, stderr, exitCode := runMigrate(t, dir, "--from", "jira")
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "xyz")
 
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
-		want := `unknown provider "jira"`
-		if !strings.Contains(stderr, want) {
-			t.Errorf("stderr = %q, want to contain %q", stderr, want)
+		wantFirst := "Error: Unknown provider \"xyz\""
+		if !strings.Contains(stderr, wantFirst) {
+			t.Errorf("stderr missing first line, got:\n%s", stderr)
+		}
+		wantHeader := "Available providers:"
+		if !strings.Contains(stderr, wantHeader) {
+			t.Errorf("stderr missing Available providers header, got:\n%s", stderr)
+		}
+		wantProvider := "  - beads"
+		if !strings.Contains(stderr, wantProvider) {
+			t.Errorf("stderr missing provider listing, got:\n%s", stderr)
 		}
 	})
 

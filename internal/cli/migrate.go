@@ -3,21 +3,37 @@ package cli
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/leeovery/tick/internal/migrate"
 	"github.com/leeovery/tick/internal/migrate/beads"
 )
 
+// providerNames lists all registered provider names. Kept in sync with the
+// switch in newMigrateProvider.
+var providerNames = []string{"beads"}
+
 // newMigrateProvider resolves a provider by name, using baseDir for file-based providers.
-// Returns an error if the name is not recognized.
+// Returns *migrate.UnknownProviderError if the name is not recognized.
 func newMigrateProvider(name string, baseDir string) (migrate.Provider, error) {
 	switch name {
 	case "beads":
 		return beads.NewBeadsProvider(baseDir), nil
 	default:
-		return nil, fmt.Errorf("unknown provider %q", name)
+		return nil, &migrate.UnknownProviderError{
+			Name:      name,
+			Available: availableProviders(),
+		}
 	}
+}
+
+// availableProviders returns a sorted list of registered provider names.
+func availableProviders() []string {
+	sorted := make([]string, len(providerNames))
+	copy(sorted, providerNames)
+	sort.Strings(sorted)
+	return sorted
 }
 
 // migrateFlags holds parsed migrate subcommand flags.
