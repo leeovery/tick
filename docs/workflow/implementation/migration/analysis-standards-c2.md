@@ -1,0 +1,15 @@
+AGENT: standards
+FINDINGS:
+- FINDING: Beads provider cannot distinguish absent priority from priority zero
+  SEVERITY: medium
+  FILES: /Users/leeovery/Code/tick/internal/migrate/beads/beads.go:29, /Users/leeovery/Code/tick/internal/migrate/beads/beads.go:119,129
+  DESCRIPTION: The `beadsIssue` struct declares `Priority int` (line 29). When a beads JSON line omits the `priority` field entirely, Go's zero value (0) is used. `mapToMigratedTask` then sets `Priority: &priority` unconditionally (line 129), telling the engine "a priority was explicitly provided as 0." The `StoreTaskCreator` only applies tick's default priority (2) when `mt.Priority == nil`, so omitted-priority beads tasks get priority 0 instead of tick's default 2. The spec says "Missing data uses sensible defaults" and the task plan (migration-1-2) says "Map directly (0->0, 1->1, 2->2, 3->3)" which covers present values but not the absent case.
+  RECOMMENDATION: Change `beadsIssue.Priority` to `*int` (`Priority *int \x60json:"priority"\x60`). In `mapToMigratedTask`, only set `MigratedTask.Priority` when the pointer is non-nil, leaving it nil otherwise so the engine applies tick's default priority of 2.
+
+- FINDING: Malformed JSON sentinel reports misleading error reason to user
+  SEVERITY: medium
+  FILES: /Users/leeovery/Code/tick/internal/migrate/beads/beads.go:94-101
+  DESCRIPTION: When a beads JSONL line contains malformed JSON, the provider creates a sentinel `MigratedTask` with `Status: task.Status("(invalid)")` to force a validation failure in the engine. The user sees the error as `invalid status "(invalid)": must be open, in_progress, done, or cancelled` rather than the actual problem (malformed JSON). The spec's error handling says "Log the failure with reason" -- the reported reason should reflect the actual failure. While the title "(malformed entry)" hints at the real cause, the error detail in both the inline skip message and the Failures section is misleading.
+  RECOMMENDATION: Instead of using an artificial invalid status to trigger a validation error, include the actual JSON parse error in the result. One approach: add an `Err` field to `MigratedTask` that the engine checks before validation, or have the provider return the parse error directly as part of the sentinel (e.g., set `Title` to "(malformed entry)" and pass it through with a valid but empty status, then handle the actual error reporting at the engine level). The simplest fix: give the sentinel a valid status so it passes status validation, and make its title empty so the engine's title validation fails with "title is required" -- but change the title fallback to "(malformed entry)" for display. Alternatively, extend the provider return type to include per-task errors.
+
+SUMMARY: Two medium-severity findings. The beads provider's `int` priority field conflates absent values with zero, causing omitted priorities to use 0 instead of tick's default 2. The malformed-JSON sentinel approach surfaces failures as required but reports a misleading error reason (invalid status) instead of the actual cause (parse failure).

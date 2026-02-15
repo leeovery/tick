@@ -12,8 +12,8 @@ external_dependencies:
     state: resolved
     task_id: tick-core-1-4
 planning:
-  phase: 3
-  task: 4
+  phase: 4
+  task: 5
 ---
 
 # Plan: Migration
@@ -101,6 +101,18 @@ status: approved
 | migration-3-2 | Surface beads provider parse/validation errors as failed results instead of silently dropping | — | authored |
 | migration-3-3 | Consolidate inconsistent empty-title fallback strings | — | authored |
 | migration-3-4 | Use task.Status type and constants instead of raw status strings | — | authored |
+
+---
+
+### Phase 4: Analysis (cycle 2 findings)
+status: approved
+
+**Goal**: Address findings from implementation analysis cycle 2.
+
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| migration-4-1 | Fix beads provider to distinguish absent priority from priority zero | — | authored |
 
 ---
 
