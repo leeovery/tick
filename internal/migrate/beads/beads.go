@@ -12,13 +12,14 @@ import (
 	"time"
 
 	"github.com/leeovery/tick/internal/migrate"
+	"github.com/leeovery/tick/internal/task"
 )
 
 // statusMap translates beads status values to tick equivalents.
-var statusMap = map[string]string{
-	"pending":     "open",
-	"in_progress": "in_progress",
-	"closed":      "done",
+var statusMap = map[string]task.Status{
+	"pending":     task.StatusOpen,
+	"in_progress": task.StatusInProgress,
+	"closed":      task.StatusDone,
 }
 
 // beadsIssue is the intermediate struct for JSON unmarshalling of a single
@@ -95,7 +96,7 @@ func (p *BeadsProvider) Tasks() ([]migrate.MigratedTask, error) {
 			// makes the failure visible to the user.
 			tasks = append(tasks, migrate.MigratedTask{
 				Title:  "(malformed entry)",
-				Status: "(invalid)",
+				Status: task.Status("(invalid)"),
 			})
 			continue
 		}

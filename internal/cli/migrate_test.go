@@ -550,9 +550,9 @@ func TestRunMigrateFailureDetail(t *testing.T) {
 		provider := &stubProvider{
 			name: "test",
 			tasks: []migrate.MigratedTask{
-				{Title: "Good task", Status: "open"},
-				{Title: "", Status: "open"},                                   // empty title — will fail validation
-				{Title: "Bad priority", Status: "open", Priority: intPtr(99)}, // invalid priority
+				{Title: "Good task", Status: task.StatusOpen},
+				{Title: "", Status: task.StatusOpen},                                   // empty title — will fail validation
+				{Title: "Bad priority", Status: task.StatusOpen, Priority: intPtr(99)}, // invalid priority
 			},
 		}
 
@@ -591,8 +591,8 @@ func TestRunMigrateFailureDetail(t *testing.T) {
 		provider := &stubProvider{
 			name: "test",
 			tasks: []migrate.MigratedTask{
-				{Title: "Task A", Status: "open"},
-				{Title: "Task B", Status: "open"},
+				{Title: "Task A", Status: task.StatusOpen},
+				{Title: "Task B", Status: task.StatusOpen},
 			},
 		}
 

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/leeovery/tick/internal/task"
 )
 
 // mockTaskCreator is a test double satisfying TaskCreator.
@@ -34,8 +36,8 @@ func (m *mockTaskCreator) CreateTask(t MigratedTask) (string, error) {
 func TestFilterPending(t *testing.T) {
 	t.Run("filterPending removes tasks with status done", func(t *testing.T) {
 		tasks := []MigratedTask{
-			{Title: "Done task", Status: "done"},
-			{Title: "Open task", Status: "open"},
+			{Title: "Done task", Status: task.StatusDone},
+			{Title: "Open task", Status: task.StatusOpen},
 		}
 		got := filterPending(tasks)
 		if len(got) != 1 {
@@ -48,8 +50,8 @@ func TestFilterPending(t *testing.T) {
 
 	t.Run("filterPending removes tasks with status cancelled", func(t *testing.T) {
 		tasks := []MigratedTask{
-			{Title: "Cancelled task", Status: "cancelled"},
-			{Title: "Open task", Status: "open"},
+			{Title: "Cancelled task", Status: task.StatusCancelled},
+			{Title: "Open task", Status: task.StatusOpen},
 		}
 		got := filterPending(tasks)
 		if len(got) != 1 {
@@ -62,7 +64,7 @@ func TestFilterPending(t *testing.T) {
 
 	t.Run("filterPending retains tasks with status open", func(t *testing.T) {
 		tasks := []MigratedTask{
-			{Title: "Open task", Status: "open"},
+			{Title: "Open task", Status: task.StatusOpen},
 		}
 		got := filterPending(tasks)
 		if len(got) != 1 {
@@ -75,7 +77,7 @@ func TestFilterPending(t *testing.T) {
 
 	t.Run("filterPending retains tasks with status in_progress", func(t *testing.T) {
 		tasks := []MigratedTask{
-			{Title: "In progress task", Status: "in_progress"},
+			{Title: "In progress task", Status: task.StatusInProgress},
 		}
 		got := filterPending(tasks)
 		if len(got) != 1 {
@@ -88,7 +90,7 @@ func TestFilterPending(t *testing.T) {
 
 	t.Run("filterPending retains tasks with empty status", func(t *testing.T) {
 		tasks := []MigratedTask{
-			{Title: "No status task", Status: ""},
+			{Title: "No status task"},
 		}
 		got := filterPending(tasks)
 		if len(got) != 1 {
@@ -101,8 +103,8 @@ func TestFilterPending(t *testing.T) {
 
 	t.Run("filterPending returns empty slice when all tasks are completed", func(t *testing.T) {
 		tasks := []MigratedTask{
-			{Title: "Done", Status: "done"},
-			{Title: "Cancelled", Status: "cancelled"},
+			{Title: "Done", Status: task.StatusDone},
+			{Title: "Cancelled", Status: task.StatusCancelled},
 		}
 		got := filterPending(tasks)
 		if len(got) != 0 {
@@ -112,9 +114,9 @@ func TestFilterPending(t *testing.T) {
 
 	t.Run("filterPending returns all tasks when none are completed", func(t *testing.T) {
 		tasks := []MigratedTask{
-			{Title: "Open", Status: "open"},
-			{Title: "In progress", Status: "in_progress"},
-			{Title: "Empty status", Status: ""},
+			{Title: "Open", Status: task.StatusOpen},
+			{Title: "In progress", Status: task.StatusInProgress},
+			{Title: "Empty status"},
 		}
 		got := filterPending(tasks)
 		if len(got) != 3 {
@@ -124,11 +126,11 @@ func TestFilterPending(t *testing.T) {
 
 	t.Run("filterPending with mixed statuses returns only non-completed tasks", func(t *testing.T) {
 		tasks := []MigratedTask{
-			{Title: "Open", Status: "open"},
-			{Title: "Done", Status: "done"},
-			{Title: "In progress", Status: "in_progress"},
-			{Title: "Cancelled", Status: "cancelled"},
-			{Title: "Empty", Status: ""},
+			{Title: "Open", Status: task.StatusOpen},
+			{Title: "Done", Status: task.StatusDone},
+			{Title: "In progress", Status: task.StatusInProgress},
+			{Title: "Cancelled", Status: task.StatusCancelled},
+			{Title: "Empty"},
 		}
 		got := filterPending(tasks)
 		if len(got) != 3 {
@@ -144,11 +146,11 @@ func TestFilterPending(t *testing.T) {
 
 	t.Run("filterPending preserves task order", func(t *testing.T) {
 		tasks := []MigratedTask{
-			{Title: "C", Status: "open"},
-			{Title: "A", Status: "done"},
-			{Title: "B", Status: "in_progress"},
-			{Title: "D", Status: "cancelled"},
-			{Title: "E", Status: ""},
+			{Title: "C", Status: task.StatusOpen},
+			{Title: "A", Status: task.StatusDone},
+			{Title: "B", Status: task.StatusInProgress},
+			{Title: "D", Status: task.StatusCancelled},
+			{Title: "E"},
 		}
 		got := filterPending(tasks)
 		if len(got) != 3 {
@@ -171,7 +173,7 @@ func TestEngineRun(t *testing.T) {
 			name: "test",
 			tasks: []MigratedTask{
 				{Title: "Valid task"},
-				{Title: "Bad status", Status: "completed"}, // invalid status
+				{Title: "Bad status", Status: task.Status("completed")}, // invalid status
 				{Title: "Another valid"},
 			},
 		}
@@ -244,7 +246,7 @@ func TestEngineRun(t *testing.T) {
 			name: "test",
 			tasks: []MigratedTask{
 				{Title: "Good"},
-				{Title: "Bad status", Status: "invalid_status"},
+				{Title: "Bad status", Status: task.Status("invalid_status")},
 			},
 		}
 		creator := &mockTaskCreator{
@@ -399,10 +401,10 @@ func TestEngineRun(t *testing.T) {
 		provider := &mockProvider{
 			name: "test",
 			tasks: []MigratedTask{
-				{Title: "Valid A"},                         // succeeds
-				{Title: "Bad status", Status: "completed"}, // fails validation
-				{Title: "Valid B"},                         // fails insertion
-				{Title: "Valid C"},                         // succeeds
+				{Title: "Valid A"}, // succeeds
+				{Title: "Bad status", Status: task.Status("completed")}, // fails validation
+				{Title: "Valid B"}, // fails insertion
+				{Title: "Valid C"}, // succeeds
 			},
 		}
 		creator := &mockTaskCreator{
@@ -563,12 +565,12 @@ func TestEngineRun(t *testing.T) {
 			t.Fatalf("expected 1 CreateTask call, got %d", len(creator.calls))
 		}
 		// Engine passes task as-is; defaults are the creator's responsibility.
-		task := creator.calls[0]
-		if task.Status != "" {
-			t.Errorf("expected empty status passed to creator, got %q", task.Status)
+		mt := creator.calls[0]
+		if mt.Status != "" {
+			t.Errorf("expected empty status passed to creator, got %q", mt.Status)
 		}
-		if task.Priority != nil {
-			t.Errorf("expected nil priority passed to creator, got %v", task.Priority)
+		if mt.Priority != nil {
+			t.Errorf("expected nil priority passed to creator, got %v", mt.Priority)
 		}
 	})
 
@@ -680,9 +682,9 @@ func TestEngineRun(t *testing.T) {
 		provider := &mockProvider{
 			name: "test",
 			tasks: []MigratedTask{
-				{Title: "Bad status", Status: "invalid"}, // validation failure
-				{Title: "Insert fail"},                   // insertion failure
-				{Title: "Success task"},                  // success
+				{Title: "Bad status", Status: task.Status("invalid")}, // validation failure
+				{Title: "Insert fail"},                                // insertion failure
+				{Title: "Success task"},                               // success
 			},
 		}
 		creator := &mockTaskCreator{
@@ -743,10 +745,10 @@ func TestEnginePendingOnly(t *testing.T) {
 		provider := &mockProvider{
 			name: "test",
 			tasks: []MigratedTask{
-				{Title: "Open task", Status: "open"},
-				{Title: "Done task", Status: "done"},
-				{Title: "In progress task", Status: "in_progress"},
-				{Title: "Cancelled task", Status: "cancelled"},
+				{Title: "Open task", Status: task.StatusOpen},
+				{Title: "Done task", Status: task.StatusDone},
+				{Title: "In progress task", Status: task.StatusInProgress},
+				{Title: "Cancelled task", Status: task.StatusCancelled},
 			},
 		}
 		creator := &mockTaskCreator{
@@ -776,9 +778,9 @@ func TestEnginePendingOnly(t *testing.T) {
 		provider := &mockProvider{
 			name: "test",
 			tasks: []MigratedTask{
-				{Title: "Open task", Status: "open"},
-				{Title: "Done task", Status: "done"},
-				{Title: "Cancelled task", Status: "cancelled"},
+				{Title: "Open task", Status: task.StatusOpen},
+				{Title: "Done task", Status: task.StatusDone},
+				{Title: "Cancelled task", Status: task.StatusCancelled},
 			},
 		}
 		creator := &mockTaskCreator{
@@ -802,8 +804,8 @@ func TestEnginePendingOnly(t *testing.T) {
 		provider := &mockProvider{
 			name: "test",
 			tasks: []MigratedTask{
-				{Title: "Done", Status: "done"},
-				{Title: "Cancelled", Status: "cancelled"},
+				{Title: "Done", Status: task.StatusDone},
+				{Title: "Cancelled", Status: task.StatusCancelled},
 			},
 		}
 		creator := &mockTaskCreator{}
@@ -828,9 +830,9 @@ func TestEnginePendingOnly(t *testing.T) {
 		provider := &mockProvider{
 			name: "test",
 			tasks: []MigratedTask{
-				{Title: "Open", Status: "open"},
-				{Title: "In progress", Status: "in_progress"},
-				{Title: "Empty", Status: ""},
+				{Title: "Open", Status: task.StatusOpen},
+				{Title: "In progress", Status: task.StatusInProgress},
+				{Title: "Empty"},
 			},
 		}
 		creator := &mockTaskCreator{
@@ -857,9 +859,9 @@ func TestEnginePendingOnly(t *testing.T) {
 		provider := &mockProvider{
 			name: "test",
 			tasks: []MigratedTask{
-				{Title: "Valid open", Status: "open"},
-				{Title: "Done task", Status: "done"},
-				{Title: "", Status: "open"}, // invalid: empty title
+				{Title: "Valid open", Status: task.StatusOpen},
+				{Title: "Done task", Status: task.StatusDone},
+				{Title: "", Status: task.StatusOpen}, // invalid: empty title
 			},
 		}
 		creator := &mockTaskCreator{

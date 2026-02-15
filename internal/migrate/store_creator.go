@@ -49,7 +49,7 @@ func (c *StoreTaskCreator) CreateTask(mt MigratedTask) (string, error) {
 		generatedID = id
 
 		// Apply defaults.
-		status := task.Status(mt.Status)
+		status := mt.Status
 		if mt.Status == "" {
 			status = task.StatusOpen
 		}

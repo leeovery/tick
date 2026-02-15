@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/leeovery/tick/internal/task"
 )
 
 func TestMigratedTaskValidation(t *testing.T) {
@@ -22,7 +24,7 @@ func TestMigratedTaskValidation(t *testing.T) {
 		closed := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
 		mt := MigratedTask{
 			Title:       "Implement login flow",
-			Status:      "done",
+			Status:      task.StatusDone,
 			Priority:    &p,
 			Description: "Full markdown description here",
 			Created:     created,
@@ -52,7 +54,7 @@ func TestMigratedTaskValidation(t *testing.T) {
 	})
 
 	t.Run("MigratedTask with invalid status is rejected", func(t *testing.T) {
-		mt := MigratedTask{Title: "Test", Status: "completed"}
+		mt := MigratedTask{Title: "Test", Status: task.Status("completed")}
 		err := mt.Validate()
 		if err == nil {
 			t.Fatal("expected error for invalid status, got nil")
@@ -60,9 +62,9 @@ func TestMigratedTaskValidation(t *testing.T) {
 	})
 
 	t.Run("MigratedTask with valid status values are accepted", func(t *testing.T) {
-		statuses := []string{"open", "in_progress", "done", "cancelled"}
+		statuses := []task.Status{task.StatusOpen, task.StatusInProgress, task.StatusDone, task.StatusCancelled}
 		for _, status := range statuses {
-			t.Run(status, func(t *testing.T) {
+			t.Run(string(status), func(t *testing.T) {
 				mt := MigratedTask{Title: "Test", Status: status}
 				err := mt.Validate()
 				if err != nil {
@@ -73,7 +75,7 @@ func TestMigratedTaskValidation(t *testing.T) {
 	})
 
 	t.Run("MigratedTask with empty status is valid (defaults applied later)", func(t *testing.T) {
-		mt := MigratedTask{Title: "Test", Status: ""}
+		mt := MigratedTask{Title: "Test"}
 		err := mt.Validate()
 		if err != nil {
 			t.Errorf("expected valid for empty status, got error: %v", err)

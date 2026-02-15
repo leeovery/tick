@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/leeovery/tick/internal/migrate"
+	"github.com/leeovery/tick/internal/task"
 )
 
 // helper creates a temp dir with optional .beads/issues.jsonl content.
@@ -68,8 +69,8 @@ func TestBeadsProvider(t *testing.T) {
 		if len(tasks) != 1 {
 			t.Fatalf("expected 1 task, got %d", len(tasks))
 		}
-		if tasks[0].Status != "open" {
-			t.Errorf("Status = %q, want %q", tasks[0].Status, "open")
+		if tasks[0].Status != task.StatusOpen {
+			t.Errorf("Status = %q, want %q", tasks[0].Status, task.StatusOpen)
 		}
 	})
 
@@ -85,8 +86,8 @@ func TestBeadsProvider(t *testing.T) {
 		if len(tasks) != 1 {
 			t.Fatalf("expected 1 task, got %d", len(tasks))
 		}
-		if tasks[0].Status != "in_progress" {
-			t.Errorf("Status = %q, want %q", tasks[0].Status, "in_progress")
+		if tasks[0].Status != task.StatusInProgress {
+			t.Errorf("Status = %q, want %q", tasks[0].Status, task.StatusInProgress)
 		}
 	})
 
@@ -102,8 +103,8 @@ func TestBeadsProvider(t *testing.T) {
 		if len(tasks) != 1 {
 			t.Fatalf("expected 1 task, got %d", len(tasks))
 		}
-		if tasks[0].Status != "done" {
-			t.Errorf("Status = %q, want %q", tasks[0].Status, "done")
+		if tasks[0].Status != task.StatusDone {
+			t.Errorf("Status = %q, want %q", tasks[0].Status, task.StatusDone)
 		}
 	})
 
@@ -120,7 +121,7 @@ func TestBeadsProvider(t *testing.T) {
 			t.Fatalf("expected 1 task, got %d", len(tasks))
 		}
 		if tasks[0].Status != "" {
-			t.Errorf("Status = %q, want %q", tasks[0].Status, "")
+			t.Errorf("Status = %q, want empty", tasks[0].Status)
 		}
 	})
 
@@ -381,18 +382,18 @@ not valid json
 		}
 		// MigratedTask has no fields for id, issue_type, close_reason, created_by, or dependencies.
 		// We verify the kept fields are correct, which implicitly proves discarded fields didn't interfere.
-		task := tasks[0]
-		if task.Title != "Preserved task" {
-			t.Errorf("Title = %q, want %q", task.Title, "Preserved task")
+		tk := tasks[0]
+		if tk.Title != "Preserved task" {
+			t.Errorf("Title = %q, want %q", tk.Title, "Preserved task")
 		}
-		if task.Description != "kept" {
-			t.Errorf("Description = %q, want %q", task.Description, "kept")
+		if tk.Description != "kept" {
+			t.Errorf("Description = %q, want %q", tk.Description, "kept")
 		}
-		if task.Status != "open" {
-			t.Errorf("Status = %q, want %q", task.Status, "open")
+		if tk.Status != task.StatusOpen {
+			t.Errorf("Status = %q, want %q", tk.Status, task.StatusOpen)
 		}
-		if task.Priority == nil || *task.Priority != 1 {
-			t.Errorf("Priority = %v, want 1", task.Priority)
+		if tk.Priority == nil || *tk.Priority != 1 {
+			t.Errorf("Priority = %v, want 1", tk.Priority)
 		}
 	})
 
@@ -472,36 +473,36 @@ func TestMapToMigratedTask(t *testing.T) {
 			Dependencies: []interface{}{"b-002", "b-003"},
 		}
 
-		task := mapToMigratedTask(issue)
+		tk := mapToMigratedTask(issue)
 
-		if task.Title != "Implement login flow" {
-			t.Errorf("Title = %q, want %q", task.Title, "Implement login flow")
+		if tk.Title != "Implement login flow" {
+			t.Errorf("Title = %q, want %q", tk.Title, "Implement login flow")
 		}
-		if task.Description != "Full markdown description" {
-			t.Errorf("Description = %q, want %q", task.Description, "Full markdown description")
+		if tk.Description != "Full markdown description" {
+			t.Errorf("Description = %q, want %q", tk.Description, "Full markdown description")
 		}
-		if task.Status != "done" {
-			t.Errorf("Status = %q, want %q", task.Status, "done")
+		if tk.Status != task.StatusDone {
+			t.Errorf("Status = %q, want %q", tk.Status, task.StatusDone)
 		}
-		if task.Priority == nil || *task.Priority != 3 {
-			t.Errorf("Priority = %v, want 3", task.Priority)
+		if tk.Priority == nil || *tk.Priority != 3 {
+			t.Errorf("Priority = %v, want 3", tk.Priority)
 		}
 
 		wantCreated := time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC)
-		if !task.Created.Equal(wantCreated) {
-			t.Errorf("Created = %v, want %v", task.Created, wantCreated)
+		if !tk.Created.Equal(wantCreated) {
+			t.Errorf("Created = %v, want %v", tk.Created, wantCreated)
 		}
 		wantUpdated := time.Date(2026, 1, 12, 14, 0, 0, 0, time.UTC)
-		if !task.Updated.Equal(wantUpdated) {
-			t.Errorf("Updated = %v, want %v", task.Updated, wantUpdated)
+		if !tk.Updated.Equal(wantUpdated) {
+			t.Errorf("Updated = %v, want %v", tk.Updated, wantUpdated)
 		}
 		wantClosed := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
-		if !task.Closed.Equal(wantClosed) {
-			t.Errorf("Closed = %v, want %v", task.Closed, wantClosed)
+		if !tk.Closed.Equal(wantClosed) {
+			t.Errorf("Closed = %v, want %v", tk.Closed, wantClosed)
 		}
 
 		// Verify it passes validation.
-		if err := task.Validate(); err != nil {
+		if err := tk.Validate(); err != nil {
 			t.Errorf("expected valid MigratedTask, got validation error: %v", err)
 		}
 	})
@@ -514,13 +515,13 @@ func TestMapToMigratedTask(t *testing.T) {
 			Priority: 0,
 		}
 
-		task := mapToMigratedTask(issue)
+		tk := mapToMigratedTask(issue)
 
-		if task.Title != "" {
-			t.Errorf("Title = %q, want empty string", task.Title)
+		if tk.Title != "" {
+			t.Errorf("Title = %q, want empty string", tk.Title)
 		}
-		if task.Status != "open" {
-			t.Errorf("Status = %q, want %q", task.Status, "open")
+		if tk.Status != task.StatusOpen {
+			t.Errorf("Status = %q, want %q", tk.Status, task.StatusOpen)
 		}
 	})
 }

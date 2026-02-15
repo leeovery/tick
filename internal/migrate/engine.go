@@ -1,11 +1,15 @@
 package migrate
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/leeovery/tick/internal/task"
+)
 
 // completedStatuses defines statuses that indicate a task is finished.
-var completedStatuses = map[string]bool{
-	"done":      true,
-	"cancelled": true,
+var completedStatuses = map[task.Status]bool{
+	task.StatusDone:      true,
+	task.StatusCancelled: true,
 }
 
 // Options configures Engine behavior.

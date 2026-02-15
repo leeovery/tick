@@ -44,7 +44,7 @@ func TestStoreTaskCreator(t *testing.T) {
 
 		mt := MigratedTask{
 			Title:       "Implement login flow",
-			Status:      "done",
+			Status:      task.StatusDone,
 			Priority:    &p,
 			Description: "Full description here",
 			Created:     created,

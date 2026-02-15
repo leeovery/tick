@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/leeovery/tick/internal/task"
 )
 
 // validStatuses defines the tick status values a migrated task may use.
-var validStatuses = map[string]bool{
-	"open":        true,
-	"in_progress": true,
-	"done":        true,
-	"cancelled":   true,
+var validStatuses = map[task.Status]bool{
+	task.StatusOpen:       true,
+	task.StatusInProgress: true,
+	task.StatusDone:       true,
+	task.StatusCancelled:  true,
 }
 
 // FallbackTitle is the display title used when a task has no title.
@@ -27,7 +29,7 @@ const (
 // Title is the only required field; all others use defaults when absent.
 type MigratedTask struct {
 	Title       string
-	Status      string
+	Status      task.Status
 	Priority    *int // nil means "not provided"; defaults applied at insertion time
 	Description string
 	Created     time.Time
