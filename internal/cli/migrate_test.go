@@ -311,6 +311,41 @@ func TestMigrateCommand(t *testing.T) {
 			t.Error("expected error message on stderr")
 		}
 	})
+
+	t.Run("migrate shows failures for invalid entries from beads provider", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		content := `{"id":"b-001","title":"Good task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-002","title":"","status":"pending","priority":0}
+not valid json at all
+{"id":"b-003","title":"Bad priority task","status":"pending","priority":99}`
+		setupBeadsFixture(t, dir, content)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		// Should show 1 imported, 3 failed
+		if !strings.Contains(stdout, "Done: 1 imported, 3 failed") {
+			t.Errorf("expected 1 imported, 3 failed in summary, got:\n%s", stdout)
+		}
+		// Should contain Failures: section
+		if !strings.Contains(stdout, "Failures:") {
+			t.Errorf("expected Failures: section in output, got:\n%s", stdout)
+		}
+		// Should contain title validation error for empty title
+		if !strings.Contains(stdout, "title is required") {
+			t.Errorf("expected title validation error in output, got:\n%s", stdout)
+		}
+		// Should contain priority validation error
+		if !strings.Contains(stdout, "priority must be") {
+			t.Errorf("expected priority validation error in output, got:\n%s", stdout)
+		}
+		// Should contain the malformed entry sentinel
+		if !strings.Contains(stdout, "(malformed entry)") {
+			t.Errorf("expected (malformed entry) in output, got:\n%s", stdout)
+		}
+	})
 }
 
 func TestMigrateDryRun(t *testing.T) {

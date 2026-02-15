@@ -239,7 +239,7 @@ func TestBeadsProvider(t *testing.T) {
 		}
 	})
 
-	t.Run("Tasks skips malformed JSON lines and returns valid tasks", func(t *testing.T) {
+	t.Run("Tasks returns malformed JSON lines as sentinel MigratedTask entries", func(t *testing.T) {
 		content := `{"id":"b-001","title":"Good task","status":"pending","priority":0}
 not valid json at all
 {"id":"b-002","title":"Another good task","status":"closed","priority":1}`
@@ -250,18 +250,21 @@ not valid json at all
 		if err != nil {
 			t.Fatalf("Tasks() returned error: %v", err)
 		}
-		if len(tasks) != 2 {
-			t.Fatalf("expected 2 tasks (skipping malformed), got %d", len(tasks))
+		if len(tasks) != 3 {
+			t.Fatalf("expected 3 tasks (including malformed entry), got %d", len(tasks))
 		}
 		if tasks[0].Title != "Good task" {
 			t.Errorf("tasks[0].Title = %q, want %q", tasks[0].Title, "Good task")
 		}
-		if tasks[1].Title != "Another good task" {
-			t.Errorf("tasks[1].Title = %q, want %q", tasks[1].Title, "Another good task")
+		if tasks[1].Title != "(malformed entry)" {
+			t.Errorf("tasks[1].Title = %q, want %q", tasks[1].Title, "(malformed entry)")
+		}
+		if tasks[2].Title != "Another good task" {
+			t.Errorf("tasks[2].Title = %q, want %q", tasks[2].Title, "Another good task")
 		}
 	})
 
-	t.Run("Tasks skips lines with empty title and returns valid tasks", func(t *testing.T) {
+	t.Run("Tasks returns entries with empty title for engine validation", func(t *testing.T) {
 		content := `{"id":"b-001","title":"","status":"pending","priority":0}
 {"id":"b-002","title":"Valid task","status":"pending","priority":0}`
 		baseDir := setupBeadsDir(t, content)
@@ -271,15 +274,18 @@ not valid json at all
 		if err != nil {
 			t.Fatalf("Tasks() returned error: %v", err)
 		}
-		if len(tasks) != 1 {
-			t.Fatalf("expected 1 task (skipping empty title), got %d", len(tasks))
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks (including empty title), got %d", len(tasks))
 		}
-		if tasks[0].Title != "Valid task" {
-			t.Errorf("tasks[0].Title = %q, want %q", tasks[0].Title, "Valid task")
+		if tasks[0].Title != "" {
+			t.Errorf("tasks[0].Title = %q, want %q", tasks[0].Title, "")
+		}
+		if tasks[1].Title != "Valid task" {
+			t.Errorf("tasks[1].Title = %q, want %q", tasks[1].Title, "Valid task")
 		}
 	})
 
-	t.Run("Tasks skips lines with whitespace-only title and returns valid tasks", func(t *testing.T) {
+	t.Run("Tasks returns entries with whitespace-only title for engine validation", func(t *testing.T) {
 		content := `{"id":"b-001","title":"   \t  ","status":"pending","priority":0}
 {"id":"b-002","title":"Valid task","status":"pending","priority":0}`
 		baseDir := setupBeadsDir(t, content)
@@ -289,11 +295,75 @@ not valid json at all
 		if err != nil {
 			t.Fatalf("Tasks() returned error: %v", err)
 		}
-		if len(tasks) != 1 {
-			t.Fatalf("expected 1 task (skipping whitespace title), got %d", len(tasks))
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks (including whitespace title), got %d", len(tasks))
+		}
+		if tasks[0].Title != "   \t  " {
+			t.Errorf("tasks[0].Title = %q, want %q", tasks[0].Title, "   \t  ")
+		}
+		if tasks[1].Title != "Valid task" {
+			t.Errorf("tasks[1].Title = %q, want %q", tasks[1].Title, "Valid task")
+		}
+	})
+
+	t.Run("Tasks returns entries with invalid priority for engine validation", func(t *testing.T) {
+		content := `{"id":"b-001","title":"Good task","status":"pending","priority":2}
+{"id":"b-002","title":"Bad priority","status":"pending","priority":99}
+{"id":"b-003","title":"Also good","status":"pending","priority":1}`
+		baseDir := setupBeadsDir(t, content)
+		p := NewBeadsProvider(baseDir)
+
+		tasks, err := p.Tasks()
+		if err != nil {
+			t.Fatalf("Tasks() returned error: %v", err)
+		}
+		if len(tasks) != 3 {
+			t.Fatalf("expected 3 tasks (including invalid priority), got %d", len(tasks))
+		}
+		if tasks[0].Title != "Good task" {
+			t.Errorf("tasks[0].Title = %q, want %q", tasks[0].Title, "Good task")
+		}
+		if tasks[1].Title != "Bad priority" {
+			t.Errorf("tasks[1].Title = %q, want %q", tasks[1].Title, "Bad priority")
+		}
+		if tasks[1].Priority == nil || *tasks[1].Priority != 99 {
+			t.Errorf("tasks[1].Priority = %v, want 99", tasks[1].Priority)
+		}
+		if tasks[2].Title != "Also good" {
+			t.Errorf("tasks[2].Title = %q, want %q", tasks[2].Title, "Also good")
+		}
+	})
+
+	t.Run("Tasks returns all entries from mixed valid invalid and malformed JSONL", func(t *testing.T) {
+		content := `{"id":"b-001","title":"Valid task","status":"pending","priority":2}
+{"id":"b-002","title":"","status":"pending","priority":0}
+not valid json
+{"id":"b-003","title":"Bad priority","status":"pending","priority":99}
+{"id":"b-004","title":"Another valid","status":"closed","priority":1}`
+		baseDir := setupBeadsDir(t, content)
+		p := NewBeadsProvider(baseDir)
+
+		tasks, err := p.Tasks()
+		if err != nil {
+			t.Fatalf("Tasks() returned error: %v", err)
+		}
+		if len(tasks) != 5 {
+			t.Fatalf("expected 5 tasks (all entries), got %d", len(tasks))
 		}
 		if tasks[0].Title != "Valid task" {
 			t.Errorf("tasks[0].Title = %q, want %q", tasks[0].Title, "Valid task")
+		}
+		if tasks[1].Title != "" {
+			t.Errorf("tasks[1].Title = %q, want %q", tasks[1].Title, "")
+		}
+		if tasks[2].Title != "(malformed entry)" {
+			t.Errorf("tasks[2].Title = %q, want %q", tasks[2].Title, "(malformed entry)")
+		}
+		if tasks[3].Title != "Bad priority" {
+			t.Errorf("tasks[3].Title = %q, want %q", tasks[3].Title, "Bad priority")
+		}
+		if tasks[4].Title != "Another valid" {
+			t.Errorf("tasks[4].Title = %q, want %q", tasks[4].Title, "Another valid")
 		}
 	})
 
@@ -402,10 +472,7 @@ func TestMapToMigratedTask(t *testing.T) {
 			Dependencies: []interface{}{"b-002", "b-003"},
 		}
 
-		task, err := mapToMigratedTask(issue)
-		if err != nil {
-			t.Fatalf("mapToMigratedTask returned error: %v", err)
-		}
+		task := mapToMigratedTask(issue)
 
 		if task.Title != "Implement login flow" {
 			t.Errorf("Title = %q, want %q", task.Title, "Implement login flow")
@@ -436,6 +503,24 @@ func TestMapToMigratedTask(t *testing.T) {
 		// Verify it passes validation.
 		if err := task.Validate(); err != nil {
 			t.Errorf("expected valid MigratedTask, got validation error: %v", err)
+		}
+	})
+
+	t.Run("mapToMigratedTask returns MigratedTask with empty title without error", func(t *testing.T) {
+		issue := beadsIssue{
+			ID:       "b-001",
+			Title:    "",
+			Status:   "pending",
+			Priority: 0,
+		}
+
+		task := mapToMigratedTask(issue)
+
+		if task.Title != "" {
+			t.Errorf("Title = %q, want empty string", task.Title)
+		}
+		if task.Status != "open" {
+			t.Errorf("Status = %q, want %q", task.Status, "open")
 		}
 	})
 }

@@ -57,10 +57,11 @@ func (p *BeadsProvider) Name() string {
 	return "beads"
 }
 
-// Tasks reads .beads/issues.jsonl, parses each line, and returns valid
-// MigratedTask values. Malformed lines and lines with empty titles are
-// skipped. Returns an error only if the .beads directory or issues.jsonl
-// file is missing.
+// Tasks reads .beads/issues.jsonl, parses each line, and returns all entries
+// as MigratedTask values. Malformed JSON lines are returned as sentinel entries
+// with the title "(malformed entry)" so the engine can report them as failures.
+// Empty titles and validation failures are left for the engine to handle.
+// Returns an error only if the .beads directory or issues.jsonl file is missing.
 func (p *BeadsProvider) Tasks() ([]migrate.MigratedTask, error) {
 	beadsDir := filepath.Join(p.baseDir, ".beads")
 	if _, err := os.Stat(beadsDir); os.IsNotExist(err) {
@@ -89,22 +90,17 @@ func (p *BeadsProvider) Tasks() ([]migrate.MigratedTask, error) {
 
 		var issue beadsIssue
 		if err := json.Unmarshal([]byte(line), &issue); err != nil {
-			// Malformed JSON — skip line.
+			// Malformed JSON — return sentinel entry so the engine reports it as a failure.
+			// Status "(invalid)" forces a validation error while the descriptive title
+			// makes the failure visible to the user.
+			tasks = append(tasks, migrate.MigratedTask{
+				Title:  "(malformed entry)",
+				Status: "(invalid)",
+			})
 			continue
 		}
 
-		task, err := mapToMigratedTask(issue)
-		if err != nil {
-			// Empty/whitespace title or other mapping failure — skip line.
-			continue
-		}
-
-		if err := task.Validate(); err != nil {
-			// Invalid task (e.g. out-of-range priority) — skip line.
-			continue
-		}
-
-		tasks = append(tasks, task)
+		tasks = append(tasks, mapToMigratedTask(issue))
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -115,16 +111,8 @@ func (p *BeadsProvider) Tasks() ([]migrate.MigratedTask, error) {
 }
 
 // mapToMigratedTask converts a beadsIssue to a migrate.MigratedTask.
-// Returns an error if the title is empty after trimming.
-func mapToMigratedTask(issue beadsIssue) (migrate.MigratedTask, error) {
-	if strings.TrimSpace(issue.Title) == "" {
-		identifier := issue.ID
-		if identifier == "" {
-			identifier = "unknown"
-		}
-		return migrate.MigratedTask{}, fmt.Errorf("skipping issue %s: empty title", identifier)
-	}
-
+// Empty or whitespace-only titles are preserved; the engine handles validation.
+func mapToMigratedTask(issue beadsIssue) migrate.MigratedTask {
 	status := statusMap[issue.Status] // unknown/empty maps to "" (zero value)
 
 	priority := issue.Priority
@@ -141,5 +129,5 @@ func mapToMigratedTask(issue beadsIssue) (migrate.MigratedTask, error) {
 		Created:     created,
 		Updated:     updated,
 		Closed:      closed,
-	}, nil
+	}
 }

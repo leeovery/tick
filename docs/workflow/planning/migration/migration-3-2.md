@@ -1,7 +1,7 @@
 ---
 id: migration-3-2
 phase: 3
-status: pending
+status: completed
 created: 2026-02-15
 ---
 
