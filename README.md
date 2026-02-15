@@ -4,8 +4,8 @@
 
 **Task management for agentic engineering**
 
-A CLI that gives AI agents deterministic, token-efficient task tracking.
-<br>Without the complexity of full project management tools.
+A CLI that gives AI agents deterministic, token-efficient task tracking,
+<br>without the complexity of full project management tools.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25+-00ADD8.svg)](https://go.dev)
