@@ -3,7 +3,7 @@ topic: migration
 plan: ../../planning/migration.md
 format: local-markdown
 status: in-progress
-task_gate_mode: gated
+task_gate_mode: auto
 fix_gate_mode: gated
 fix_attempts: 0
 linters:
@@ -18,12 +18,13 @@ project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro
 current_phase: 1
-current_task: migration-1-4
+current_task: migration-1-5
 completed_phases: []
 completed_tasks:
   - migration-1-1
   - migration-1-2
   - migration-1-3
+  - migration-1-4
 started: 2026-02-15
 updated: 2026-02-15
 completed: ~
