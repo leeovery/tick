@@ -28,7 +28,7 @@ Claude, Cursor, and other AI coding agents need a way to track tasks across sess
 - **Markdown files** — no structure, agents parse them inconsistently, output is verbose
 - **Beads / full PM tools** — too much complexity for a coding session, heavy overhead
 
-Tick sits in between: structured enough for agents to reason about reliably, simple enough that it doesn't get in the way. Tasks are stored in a plain JSONL file (human-readable, git-friendly) with a SQLite cache for fast queries.
+Tick sits in between: structured enough for agents to reason about reliably, simple enough that it doesn't get in the way.
 
 ### Key differences
 
