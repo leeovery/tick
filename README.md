@@ -75,71 +75,177 @@ tick done tick-a1b2                 # in_progress → done
 
 ## Commands
 
-### Creating tasks
+### `init`
+
+Initialize a new tick project in the current directory. Creates a `.tick/` directory with an empty `tasks.jsonl` file.
 
 ```bash
-tick create "Task title"
-tick create "Critical fix" --priority 0
-tick create "Subtask" --parent tick-a1b2
-tick create "Blocked work" --blocked-by tick-a1b2,tick-c3d4
-tick create "Blocking work" --blocks tick-f5e6
-tick create "With details" --description "Multi-line\ndescription"
+tick init
 ```
 
-Priority levels: `0` critical, `1` high, `2` medium (default), `3` low, `4` backlog.
+### `create`
 
-### Listing and filtering
+Create a new task. Returns the full task detail on success.
+
+```bash
+tick create <title> [flags]
+```
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--priority` | `0-4` | `2` | `0` critical, `1` high, `2` medium, `3` low, `4` backlog |
+| `--description` | string | | Task description (supports multi-line) |
+| `--parent` | ID | | Make this a subtask of another task |
+| `--blocked-by` | IDs | | Comma-separated list of tasks this depends on |
+| `--blocks` | IDs | | Comma-separated list of tasks this blocks |
+
+```bash
+tick create "Build auth module"
+tick create "Critical fix" --priority 0
+tick create "Write tests" --blocked-by tick-a1b2,tick-c3d4
+tick create "Login endpoint" --parent tick-a1b2
+```
+
+### `list`
+
+List tasks with optional filters. Results are sorted by priority (ascending), then creation date.
+
+```bash
+tick list [flags]
+```
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--status` | string | | Filter by status: `open`, `in_progress`, `done`, `cancelled` |
+| `--priority` | `0-4` | | Filter by priority level |
+| `--parent` | ID | | Show descendants of a task |
+| `--ready` | bool | `false` | Show only ready tasks (open, no unresolved blockers, no open children) |
+| `--blocked` | bool | `false` | Show only blocked tasks (open with unresolved blockers or open children) |
+
+`--ready` and `--blocked` are mutually exclusive.
 
 ```bash
 tick list                           # all tasks
 tick list --status open             # filter by status
-tick list --priority 0              # filter by priority
-tick list --parent tick-a1b2        # show descendants
-tick ready                          # open, no blockers, no open children
-tick blocked                        # open, has unresolved blockers
+tick list --priority 0              # only critical tasks
+tick list --parent tick-a1b2        # descendants of a task
 ```
 
-### Viewing details
+### `ready`
+
+Alias for `tick list --ready`. Shows tasks that are open, have no unresolved blockers, and no open children.
 
 ```bash
-tick show tick-a1b2                 # full detail with blockers and children
-tick stats                          # counts by status, priority, workflow
+tick ready
 ```
 
-### Status transitions
+### `blocked`
+
+Alias for `tick list --blocked`. Shows tasks that are open but waiting on dependencies or have open children.
 
 ```bash
-tick start tick-a1b2                # open → in_progress
-tick done tick-a1b2                 # in_progress → done
-tick cancel tick-a1b2               # any → cancelled
-tick reopen tick-a1b2               # done/cancelled → open
+tick blocked
 ```
 
-### Updating tasks
+### `show`
+
+Display full detail for a single task, including blockers, children, and description.
 
 ```bash
-tick update tick-a1b2 --title "New title"
-tick update tick-a1b2 --priority 1
-tick update tick-a1b2 --description "Updated description"
+tick show <task-id>
+```
+
+### `update`
+
+Modify one or more fields on an existing task. At least one flag is required.
+
+```bash
+tick update <task-id> [flags]
+```
+
+| Flag | Type | Description |
+|---|---|---|
+| `--title` | string | Set a new title |
+| `--description` | string | Set or replace the description |
+| `--priority` | `0-4` | Change priority level |
+| `--parent` | ID | Set or change the parent task (pass empty string to clear) |
+| `--blocks` | IDs | Comma-separated list of tasks this blocks |
+
+```bash
+tick update tick-a1b2 --title "Revised title" --priority 1
 tick update tick-a1b2 --parent tick-c3d4
 ```
 
-### Dependencies
+### `start` / `done` / `cancel` / `reopen`
+
+Transition a task between statuses.
 
 ```bash
-tick dep add tick-a1b2 tick-c3d4    # tick-a1b2 blocked by tick-c3d4
-tick dep rm tick-a1b2 tick-c3d4     # remove dependency
+tick start  <task-id>               # open → in_progress
+tick done   <task-id>               # in_progress → done
+tick cancel <task-id>               # any → cancelled
+tick reopen <task-id>               # done/cancelled → open
 ```
 
-Tick prevents dependency cycles, self-references, and children blocked by their own parent.
+`done` and `cancel` set a closed timestamp. `reopen` clears it.
 
-### Maintenance
+### `dep`
+
+Manage task dependencies. Tick validates all dependency changes and prevents cycles, self-references, and children blocked by their own parent.
 
 ```bash
-tick doctor                         # diagnose data issues
-tick rebuild                        # force SQLite cache rebuild
-tick migrate --from beads           # import from external tools
-tick migrate --from beads --dry-run # preview without changes
+tick dep add <task-id> <blocked-by-id>
+tick dep rm  <task-id> <blocked-by-id>
+```
+
+```bash
+tick dep add tick-a1b2 tick-c3d4    # tick-a1b2 is now blocked by tick-c3d4
+tick dep rm  tick-a1b2 tick-c3d4    # remove that dependency
+```
+
+### `stats`
+
+Show aggregate task counts grouped by status, workflow state (ready/blocked), and priority.
+
+```bash
+tick stats
+```
+
+### `doctor`
+
+Run diagnostic checks against your task data. Read-only, never modifies data.
+
+```bash
+tick doctor
+```
+
+Checks for: JSONL syntax errors, invalid IDs, duplicates, orphaned references, self-referential dependencies, dependency cycles, parent/child constraint violations, and cache staleness.
+
+### `rebuild`
+
+Force a full SQLite cache rebuild from the JSONL source file, bypassing the freshness check.
+
+```bash
+tick rebuild
+```
+
+### `migrate`
+
+Import tasks from external tools.
+
+```bash
+tick migrate --from <provider> [flags]
+```
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--from` | string | *required* | Provider to import from (currently: `beads`) |
+| `--dry-run` | bool | `false` | Preview what would be imported without persisting |
+| `--pending-only` | bool | `false` | Only import tasks not yet migrated |
+
+```bash
+tick migrate --from beads
+tick migrate --from beads --dry-run --pending-only
 ```
 
 ## Output Formats
