@@ -12,8 +12,8 @@ external_dependencies:
     state: resolved
     task_id: tick-core-1-4
 planning:
-  phase: 2
-  task: 5
+  phase: 3
+  task: 4
 ---
 
 # Plan: Migration
@@ -86,6 +86,21 @@ approved_at: 2026-01-31
 | migration-2-3 | Dry-Run Mode | dry-run with zero tasks, dry-run combined with --pending-only | authored |
 | migration-2-4 | Pending-Only Filter | all tasks completed (zero remaining), no completed tasks (filter is no-op), mixed statuses | authored |
 | migration-2-5 | Unknown Provider Available Listing | single provider in registry, multiple providers in registry | authored |
+
+---
+
+### Phase 3: Analysis (cycle 1 findings)
+status: approved
+
+**Goal**: Address findings from implementation analysis cycle 1.
+
+#### Tasks
+| ID | Name | Edge Cases | Status |
+|----|------|------------|--------|
+| migration-3-1 | Replace manual presenter calls in RunMigrate with Present function | — | authored |
+| migration-3-2 | Surface beads provider parse/validation errors as failed results instead of silently dropping | — | authored |
+| migration-3-3 | Consolidate inconsistent empty-title fallback strings | — | authored |
+| migration-3-4 | Use task.Status type and constants instead of raw status strings | — | authored |
 
 ---
 

@@ -6,7 +6,7 @@ total_proposed: 4
 # Analysis Tasks: Migration (Cycle 1)
 
 ## Task 1: Replace manual presenter calls in RunMigrate with Present function
-status: pending
+status: approved
 severity: high
 sources: duplication, standards, architecture
 
@@ -33,7 +33,7 @@ sources: duplication, standards, architecture
 - Test `RunMigrate` with all-successful tasks; assert no "Failures:" section appears.
 
 ## Task 2: Surface beads provider parse/validation errors as failed results instead of silently dropping
-status: pending
+status: approved
 severity: high
 sources: standards, architecture
 
@@ -62,7 +62,7 @@ sources: standards, architecture
 - Integration test: run migration against a fixture with invalid entries; assert the output shows the correct failed count and failure detail lines.
 
 ## Task 3: Consolidate inconsistent empty-title fallback strings
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -89,7 +89,7 @@ sources: duplication
 - Existing tests for `WriteResult`, `WriteFailures`, and `Engine.Run` with empty-title tasks should pass after updating expected strings.
 
 ## Task 4: Use task.Status type and constants instead of raw status strings
-status: pending
+status: approved
 severity: medium
 sources: architecture, standards
 
