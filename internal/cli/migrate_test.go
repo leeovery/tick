@@ -1,0 +1,256 @@
+package cli
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/leeovery/tick/internal/migrate/beads"
+	"github.com/leeovery/tick/internal/task"
+)
+
+func TestNewMigrateProvider(t *testing.T) {
+	t.Run("registry returns BeadsProvider for name beads", func(t *testing.T) {
+		provider, err := newMigrateProvider("beads", "/tmp/claude/fake")
+		if err != nil {
+			t.Fatalf("newMigrateProvider(beads) returned error: %v", err)
+		}
+		if provider == nil {
+			t.Fatal("expected non-nil provider")
+		}
+		if provider.Name() != "beads" {
+			t.Errorf("provider.Name() = %q, want %q", provider.Name(), "beads")
+		}
+		if _, ok := provider.(*beads.BeadsProvider); !ok {
+			t.Errorf("expected *beads.BeadsProvider, got %T", provider)
+		}
+	})
+
+	t.Run("registry returns error for unknown provider name", func(t *testing.T) {
+		_, err := newMigrateProvider("jira", "/tmp/claude/fake")
+		if err == nil {
+			t.Fatal("expected error for unknown provider, got nil")
+		}
+		want := `unknown provider "jira"`
+		if err.Error() != want {
+			t.Errorf("error = %q, want %q", err.Error(), want)
+		}
+	})
+}
+
+// runMigrate runs tick migrate with the given args and returns stdout, stderr, exit code.
+func runMigrate(t *testing.T, dir string, args ...string) (string, string, int) {
+	t.Helper()
+	var stdoutBuf, stderrBuf bytes.Buffer
+	app := &App{
+		Stdout: &stdoutBuf,
+		Stderr: &stderrBuf,
+		Getwd:  func() (string, error) { return dir, nil },
+		IsTTY:  true,
+	}
+	fullArgs := append([]string{"tick", "migrate"}, args...)
+	code := app.Run(fullArgs)
+	return stdoutBuf.String(), stderrBuf.String(), code
+}
+
+func TestMigrateCommand(t *testing.T) {
+	t.Run("migrate command requires --from flag", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runMigrate(t, dir)
+
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--from") {
+			t.Errorf("stderr = %q, want to contain --from", stderr)
+		}
+	})
+
+	t.Run("migrate command with empty --from value returns error", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "")
+
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--from") {
+			t.Errorf("stderr = %q, want to contain --from", stderr)
+		}
+	})
+
+	t.Run("migrate command with unknown provider returns error", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "jira")
+
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		want := `unknown provider "jira"`
+		if !strings.Contains(stderr, want) {
+			t.Errorf("stderr = %q, want to contain %q", stderr, want)
+		}
+	})
+
+	t.Run("migrate command with --from beads resolves beads provider", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		// Create .beads/issues.jsonl with valid data
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Test task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stdout, "Importing from beads...") {
+			t.Errorf("stdout missing header, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "Test task") {
+			t.Errorf("stdout missing task title, got %q", stdout)
+		}
+	})
+
+	t.Run("migrate command exits 0 when some tasks fail validation but others succeed", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		// One valid task, one with invalid status (will fail engine validation)
+		content := `{"id":"b-001","title":"Good task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-002","title":"","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`
+		setupBeadsFixture(t, dir, content)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+	})
+
+	t.Run("migrate command exits 1 when provider cannot be read", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		// No .beads directory → provider.Tasks() will fail
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, ".beads") {
+			t.Errorf("stderr = %q, want to contain .beads error", stderr)
+		}
+	})
+
+	t.Run("end-to-end: migrate --from beads reads tasks, inserts, and prints output", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		content := `{"id":"b-001","title":"Implement login flow","description":"Login desc","status":"pending","priority":2,"issue_type":"task","created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-12T14:00:00Z","closed_at":"","close_reason":"","created_by":"alice","dependencies":[]}
+{"id":"b-002","title":"Fix database connection","description":"DB fix","status":"closed","priority":1,"issue_type":"epic","created_at":"2026-01-05T08:00:00Z","updated_at":"2026-01-06T12:00:00Z","closed_at":"2026-01-07T10:00:00Z","close_reason":"completed","created_by":"bob","dependencies":["b-001"]}`
+		setupBeadsFixture(t, dir, content)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		// Verify output format
+		if !strings.Contains(stdout, "Importing from beads...") {
+			t.Errorf("stdout missing header, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "Implement login flow") {
+			t.Errorf("stdout missing first task, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "Fix database connection") {
+			t.Errorf("stdout missing second task, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "Done: 2 imported, 0 failed") {
+			t.Errorf("stdout missing summary, got:\n%s", stdout)
+		}
+
+		// Verify tasks were persisted to tick store
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 persisted tasks, got %d", len(tasks))
+		}
+
+		// Find the task by title to verify fields
+		var loginTask, dbTask task.Task
+		for _, tk := range tasks {
+			switch tk.Title {
+			case "Implement login flow":
+				loginTask = tk
+			case "Fix database connection":
+				dbTask = tk
+			}
+		}
+
+		if loginTask.Title == "" {
+			t.Fatal("login task not found in persisted tasks")
+		}
+		if loginTask.Status != task.StatusOpen {
+			t.Errorf("login task status = %q, want %q", loginTask.Status, task.StatusOpen)
+		}
+		if loginTask.Priority != 2 {
+			t.Errorf("login task priority = %d, want 2", loginTask.Priority)
+		}
+		if loginTask.Description != "Login desc" {
+			t.Errorf("login task description = %q, want %q", loginTask.Description, "Login desc")
+		}
+
+		if dbTask.Title == "" {
+			t.Fatal("db task not found in persisted tasks")
+		}
+		if dbTask.Status != task.StatusDone {
+			t.Errorf("db task status = %q, want %q", dbTask.Status, task.StatusDone)
+		}
+		if dbTask.Priority != 1 {
+			t.Errorf("db task priority = %d, want 1", dbTask.Priority)
+		}
+		if dbTask.Closed == nil {
+			t.Error("db task should have closed timestamp")
+		}
+	})
+
+	t.Run("migrate command prints header and summary for zero tasks", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		// Empty issues.jsonl
+		setupBeadsFixture(t, dir, "")
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stdout, "Importing from beads...") {
+			t.Errorf("stdout missing header, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "Done: 0 imported, 0 failed") {
+			t.Errorf("stdout missing summary, got:\n%s", stdout)
+		}
+	})
+
+	t.Run("migrate command exits 1 when tick not initialized", func(t *testing.T) {
+		// Directory without .tick/
+		dir := t.TempDir()
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Test","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if stderr == "" {
+			t.Error("expected error message on stderr")
+		}
+	})
+}
+
+// setupBeadsFixture creates a .beads/issues.jsonl file in the given directory.
+func setupBeadsFixture(t *testing.T, dir string, content string) {
+	t.Helper()
+	beadsDir := filepath.Join(dir, ".beads")
+	if err := os.MkdirAll(beadsDir, 0o755); err != nil {
+		t.Fatalf("failed to create .beads dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(beadsDir, "issues.jsonl"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write issues.jsonl: %v", err)
+	}
+}

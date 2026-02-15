@@ -26,9 +26,12 @@ func (a *App) Run(args []string) int {
 		return 0
 	}
 
-	// Doctor bypasses format/formatter machinery — always human-readable text.
+	// Doctor and migrate bypass format/formatter machinery — always human-readable text.
 	if subcmd == "doctor" {
 		return a.handleDoctor()
+	}
+	if subcmd == "migrate" {
+		return a.handleMigrate(subArgs)
 	}
 
 	// Resolve format once in dispatcher.
