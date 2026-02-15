@@ -25,7 +25,7 @@ func WriteResult(w io.Writer, r Result) {
 	}
 	title := r.Title
 	if title == "" {
-		title = "(unknown)"
+		title = FallbackTitle
 	}
 	fmt.Fprintf(w, "  \u2717 Task: %s (skipped: %s)\n", title, r.Err.Error())
 }
@@ -62,7 +62,7 @@ func WriteFailures(w io.Writer, results []Result) {
 	for _, r := range failures {
 		title := r.Title
 		if title == "" {
-			title = "(unknown)"
+			title = FallbackTitle
 		}
 		fmt.Fprintf(w, "- Task %q: %s\n", title, r.Err.Error())
 	}

@@ -67,7 +67,7 @@ func (e *Engine) Run(provider Provider) ([]Result, error) {
 		if err := task.Validate(); err != nil {
 			title := task.Title
 			if strings.TrimSpace(title) == "" {
-				title = "(untitled)"
+				title = FallbackTitle
 			}
 			results = append(results, Result{Title: title, Success: false, Err: err})
 			continue

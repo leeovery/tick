@@ -15,6 +15,9 @@ var validStatuses = map[string]bool{
 	"cancelled":   true,
 }
 
+// FallbackTitle is the display title used when a task has no title.
+const FallbackTitle = "(untitled)"
+
 const (
 	minPriority = 0
 	maxPriority = 4

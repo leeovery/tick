@@ -101,13 +101,13 @@ func TestWriteResult(t *testing.T) {
 		}
 	})
 
-	t.Run("prints (unknown) as title when failed result has empty title", func(t *testing.T) {
+	t.Run("prints fallback title when failed result has empty title", func(t *testing.T) {
 		var buf bytes.Buffer
 		r := Result{Title: "", Success: false, Err: fmt.Errorf("missing title")}
 		WriteResult(&buf, r)
 
 		got := buf.String()
-		want := "  ✗ Task: (unknown) (skipped: missing title)\n"
+		want := "  ✗ Task: (untitled) (skipped: missing title)\n"
 		if got != want {
 			t.Errorf("WriteResult() = %q, want %q", got, want)
 		}
@@ -258,7 +258,7 @@ func TestWriteFailures(t *testing.T) {
 		}
 	})
 
-	t.Run("uses (unknown) for failures with empty title", func(t *testing.T) {
+	t.Run("uses fallback title for failures with empty title", func(t *testing.T) {
 		var buf bytes.Buffer
 		results := []Result{
 			{Title: "", Success: false, Err: fmt.Errorf("missing title")},
@@ -267,7 +267,7 @@ func TestWriteFailures(t *testing.T) {
 
 		got := buf.String()
 		want := "\nFailures:\n" +
-			"- Task \"(unknown)\": missing title\n"
+			"- Task \"(untitled)\": missing title\n"
 		if got != want {
 			t.Errorf("WriteFailures() = %q, want %q", got, want)
 		}
