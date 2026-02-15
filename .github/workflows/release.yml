@@ -34,10 +34,9 @@ jobs:
         id: checksums
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          CHECKSUMS_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/tick_${VERSION}_checksums.txt"
-          curl -fsSL "$CHECKSUMS_URL" -o checksums.txt
-          SHA256_ARM64=$(grep "tick_${VERSION}_darwin_arm64.tar.gz" checksums.txt | awk '{print $1}')
-          SHA256_AMD64=$(grep "tick_${VERSION}_darwin_amd64.tar.gz" checksums.txt | awk '{print $1}')
+          CHECKSUMS_FILE="dist/tick_${VERSION}_checksums.txt"
+          SHA256_ARM64=$(grep "tick_${VERSION}_darwin_arm64.tar.gz" "$CHECKSUMS_FILE" | awk '{print $1}')
+          SHA256_AMD64=$(grep "tick_${VERSION}_darwin_amd64.tar.gz" "$CHECKSUMS_FILE" | awk '{print $1}')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "sha256_arm64=$SHA256_ARM64" >> "$GITHUB_OUTPUT"
           echo "sha256_amd64=$SHA256_AMD64" >> "$GITHUB_OUTPUT"
