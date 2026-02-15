@@ -22,8 +22,16 @@ func (a *App) Run(args []string) int {
 	flags, subcmd, subArgs := parseArgs(args[1:])
 
 	if subcmd == "" {
-		a.printUsage()
+		printTopLevelHelp(a.Stdout)
 		return 0
+	}
+
+	// Help bypasses format/formatter machinery — always plain text.
+	if subcmd == "help" {
+		return a.handleHelp(subArgs)
+	}
+	if flags.help {
+		return a.handleHelp([]string{subcmd})
 	}
 
 	// Doctor and migrate bypass format/formatter machinery — always human-readable text.
@@ -199,12 +207,19 @@ func (a *App) handleTransition(command string, fc FormatConfig, fmtr Formatter, 
 	return RunTransition(dir, command, fc, fmtr, subArgs, a.Stdout)
 }
 
-// printUsage prints basic usage information.
-func (a *App) printUsage() {
-	fmt.Fprintln(a.Stdout, "Usage: tick <command> [options]")
-	fmt.Fprintln(a.Stdout, "")
-	fmt.Fprintln(a.Stdout, "Commands:")
-	fmt.Fprintln(a.Stdout, "  init    Initialize a new tick project")
+// handleHelp implements the help command and --help/-h flag.
+func (a *App) handleHelp(args []string) int {
+	if len(args) == 0 {
+		printTopLevelHelp(a.Stdout)
+		return 0
+	}
+	cmd := findCommand(args[0])
+	if cmd == nil {
+		fmt.Fprintf(a.Stderr, "Error: Unknown command '%s'. Run 'tick help' for usage.\n", args[0])
+		return 1
+	}
+	printCommandHelp(a.Stdout, cmd)
+	return 0
 }
 
 // globalFlags holds parsed global CLI flags.
@@ -214,6 +229,7 @@ type globalFlags struct {
 	toon    bool
 	pretty  bool
 	json    bool
+	help    bool
 }
 
 // parseArgs separates global flags from the subcommand and its arguments.
@@ -259,6 +275,8 @@ func applyGlobalFlag(flags *globalFlags, arg string) bool {
 		flags.pretty = true
 	case "--json":
 		flags.json = true
+	case "--help", "-h":
+		flags.help = true
 	default:
 		return false
 	}
