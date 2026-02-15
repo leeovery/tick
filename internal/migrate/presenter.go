@@ -6,7 +6,12 @@ import (
 )
 
 // WriteHeader prints the migration header line identifying the source provider.
-func WriteHeader(w io.Writer, providerName string) {
+// When dryRun is true, a [dry-run] indicator is appended to the header.
+func WriteHeader(w io.Writer, providerName string, dryRun bool) {
+	if dryRun {
+		fmt.Fprintf(w, "Importing from %s... [dry-run]\n", providerName)
+		return
+	}
 	fmt.Fprintf(w, "Importing from %s...\n", providerName)
 }
 
@@ -64,9 +69,10 @@ func WriteFailures(w io.Writer, results []Result) {
 }
 
 // Present renders the complete migration output: header, per-task lines, summary,
-// and failure detail section (when failures exist).
-func Present(w io.Writer, providerName string, results []Result) {
-	WriteHeader(w, providerName)
+// and failure detail section (when failures exist). When dryRun is true, the
+// header includes a [dry-run] indicator.
+func Present(w io.Writer, providerName string, dryRun bool, results []Result) {
+	WriteHeader(w, providerName, dryRun)
 	for _, r := range results {
 		WriteResult(w, r)
 	}

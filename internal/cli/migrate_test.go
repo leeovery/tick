@@ -243,6 +243,115 @@ func TestMigrateCommand(t *testing.T) {
 	})
 }
 
+func TestMigrateDryRun(t *testing.T) {
+	t.Run("--dry-run flag defaults to false", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Persisted task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		// Without --dry-run, header should NOT contain [dry-run]
+		if strings.Contains(stdout, "[dry-run]") {
+			t.Errorf("stdout should not contain [dry-run] by default, got:\n%s", stdout)
+		}
+		// Tasks should be persisted
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 persisted task, got %d", len(tasks))
+		}
+	})
+
+	t.Run("non-dry-run execution still uses StoreTaskCreator", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Stored task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 persisted task, got %d", len(tasks))
+		}
+		if tasks[0].Title != "Stored task" {
+			t.Errorf("task title = %q, want %q", tasks[0].Title, "Stored task")
+		}
+	})
+
+	t.Run("dry-run with zero tasks prints header with [dry-run] and summary with zero counts", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		setupBeadsFixture(t, dir, "")
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--dry-run")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stdout, "Importing from beads... [dry-run]") {
+			t.Errorf("stdout missing dry-run header, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "Done: 0 imported, 0 failed") {
+			t.Errorf("stdout missing zero-count summary, got:\n%s", stdout)
+		}
+	})
+
+	t.Run("dry-run with multiple tasks shows all as successful", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		content := `{"id":"b-001","title":"Task Alpha","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-002","title":"Task Beta","status":"pending","priority":1,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-003","title":"Task Gamma","status":"closed","priority":3,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z","closed_at":"2026-01-11T10:00:00Z","close_reason":"completed"}`
+		setupBeadsFixture(t, dir, content)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--dry-run")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stdout, "Importing from beads... [dry-run]") {
+			t.Errorf("stdout missing dry-run header, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "\u2713 Task: Task Alpha") {
+			t.Errorf("stdout missing Task Alpha checkmark, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "\u2713 Task: Task Beta") {
+			t.Errorf("stdout missing Task Beta checkmark, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "\u2713 Task: Task Gamma") {
+			t.Errorf("stdout missing Task Gamma checkmark, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "Done: 3 imported, 0 failed") {
+			t.Errorf("stdout missing summary, got:\n%s", stdout)
+		}
+
+		// Verify NO tasks were persisted
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 persisted tasks in dry-run, got %d", len(tasks))
+		}
+	})
+
+	t.Run("dry-run summary shows correct imported count matching number of valid tasks", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		content := `{"id":"b-001","title":"Valid task A","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-002","title":"Valid task B","status":"pending","priority":1,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-003","title":"Valid task C","status":"closed","priority":3,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z","closed_at":"2026-01-11T10:00:00Z"}`
+		setupBeadsFixture(t, dir, content)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--dry-run")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stdout, "Done: 3 imported, 0 failed") {
+			t.Errorf("expected 3 imported, 0 failed in dry-run summary, got:\n%s", stdout)
+		}
+	})
+}
+
 // setupBeadsFixture creates a .beads/issues.jsonl file in the given directory.
 func setupBeadsFixture(t *testing.T, dir string, content string) {
 	t.Helper()

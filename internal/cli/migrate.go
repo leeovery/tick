@@ -20,33 +20,45 @@ func newMigrateProvider(name string, baseDir string) (migrate.Provider, error) {
 	}
 }
 
-// parseMigrateArgs extracts the --from flag value from migrate subcommand args.
-func parseMigrateArgs(args []string) (string, error) {
+// migrateFlags holds parsed migrate subcommand flags.
+type migrateFlags struct {
+	from   string
+	dryRun bool
+}
+
+// parseMigrateArgs extracts flag values from migrate subcommand args.
+func parseMigrateArgs(args []string) (migrateFlags, error) {
+	var flags migrateFlags
 	for i := 0; i < len(args); i++ {
-		if args[i] == "--from" {
+		switch {
+		case args[i] == "--from":
 			i++
 			if i >= len(args) {
-				return "", fmt.Errorf("--from requires a value")
+				return flags, fmt.Errorf("--from requires a value")
 			}
-			return args[i], nil
-		}
-		if strings.HasPrefix(args[i], "--from=") {
-			return strings.TrimPrefix(args[i], "--from="), nil
+			flags.from = args[i]
+		case strings.HasPrefix(args[i], "--from="):
+			flags.from = strings.TrimPrefix(args[i], "--from=")
+		case args[i] == "--dry-run":
+			flags.dryRun = true
 		}
 	}
-	return "", fmt.Errorf("--from flag is required. Usage: tick migrate --from <provider>")
+	if flags.from == "" {
+		return flags, fmt.Errorf("--from flag is required. Usage: tick migrate --from <provider>")
+	}
+	return flags, nil
 }
 
 // handleMigrate implements the migrate subcommand. It bypasses the format/formatter
 // machinery and outputs migration progress directly.
 func (a *App) handleMigrate(subArgs []string) int {
-	fromValue, err := parseMigrateArgs(subArgs)
+	mf, err := parseMigrateArgs(subArgs)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
 	}
 
-	if strings.TrimSpace(fromValue) == "" {
+	if strings.TrimSpace(mf.from) == "" {
 		fmt.Fprintf(a.Stderr, "Error: --from flag is required. Usage: tick migrate --from <provider>\n")
 		return 1
 	}
@@ -57,13 +69,13 @@ func (a *App) handleMigrate(subArgs []string) int {
 		return 1
 	}
 
-	provider, err := newMigrateProvider(fromValue, dir)
+	provider, err := newMigrateProvider(mf.from, dir)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
 	}
 
-	if err := RunMigrate(dir, provider, a.Stdout); err != nil {
+	if err := RunMigrate(dir, provider, mf.dryRun, a.Stdout); err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
 	}
@@ -72,19 +84,25 @@ func (a *App) handleMigrate(subArgs []string) int {
 }
 
 // RunMigrate executes the migration pipeline: opens the store, creates the engine
-// with a StoreTaskCreator, runs the provider, and outputs results via the presenter.
-func RunMigrate(dir string, provider migrate.Provider, stdout io.Writer) error {
-	store, err := openStore(dir, FormatConfig{})
-	if err != nil {
-		return err
+// with a TaskCreator (StoreTaskCreator for real runs, DryRunTaskCreator for dry-run),
+// runs the provider, and outputs results via the presenter.
+func RunMigrate(dir string, provider migrate.Provider, dryRun bool, stdout io.Writer) error {
+	var creator migrate.TaskCreator
+	if dryRun {
+		creator = &migrate.DryRunTaskCreator{}
+	} else {
+		store, err := openStore(dir, FormatConfig{})
+		if err != nil {
+			return err
+		}
+		defer store.Close()
+		creator = migrate.NewStoreTaskCreator(store)
 	}
-	defer store.Close()
 
-	creator := migrate.NewStoreTaskCreator(store)
 	engine := migrate.NewEngine(creator)
 
 	// Print header.
-	migrate.WriteHeader(stdout, provider.Name())
+	migrate.WriteHeader(stdout, provider.Name(), dryRun)
 
 	// Run migration.
 	results, runErr := engine.Run(provider)

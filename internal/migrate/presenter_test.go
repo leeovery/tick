@@ -10,7 +10,7 @@ import (
 func TestWriteHeader(t *testing.T) {
 	t.Run("prints Importing from <provider>... with provider name", func(t *testing.T) {
 		var buf bytes.Buffer
-		WriteHeader(&buf, "beads")
+		WriteHeader(&buf, "beads", false)
 
 		got := buf.String()
 		want := "Importing from beads...\n"
@@ -22,12 +22,33 @@ func TestWriteHeader(t *testing.T) {
 	t.Run("provider name in header matches what provider.Name() returns", func(t *testing.T) {
 		var buf bytes.Buffer
 		providerName := "jira"
-		WriteHeader(&buf, providerName)
+		WriteHeader(&buf, providerName, false)
 
 		got := buf.String()
 		want := "Importing from jira...\n"
 		if got != want {
 			t.Errorf("WriteHeader() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("dry-run header prints Importing from <provider>... [dry-run]", func(t *testing.T) {
+		var buf bytes.Buffer
+		WriteHeader(&buf, "beads", true)
+
+		got := buf.String()
+		want := "Importing from beads... [dry-run]\n"
+		if got != want {
+			t.Errorf("WriteHeader() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("non-dry-run header does not include [dry-run]", func(t *testing.T) {
+		var buf bytes.Buffer
+		WriteHeader(&buf, "beads", false)
+
+		got := buf.String()
+		if strings.Contains(got, "[dry-run]") {
+			t.Errorf("WriteHeader(dryRun=false) should not contain [dry-run], got %q", got)
 		}
 	})
 }
@@ -276,7 +297,7 @@ func TestPresent(t *testing.T) {
 			{Title: "Fix database connection", Success: true},
 			{Title: "Add unit tests", Success: true},
 		}
-		Present(&buf, "beads", results)
+		Present(&buf, "beads", false, results)
 
 		got := buf.String()
 		want := "Importing from beads...\n" +
@@ -292,7 +313,7 @@ func TestPresent(t *testing.T) {
 
 	t.Run("with zero results prints header and summary with zero counts", func(t *testing.T) {
 		var buf bytes.Buffer
-		Present(&buf, "beads", []Result{})
+		Present(&buf, "beads", false, []Result{})
 
 		got := buf.String()
 		want := "Importing from beads...\n" +
@@ -308,7 +329,7 @@ func TestPresent(t *testing.T) {
 		results := []Result{
 			{Title: "Only task", Success: true},
 		}
-		Present(&buf, "beads", results)
+		Present(&buf, "beads", false, results)
 
 		got := buf.String()
 		want := "Importing from beads...\n" +
@@ -328,7 +349,7 @@ func TestPresent(t *testing.T) {
 			{Title: "Task C", Success: true},
 			{Title: "Task D", Success: true},
 		}
-		Present(&buf, "test", results)
+		Present(&buf, "test", false, results)
 
 		got := buf.String()
 		lines := strings.Split(got, "\n")
@@ -349,7 +370,7 @@ func TestPresent(t *testing.T) {
 		results := []Result{
 			{Title: "Task A", Success: true},
 		}
-		Present(&buf, "beads", results)
+		Present(&buf, "beads", false, results)
 
 		got := buf.String()
 		// The output should contain the pattern: task line\n\nDone:
@@ -365,7 +386,7 @@ func TestPresent(t *testing.T) {
 			{Title: "Fix database connection", Success: true},
 			{Title: "Broken entry", Success: false, Err: fmt.Errorf("missing title")},
 		}
-		Present(&buf, "beads", results)
+		Present(&buf, "beads", false, results)
 
 		got := buf.String()
 		want := "Importing from beads...\n" +
@@ -388,7 +409,7 @@ func TestPresent(t *testing.T) {
 			{Title: "Task A", Success: true},
 			{Title: "Task B", Success: true},
 		}
-		Present(&buf, "beads", results)
+		Present(&buf, "beads", false, results)
 
 		got := buf.String()
 		want := "Importing from beads...\n" +
@@ -407,7 +428,7 @@ func TestPresent(t *testing.T) {
 			{Title: "foo", Success: false, Err: fmt.Errorf("bad data")},
 			{Title: "bar", Success: false, Err: fmt.Errorf("invalid format")},
 		}
-		Present(&buf, "beads", results)
+		Present(&buf, "beads", false, results)
 
 		got := buf.String()
 		want := "Importing from beads...\n" +
@@ -421,6 +442,55 @@ func TestPresent(t *testing.T) {
 			"- Task \"bar\": invalid format\n"
 		if got != want {
 			t.Errorf("Present() =\n%s\nwant:\n%s", got, want)
+		}
+	})
+
+	t.Run("dry-run with zero tasks prints header with [dry-run] and summary with zero counts", func(t *testing.T) {
+		var buf bytes.Buffer
+		Present(&buf, "beads", true, []Result{})
+
+		got := buf.String()
+		want := "Importing from beads... [dry-run]\n" +
+			"\n" +
+			"Done: 0 imported, 0 failed\n"
+		if got != want {
+			t.Errorf("Present() =\n%s\nwant:\n%s", got, want)
+		}
+	})
+
+	t.Run("dry-run with multiple tasks shows all as successful with checkmark", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "Task A", Success: true},
+			{Title: "Task B", Success: true},
+			{Title: "Task C", Success: true},
+		}
+		Present(&buf, "beads", true, results)
+
+		got := buf.String()
+		want := "Importing from beads... [dry-run]\n" +
+			"  \u2713 Task: Task A\n" +
+			"  \u2713 Task: Task B\n" +
+			"  \u2713 Task: Task C\n" +
+			"\n" +
+			"Done: 3 imported, 0 failed\n"
+		if got != want {
+			t.Errorf("Present() =\n%s\nwant:\n%s", got, want)
+		}
+	})
+
+	t.Run("dry-run summary shows correct imported count matching number of valid tasks", func(t *testing.T) {
+		var buf bytes.Buffer
+		results := []Result{
+			{Title: "Task A", Success: true},
+			{Title: "Task B", Success: true},
+			{Title: "(untitled)", Success: false, Err: fmt.Errorf("title is required")},
+		}
+		Present(&buf, "beads", true, results)
+
+		got := buf.String()
+		if !strings.Contains(got, "Done: 2 imported, 1 failed") {
+			t.Errorf("expected summary with 2 imported, 1 failed, got:\n%s", got)
 		}
 	})
 }
