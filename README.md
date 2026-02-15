@@ -1,9 +1,27 @@
+<div align="center">
+
 # Tick
 
-A task management CLI built for AI-assisted development. Tick gives AI agents deterministic, token-efficient task tracking without the complexity of full project management tools.
+**Task management for AI-assisted development**
 
-When piped or called by an agent, output defaults to [TOON](https://github.com/toon-format/spec) — a format that uses 30-60% fewer tokens than JSON. In a terminal, output switches to a clean human-readable table. JSON is also available.
+A CLI that gives AI agents deterministic, token-efficient task tracking — without the complexity of full project management tools.
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8.svg)](https://go.dev)
+
+[Install](#install) · [Quick Start](#quick-start) · [Commands](#commands) · [Output Formats](#output-formats) · [Why Tick?](#why-tick)
+
+</div>
+
+---
+
+When called by an agent or piped, output defaults to [TOON](https://github.com/toon-format/spec) — a format that uses 30-60% fewer tokens than JSON. In a terminal, it switches to a clean human-readable table. JSON is also available.
+
+<table>
+<tr>
+<td>
+
+**Agent / pipe** (TOON — default)
 ```
 $ tick list
 tasks[3]{id,title,status,priority}:
@@ -12,13 +30,21 @@ tasks[3]{id,title,status,priority}:
   tick-d5c6,Update docs,open,3
 ```
 
+</td>
+<td>
+
+**Terminal** (Pretty — auto-detected)
 ```
-$ tick list --pretty
+$ tick list
 ID          STATUS        PRI   TITLE
 tick-a1b2   in_progress   1     Auth middleware
 tick-f3e4   open          2     Write tests
 tick-d5c6   open          3     Update docs
 ```
+
+</td>
+</tr>
+</table>
 
 ## Why Tick?
 
