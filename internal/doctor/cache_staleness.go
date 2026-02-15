@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // CacheStalenessCheck verifies that the SQLite cache (cache.db) is in sync
@@ -86,7 +86,7 @@ func (c *CacheStalenessCheck) Run(_ context.Context, tickDir string) []CheckResu
 // is missing.
 func queryStoredHash(cachePath string) (string, error) {
 	dsn := fmt.Sprintf("file:%s?mode=ro", cachePath)
-	db, err := sql.Open("sqlite3", dsn)
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return "", fmt.Errorf("failed to open cache.db: %w", err)
 	}
