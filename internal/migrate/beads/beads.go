@@ -30,7 +30,7 @@ type beadsIssue struct {
 	Title        string        `json:"title"`
 	Description  string        `json:"description"`
 	Status       string        `json:"status"`
-	Priority     int           `json:"priority"`
+	Priority     *int          `json:"priority"`
 	IssueType    string        `json:"issue_type"`
 	CreatedAt    string        `json:"created_at"`
 	UpdatedAt    string        `json:"updated_at"`
@@ -116,19 +116,23 @@ func (p *BeadsProvider) Tasks() ([]migrate.MigratedTask, error) {
 func mapToMigratedTask(issue beadsIssue) migrate.MigratedTask {
 	status := statusMap[issue.Status] // unknown/empty maps to "" (zero value)
 
-	priority := issue.Priority
-
 	created, _ := time.Parse(time.RFC3339, issue.CreatedAt)
 	updated, _ := time.Parse(time.RFC3339, issue.UpdatedAt)
 	closed, _ := time.Parse(time.RFC3339, issue.ClosedAt)
 
-	return migrate.MigratedTask{
+	mt := migrate.MigratedTask{
 		Title:       issue.Title,
 		Description: issue.Description,
 		Status:      status,
-		Priority:    &priority,
 		Created:     created,
 		Updated:     updated,
 		Closed:      closed,
 	}
+
+	if issue.Priority != nil {
+		p := *issue.Priority
+		mt.Priority = &p
+	}
+
+	return mt
 }

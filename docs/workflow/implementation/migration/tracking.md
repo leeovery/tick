@@ -18,11 +18,12 @@ project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro
 current_phase: 4
-current_task: migration-4-1
+current_task: ~
 completed_phases:
   - 1
   - 2
   - 3
+  - 4
 completed_tasks:
   - migration-1-1
   - migration-1-2
@@ -38,6 +39,7 @@ completed_tasks:
   - migration-3-2
   - migration-3-3
   - migration-3-4
+  - migration-4-1
 started: 2026-02-15
 updated: 2026-02-15
 completed: ~

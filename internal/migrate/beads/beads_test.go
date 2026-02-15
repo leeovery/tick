@@ -159,6 +159,43 @@ func TestBeadsProvider(t *testing.T) {
 		}
 	})
 
+	t.Run("Tasks produces nil Priority when JSON line omits priority field", func(t *testing.T) {
+		content := `{"id":"b-001","title":"No priority task","status":"pending"}`
+		baseDir := setupBeadsDir(t, content)
+		p := NewBeadsProvider(baseDir)
+
+		tasks, err := p.Tasks()
+		if err != nil {
+			t.Fatalf("Tasks() returned error: %v", err)
+		}
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].Priority != nil {
+			t.Errorf("Priority = %v, want nil (absent priority should not default to 0)", *tasks[0].Priority)
+		}
+	})
+
+	t.Run("Tasks produces non-nil Priority pointing to 0 when JSON has priority 0", func(t *testing.T) {
+		content := `{"id":"b-001","title":"Zero priority task","status":"pending","priority":0}`
+		baseDir := setupBeadsDir(t, content)
+		p := NewBeadsProvider(baseDir)
+
+		tasks, err := p.Tasks()
+		if err != nil {
+			t.Fatalf("Tasks() returned error: %v", err)
+		}
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].Priority == nil {
+			t.Fatal("expected Priority to be non-nil for explicit priority 0")
+		}
+		if *tasks[0].Priority != 0 {
+			t.Errorf("Priority = %d, want 0", *tasks[0].Priority)
+		}
+	})
+
 	t.Run("Tasks parses ISO 8601 timestamps into time.Time", func(t *testing.T) {
 		content := `{"id":"b-001","title":"Timestamped task","status":"pending","priority":0,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-12T14:00:00Z"}`
 		baseDir := setupBeadsDir(t, content)
@@ -456,6 +493,8 @@ not valid json
 	})
 }
 
+func intPtr(v int) *int { return &v }
+
 func TestMapToMigratedTask(t *testing.T) {
 	t.Run("mapToMigratedTask produces valid MigratedTask from fully populated beadsIssue", func(t *testing.T) {
 		issue := beadsIssue{
@@ -463,7 +502,7 @@ func TestMapToMigratedTask(t *testing.T) {
 			Title:        "Implement login flow",
 			Description:  "Full markdown description",
 			Status:       "closed",
-			Priority:     3,
+			Priority:     intPtr(3),
 			IssueType:    "epic",
 			CreatedAt:    "2026-01-10T09:00:00Z",
 			UpdatedAt:    "2026-01-12T14:00:00Z",
@@ -512,7 +551,7 @@ func TestMapToMigratedTask(t *testing.T) {
 			ID:       "b-001",
 			Title:    "",
 			Status:   "pending",
-			Priority: 0,
+			Priority: intPtr(0),
 		}
 
 		tk := mapToMigratedTask(issue)
