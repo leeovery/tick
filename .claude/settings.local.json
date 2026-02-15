@@ -35,7 +35,8 @@
       "Bash(go build:*)",
       "Bash(goreleaser:*)",
       "Bash(chmod:*)",
-      "Bash(~/go/bin/goreleaser release:*)"
+      "Bash(~/go/bin/goreleaser release:*)",
+      "Bash(gh pr create:*)"
     ]
   },
   "sandbox": {
