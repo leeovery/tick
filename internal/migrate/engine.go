@@ -22,9 +22,10 @@ func NewEngine(creator TaskCreator) *Engine {
 }
 
 // Run fetches tasks from the provider, validates each one, inserts valid tasks
-// via the TaskCreator, and returns a Result per task. Validation failures are
-// skipped (recorded as failed Results). Insertion failures cause an immediate
-// return with partial results (Phase 1 fail-fast behavior).
+// via the TaskCreator, and returns a Result per task. Both validation and
+// insertion failures are recorded as failed Results; processing continues for
+// all remaining tasks. The returned error is non-nil only when provider.Tasks()
+// fails — individual task failures are captured in the Results slice.
 func (e *Engine) Run(provider Provider) ([]Result, error) {
 	tasks, err := provider.Tasks()
 	if err != nil {
@@ -44,7 +45,7 @@ func (e *Engine) Run(provider Provider) ([]Result, error) {
 
 		if _, err := e.creator.CreateTask(task); err != nil {
 			results = append(results, Result{Title: task.Title, Success: false, Err: err})
-			return results, err
+			continue
 		}
 
 		results = append(results, Result{Title: task.Title, Success: true})

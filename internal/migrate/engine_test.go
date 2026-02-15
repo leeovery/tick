@@ -7,23 +7,27 @@ import (
 )
 
 // mockTaskCreator is a test double satisfying TaskCreator.
+// It supports per-call error control via the errs map (keyed by call index).
 type mockTaskCreator struct {
 	calls   []MigratedTask
-	ids     []string // IDs to return in order
-	err     error    // if set, CreateTask returns this error
+	ids     []string      // IDs to return in order
+	errs    map[int]error // per-call errors keyed by call index (0-based)
 	callIdx int
 }
 
 func (m *mockTaskCreator) CreateTask(t MigratedTask) (string, error) {
+	idx := m.callIdx
 	m.calls = append(m.calls, t)
-	if m.err != nil {
-		return "", m.err
+	m.callIdx++
+	if m.errs != nil {
+		if err, ok := m.errs[idx]; ok {
+			return "", err
+		}
 	}
 	id := ""
-	if m.callIdx < len(m.ids) {
-		id = m.ids[m.callIdx]
+	if idx < len(m.ids) {
+		id = m.ids[idx]
 	}
-	m.callIdx++
 	return id, nil
 }
 
@@ -183,8 +187,52 @@ func TestEngineRun(t *testing.T) {
 		}
 	})
 
-	t.Run("it returns error immediately when TaskCreator.CreateTask fails", func(t *testing.T) {
+	t.Run("it continues processing after CreateTask fails and records failure Result", func(t *testing.T) {
 		insertErr := errors.New("storage write failed")
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Task A"},
+				{Title: "Task B"},
+				{Title: "Task C"},
+			},
+		}
+		creator := &mockTaskCreator{
+			ids:  []string{"id-1", "", "id-3"},
+			errs: map[int]error{1: insertErr}, // Task B fails insertion
+		}
+		engine := NewEngine(creator)
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 3 {
+			t.Fatalf("expected 3 results, got %d", len(results))
+		}
+		// Task A: success
+		if !results[0].Success {
+			t.Error("results[0].Success = false, want true")
+		}
+		// Task B: insertion failure
+		if results[1].Success {
+			t.Error("results[1].Success = true, want false")
+		}
+		if results[1].Err != insertErr {
+			t.Errorf("results[1].Err = %v, want %v", results[1].Err, insertErr)
+		}
+		// Task C: success (engine continued after Task B failure)
+		if !results[2].Success {
+			t.Error("results[2].Success = false, want true")
+		}
+		// All 3 tasks should have been sent to creator
+		if len(creator.calls) != 3 {
+			t.Fatalf("expected 3 CreateTask calls, got %d", len(creator.calls))
+		}
+	})
+
+	t.Run("it returns nil error when all tasks fail insertion", func(t *testing.T) {
+		insertErr := errors.New("storage unavailable")
 		provider := &mockProvider{
 			name: "test",
 			tasks: []MigratedTask{
@@ -193,26 +241,132 @@ func TestEngineRun(t *testing.T) {
 			},
 		}
 		creator := &mockTaskCreator{
-			err: insertErr,
+			errs: map[int]error{0: insertErr, 1: insertErr},
 		}
 		engine := NewEngine(creator)
 
 		results, err := engine.Run(provider)
-		if err == nil {
-			t.Fatal("expected error, got nil")
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
 		}
-		if err != insertErr {
-			t.Errorf("err = %v, want %v", err, insertErr)
+		if len(results) != 2 {
+			t.Fatalf("expected 2 results, got %d", len(results))
 		}
-		// Should have partial results: the failed one
+		for i, r := range results {
+			if r.Success {
+				t.Errorf("results[%d].Success = true, want false", i)
+			}
+			if r.Err != insertErr {
+				t.Errorf("results[%d].Err = %v, want %v", i, r.Err, insertErr)
+			}
+		}
+	})
+
+	t.Run("it returns nil error with mixed validation and insertion failures", func(t *testing.T) {
+		insertErr := errors.New("write failed")
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Valid A"},                         // succeeds
+				{Title: "Bad status", Status: "completed"}, // fails validation
+				{Title: "Valid B"},                         // fails insertion
+				{Title: "Valid C"},                         // succeeds
+			},
+		}
+		creator := &mockTaskCreator{
+			ids:  []string{"id-1", "", "id-3"},
+			errs: map[int]error{1: insertErr}, // second CreateTask call (Valid B) fails
+		}
+		engine := NewEngine(creator)
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 4 {
+			t.Fatalf("expected 4 results, got %d", len(results))
+		}
+		// Valid A: success
+		if !results[0].Success {
+			t.Error("results[0].Success = false, want true")
+		}
+		// Bad status: validation failure
+		if results[1].Success {
+			t.Error("results[1].Success = true, want false")
+		}
+		if !strings.Contains(results[1].Err.Error(), "invalid status") {
+			t.Errorf("results[1].Err = %q, want validation error", results[1].Err.Error())
+		}
+		// Valid B: insertion failure
+		if results[2].Success {
+			t.Error("results[2].Success = true, want false")
+		}
+		if results[2].Err != insertErr {
+			t.Errorf("results[2].Err = %v, want %v", results[2].Err, insertErr)
+		}
+		// Valid C: success
+		if !results[3].Success {
+			t.Error("results[3].Success = false, want true")
+		}
+	})
+
+	t.Run("failure Result from insertion contains the original CreateTask error", func(t *testing.T) {
+		originalErr := errors.New("unique constraint violated: task already exists")
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Duplicate task"},
+			},
+		}
+		creator := &mockTaskCreator{
+			errs: map[int]error{0: originalErr},
+		}
+		engine := NewEngine(creator)
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
 		if len(results) != 1 {
-			t.Fatalf("expected 1 partial result, got %d", len(results))
+			t.Fatalf("expected 1 result, got %d", len(results))
 		}
-		if results[0].Success {
-			t.Error("results[0].Success = true, want false")
+		if results[0].Err != originalErr {
+			t.Errorf("results[0].Err = %v, want exact error %v", results[0].Err, originalErr)
 		}
-		if results[0].Err != insertErr {
-			t.Errorf("results[0].Err = %v, want %v", results[0].Err, insertErr)
+		if results[0].Title != "Duplicate task" {
+			t.Errorf("results[0].Title = %q, want %q", results[0].Title, "Duplicate task")
+		}
+	})
+
+	t.Run("results slice contains entries for all tasks in provider order regardless of success or failure", func(t *testing.T) {
+		insertErr := errors.New("write failed")
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Alpha"},
+				{Title: "Beta"},
+				{Title: "Gamma"},
+				{Title: "Delta"},
+			},
+		}
+		creator := &mockTaskCreator{
+			ids:  []string{"id-1", "", "id-3", "id-4"},
+			errs: map[int]error{1: insertErr}, // Beta fails insertion
+		}
+		engine := NewEngine(creator)
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 4 {
+			t.Fatalf("expected 4 results, got %d", len(results))
+		}
+		expectedTitles := []string{"Alpha", "Beta", "Gamma", "Delta"}
+		for i, want := range expectedTitles {
+			if results[i].Title != want {
+				t.Errorf("results[%d].Title = %q, want %q", i, results[i].Title, want)
+			}
 		}
 	})
 
@@ -314,49 +468,140 @@ func TestEngineRun(t *testing.T) {
 		}
 	})
 
-	t.Run("it continues past validation failures but stops on insertion failures", func(t *testing.T) {
+	t.Run("successful tasks are persisted even when later tasks fail insertion", func(t *testing.T) {
 		insertErr := errors.New("disk full")
 		provider := &mockProvider{
 			name: "test",
 			tasks: []MigratedTask{
-				{Title: "Bad status", Status: "invalid"}, // fails validation
-				{Title: "Good task"},                     // passes validation, fails insertion
-				{Title: "Never reached"},                 // should not be processed
+				{Title: "First valid"},
+				{Title: "Fails insertion"},
+				{Title: "Second valid"},
 			},
 		}
 		creator := &mockTaskCreator{
-			err: insertErr,
+			ids:  []string{"id-1", "", "id-3"},
+			errs: map[int]error{1: insertErr},
 		}
 		engine := NewEngine(creator)
 
 		results, err := engine.Run(provider)
-		if err == nil {
-			t.Fatal("expected error, got nil")
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
 		}
-		if err != insertErr {
-			t.Errorf("err = %v, want %v", err, insertErr)
+		if len(results) != 3 {
+			t.Fatalf("expected 3 results, got %d", len(results))
 		}
-		// Should have 2 results: validation failure + insertion failure
-		if len(results) != 2 {
-			t.Fatalf("expected 2 results, got %d", len(results))
+		// All 3 tasks were sent to creator
+		if len(creator.calls) != 3 {
+			t.Fatalf("expected 3 CreateTask calls, got %d", len(creator.calls))
 		}
-		// First: validation failure (skipped, continued)
+		// First and third succeeded
+		if !results[0].Success {
+			t.Error("results[0].Success = false, want true")
+		}
+		if !results[2].Success {
+			t.Error("results[2].Success = false, want true")
+		}
+		// Second failed
+		if results[1].Success {
+			t.Error("results[1].Success = true, want false")
+		}
+	})
+
+	t.Run("all tasks fail insertion returns results with all failures and nil error", func(t *testing.T) {
+		errA := errors.New("fail A")
+		errB := errors.New("fail B")
+		errC := errors.New("fail C")
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Task A"},
+				{Title: "Task B"},
+				{Title: "Task C"},
+			},
+		}
+		creator := &mockTaskCreator{
+			errs: map[int]error{0: errA, 1: errB, 2: errC},
+		}
+		engine := NewEngine(creator)
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 3 {
+			t.Fatalf("expected 3 results, got %d", len(results))
+		}
+		expectedErrs := []error{errA, errB, errC}
+		for i, wantErr := range expectedErrs {
+			if results[i].Success {
+				t.Errorf("results[%d].Success = true, want false", i)
+			}
+			if results[i].Err != wantErr {
+				t.Errorf("results[%d].Err = %v, want %v", i, results[i].Err, wantErr)
+			}
+		}
+	})
+
+	t.Run("mixed failures: validation then insertion then success produces three Results in order", func(t *testing.T) {
+		insertErr := errors.New("insert failed")
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Bad status", Status: "invalid"}, // validation failure
+				{Title: "Insert fail"},                   // insertion failure
+				{Title: "Success task"},                  // success
+			},
+		}
+		creator := &mockTaskCreator{
+			ids:  []string{"", "id-2"},
+			errs: map[int]error{0: insertErr}, // first CreateTask call fails
+		}
+		engine := NewEngine(creator)
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 3 {
+			t.Fatalf("expected 3 results, got %d", len(results))
+		}
+		// Result 0: validation failure
 		if results[0].Success {
-			t.Error("results[0].Success = true, want false (validation failure)")
+			t.Error("results[0].Success = true, want false (validation)")
 		}
 		if results[0].Title != "Bad status" {
 			t.Errorf("results[0].Title = %q, want %q", results[0].Title, "Bad status")
 		}
-		// Second: insertion failure (stopped)
+		if !strings.Contains(results[0].Err.Error(), "invalid status") {
+			t.Errorf("results[0].Err = %q, want validation error", results[0].Err.Error())
+		}
+		// Result 1: insertion failure
 		if results[1].Success {
-			t.Error("results[1].Success = true, want false (insertion failure)")
+			t.Error("results[1].Success = true, want false (insertion)")
+		}
+		if results[1].Title != "Insert fail" {
+			t.Errorf("results[1].Title = %q, want %q", results[1].Title, "Insert fail")
 		}
 		if results[1].Err != insertErr {
 			t.Errorf("results[1].Err = %v, want %v", results[1].Err, insertErr)
 		}
-		// Creator should have been called exactly once (for "Good task")
-		if len(creator.calls) != 1 {
-			t.Fatalf("expected 1 CreateTask call, got %d", len(creator.calls))
+		// Result 2: success
+		if !results[2].Success {
+			t.Error("results[2].Success = false, want true")
+		}
+		if results[2].Title != "Success task" {
+			t.Errorf("results[2].Title = %q, want %q", results[2].Title, "Success task")
+		}
+		// Creator called twice: "Insert fail" and "Success task" (validation failure skips creator)
+		if len(creator.calls) != 2 {
+			t.Fatalf("expected 2 CreateTask calls, got %d", len(creator.calls))
+		}
+		if creator.calls[0].Title != "Insert fail" {
+			t.Errorf("creator.calls[0].Title = %q, want %q", creator.calls[0].Title, "Insert fail")
+		}
+		if creator.calls[1].Title != "Success task" {
+			t.Errorf("creator.calls[1].Title = %q, want %q", creator.calls[1].Title, "Success task")
 		}
 	})
 }
