@@ -352,6 +352,83 @@ func TestMigrateDryRun(t *testing.T) {
 	})
 }
 
+func TestMigratePendingOnly(t *testing.T) {
+	t.Run("--pending-only flag defaults to false", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		// Include a closed task (beads "closed" maps to tick "done")
+		content := `{"id":"b-001","title":"Open task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-002","title":"Done task","status":"closed","priority":1,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z","closed_at":"2026-01-11T10:00:00Z","close_reason":"completed"}`
+		setupBeadsFixture(t, dir, content)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		// Without --pending-only, both tasks should be imported
+		if !strings.Contains(stdout, "Done: 2 imported, 0 failed") {
+			t.Errorf("expected 2 imported without --pending-only, got:\n%s", stdout)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 persisted tasks, got %d", len(tasks))
+		}
+	})
+
+	t.Run("--pending-only flag is accepted by the migrate command", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		content := `{"id":"b-001","title":"Open task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-002","title":"Done task","status":"closed","priority":1,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z","closed_at":"2026-01-11T10:00:00Z","close_reason":"completed"}`
+		setupBeadsFixture(t, dir, content)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--pending-only")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		// Only the open task should be imported (done task filtered out)
+		if !strings.Contains(stdout, "Done: 1 imported, 0 failed") {
+			t.Errorf("expected 1 imported with --pending-only, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "Open task") {
+			t.Errorf("expected Open task in output, got:\n%s", stdout)
+		}
+	})
+
+	t.Run("--pending-only combined with --dry-run filters then previews without writing", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		content := `{"id":"b-001","title":"Active task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}
+{"id":"b-002","title":"Closed task","status":"closed","priority":1,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z","closed_at":"2026-01-11T10:00:00Z","close_reason":"completed"}
+{"id":"b-003","title":"WIP task","status":"in_progress","priority":3,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`
+		setupBeadsFixture(t, dir, content)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--pending-only", "--dry-run")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		// Should show dry-run header
+		if !strings.Contains(stdout, "[dry-run]") {
+			t.Errorf("expected [dry-run] in output, got:\n%s", stdout)
+		}
+		// Should only show 2 tasks (pending ones), not the closed one
+		if !strings.Contains(stdout, "Done: 2 imported, 0 failed") {
+			t.Errorf("expected 2 imported with --pending-only --dry-run, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "Active task") {
+			t.Errorf("expected Active task in output, got:\n%s", stdout)
+		}
+		if !strings.Contains(stdout, "WIP task") {
+			t.Errorf("expected WIP task in output, got:\n%s", stdout)
+		}
+		// Verify NO tasks persisted (dry-run)
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 persisted tasks in dry-run, got %d", len(tasks))
+		}
+	})
+}
+
 // setupBeadsFixture creates a .beads/issues.jsonl file in the given directory.
 func setupBeadsFixture(t *testing.T, dir string, content string) {
 	t.Helper()

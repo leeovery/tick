@@ -31,6 +31,138 @@ func (m *mockTaskCreator) CreateTask(t MigratedTask) (string, error) {
 	return id, nil
 }
 
+func TestFilterPending(t *testing.T) {
+	t.Run("filterPending removes tasks with status done", func(t *testing.T) {
+		tasks := []MigratedTask{
+			{Title: "Done task", Status: "done"},
+			{Title: "Open task", Status: "open"},
+		}
+		got := filterPending(tasks)
+		if len(got) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(got))
+		}
+		if got[0].Title != "Open task" {
+			t.Errorf("got[0].Title = %q, want %q", got[0].Title, "Open task")
+		}
+	})
+
+	t.Run("filterPending removes tasks with status cancelled", func(t *testing.T) {
+		tasks := []MigratedTask{
+			{Title: "Cancelled task", Status: "cancelled"},
+			{Title: "Open task", Status: "open"},
+		}
+		got := filterPending(tasks)
+		if len(got) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(got))
+		}
+		if got[0].Title != "Open task" {
+			t.Errorf("got[0].Title = %q, want %q", got[0].Title, "Open task")
+		}
+	})
+
+	t.Run("filterPending retains tasks with status open", func(t *testing.T) {
+		tasks := []MigratedTask{
+			{Title: "Open task", Status: "open"},
+		}
+		got := filterPending(tasks)
+		if len(got) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(got))
+		}
+		if got[0].Title != "Open task" {
+			t.Errorf("got[0].Title = %q, want %q", got[0].Title, "Open task")
+		}
+	})
+
+	t.Run("filterPending retains tasks with status in_progress", func(t *testing.T) {
+		tasks := []MigratedTask{
+			{Title: "In progress task", Status: "in_progress"},
+		}
+		got := filterPending(tasks)
+		if len(got) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(got))
+		}
+		if got[0].Title != "In progress task" {
+			t.Errorf("got[0].Title = %q, want %q", got[0].Title, "In progress task")
+		}
+	})
+
+	t.Run("filterPending retains tasks with empty status", func(t *testing.T) {
+		tasks := []MigratedTask{
+			{Title: "No status task", Status: ""},
+		}
+		got := filterPending(tasks)
+		if len(got) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(got))
+		}
+		if got[0].Title != "No status task" {
+			t.Errorf("got[0].Title = %q, want %q", got[0].Title, "No status task")
+		}
+	})
+
+	t.Run("filterPending returns empty slice when all tasks are completed", func(t *testing.T) {
+		tasks := []MigratedTask{
+			{Title: "Done", Status: "done"},
+			{Title: "Cancelled", Status: "cancelled"},
+		}
+		got := filterPending(tasks)
+		if len(got) != 0 {
+			t.Fatalf("expected 0 tasks, got %d", len(got))
+		}
+	})
+
+	t.Run("filterPending returns all tasks when none are completed", func(t *testing.T) {
+		tasks := []MigratedTask{
+			{Title: "Open", Status: "open"},
+			{Title: "In progress", Status: "in_progress"},
+			{Title: "Empty status", Status: ""},
+		}
+		got := filterPending(tasks)
+		if len(got) != 3 {
+			t.Fatalf("expected 3 tasks, got %d", len(got))
+		}
+	})
+
+	t.Run("filterPending with mixed statuses returns only non-completed tasks", func(t *testing.T) {
+		tasks := []MigratedTask{
+			{Title: "Open", Status: "open"},
+			{Title: "Done", Status: "done"},
+			{Title: "In progress", Status: "in_progress"},
+			{Title: "Cancelled", Status: "cancelled"},
+			{Title: "Empty", Status: ""},
+		}
+		got := filterPending(tasks)
+		if len(got) != 3 {
+			t.Fatalf("expected 3 tasks, got %d", len(got))
+		}
+		wantTitles := []string{"Open", "In progress", "Empty"}
+		for i, want := range wantTitles {
+			if got[i].Title != want {
+				t.Errorf("got[%d].Title = %q, want %q", i, got[i].Title, want)
+			}
+		}
+	})
+
+	t.Run("filterPending preserves task order", func(t *testing.T) {
+		tasks := []MigratedTask{
+			{Title: "C", Status: "open"},
+			{Title: "A", Status: "done"},
+			{Title: "B", Status: "in_progress"},
+			{Title: "D", Status: "cancelled"},
+			{Title: "E", Status: ""},
+		}
+		got := filterPending(tasks)
+		if len(got) != 3 {
+			t.Fatalf("expected 3 tasks, got %d", len(got))
+		}
+		wantTitles := []string{"C", "B", "E"}
+		for i, want := range wantTitles {
+			if got[i].Title != want {
+				t.Errorf("got[%d].Title = %q, want %q", i, got[i].Title, want)
+			}
+		}
+	})
+}
+
 func TestEngineRun(t *testing.T) {
 	t.Run("it calls Validate on each MigratedTask before insertion", func(t *testing.T) {
 		// One valid task and one invalid (bad status). The invalid task should
@@ -46,7 +178,7 @@ func TestEngineRun(t *testing.T) {
 		creator := &mockTaskCreator{
 			ids: []string{"id-1", "id-2"},
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -82,7 +214,7 @@ func TestEngineRun(t *testing.T) {
 		creator := &mockTaskCreator{
 			ids: []string{"id-1", "id-2"},
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -118,7 +250,7 @@ func TestEngineRun(t *testing.T) {
 		creator := &mockTaskCreator{
 			ids: []string{"id-1"},
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -153,7 +285,7 @@ func TestEngineRun(t *testing.T) {
 			err:  providerErr,
 		}
 		creator := &mockTaskCreator{}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err == nil {
@@ -173,7 +305,7 @@ func TestEngineRun(t *testing.T) {
 			tasks: []MigratedTask{},
 		}
 		creator := &mockTaskCreator{}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -201,7 +333,7 @@ func TestEngineRun(t *testing.T) {
 			ids:  []string{"id-1", "", "id-3"},
 			errs: map[int]error{1: insertErr}, // Task B fails insertion
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -243,7 +375,7 @@ func TestEngineRun(t *testing.T) {
 		creator := &mockTaskCreator{
 			errs: map[int]error{0: insertErr, 1: insertErr},
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -277,7 +409,7 @@ func TestEngineRun(t *testing.T) {
 			ids:  []string{"id-1", "", "id-3"},
 			errs: map[int]error{1: insertErr}, // second CreateTask call (Valid B) fails
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -321,7 +453,7 @@ func TestEngineRun(t *testing.T) {
 		creator := &mockTaskCreator{
 			errs: map[int]error{0: originalErr},
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -353,7 +485,7 @@ func TestEngineRun(t *testing.T) {
 			ids:  []string{"id-1", "", "id-3", "id-4"},
 			errs: map[int]error{1: insertErr}, // Beta fails insertion
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -382,7 +514,7 @@ func TestEngineRun(t *testing.T) {
 		creator := &mockTaskCreator{
 			ids: []string{"id-1", "id-2", "id-3"},
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -421,7 +553,7 @@ func TestEngineRun(t *testing.T) {
 		creator := &mockTaskCreator{
 			ids: []string{"id-1"},
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		_, err := engine.Run(provider)
 		if err != nil {
@@ -448,7 +580,7 @@ func TestEngineRun(t *testing.T) {
 			},
 		}
 		creator := &mockTaskCreator{}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -482,7 +614,7 @@ func TestEngineRun(t *testing.T) {
 			ids:  []string{"id-1", "", "id-3"},
 			errs: map[int]error{1: insertErr},
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -523,7 +655,7 @@ func TestEngineRun(t *testing.T) {
 		creator := &mockTaskCreator{
 			errs: map[int]error{0: errA, 1: errB, 2: errC},
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -557,7 +689,7 @@ func TestEngineRun(t *testing.T) {
 			ids:  []string{"", "id-2"},
 			errs: map[int]error{0: insertErr}, // first CreateTask call fails
 		}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -602,6 +734,162 @@ func TestEngineRun(t *testing.T) {
 		}
 		if creator.calls[1].Title != "Success task" {
 			t.Errorf("creator.calls[1].Title = %q, want %q", creator.calls[1].Title, "Success task")
+		}
+	})
+}
+
+func TestEnginePendingOnly(t *testing.T) {
+	t.Run("engine with PendingOnly true filters completed tasks before processing", func(t *testing.T) {
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Open task", Status: "open"},
+				{Title: "Done task", Status: "done"},
+				{Title: "In progress task", Status: "in_progress"},
+				{Title: "Cancelled task", Status: "cancelled"},
+			},
+		}
+		creator := &mockTaskCreator{
+			ids: []string{"id-1", "id-2"},
+		}
+		engine := NewEngine(creator, Options{PendingOnly: true})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 2 {
+			t.Fatalf("expected 2 results, got %d", len(results))
+		}
+		if results[0].Title != "Open task" {
+			t.Errorf("results[0].Title = %q, want %q", results[0].Title, "Open task")
+		}
+		if results[1].Title != "In progress task" {
+			t.Errorf("results[1].Title = %q, want %q", results[1].Title, "In progress task")
+		}
+		if len(creator.calls) != 2 {
+			t.Fatalf("expected 2 CreateTask calls, got %d", len(creator.calls))
+		}
+	})
+
+	t.Run("engine with PendingOnly false does not filter any tasks", func(t *testing.T) {
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Open task", Status: "open"},
+				{Title: "Done task", Status: "done"},
+				{Title: "Cancelled task", Status: "cancelled"},
+			},
+		}
+		creator := &mockTaskCreator{
+			ids: []string{"id-1", "id-2", "id-3"},
+		}
+		engine := NewEngine(creator, Options{PendingOnly: false})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 3 {
+			t.Fatalf("expected 3 results, got %d", len(results))
+		}
+		if len(creator.calls) != 3 {
+			t.Fatalf("expected 3 CreateTask calls, got %d", len(creator.calls))
+		}
+	})
+
+	t.Run("engine with PendingOnly true and all tasks completed returns empty Results and nil error", func(t *testing.T) {
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Done", Status: "done"},
+				{Title: "Cancelled", Status: "cancelled"},
+			},
+		}
+		creator := &mockTaskCreator{}
+		engine := NewEngine(creator, Options{PendingOnly: true})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if results == nil {
+			t.Fatal("expected non-nil results slice")
+		}
+		if len(results) != 0 {
+			t.Fatalf("expected 0 results, got %d", len(results))
+		}
+		if len(creator.calls) != 0 {
+			t.Fatalf("expected 0 CreateTask calls, got %d", len(creator.calls))
+		}
+	})
+
+	t.Run("engine with PendingOnly true and no completed tasks returns all Results", func(t *testing.T) {
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Open", Status: "open"},
+				{Title: "In progress", Status: "in_progress"},
+				{Title: "Empty", Status: ""},
+			},
+		}
+		creator := &mockTaskCreator{
+			ids: []string{"id-1", "id-2", "id-3"},
+		}
+		engine := NewEngine(creator, Options{PendingOnly: true})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 3 {
+			t.Fatalf("expected 3 results, got %d", len(results))
+		}
+		wantTitles := []string{"Open", "In progress", "Empty"}
+		for i, want := range wantTitles {
+			if results[i].Title != want {
+				t.Errorf("results[%d].Title = %q, want %q", i, results[i].Title, want)
+			}
+		}
+	})
+
+	t.Run("engine with PendingOnly true still validates remaining tasks", func(t *testing.T) {
+		provider := &mockProvider{
+			name: "test",
+			tasks: []MigratedTask{
+				{Title: "Valid open", Status: "open"},
+				{Title: "Done task", Status: "done"},
+				{Title: "", Status: "open"}, // invalid: empty title
+			},
+		}
+		creator := &mockTaskCreator{
+			ids: []string{"id-1"},
+		}
+		engine := NewEngine(creator, Options{PendingOnly: true})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		// "Done task" filtered out, 2 remaining: "Valid open" (success) and "" (validation failure)
+		if len(results) != 2 {
+			t.Fatalf("expected 2 results, got %d", len(results))
+		}
+		if !results[0].Success {
+			t.Error("results[0].Success = false, want true")
+		}
+		if results[0].Title != "Valid open" {
+			t.Errorf("results[0].Title = %q, want %q", results[0].Title, "Valid open")
+		}
+		if results[1].Success {
+			t.Error("results[1].Success = true, want false")
+		}
+		if results[1].Err == nil {
+			t.Error("results[1].Err = nil, want validation error")
+		}
+		// Only 1 task sent to creator (the valid one)
+		if len(creator.calls) != 1 {
+			t.Fatalf("expected 1 CreateTask call, got %d", len(creator.calls))
 		}
 	})
 }

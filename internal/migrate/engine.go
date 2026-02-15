@@ -2,6 +2,30 @@ package migrate
 
 import "strings"
 
+// completedStatuses defines statuses that indicate a task is finished.
+var completedStatuses = map[string]bool{
+	"done":      true,
+	"cancelled": true,
+}
+
+// Options configures Engine behavior.
+type Options struct {
+	PendingOnly bool
+}
+
+// filterPending returns a new slice containing only tasks whose status
+// is not "done" or "cancelled". Tasks with status "open", "in_progress",
+// or "" (empty) are retained.
+func filterPending(tasks []MigratedTask) []MigratedTask {
+	result := make([]MigratedTask, 0, len(tasks))
+	for _, t := range tasks {
+		if !completedStatuses[t.Status] {
+			result = append(result, t)
+		}
+	}
+	return result
+}
+
 // TaskCreator abstracts tick-core task creation so the migrate package
 // remains decoupled from tick-core internals.
 type TaskCreator interface {
@@ -14,11 +38,13 @@ type TaskCreator interface {
 // via a TaskCreator.
 type Engine struct {
 	creator TaskCreator
+	opts    Options
 }
 
 // NewEngine creates an Engine that uses the given TaskCreator for persistence.
-func NewEngine(creator TaskCreator) *Engine {
-	return &Engine{creator: creator}
+// Options controls filtering and other engine behaviors.
+func NewEngine(creator TaskCreator, opts Options) *Engine {
+	return &Engine{creator: creator, opts: opts}
 }
 
 // Run fetches tasks from the provider, validates each one, inserts valid tasks
@@ -30,6 +56,10 @@ func (e *Engine) Run(provider Provider) ([]Result, error) {
 	tasks, err := provider.Tasks()
 	if err != nil {
 		return nil, err
+	}
+
+	if e.opts.PendingOnly {
+		tasks = filterPending(tasks)
 	}
 
 	results := make([]Result, 0, len(tasks))

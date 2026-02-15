@@ -54,7 +54,7 @@ func TestEngineWithDryRunTaskCreator(t *testing.T) {
 			},
 		}
 		creator := &DryRunTaskCreator{}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {
@@ -91,7 +91,7 @@ func TestEngineWithDryRunTaskCreator(t *testing.T) {
 			},
 		}
 		creator := &DryRunTaskCreator{}
-		engine := NewEngine(creator)
+		engine := NewEngine(creator, Options{})
 
 		results, err := engine.Run(provider)
 		if err != nil {

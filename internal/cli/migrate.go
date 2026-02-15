@@ -22,8 +22,9 @@ func newMigrateProvider(name string, baseDir string) (migrate.Provider, error) {
 
 // migrateFlags holds parsed migrate subcommand flags.
 type migrateFlags struct {
-	from   string
-	dryRun bool
+	from        string
+	dryRun      bool
+	pendingOnly bool
 }
 
 // parseMigrateArgs extracts flag values from migrate subcommand args.
@@ -41,6 +42,8 @@ func parseMigrateArgs(args []string) (migrateFlags, error) {
 			flags.from = strings.TrimPrefix(args[i], "--from=")
 		case args[i] == "--dry-run":
 			flags.dryRun = true
+		case args[i] == "--pending-only":
+			flags.pendingOnly = true
 		}
 	}
 	if flags.from == "" {
@@ -75,7 +78,7 @@ func (a *App) handleMigrate(subArgs []string) int {
 		return 1
 	}
 
-	if err := RunMigrate(dir, provider, mf.dryRun, a.Stdout); err != nil {
+	if err := RunMigrate(dir, provider, mf.dryRun, mf.pendingOnly, a.Stdout); err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
 	}
@@ -86,7 +89,7 @@ func (a *App) handleMigrate(subArgs []string) int {
 // RunMigrate executes the migration pipeline: opens the store, creates the engine
 // with a TaskCreator (StoreTaskCreator for real runs, DryRunTaskCreator for dry-run),
 // runs the provider, and outputs results via the presenter.
-func RunMigrate(dir string, provider migrate.Provider, dryRun bool, stdout io.Writer) error {
+func RunMigrate(dir string, provider migrate.Provider, dryRun bool, pendingOnly bool, stdout io.Writer) error {
 	var creator migrate.TaskCreator
 	if dryRun {
 		creator = &migrate.DryRunTaskCreator{}
@@ -99,7 +102,7 @@ func RunMigrate(dir string, provider migrate.Provider, dryRun bool, stdout io.Wr
 		creator = migrate.NewStoreTaskCreator(store)
 	}
 
-	engine := migrate.NewEngine(creator)
+	engine := migrate.NewEngine(creator, migrate.Options{PendingOnly: pendingOnly})
 
 	// Print header.
 	migrate.WriteHeader(stdout, provider.Name(), dryRun)
