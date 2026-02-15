@@ -6,13 +6,22 @@ status: in-progress
 task_gate_mode: gated
 fix_gate_mode: gated
 fix_attempts: 0
-linters: []
+linters:
+  - name: gofmt
+    command: gofmt -l .
+  - name: go-vet
+    command: go vet ./...
+  - name: golangci-lint
+    command: ~/go/bin/golangci-lint run ./...
 analysis_cycle: 0
-project_skills: []
+project_skills:
+  - name: golang-pro
+    path: .claude/skills/golang-pro
 current_phase: 1
-current_task: ~
+current_task: migration-1-2
 completed_phases: []
-completed_tasks: []
+completed_tasks:
+  - migration-1-1
 started: 2026-02-15
 updated: 2026-02-15
 completed: ~
