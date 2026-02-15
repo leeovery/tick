@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // setupTickDir creates a temp .tick directory and returns its path.
@@ -35,7 +35,7 @@ func writeJSONL(t *testing.T, tickDir string, content []byte) {
 func createCacheWithHash(t *testing.T, tickDir string, hash string) {
 	t.Helper()
 	cachePath := filepath.Join(tickDir, "cache.db")
-	db, err := sql.Open("sqlite3", cachePath)
+	db, err := sql.Open("sqlite", cachePath)
 	if err != nil {
 		t.Fatalf("failed to open cache.db: %v", err)
 	}
@@ -53,7 +53,7 @@ func createCacheWithHash(t *testing.T, tickDir string, hash string) {
 func createCacheWithoutHash(t *testing.T, tickDir string) {
 	t.Helper()
 	cachePath := filepath.Join(tickDir, "cache.db")
-	db, err := sql.Open("sqlite3", cachePath)
+	db, err := sql.Open("sqlite", cachePath)
 	if err != nil {
 		t.Fatalf("failed to open cache.db: %v", err)
 	}
@@ -495,7 +495,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 		writeJSONL(t, tickDir, []byte(`{"id":"abc"}`))
 		// Create a valid SQLite file but without metadata table
 		cachePath := filepath.Join(tickDir, "cache.db")
-		db, err := sql.Open("sqlite3", cachePath)
+		db, err := sql.Open("sqlite", cachePath)
 		if err != nil {
 			t.Fatalf("failed to open cache.db: %v", err)
 		}

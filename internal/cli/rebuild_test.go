@@ -51,7 +51,7 @@ func TestRebuild(t *testing.T) {
 		}
 
 		// Open cache and verify task count.
-		db, err := sql.Open("sqlite3", cachePath)
+		db, err := sql.Open("sqlite", cachePath)
 		if err != nil {
 			t.Fatalf("failed to open cache.db: %v", err)
 		}
@@ -134,7 +134,7 @@ func TestRebuild(t *testing.T) {
 
 		// Verify new cache has 2 tasks.
 		cachePath := filepath.Join(tickDir, "cache.db")
-		db, err := sql.Open("sqlite3", cachePath)
+		db, err := sql.Open("sqlite", cachePath)
 		if err != nil {
 			t.Fatalf("failed to open cache.db: %v", err)
 		}
@@ -162,7 +162,7 @@ func TestRebuild(t *testing.T) {
 
 		// Verify metadata table has the hash.
 		cachePath := filepath.Join(tickDir, "cache.db")
-		db, err := sql.Open("sqlite3", cachePath)
+		db, err := sql.Open("sqlite", cachePath)
 		if err != nil {
 			t.Fatalf("failed to open cache.db: %v", err)
 		}
@@ -305,7 +305,7 @@ func TestRebuild(t *testing.T) {
 
 		// Cache should still exist with correct schema.
 		cachePath := filepath.Join(tickDir, "cache.db")
-		db, err := sql.Open("sqlite3", cachePath)
+		db, err := sql.Open("sqlite", cachePath)
 		if err != nil {
 			t.Fatalf("failed to open cache.db: %v", err)
 		}
