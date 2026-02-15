@@ -420,9 +420,8 @@ func TestTrapCleanup(t *testing.T) {
 // directory (to prepend to PATH) and a log file path where invocations are
 // recorded. The behavior parameter controls exit codes:
 //
-//	"success"       — all commands succeed
-//	"tap-fail"      — brew tap exits 1
-//	"install-fail"  — brew install exits 1
+//	"success"          — all commands succeed
+//	"install-fail"     — brew install exits 1
 //	"already-installed" — brew install prints "already installed" warning and exits 0
 func createFakeBrew(t *testing.T, behavior string) (binDir, logFile string) {
 	t.Helper()
@@ -438,16 +437,6 @@ func createFakeBrew(t *testing.T, behavior string) (binDir, logFile string) {
 	case "success":
 		script = `#!/usr/bin/env bash
 echo "$@" >> "` + logFile + `"
-echo "brew $@"
-exit 0
-`
-	case "tap-fail":
-		script = `#!/usr/bin/env bash
-echo "$@" >> "` + logFile + `"
-if [[ "$1" == "tap" ]]; then
-    echo "Error: tap failed" >&2
-    exit 1
-fi
 echo "brew $@"
 exit 0
 `
@@ -653,7 +642,7 @@ func TestFullInstallFlow(t *testing.T) {
 }
 
 func TestMacOSInstall(t *testing.T) {
-	t.Run("it runs brew tap and brew install when brew is available on macOS", func(t *testing.T) {
+	t.Run("it runs brew install leeovery/tools/tick when brew is available on macOS", func(t *testing.T) {
 		out, err, logFile := runScriptWithFakeBrew(t, "success", nil)
 		if err != nil {
 			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
@@ -664,11 +653,8 @@ func TestMacOSInstall(t *testing.T) {
 			t.Fatalf("cannot read brew log: %v", readErr)
 		}
 		log := string(logData)
-		if !strings.Contains(log, "tap leeovery/tick") {
-			t.Errorf("expected brew tap leeovery/tick in log, got: %q", log)
-		}
-		if !strings.Contains(log, "install tick") {
-			t.Errorf("expected brew install tick in log, got: %q", log)
+		if !strings.Contains(log, "install leeovery/tools/tick") {
+			t.Errorf("expected brew install leeovery/tools/tick in log, got: %q", log)
 		}
 	})
 
@@ -686,23 +672,6 @@ func TestMacOSInstall(t *testing.T) {
 		}
 		if !strings.Contains(strings.ToLower(out), "success") || !strings.Contains(strings.ToLower(out), "homebrew") {
 			t.Errorf("expected success message mentioning Homebrew, got: %q", out)
-		}
-	})
-
-	t.Run("it propagates exit code when brew tap fails", func(t *testing.T) {
-		out, err, logFile := runScriptWithFakeBrew(t, "tap-fail", nil)
-		if err == nil {
-			t.Fatal("expected non-zero exit when brew tap fails, got success")
-		}
-		if !strings.Contains(out, "tap failed") && !strings.Contains(strings.ToLower(out), "error") {
-			t.Errorf("expected error output when brew tap fails, got: %q", out)
-		}
-		logData, readErr := os.ReadFile(logFile)
-		if readErr != nil {
-			t.Fatalf("cannot read brew log: %v", readErr)
-		}
-		if strings.Contains(string(logData), "install tick") {
-			t.Error("brew install should not be called when brew tap fails")
 		}
 	})
 
@@ -732,10 +701,7 @@ func TestMacOSInstall(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
 		}
-		if !strings.Contains(out, "brew tap leeovery/tick") {
-			t.Errorf("expected brew tap output to be visible, got: %q", out)
-		}
-		if !strings.Contains(out, "brew install tick") {
+		if !strings.Contains(out, "brew install leeovery/tools/tick") {
 			t.Errorf("expected brew install output to be visible, got: %q", out)
 		}
 	})
@@ -793,7 +759,7 @@ func TestMacOSNoBrewError(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error, got success")
 		}
-		if !strings.Contains(out, "brew tap leeovery/tick && brew install tick") {
+		if !strings.Contains(out, "brew install leeovery/tools/tick") {
 			t.Errorf("expected Homebrew install instructions, got: %q", out)
 		}
 	})
@@ -842,7 +808,7 @@ func TestMacOSNoBrewError(t *testing.T) {
 		if !strings.Contains(stderr, "Please install via Homebrew:") {
 			t.Errorf("expected error message on stderr, got stderr: %q", stderr)
 		}
-		if !strings.Contains(stderr, "brew tap leeovery/tick && brew install tick") {
+		if !strings.Contains(stderr, "brew install leeovery/tools/tick") {
 			t.Errorf("expected install instructions on stderr, got stderr: %q", stderr)
 		}
 		if strings.Contains(stdout, "Please install via Homebrew:") {

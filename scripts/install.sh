@@ -59,12 +59,11 @@ construct_url() {
 install_macos() {
     if ! command -v brew &> /dev/null; then
         echo "Please install via Homebrew:" >&2
-        echo "brew tap leeovery/tick && brew install tick" >&2
+        echo "brew install leeovery/tools/tick" >&2
         return 1
     fi
 
-    brew tap leeovery/tick
-    brew install tick
+    brew install leeovery/tools/tick
 
     echo "Successfully installed ${BINARY_NAME} via Homebrew."
 }
