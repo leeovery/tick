@@ -13,17 +13,18 @@ import (
 // updateOpts holds parsed options for the update command.
 // Pointer fields distinguish "not provided" from "provided with empty value".
 type updateOpts struct {
-	id          string
-	title       *string
-	description *string
-	priority    *int
-	parent      *string
-	blocks      []string
+	id               string
+	title            *string
+	description      *string
+	priority         *int
+	parent           *string
+	blocks           []string
+	clearDescription bool
 }
 
 // hasChanges reports whether at least one update flag was provided.
 func (o updateOpts) hasChanges() bool {
-	return o.title != nil || o.description != nil || o.priority != nil || o.parent != nil || len(o.blocks) > 0
+	return o.title != nil || o.description != nil || o.priority != nil || o.parent != nil || len(o.blocks) > 0 || o.clearDescription
 }
 
 // parseUpdateArgs parses the subcommand arguments for `tick update`.
@@ -69,6 +70,8 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 				v = task.NormalizeID(strings.TrimSpace(v))
 			}
 			opts.parent = &v
+		case arg == "--clear-description":
+			opts.clearDescription = true
 		case arg == "--blocks":
 			i++
 			if i >= len(args) {
@@ -101,13 +104,24 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	if !opts.hasChanges() {
-		return fmt.Errorf("at least one flag is required: --title, --description, --priority, --parent, --blocks")
+		return fmt.Errorf("at least one flag is required: --title, --description, --clear-description, --priority, --parent, --blocks")
 	}
 
 	// Validate title if provided.
 	if opts.title != nil {
 		trimmed := task.TrimTitle(*opts.title)
 		if err := task.ValidateTitle(trimmed); err != nil {
+			return err
+		}
+	}
+
+	// Validate description flags.
+	if opts.description != nil && opts.clearDescription {
+		return fmt.Errorf("--description and --clear-description are mutually exclusive")
+	}
+	if opts.description != nil {
+		trimmed := task.TrimDescription(*opts.description)
+		if err := task.ValidateDescriptionUpdate(trimmed); err != nil {
 			return err
 		}
 	}
@@ -162,8 +176,10 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			if opts.title != nil {
 				tasks[i].Title = task.TrimTitle(*opts.title)
 			}
-			if opts.description != nil {
-				tasks[i].Description = *opts.description
+			if opts.clearDescription {
+				tasks[i].Description = ""
+			} else if opts.description != nil {
+				tasks[i].Description = task.TrimDescription(*opts.description)
 			}
 			if opts.priority != nil {
 				tasks[i].Priority = *opts.priority

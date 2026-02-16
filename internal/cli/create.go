@@ -136,7 +136,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			Title:       trimmedTitle,
 			Status:      task.StatusOpen,
 			Priority:    opts.priority,
-			Description: opts.description,
+			Description: task.TrimDescription(opts.description),
 			BlockedBy:   opts.blockedBy,
 			Parent:      opts.parent,
 			Created:     now,

@@ -74,6 +74,7 @@ var commands = []commandInfo{
 		Flags: []flagInfo{
 			{"--title", "<text>", "New title", false},
 			{"--description", "<text>", "New description", false},
+			{"--clear-description", "", "Remove description", false},
 			{"--priority", "<0-4>", "New priority", false},
 			{"--parent", "<id>", "New parent task ID", false},
 			{"--blocks", "<id,...>", "Task IDs this blocks", false},
