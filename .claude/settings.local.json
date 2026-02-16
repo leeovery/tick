@@ -37,7 +37,8 @@
       "Bash(chmod:*)",
       "Bash(~/go/bin/goreleaser release:*)",
       "Bash(gh pr create:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git checkout:*)"
     ]
   },
   "sandbox": {
