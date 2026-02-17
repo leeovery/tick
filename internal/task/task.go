@@ -168,6 +168,20 @@ func TrimTitle(title string) string {
 	return strings.TrimSpace(title)
 }
 
+// TrimDescription removes leading and trailing whitespace from a description.
+func TrimDescription(desc string) string {
+	return strings.TrimSpace(desc)
+}
+
+// ValidateDescriptionUpdate checks that a description update is not empty or whitespace-only.
+// Empty descriptions should use --clear-description instead.
+func ValidateDescriptionUpdate(desc string) error {
+	if strings.TrimSpace(desc) == "" {
+		return errors.New("--description cannot be empty; use --clear-description to remove the description")
+	}
+	return nil
+}
+
 // ValidatePriority checks that a priority value is in the range 0-4.
 func ValidatePriority(priority int) error {
 	if priority < minPriority || priority > maxPriority {

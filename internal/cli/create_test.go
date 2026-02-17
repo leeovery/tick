@@ -275,6 +275,30 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
+	t.Run("it trims description on create", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, _, exitCode := runCreate(t, dir, "With desc", "--description", "  Trimmed desc  ")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if tasks[0].Description != "Trimmed desc" {
+			t.Errorf("description = %q, want %q", tasks[0].Description, "Trimmed desc")
+		}
+	})
+
+	t.Run("it allows empty --description on create", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, _, exitCode := runCreate(t, dir, "No desc", "--description", "")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if tasks[0].Description != "" {
+			t.Errorf("description = %q, want empty", tasks[0].Description)
+		}
+	})
+
 	t.Run("it sets blocked_by from --blocked-by flag (single ID)", func(t *testing.T) {
 		now := time.Now().UTC().Truncate(time.Second)
 		existingTask := task.Task{

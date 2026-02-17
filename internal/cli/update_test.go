@@ -65,7 +65,7 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
-	t.Run("it clears description with --description empty string", func(t *testing.T) {
+	t.Run("it rejects empty --description on update", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		tasks := []task.Task{
 			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Description: "Existing desc", Created: now, Updated: now},
@@ -73,6 +73,49 @@ func TestUpdate(t *testing.T) {
 		dir, tickDir := setupTickProjectWithTasks(t, tasks)
 
 		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--description", "")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--clear-description") {
+			t.Errorf("stderr should mention --clear-description, got %q", stderr)
+		}
+
+		// Description should be unchanged
+		persisted := readPersistedTasks(t, tickDir)
+		if persisted[0].Description != "Existing desc" {
+			t.Errorf("description = %q, want %q (unchanged)", persisted[0].Description, "Existing desc")
+		}
+	})
+
+	t.Run("it rejects whitespace-only --description on update", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Description: "Existing desc", Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--description", "   ")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--clear-description") {
+			t.Errorf("stderr should mention --clear-description, got %q", stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if persisted[0].Description != "Existing desc" {
+			t.Errorf("description = %q, want %q (unchanged)", persisted[0].Description, "Existing desc")
+		}
+	})
+
+	t.Run("it clears description with --clear-description", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Description: "Existing desc", Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--clear-description")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
@@ -80,6 +123,40 @@ func TestUpdate(t *testing.T) {
 		persisted := readPersistedTasks(t, tickDir)
 		if persisted[0].Description != "" {
 			t.Errorf("description = %q, want empty", persisted[0].Description)
+		}
+	})
+
+	t.Run("it rejects --description and --clear-description together", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--description", "New desc", "--clear-description")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "mutually exclusive") {
+			t.Errorf("stderr should mention 'mutually exclusive', got %q", stderr)
+		}
+	})
+
+	t.Run("it trims description on update", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--description", "  Trimmed desc  ")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if persisted[0].Description != "Trimmed desc" {
+			t.Errorf("description = %q, want %q", persisted[0].Description, "Trimmed desc")
 		}
 	})
 

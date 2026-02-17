@@ -128,6 +128,59 @@ func TestValidateTitle(t *testing.T) {
 	})
 }
 
+func TestTrimDescription(t *testing.T) {
+	t.Run("it trims whitespace from description", func(t *testing.T) {
+		result := TrimDescription("  hello world  ")
+		expected := "hello world"
+		if result != expected {
+			t.Errorf("TrimDescription(%q) = %q, want %q", "  hello world  ", result, expected)
+		}
+	})
+
+	t.Run("it returns empty string for whitespace-only input", func(t *testing.T) {
+		result := TrimDescription("   ")
+		if result != "" {
+			t.Errorf("TrimDescription(%q) = %q, want empty", "   ", result)
+		}
+	})
+
+	t.Run("it returns empty string for empty input", func(t *testing.T) {
+		result := TrimDescription("")
+		if result != "" {
+			t.Errorf("TrimDescription(%q) = %q, want empty", "", result)
+		}
+	})
+}
+
+func TestValidateDescriptionUpdate(t *testing.T) {
+	t.Run("it rejects empty description", func(t *testing.T) {
+		err := ValidateDescriptionUpdate("")
+		if err == nil {
+			t.Fatal("expected error for empty description, got nil")
+		}
+		if !strings.Contains(err.Error(), "--clear-description") {
+			t.Errorf("error should mention --clear-description, got %q", err.Error())
+		}
+	})
+
+	t.Run("it rejects whitespace-only description", func(t *testing.T) {
+		err := ValidateDescriptionUpdate("   ")
+		if err == nil {
+			t.Fatal("expected error for whitespace-only description, got nil")
+		}
+		if !strings.Contains(err.Error(), "--clear-description") {
+			t.Errorf("error should mention --clear-description, got %q", err.Error())
+		}
+	})
+
+	t.Run("it accepts valid description", func(t *testing.T) {
+		err := ValidateDescriptionUpdate("A valid description")
+		if err != nil {
+			t.Errorf("expected no error, got: %v", err)
+		}
+	})
+}
+
 func TestValidatePriority(t *testing.T) {
 	t.Run("it rejects priority outside 0-4", func(t *testing.T) {
 		tests := []struct {
