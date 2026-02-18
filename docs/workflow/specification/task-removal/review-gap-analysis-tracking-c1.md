@@ -21,10 +21,10 @@ topic: Task Removal
 The spec says "explicit confirmation (e.g., 'yes')" but doesn't define what input is accepted. An implementer needs to know: is it "yes" only? "y"/"yes"? Case-insensitive? This affects both the prompt text and the input parsing.
 
 **Proposed Addition**:
-TBD — depends on user decision.
+Added confirmation input format to Confirmation Behavior section.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Case-insensitive y/yes, [y/N] convention, default-no.
 
 ---
 

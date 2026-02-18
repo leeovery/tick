@@ -56,7 +56,13 @@ Remove is the first truly destructive command in Tick. All other mutations are r
 - Any children that will be cascade-deleted
 - Any dependency references that will be cleaned up from surviving tasks
 
-The user must enter explicit confirmation (e.g., "yes") to proceed.
+The user must enter explicit confirmation to proceed.
+
+**Accepted confirmation input:** Case-insensitive `y` or `yes`. Any other input (including empty/Enter) is treated as decline.
+
+The prompt should indicate the expected input, e.g.: `Remove task tick-abc "My task title"? [y/N]`
+
+The `[y/N]` convention (capital N) signals that "no" is the default — pressing Enter without typing anything aborts.
 
 **With `--force`:** Skip the confirmation prompt entirely. The caller accepts full responsibility. Designed for AI agents, scripts, and non-interactive pipelines.
 
