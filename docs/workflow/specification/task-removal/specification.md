@@ -7,7 +7,7 @@ review_cycle: 0
 finding_gate_mode: gated
 sources:
   - name: task-removal
-    status: pending
+    status: incorporated
 ---
 
 # Specification: Task Removal
@@ -106,3 +106,14 @@ The `remove` command's help entry should document:
 - Usage and flags
 - Cascade behavior (removing a parent removes all descendants)
 - That Git history serves as the recovery mechanism for accidental removals
+
+---
+
+## Dependencies
+
+Prerequisites that must exist before implementation can begin:
+
+### Notes
+
+- **No blocking dependencies.** The `remove` command builds on existing infrastructure: `Store.Mutate()` for atomic writes, the Task struct with `BlockedBy`/`Parent` fields, the Formatter interface, and the command dispatch pattern in `App.Run()`. All of these already exist.
+- The only new concern is stdin reading for the interactive confirmation prompt, which is a standard Go capability (`bufio.Scanner` on `os.Stdin`) — no external dependency required.
