@@ -87,3 +87,22 @@ When a task is removed, its ID is automatically scrubbed from all surviving task
 **Output:** Report which surviving tasks had their dependencies updated. E.g.: "Updated dependencies on tick-def, tick-ghi". This applies to all three formatters (toon, pretty, JSON).
 
 **Interaction with cascade:** When cascade deletion removes multiple tasks, dependency cleanup scrubs *all* removed IDs (parent + descendants) from surviving tasks' `BlockedBy` arrays.
+
+### Output
+
+After a successful removal (with or without `--force`), output through the Formatter interface:
+
+- Which task(s) were removed (IDs and titles)
+- Which cascaded children were removed (if any)
+- Which surviving tasks had dependency references cleaned up (if any)
+
+Respects `--quiet` flag (suppress output) consistent with other commands.
+
+All three formatters (toon, pretty, JSON) must support removal output. This will likely require a new Formatter method (e.g., `FormatRemoval`) since removal is a distinct operation — not a status transition, not a dependency change, not a generic message. It combines deletion confirmation with cascade and dependency cleanup reporting.
+
+### Help Text
+
+The `remove` command's help entry should document:
+- Usage and flags
+- Cascade behavior (removing a parent removes all descendants)
+- That Git history serves as the recovery mechanism for accidental removals
