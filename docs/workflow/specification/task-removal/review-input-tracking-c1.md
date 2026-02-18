@@ -37,10 +37,10 @@ Add a note to the Cascade Deletion section.
 The spec doesn't define what happens when a provided task ID doesn't exist. Should the command fail entirely, or skip the missing ID and remove the others? For single-ID removal this is straightforward (error). For bulk removal, the behavior needs specification.
 
 **Proposed Addition**:
-TBD — depends on user decision.
+Added error handling paragraph to Command Interface section.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Fail-all approach chosen — no partial removal.
 
 ---
 

@@ -43,6 +43,8 @@ tick remove <id> [<id>...] --force
 
 **Status restrictions:** None. Tasks in any status (open, in_progress, done, cancelled) can be removed. The confirmation prompt is the safety gate, not status rules.
 
+**Error handling:** If any provided task ID does not exist, the command fails with an error before any removal occurs. No partial removal — either all targets are valid and removed, or none are. This applies to both single and bulk invocations.
+
 ### Confirmation Behavior
 
 Remove is the first truly destructive command in Tick. All other mutations are reversible status transitions. This warrants an interactive confirmation gate.
