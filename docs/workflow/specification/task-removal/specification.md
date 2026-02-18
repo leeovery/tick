@@ -21,3 +21,24 @@ Tick needs a `remove` command that permanently deletes tasks from the JSONL sour
 **What "remove" means at the storage level:** True deletion. The task is filtered from the in-memory slice inside `Store.Mutate()`, and the JSONL file is rewritten without it. The SQLite cache is rebuilt from JSONL after each write, so the task disappears from both stores atomically. No new status is introduced — the task ceases to exist.
 
 **Recovery:** The JSONL file is tracked in Git. Prior state is always recoverable from Git history. No in-app undo mechanism is needed.
+
+### Command Interface
+
+**Command name:** `remove`
+
+Consistent with the existing vocabulary of full English words (`cancel`, `reopen`, `create`). No alias (`rm`) — aliasing can be added later as a cross-cutting feature.
+
+**Usage:**
+
+```
+tick remove <id> [<id>...]
+tick remove <id> [<id>...] --force
+```
+
+**Arguments:**
+- One or more task IDs as positional arguments (bulk removal supported)
+
+**Flags:**
+- `--force` / `-f` — Skip interactive confirmation. For AI agents, scripts, and non-interactive use.
+
+**Status restrictions:** None. Tasks in any status (open, in_progress, done, cancelled) can be removed. The confirmation prompt is the safety gate, not status rules.
