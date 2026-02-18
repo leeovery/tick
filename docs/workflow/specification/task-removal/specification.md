@@ -42,3 +42,18 @@ tick remove <id> [<id>...] --force
 - `--force` / `-f` — Skip interactive confirmation. For AI agents, scripts, and non-interactive use.
 
 **Status restrictions:** None. Tasks in any status (open, in_progress, done, cancelled) can be removed. The confirmation prompt is the safety gate, not status rules.
+
+### Confirmation Behavior
+
+Remove is the first truly destructive command in Tick. All other mutations are reversible status transitions. This warrants an interactive confirmation gate.
+
+**Default (no `--force`):** Prompt the user before proceeding. The prompt surfaces the blast radius:
+- The target task(s) being removed
+- Any children that will be cascade-deleted
+- Any dependency references that will be cleaned up from surviving tasks
+
+The user must enter explicit confirmation (e.g., "yes") to proceed.
+
+**With `--force`:** Skip the confirmation prompt entirely. The caller accepts full responsibility. Designed for AI agents, scripts, and non-interactive pipelines.
+
+**Design choice:** `--force` rather than TTY auto-detection. The app already injects `IsTTY` for format detection, but behavior should be explicit — always confirm unless `--force` is passed. This avoids ambiguity about what happens in non-TTY contexts without `--force`.
