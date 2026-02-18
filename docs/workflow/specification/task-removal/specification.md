@@ -3,7 +3,7 @@ topic: task-removal
 status: in-progress
 type: feature
 date: 2026-02-18
-review_cycle: 0
+review_cycle: 1
 finding_gate_mode: gated
 sources:
   - name: task-removal
