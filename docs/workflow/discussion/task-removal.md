@@ -30,11 +30,11 @@ The need: a way to completely eliminate a task, removing it from the JSONL sourc
 
 ## Questions
 
-- [ ] What does "remove" mean at the storage level?
-- [ ] Command naming: `remove`, `rm`, or both?
-- [ ] Which tasks can be removed? Any status restrictions?
-- [ ] How should dependency references be handled on removal?
-- [ ] How should parent/child relationships be handled on removal?
+- [x] What does "remove" mean at the storage level?
+- [x] Command naming: `remove`, `rm`, or both?
+- [x] Which tasks can be removed? Any status restrictions?
+- [x] How should dependency references be handled on removal?
+- [x] How should parent/child relationships be handled on removal?
 - [ ] Should bulk removal be supported?
 
 ---
@@ -59,6 +59,14 @@ The JSONL file is rewritten atomically on every mutation via `Store.Mutate()`. A
 - But: how is this meaningfully different from `cancelled`?
 - Adds complexity: need to filter out of all queries, handle in ready logic, etc.
 
+### Journey
+
+Option B was quickly dismissed — it's functionally redundant with `cancelled`. If someone wants a task gone-but-tracked, cancel is already that. The whole point of "remove" is a stronger action: the task ceases to exist. Parallels drawn to Jira and Linear where delete truly deletes. No recovery mechanism needed in Tick because the JSONL file is tracked in Git — prior state is always recoverable from Git history.
+
+### Decision
+
+**True deletion (Option A).** Filter the task from the slice inside `Store.Mutate()`, rewrite JSONL without it. Clean, simple, gives users a capability they genuinely don't have today. Irreversibility is acceptable — Git history provides a safety net.
+
 ---
 
 ## Command naming: `remove`, `rm`, or both?
@@ -67,13 +75,43 @@ The JSONL file is rewritten atomically on every mutation via `Store.Mutate()`. A
 
 Need a command name. Existing commands: `init`, `create`, `list`, `show`, `update`, `start`, `done`, `cancel`, `reopen`, `ready`, `blocked`, `dep`, `stats`, `rebuild`, `doctor`, `migrate`, `help`.
 
+### Options Considered
+
+**Option A: `remove`** — consistent with verbose style of existing commands (`cancel`, `reopen`, `create`)
+
+**Option B: `rm`** — short, unix-y, matches destructive-action convention
+
+**Option C: Both as aliases** — introduces aliasing pattern that doesn't exist yet
+
+### Journey
+
+Existing commands are full English words. `rm` would be the odd one out. Aliasing is a separate feature concern — don't introduce it just for this command.
+
+### Decision
+
+**`remove`** — keeps naming consistent with existing command vocabulary. Aliasing can be added later as a cross-cutting feature if desired.
+
 ---
 
 ## Which tasks can be removed? Any status restrictions?
 
 ### Context
 
-Should removal be allowed from any status, or only certain ones? Cancellation is valid from `open` or `in_progress`. Should a `done` task be removable? What about already-cancelled tasks?
+Should removal be allowed from any status, or only certain ones? Cancellation is valid from `open` or `in_progress`.
+
+### Options Considered
+
+**Restrict to certain statuses** — e.g., only `open` or `cancelled` tasks
+
+**Any status** — open, in_progress, done, cancelled — all removable
+
+### Journey
+
+No logical reason to prevent removing a `done` or `cancelled` task. Use cases exist for all: remove a mistakenly created `open` task, clean up old `cancelled` tasks, remove a duplicate `done` task. The `--force` confirmation already guards against accidents.
+
+### Decision
+
+**Any status.** No restrictions. The confirmation prompt (or `--force` flag) is the safety gate, not status rules.
 
 ---
 
@@ -83,13 +121,76 @@ Should removal be allowed from any status, or only certain ones? Cancellation is
 
 Tasks reference other tasks via `BlockedBy []string`. If task A is in task B's BlockedBy and we remove task A, B's BlockedBy now contains an orphaned ID. Currently, cancelling a task does NOT clean up BlockedBy arrays — the query logic treats cancelled/done as "resolved." But a removed task won't exist at all.
 
+### Options Considered
+
+**Option A: Block removal if dependencies exist** — refuse until deps are manually cleaned up. Safe but high friction.
+
+**Option B: Auto-clean references** — scrub the removed task's ID from all other tasks' `BlockedBy` arrays. Single atomic operation inside `Store.Mutate()`.
+
+**Option C: Leave orphans** — let query logic treat missing IDs as resolved. But "missing" is ambiguous — bug or removed task?
+
+### Journey
+
+Option A adds unnecessary friction for a problem we can solve automatically. Option C leaves dirty data. Option B is both user-friendly and leaves data clean. Conceptually, removing a blocker removes the dependency — a task that depended on the deleted task isn't blocked anymore.
+
+Implementation is straightforward: inside the Mutate callback, after filtering out the removed task, iterate remaining tasks and strip the removed ID from their `BlockedBy`. All in one atomic write. Since we already have the full task slice, we know exactly which tasks were modified — report them in the output at zero extra cost.
+
+### Decision
+
+**Auto-clean (Option B).** Strip the removed task's ID from all `BlockedBy` arrays in the same atomic mutation. Report affected tasks in the output for transparency (e.g., "Updated dependencies on tick-def, tick-ghi").
+
 ---
 
 ## How should parent/child relationships be handled on removal?
 
 ### Context
 
-Tasks have a `Parent string` field for hierarchy. Removing a parent could orphan children. Removing a child changes the parent's leaf-task status.
+Tasks have a `Parent string` field for hierarchy. Removing a parent could orphan children. Removing a child is straightforward (children point up to parent, parent doesn't reference children — no cleanup needed).
+
+### Options Considered
+
+**Option A: Cascade delete** — remove parent + all descendants recursively. Jira's approach.
+
+**Option B: Block removal** — refuse to remove a parent with children. Must remove children first.
+
+**Option C: Auto-orphan** — clear children's `Parent` field, promote them to top-level tasks.
+
+### Journey
+
+Industry research: Jira cascade-deletes subtasks when deleting a parent. Linear's docs don't explicitly cover it. GitHub sub-issues are too new to have clear precedent.
+
+Key insight from discussion: parent-child is structural, not loose coupling like dependencies. Children are *part of* the parent — "Build authentication" with subtasks "Create login form", "Add JWT middleware". Deleting the parent means abandoning the whole effort. Children shouldn't make sense without the parent in most cases. While a parent might sometimes act as just a wrapper with no real work attached, that's the exception.
+
+Cascade is the right default because it matches the semantics: children are subtasks *of* the parent. Recursive — if children have children, they all go.
+
+Safety is handled by the confirmation prompt. For interactive use (no `--force`), the prompt surfaces the blast radius: "This task has the following children: tick-def, tick-ghi. Deleting it will also delete them. Are you sure?" This is the first truly dangerous command in Tick, and the confirmation gate makes the danger visible. For `--force` (AI/scripts), the caller accepts the consequences.
+
+Recovery is always possible via Git history — the JSONL file is version-controlled. This should be documented in command help and README.
+
+### Decision
+
+**Cascade delete (Option A).** Removing a parent recursively removes all descendants. The confirmation prompt (without `--force`) explicitly lists all tasks that will be removed. Dependency references for all removed tasks are auto-cleaned from surviving tasks.
+
+---
+
+## Confirmation UX: `--force` flag
+
+### Context
+
+Remove is the first truly destructive command in Tick. All other mutations (cancel, done, start) are reversible status transitions. This warrants a confirmation gate.
+
+### Decision
+
+**Default: interactive confirmation prompt.** When run without `--force`:
+- Show what will be removed (the target task + any cascaded children)
+- Show what dependencies will be cleaned up
+- Require explicit "yes" to proceed
+
+**`--force` / `-f` flag:** Skips confirmation. For AI agents, scripts, and non-interactive use.
+
+This follows the `rm` / `git` convention — universally understood by humans and tooling alike.
+
+Note: the app already injects `IsTTY` for format detection, but we chose `--force` over TTY auto-detection to keep behavior explicit. TTY detection was considered but creates ambiguity (what does `--force` mean in non-TTY mode?). Simpler: always confirm unless `--force`.
 
 ---
 
@@ -97,17 +198,18 @@ Tasks have a `Parent string` field for hierarchy. Removing a parent could orphan
 
 ### Context
 
-No existing bulk status transitions exist. Each `cancel`, `done`, `start` etc. operates on a single task. Dependencies can be specified as comma-separated lists in create/update, but that's it.
+No existing bulk status transitions exist. Each `cancel`, `done`, `start` etc. operates on a single task ID.
 
 ---
 
 ## Summary
 
 ### Key Insights
-*(To be filled as discussion progresses)*
+*(To be filled as discussion concludes)*
 
 ### Current State
-- Questions identified, discussion beginning
+- 5 of 6 questions decided
+- Remaining: bulk removal support
 
 ### Next Steps
-- Work through each question with the user
+- Decide on bulk removal
