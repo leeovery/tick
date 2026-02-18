@@ -45,6 +45,8 @@ tick remove <id> [<id>...] --force
 
 **Error handling:** If any provided task ID does not exist, the command fails with an error before any removal occurs. No partial removal — either all targets are valid and removed, or none are. This applies to both single and bulk invocations.
 
+**Deduplication:** Duplicate task IDs in arguments are silently deduplicated. This also applies when a task appears both as an explicit argument and as a cascaded descendant of another argument — it is only removed once. The confirmation prompt shows the deduplicated set.
+
 ### Confirmation Behavior
 
 Remove is the first truly destructive command in Tick. All other mutations are reversible status transitions. This warrants an interactive confirmation gate.

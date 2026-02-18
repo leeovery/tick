@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-18
 cycle: 1
 phase: Input Review
@@ -54,7 +54,7 @@ Added error handling paragraph to Command Interface section.
 If the user passes the same ID twice (e.g., `tick remove tick-abc tick-abc`), should it error or silently deduplicate? Similarly, if a cascaded child is also explicitly listed, it's effectively a duplicate.
 
 **Proposed Addition**:
-TBD — depends on user decision.
+Added deduplication paragraph to Command Interface section.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Silent deduplication — consistent with existing "deduplicated" language in bulk+cascade.
