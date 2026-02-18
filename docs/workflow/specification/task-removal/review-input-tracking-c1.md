@@ -22,8 +22,8 @@ The discussion notes: "Removing a child is straightforward (children point up to
 **Proposed Addition**:
 Add a note to the Cascade Deletion section.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added to Cascade Deletion section.
 
 ---
 

@@ -76,6 +76,8 @@ Removing a task that has children triggers recursive cascade deletion — the pa
 
 **Bulk + cascade interaction:** When multiple IDs are passed and some trigger cascades, all targets plus their descendants are collected, deduplicated, and removed in a single atomic operation. The confirmation prompt lists the full deduplicated set.
 
+**Removing a child:** When a child task (leaf node) is removed, no cleanup is needed on the parent side — the `Parent` field lives on the child, and parents don't maintain a children list. The child is simply filtered out.
+
 ### Dependency Cleanup
 
 When a task is removed, its ID is automatically scrubbed from all surviving tasks' `BlockedBy` arrays. This happens in the same atomic `Store.Mutate()` call as the deletion.
