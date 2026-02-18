@@ -75,3 +75,15 @@ Removing a task that has children triggers recursive cascade deletion — the pa
 **With `--force`:** Cascade proceeds silently. The caller accepts the consequences.
 
 **Bulk + cascade interaction:** When multiple IDs are passed and some trigger cascades, all targets plus their descendants are collected, deduplicated, and removed in a single atomic operation. The confirmation prompt lists the full deduplicated set.
+
+### Dependency Cleanup
+
+When a task is removed, its ID is automatically scrubbed from all surviving tasks' `BlockedBy` arrays. This happens in the same atomic `Store.Mutate()` call as the deletion.
+
+**Rationale:** Removing a blocker removes the block. A task that depended on the deleted task is no longer blocked by it. This is both user-friendly (no manual cleanup) and leaves data clean (no orphaned IDs).
+
+**Implementation approach:** Inside the Mutate callback, after filtering out the removed task(s), iterate remaining tasks and strip all removed IDs from their `BlockedBy` arrays. Since the full task slice is already in memory, identifying affected tasks costs nothing extra.
+
+**Output:** Report which surviving tasks had their dependencies updated. E.g.: "Updated dependencies on tick-def, tick-ghi". This applies to all three formatters (toon, pretty, JSON).
+
+**Interaction with cascade:** When cascade deletion removes multiple tasks, dependency cleanup scrubs *all* removed IDs (parent + descendants) from surviving tasks' `BlockedBy` arrays.
