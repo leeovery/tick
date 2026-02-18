@@ -1,6 +1,6 @@
 ---
 topic: task-removal
-status: in-progress
+status: concluded
 date: 2026-02-18
 ---
 
