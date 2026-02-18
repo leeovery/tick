@@ -2,7 +2,13 @@
 name: start-implementation
 description: "Start an implementation session from an existing plan. Discovers available plans, checks environment setup, and invokes the technical-implementation skill."
 disable-model-invocation: true
-allowed-tools: Bash(.claude/skills/start-implementation/scripts/discovery.sh)
+allowed-tools: Bash(.claude/skills/start-implementation/scripts/discovery.sh), Bash(.claude/hooks/workflows/write-session-state.sh)
+hooks:
+  PreToolUse:
+    - hooks:
+        - type: command
+          command: "$CLAUDE_PROJECT_DIR/.claude/hooks/workflows/system-check.sh"
+          once: true
 ---
 
 Invoke the **technical-implementation** skill for this conversation.
@@ -369,8 +375,6 @@ Environment setup file found: docs/workflow/environment-setup.md
 
 **If `setup_file_exists: false` or `requires_setup: unknown`:**
 
-Ask:
-
 > *Output the next fenced block as a code block:*
 
 ```
@@ -389,6 +393,21 @@ Are there any environment setup instructions I should follow before implementati
 
 ## Step 6: Invoke the Skill
 
+Before invoking the processing skill, save a session bookmark.
+
+> *Output the next fenced block as a code block:*
+
+```
+Saving session state so Claude can pick up where it left off if the conversation is compacted.
+```
+
+```bash
+.claude/hooks/workflows/write-session-state.sh \
+  "{topic}" \
+  "skills/technical-implementation/SKILL.md" \
+  "docs/workflow/implementation/{topic}/tracking.md"
+```
+
 After completing the steps above, this skill's purpose is fulfilled.
 
 Invoke the [technical-implementation](../technical-implementation/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
@@ -396,7 +415,7 @@ Invoke the [technical-implementation](../technical-implementation/SKILL.md) skil
 **Example handoff:**
 ```
 Implementation session for: {topic}
-Plan: docs/workflow/planning/{topic}.md
+Plan: docs/workflow/planning/{topic}/plan.md
 Format: {format}
 Plan ID: {plan_id} (if applicable)
 Specification: {specification} (exists: {true|false})

@@ -2,6 +2,12 @@
 name: link-dependencies
 description: "Scan all plans and wire up cross-topic dependencies. Finds unresolved external dependencies, matches them to tasks in other plans, and updates both the plan index and output format."
 disable-model-invocation: true
+hooks:
+  PreToolUse:
+    - hooks:
+        - type: command
+          command: "$CLAUDE_PROJECT_DIR/.claude/hooks/workflows/system-check.sh"
+          once: true
 ---
 
 Link cross-topic dependencies across all existing plans.
@@ -20,7 +26,7 @@ Scan the codebase for existing plans:
 
 1. **Find plan files**: Look in `docs/workflow/planning/`
    - Run `ls docs/workflow/planning/` to list plan files
-   - Each file is named `{topic}.md`
+   - Each topic is a directory containing `plan.md`
 
 2. **Extract plan metadata**: For each plan file
    - Read the frontmatter to get the `format:` field
@@ -116,7 +122,7 @@ Key:
 
 For each unresolved dependency:
 
-1. **Search for matching plan**: Does `docs/workflow/planning/{dependency-topic}.md` exist?
+1. **Search for matching plan**: Does `docs/workflow/planning/{dependency-topic}/plan.md` exist?
    - If no match: Mark as "no plan exists" - cannot resolve yet
 
 2. **If plan exists**: Load the format's reading reference
@@ -168,7 +174,7 @@ Unresolved (no matching plan exists):
   • {source} → {target}: {description}
 
 Updated files:
-  • docs/workflow/planning/{topic}.md
+  • docs/workflow/planning/{topic}/plan.md
 ```
 
 If any dependencies remain unresolved:

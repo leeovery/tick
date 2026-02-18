@@ -2,6 +2,12 @@
 name: view-plan
 description: "View a plan's tasks and progress, regardless of output format."
 disable-model-invocation: true
+hooks:
+  PreToolUse:
+    - hooks:
+        - type: command
+          command: "$CLAUDE_PROJECT_DIR/.claude/hooks/workflows/system-check.sh"
+          once: true
 ---
 
 Display a readable summary of a plan's phases, tasks, and status.
@@ -18,7 +24,7 @@ Ask the user which plan to view.
 
 ## Step 2: Read the Plan Index
 
-Read the plan file from `docs/workflow/planning/{topic}.md` and check the `format:` field in the frontmatter.
+Read the plan file from `docs/workflow/planning/{topic}/plan.md` and check the `format:` field in the frontmatter.
 
 ## Step 3: Load Format Reading Reference
 
