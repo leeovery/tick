@@ -35,7 +35,7 @@ The need: a way to completely eliminate a task, removing it from the JSONL sourc
 - [x] Which tasks can be removed? Any status restrictions?
 - [x] How should dependency references be handled on removal?
 - [x] How should parent/child relationships be handled on removal?
-- [ ] Should bulk removal be supported?
+- [x] Should bulk removal be supported?
 
 ---
 
@@ -200,16 +200,34 @@ Note: the app already injects `IsTTY` for format detection, but we chose `--forc
 
 No existing bulk status transitions exist. Each `cancel`, `done`, `start` etc. operates on a single task ID.
 
+### Options Considered
+
+**Support bulk from day one** — `tick remove tick-abc tick-def tick-ghi` accepts variadic args
+
+**Single-task only** — consistent with existing command patterns, add bulk later if needed
+
+### Journey
+
+Implementation cost is trivial — accept variadic args instead of a single arg inside the same Mutate callback. The confirmation prompt already handles listing everything that will be removed, so bulk + cascade is naturally transparent. Not supporting it means users run `tick remove tick-abc --force` repeatedly, which is tedious and pointless friction. While no precedent exists for bulk status transitions, remove is already a new kind of command (true deletion vs status transition) so it doesn't need to follow that pattern.
+
+### Decision
+
+**Yes, support bulk removal from day one.** Accept multiple task IDs as positional args. Each target (plus its cascaded children) is collected, deduplicated, and removed in a single atomic Mutate. The confirmation prompt lists the full set of tasks to be removed.
+
 ---
 
 ## Summary
 
 ### Key Insights
-*(To be filled as discussion concludes)*
+
+1. **Remove ≠ cancel.** Cancel is a reversible status transition; remove is true deletion. They serve fundamentally different purposes and the codebase needs both.
+2. **Auto-clean references, don't block.** When removing tasks, automatically scrub their IDs from other tasks' `BlockedBy` arrays. Conceptually, removing a blocker removes the block.
+3. **Cascade matches parent-child semantics.** Children are *part of* the parent — deleting the parent means abandoning the whole effort. Recursive cascade is the right default.
+4. **Confirmation is the safety gate, not status restrictions.** Any task in any status can be removed. The interactive confirmation prompt (surfacing blast radius) and `--force` flag are the safety mechanism.
+5. **Git is the recovery mechanism.** JSONL is version-controlled. No need for an undo feature — document this in help text.
 
 ### Current State
-- 5 of 6 questions decided
-- Remaining: bulk removal support
+- All 6 questions decided
 
 ### Next Steps
-- Decide on bulk removal
+- Proceed to specification
