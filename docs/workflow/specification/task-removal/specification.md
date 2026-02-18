@@ -47,6 +47,8 @@ tick remove <id> [<id>...] --force
 
 **Deduplication:** Duplicate task IDs in arguments are silently deduplicated. This also applies when a task appears both as an explicit argument and as a cascaded descendant of another argument — it is only removed once. The confirmation prompt shows the deduplicated set.
 
+**No arguments:** If no task IDs are provided, the command returns an error: `"task ID is required. Usage: tick remove <id> [<id>...]"`. Consistent with existing commands like `start`, `done`, `cancel`.
+
 ### Confirmation Behavior
 
 Remove is the first truly destructive command in Tick. All other mutations are reversible status transitions. This warrants an interactive confirmation gate.

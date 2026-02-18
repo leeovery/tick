@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-18
 cycle: 1
 phase: Gap Analysis
@@ -57,7 +57,7 @@ Added abort behavior paragraph to Confirmation Behavior section.
 The spec requires "one or more task IDs" but doesn't explicitly state what happens with zero arguments. The existing pattern (`RunTransition`) returns an error like "task ID is required", so this likely follows suit, but it's worth being explicit.
 
 **Proposed Addition**:
-TBD.
+Added no-arguments paragraph to Command Interface section.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Follows existing pattern from RunTransition.
