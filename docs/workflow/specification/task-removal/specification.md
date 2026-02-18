@@ -64,6 +64,8 @@ The prompt should indicate the expected input, e.g.: `Remove task tick-abc "My t
 
 The `[y/N]` convention (capital N) signals that "no" is the default — pressing Enter without typing anything aborts.
 
+**Abort behavior:** If the user declines (any input other than `y`/`yes`, including empty Enter), the command prints "Aborted." to stderr and exits with code 1. No tasks are modified. This matches the convention where a non-zero exit signals "the requested operation did not happen."
+
 **With `--force`:** Skip the confirmation prompt entirely. The caller accepts full responsibility. Designed for AI agents, scripts, and non-interactive pipelines.
 
 **Design choice:** `--force` rather than TTY auto-detection. The app already injects `IsTTY` for format detection, but behavior should be explicit — always confirm unless `--force` is passed. This avoids ambiguity about what happens in non-TTY contexts without `--force`.

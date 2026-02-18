@@ -39,10 +39,10 @@ Added confirmation input format to Confirmation Behavior section.
 The spec defines what happens when the user confirms, but not what happens when they decline or enter unexpected input. Does the command exit silently with code 0? Print "Aborted" and exit 0? Exit with code 1? This matters for scripting.
 
 **Proposed Addition**:
-TBD — depends on user decision.
+Added abort behavior paragraph to Confirmation Behavior section.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Print "Aborted." to stderr, exit code 1.
 
 ---
 
