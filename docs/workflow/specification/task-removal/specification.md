@@ -57,3 +57,21 @@ The user must enter explicit confirmation (e.g., "yes") to proceed.
 **With `--force`:** Skip the confirmation prompt entirely. The caller accepts full responsibility. Designed for AI agents, scripts, and non-interactive pipelines.
 
 **Design choice:** `--force` rather than TTY auto-detection. The app already injects `IsTTY` for format detection, but behavior should be explicit — always confirm unless `--force` is passed. This avoids ambiguity about what happens in non-TTY contexts without `--force`.
+
+### Cascade Deletion
+
+Removing a task that has children triggers recursive cascade deletion — the parent and all descendants are removed together.
+
+**Rationale:** Parent-child is structural. Children are subtasks *of* the parent (e.g., "Build authentication" → "Create login form", "Add JWT middleware"). Deleting the parent means abandoning the whole effort. Children don't make sense without the parent in most cases.
+
+**Behavior:**
+- When a task with children is removed, all descendants are collected recursively (children, grandchildren, etc.)
+- All collected tasks are removed in a single atomic `Store.Mutate()` call
+- Dependency references for *all* removed tasks (parent + descendants) are auto-cleaned from surviving tasks
+
+**Confirmation prompt (without `--force`):** Explicitly lists all tasks that will be removed, e.g.:
+> "This task has the following children: tick-def, tick-ghi. Removing it will also remove them. Are you sure?"
+
+**With `--force`:** Cascade proceeds silently. The caller accepts the consequences.
+
+**Bulk + cascade interaction:** When multiple IDs are passed and some trigger cascades, all targets plus their descendants are collected, deduplicated, and removed in a single atomic operation. The confirmation prompt lists the full deduplicated set.
