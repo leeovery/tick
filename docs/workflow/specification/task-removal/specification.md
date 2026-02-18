@@ -1,0 +1,23 @@
+---
+topic: task-removal
+status: in-progress
+type: feature
+date: 2026-02-18
+review_cycle: 0
+finding_gate_mode: gated
+sources:
+  - name: task-removal
+    status: pending
+---
+
+# Specification: Task Removal
+
+## Specification
+
+### Overview
+
+Tick needs a `remove` command that permanently deletes tasks from the JSONL source of truth. This is fundamentally different from `cancel` — cancel marks a task as resolved-but-present; remove erases it entirely.
+
+**What "remove" means at the storage level:** True deletion. The task is filtered from the in-memory slice inside `Store.Mutate()`, and the JSONL file is rewritten without it. The SQLite cache is rebuilt from JSONL after each write, so the task disappears from both stores atomically. No new status is introduced — the task ceases to exist.
+
+**Recovery:** The JSONL file is tracked in Git. Prior state is always recoverable from Git history. No in-app undo mechanism is needed.
