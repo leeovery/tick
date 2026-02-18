@@ -2,7 +2,7 @@
 topic: installation
 status: concluded
 format: local-markdown
-specification: ../specification/installation.md
+specification: ../specification/installation/specification.md
 spec_commit: d20af03c956b3e3c4608eb4d5945a67c5a3f6c90
 created: 2026-01-31
 updated: 2026-01-31

@@ -28,3 +28,15 @@ docs/workflow/planning/installation.md: 005
 docs/workflow/planning/migration.md: 005
 docs/workflow/planning/tick-core.md: 005
 docs/workflow/discussion/task-scoping-by-plan.md: 001
+docs/workflow/specification/doctor-validation/specification.md: 006
+docs/workflow/specification/installation/specification.md: 006
+docs/workflow/specification/migration/specification.md: 006
+docs/workflow/specification/tick-core/specification.md: 006
+docs/workflow/planning/doctor-validation/plan.md: 006
+docs/workflow/planning/installation/plan.md: 006
+docs/workflow/planning/migration/plan.md: 006
+docs/workflow/planning/tick-core/plan.md: 006
+docs/workflow/planning/doctor-validation/plan.md: 007
+docs/workflow/planning/installation/plan.md: 007
+docs/workflow/planning/migration/plan.md: 007
+docs/workflow/planning/tick-core/plan.md: 007
