@@ -17,3 +17,59 @@ planning:
 ---
 
 # Plan: Task Removal
+
+### Phase 1: Walking Skeleton — Single Task Removal
+status: draft
+ext_id:
+
+**Goal**: Remove a single task by ID using `--force`, filtering it from JSONL via `Store.Mutate()`, with output through all three formatters and help text registration.
+
+**Why this order**: This is the thinnest end-to-end slice threading through every layer the feature needs: CLI argument parsing, `--force` flag, command dispatch in `App.Run`, the `RunRemove` handler, a `Store.Mutate` callback that filters a task from the slice, a new `FormatRemoval` method on the `Formatter` interface with implementations in all three formatters, and help text. It establishes every pattern subsequent phases extend.
+
+**Acceptance**:
+- [ ] `tick remove <id> --force` removes a task from tasks.jsonl and SQLite cache
+- [ ] Removed task no longer appears in `tick list` or `tick show <id>`
+- [ ] `FormatRemoval` method exists on all three formatters (toon, pretty, JSON) and outputs the removed task's ID and title
+- [ ] Error returned when the provided task ID does not exist
+- [ ] Error returned when no arguments provided, with message: `"task ID is required. Usage: tick remove <id> [<id>...]"`
+- [ ] `tick help remove` displays usage, flags, cascade behavior note, and Git recovery note
+- [ ] `--quiet` flag suppresses removal output
+- [ ] All existing tests continue to pass
+
+### Phase 2: Interactive Confirmation Prompt
+status: draft
+ext_id:
+
+**Goal**: Add the interactive confirmation gate when `--force` is not provided, reading user input from stdin and writing prompts/abort messages to stderr.
+
+**Why this order**: The confirmation prompt is the primary safety mechanism for this destructive command. It must be in place before cascade deletion is added, because cascade amplifies the blast radius and the prompt must surface it. This phase depends on the working removal pathway from Phase 1.
+
+**Acceptance**:
+- [ ] Without `--force`, `tick remove <id>` prompts on stderr showing task ID and title with `[y/N]` convention
+- [ ] Entering `y` or `yes` (case-insensitive) proceeds with removal and outputs result to stdout
+- [ ] Any other input including empty Enter aborts with `"Aborted."` on stderr and exit code 1
+- [ ] Prompt text and abort message are written to stderr, not stdout
+- [ ] Stdin is injectable on `App` (e.g., `Stdin io.Reader` field) for test isolation
+- [ ] `--force` continues to skip the prompt entirely (Phase 1 behavior preserved)
+
+### Phase 3: Cascade Deletion, Dependency Cleanup, and Bulk Removal
+status: draft
+ext_id:
+
+**Goal**: Support cascade deletion of parent-child hierarchies, automatic dependency reference cleanup on surviving tasks, and bulk removal of multiple task IDs with deduplication — all in a single atomic `Store.Mutate` call.
+
+**Why this order**: This is the most complex phase and depends on both the removal mechanism (Phase 1) and the confirmation prompt (Phase 2). Cascade deletion, dependency cleanup, and bulk removal are highly cohesive — they all operate within the same `Mutate` callback, share the same deduplication logic, and the confirmation prompt must surface the combined blast radius. Splitting them would create artificial phase boundaries with no independently valuable intermediate state.
+
+**Acceptance**:
+- [ ] Removing a parent task recursively removes all descendants (children, grandchildren, etc.) in a single `Mutate` call
+- [ ] Removing a child task does not affect the parent
+- [ ] Surviving tasks have all removed task IDs scrubbed from their `BlockedBy` arrays within the same `Mutate` call
+- [ ] Formatter output reports which surviving tasks had dependency references cleaned (e.g., "Updated dependencies on tick-def, tick-ghi")
+- [ ] Confirmation prompt (without `--force`) lists all tasks that will be removed, including cascaded descendants
+- [ ] Multiple task IDs accepted as positional arguments for bulk removal
+- [ ] Duplicate IDs in arguments are silently deduplicated
+- [ ] A task appearing both as explicit argument and as cascaded descendant is only removed once
+- [ ] If any provided task ID does not exist, the command fails before any removal occurs (all-or-nothing)
+- [ ] Bulk removal with mixed cascade and non-cascade targets works atomically
+- [ ] `--force` with cascade proceeds silently without confirmation
+- [ ] All formatters (toon, pretty, JSON) render the combined removal + cascade + dependency cleanup output
