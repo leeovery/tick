@@ -89,6 +89,8 @@ func (a *App) Run(args []string) int {
 		err = a.handleBlocked(fc, fmtr, subArgs)
 	case "dep":
 		err = a.handleDep(fc, fmtr, subArgs)
+	case "remove":
+		err = a.handleRemove(fc, fmtr, subArgs)
 	case "stats":
 		err = a.handleStats(fc, fmtr)
 	case "rebuild":
@@ -196,6 +198,15 @@ func (a *App) handleRebuild(fc FormatConfig, fmtr Formatter) error {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 	return RunRebuild(dir, fc, fmtr, a.Stdout)
+}
+
+// handleRemove implements the remove subcommand.
+func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+	dir, err := a.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not determine working directory: %w", err)
+	}
+	return RunRemove(dir, fc, fmtr, subArgs, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
