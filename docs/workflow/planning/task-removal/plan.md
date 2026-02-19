@@ -13,7 +13,7 @@ author_gate_mode: gated
 finding_gate_mode: gated
 planning:
   phase: 1
-  task: 2
+  task: 3
 ---
 
 # Plan: Task Removal
@@ -41,7 +41,7 @@ approved_at: 2026-02-19
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
 | task-removal-1-1 | Add FormatRemoval to Formatter interface and all implementations | none | authored | tick-7314b0 |
-| task-removal-1-2 | Implement RunRemove handler with --force flag and wire into App.Run | case-insensitive ID matching | pending | |
+| task-removal-1-2 | Implement RunRemove handler with --force flag and wire into App.Run | case-insensitive ID matching | authored | tick-64566b |
 | task-removal-1-3 | Handle remove error cases | no-args message matches spec exactly | pending | |
 | task-removal-1-4 | Register remove command help text | none | pending | |
 
