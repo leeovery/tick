@@ -105,6 +105,20 @@ var commands = []commandInfo{
 		Description: "Transitions a done or cancelled task back to open.",
 	},
 	{
+		Name:    "remove",
+		Summary: "Permanently remove tasks from the project",
+		Usage:   "tick remove <id> [<id>...] [flags]",
+		Description: "Permanently deletes one or more tasks from the JSONL source of truth.\n" +
+			"Removing a parent task cascades to all its descendants — children,\n" +
+			"grandchildren, etc. are removed together. Dependency references to\n" +
+			"removed tasks are automatically cleaned from surviving tasks.\n\n" +
+			"Recovery: since tasks.jsonl is tracked in Git, accidental removals\n" +
+			"can be recovered from Git history.",
+		Flags: []flagInfo{
+			{"--force, -f", "", "Skip confirmation prompt", false},
+		},
+	},
+	{
 		Name:    "dep",
 		Summary: "Manage task dependencies",
 		Usage:   "tick dep <add|rm> <task-id> <blocked-by-id>",

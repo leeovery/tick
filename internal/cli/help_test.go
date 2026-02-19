@@ -28,9 +28,9 @@ func TestHelp(t *testing.T) {
 		}
 		for _, name := range []string{
 			"init", "create", "list", "show", "update",
-			"start", "done", "cancel", "reopen", "dep",
-			"ready", "blocked", "stats", "rebuild", "doctor",
-			"migrate", "help",
+			"start", "done", "cancel", "reopen", "remove",
+			"dep", "ready", "blocked", "stats", "rebuild",
+			"doctor", "migrate", "help",
 		} {
 			if !strings.Contains(stdout, name) {
 				t.Errorf("stdout missing command %q", name)
@@ -225,6 +225,39 @@ func TestHelp(t *testing.T) {
 		}
 		if stderr != "" {
 			t.Errorf("stderr should be empty, got %q", stderr)
+		}
+	})
+
+	t.Run("tick help remove shows flags", func(t *testing.T) {
+		stdout, _, code := runHelp(t, "help", "remove")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0", code)
+		}
+		if !strings.Contains(stdout, "--force") {
+			t.Error("stdout missing --force flag")
+		}
+		if !strings.Contains(stdout, "-f") {
+			t.Error("stdout missing -f short flag")
+		}
+	})
+
+	t.Run("tick help remove mentions cascade", func(t *testing.T) {
+		stdout, _, code := runHelp(t, "help", "remove")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0", code)
+		}
+		if !strings.Contains(stdout, "descendant") {
+			t.Error("stdout missing cascade/descendants mention")
+		}
+	})
+
+	t.Run("tick help remove mentions git recovery", func(t *testing.T) {
+		stdout, _, code := runHelp(t, "help", "remove")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0", code)
+		}
+		if !strings.Contains(stdout, "Git") {
+			t.Error("stdout missing Git recovery mention")
 		}
 	})
 }
