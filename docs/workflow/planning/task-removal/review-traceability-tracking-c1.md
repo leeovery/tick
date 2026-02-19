@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-19
 cycle: 1
 phase: Traceability Review
@@ -126,7 +126,7 @@ The specification explicitly requires the confirmation prompt to surface three c
 - "it writes cascade prompt to stderr not stdout"
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**:
 The spec's "Confirmation Behavior" section lists three blast radius items the prompt must surface. The plan covers two (targets and cascade children) but omits the third (dependency references on surviving tasks). This applies to all prompt scenarios — single, cascade, and bulk. The proposed fix adds a pre-scan for affected dependency tasks and includes them in the prompt output.
 
