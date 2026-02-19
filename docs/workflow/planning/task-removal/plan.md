@@ -13,7 +13,7 @@ author_gate_mode: gated
 finding_gate_mode: gated
 planning:
   phase: 2
-  task: ~
+  task: 1
 ---
 
 # Plan: Task Removal
