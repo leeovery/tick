@@ -62,6 +62,12 @@ approved_at: 2026-02-19
 - [ ] Stdin is injectable on `App` (e.g., `Stdin io.Reader` field) for test isolation
 - [ ] `--force` continues to skip the prompt entirely (Phase 1 behavior preserved)
 
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| task-removal-2-1 | Add Stdin to App and thread through remove handler | none | pending | |
+| task-removal-2-2 | Implement confirmation prompt with accept and abort paths | case-insensitive y/yes, empty Enter aborts, whitespace-padded input, --force bypass preserved | pending | |
+
 ### Phase 3: Cascade Deletion, Dependency Cleanup, and Bulk Removal
 status: approved
 ext_id:
