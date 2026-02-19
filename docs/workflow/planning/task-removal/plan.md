@@ -13,7 +13,7 @@ author_gate_mode: gated
 finding_gate_mode: gated
 planning:
   phase: 3
-  task: 1
+  task: 2
 ---
 
 # Plan: Task Removal
@@ -70,7 +70,7 @@ approved_at: 2026-02-19
 
 ### Phase 3: Cascade Deletion, Dependency Cleanup, and Bulk Removal
 status: approved
-ext_id:
+ext_id: tick-192a68
 approved_at: 2026-02-19
 
 **Goal**: Support cascade deletion of parent-child hierarchies, automatic dependency reference cleanup on surviving tasks, and bulk removal of multiple task IDs with deduplication — all in a single atomic `Store.Mutate` call.
@@ -94,7 +94,7 @@ approved_at: 2026-02-19
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| task-removal-3-1 | Bulk argument parsing with deduplication | duplicate IDs silently deduplicated, single ID still works, mixed flags and positional args | pending | |
+| task-removal-3-1 | Bulk argument parsing with deduplication | duplicate IDs silently deduplicated, single ID still works, mixed flags and positional args | authored | tick-2a1fa5 |
 | task-removal-3-2 | All-or-nothing ID validation for bulk removal | first ID valid but second invalid, all IDs invalid | pending | |
 | task-removal-3-3 | Cascade descendant collection | deep hierarchy (3+ levels), task with no children, child removal does not cascade upward | pending | |
 | task-removal-3-4 | Integrate cascade into removal flow with confirmation prompt | cascade with --force skips prompt, prompt lists all cascaded descendants, dependency cleanup covers all removed IDs | pending | |
