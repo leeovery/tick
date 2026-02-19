@@ -2,7 +2,7 @@
 topic: task-removal
 plan: ../../planning/task-removal/plan.md
 format: tick
-status: in-progress
+status: completed
 task_gate_mode: auto
 fix_gate_mode: gated
 fix_attempts: 0
@@ -42,7 +42,7 @@ completed_tasks:
   - task-removal-5-1
 started: 2026-02-19
 updated: 2026-02-19
-completed: ~
+completed: 2026-02-19
 ---
 
 # Implementation: Task Removal
