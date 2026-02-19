@@ -842,6 +842,430 @@ func TestRunRemove(t *testing.T) {
 		}
 	})
 
+	// === Cascade integration tests (task 3-4) ===
+
+	t.Run("it removes parent and all descendants when removing a parent with --force", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child1 := task.Task{
+			ID: "tick-child1", Title: "Child one", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		child2 := task.Task{
+			ID: "tick-child2", Title: "Child two", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		survivor := task.Task{
+			ID: "tick-surviv", Title: "Survivor", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parent, child1, child2, survivor})
+
+		_, _, exitCode := runRemove(t, dir, "tick-parent", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-surviv" {
+			t.Errorf("remaining task ID = %q, want %q", tasks[0].ID, "tick-surviv")
+		}
+	})
+
+	t.Run("it removes 3-level hierarchy (parent -> child -> grandchild) with --force", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-child0", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		grandchild := task.Task{
+			ID: "tick-grndch", Title: "Grandchild", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-child0",
+		}
+		survivor := task.Task{
+			ID: "tick-surviv", Title: "Survivor", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parent, child, grandchild, survivor})
+
+		_, _, exitCode := runRemove(t, dir, "tick-parent", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-surviv" {
+			t.Errorf("remaining task ID = %q, want %q", tasks[0].ID, "tick-surviv")
+		}
+	})
+
+	t.Run("it does not remove parent when removing a child with --force", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-child0", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parent, child})
+
+		_, _, exitCode := runRemove(t, dir, "tick-child0", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-parent" {
+			t.Errorf("remaining task ID = %q, want %q", tasks[0].ID, "tick-parent")
+		}
+	})
+
+	t.Run("it does not remove siblings when removing a child with --force", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child1 := task.Task{
+			ID: "tick-child1", Title: "Child one", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		child2 := task.Task{
+			ID: "tick-child2", Title: "Child two", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parent, child1, child2})
+
+		_, _, exitCode := runRemove(t, dir, "tick-child1", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(tasks))
+		}
+		// Should have parent and child2 remaining.
+		remaining := make(map[string]bool)
+		for _, tk := range tasks {
+			remaining[tk.ID] = true
+		}
+		if !remaining["tick-parent"] {
+			t.Errorf("expected tick-parent to remain")
+		}
+		if !remaining["tick-child2"] {
+			t.Errorf("expected tick-child2 to remain")
+		}
+	})
+
+	t.Run("it shows descendants in confirmation prompt when removing parent without --force", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child1 := task.Task{
+			ID: "tick-child1", Title: "Child one", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		child2 := task.Task{
+			ID: "tick-child2", Title: "Child two", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent, child1, child2})
+
+		_, stderr, _ := runRemoveWithStdin(t, dir, "n\n", "tick-parent")
+
+		// Prompt should mention target.
+		if !strings.Contains(stderr, "tick-parent") {
+			t.Errorf("stderr should mention target tick-parent, got %q", stderr)
+		}
+		if !strings.Contains(stderr, "Parent task") {
+			t.Errorf("stderr should mention target title, got %q", stderr)
+		}
+		// Prompt should mention descendants.
+		if !strings.Contains(stderr, "descendants") {
+			t.Errorf("stderr should mention 'descendants', got %q", stderr)
+		}
+		if !strings.Contains(stderr, "tick-child1") {
+			t.Errorf("stderr should mention cascaded child tick-child1, got %q", stderr)
+		}
+		if !strings.Contains(stderr, "tick-child2") {
+			t.Errorf("stderr should mention cascaded child tick-child2, got %q", stderr)
+		}
+	})
+
+	t.Run("it shows affected dependency tasks in confirmation prompt", func(t *testing.T) {
+		blocker := task.Task{
+			ID: "tick-blockr", Title: "Blocker", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		blocked := task.Task{
+			ID: "tick-blkd01", Title: "Blocked task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+			BlockedBy: []string{"tick-blockr"},
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{blocker, blocked})
+
+		_, stderr, _ := runRemoveWithStdin(t, dir, "n\n", "tick-blockr")
+
+		// Prompt should mention the affected dependency.
+		if !strings.Contains(stderr, "dependencies") {
+			t.Errorf("stderr should mention 'dependencies', got %q", stderr)
+		}
+		if !strings.Contains(stderr, "tick-blkd01") {
+			t.Errorf("stderr should mention affected task tick-blkd01, got %q", stderr)
+		}
+	})
+
+	t.Run("it proceeds with cascade removal when user confirms with y", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-child0", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		survivor := task.Task{
+			ID: "tick-surviv", Title: "Survivor", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parent, child, survivor})
+
+		stdout, _, exitCode := runRemoveWithStdin(t, dir, "y\n", "tick-parent")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-surviv" {
+			t.Errorf("remaining task ID = %q, want %q", tasks[0].ID, "tick-surviv")
+		}
+		// Output should mention both removed tasks.
+		if !strings.Contains(stdout, "tick-parent") {
+			t.Errorf("stdout should mention tick-parent, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "tick-child0") {
+			t.Errorf("stdout should mention tick-child0, got %q", stdout)
+		}
+	})
+
+	t.Run("it aborts cascade removal when user declines", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-child0", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parent, child})
+
+		_, stderr, exitCode := runRemoveWithStdin(t, dir, "n\n", "tick-parent")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "Aborted.") {
+			t.Errorf("stderr should contain 'Aborted.', got %q", stderr)
+		}
+
+		// All tasks should remain.
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks (no removal), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it skips prompt entirely with --force for cascade removal", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-child0", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parent, child})
+
+		_, stderr, exitCode := runRemove(t, dir, "tick-parent", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		// stderr should not contain any prompt.
+		if strings.Contains(stderr, "[y/N]") {
+			t.Errorf("stderr should not contain prompt with --force, got %q", stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks after forced cascade remove, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it cleans BlockedBy references for all cascaded descendant IDs on surviving tasks", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-child0", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		survivor := task.Task{
+			ID: "tick-surviv", Title: "Survivor", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+			BlockedBy: []string{"tick-parent", "tick-child0", "tick-other0"},
+		}
+		other := task.Task{
+			ID: "tick-other0", Title: "Other blocker", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parent, child, survivor, other})
+
+		_, _, exitCode := runRemove(t, dir, "tick-parent", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		// Should have survivor and other remaining.
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(tasks))
+		}
+
+		for _, tk := range tasks {
+			if tk.ID == "tick-surviv" {
+				// Should only have tick-other0 remaining in BlockedBy.
+				if len(tk.BlockedBy) != 1 || tk.BlockedBy[0] != "tick-other0" {
+					t.Errorf("survivor BlockedBy = %v, want [tick-other0]", tk.BlockedBy)
+				}
+			}
+		}
+	})
+
+	t.Run("it reports all cascade-removed tasks in RemovalResult.Removed", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-child0", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent, child})
+
+		stdout, _, exitCode := runRemove(t, dir, "tick-parent", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		// Output should mention both parent and child as removed.
+		if !strings.Contains(stdout, "Removed tick-parent") {
+			t.Errorf("stdout should contain 'Removed tick-parent', got %q", stdout)
+		}
+		if !strings.Contains(stdout, "Removed tick-child0") {
+			t.Errorf("stdout should contain 'Removed tick-child0', got %q", stdout)
+		}
+	})
+
+	t.Run("it reports dep-updated tasks in RemovalResult.DepsUpdated for cascade-removed IDs", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-child0", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		survivor := task.Task{
+			ID: "tick-surviv", Title: "Survivor", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+			BlockedBy: []string{"tick-child0"},
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent, child, survivor})
+
+		stdout, _, exitCode := runRemove(t, dir, "tick-parent", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		// Output should report dependency update on survivor.
+		if !strings.Contains(stdout, "Updated dependencies") {
+			t.Errorf("stdout should contain 'Updated dependencies', got %q", stdout)
+		}
+		if !strings.Contains(stdout, "tick-surviv") {
+			t.Errorf("stdout should mention tick-surviv in dep update, got %q", stdout)
+		}
+	})
+
+	t.Run("it retains simple prompt format for single target with no children and no dep impact", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Solo task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, _ := runRemoveWithStdin(t, dir, "n\n", "tick-abc123")
+		wantPrompt := `Remove task tick-abc123 "Solo task"? [y/N] `
+		if !strings.Contains(stderr, wantPrompt) {
+			t.Errorf("stderr should contain simple prompt %q, got %q", wantPrompt, stderr)
+		}
+		// Should NOT contain cascade or dependency sections.
+		if strings.Contains(stderr, "descendants") {
+			t.Errorf("stderr should not mention descendants for leaf task, got %q", stderr)
+		}
+		if strings.Contains(stderr, "dependencies") {
+			t.Errorf("stderr should not mention dependencies for no-dep-impact task, got %q", stderr)
+		}
+	})
+
+	t.Run("it writes cascade prompt to stderr not stdout", func(t *testing.T) {
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-child0", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent, child})
+
+		stdout, stderr, exitCode := runRemoveWithStdin(t, dir, "n\n", "tick-parent")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+
+		// Prompt text should be on stderr.
+		if !strings.Contains(stderr, "tick-parent") {
+			t.Errorf("stderr should contain prompt text, got %q", stderr)
+		}
+		if !strings.Contains(stderr, "descendants") {
+			t.Errorf("stderr should contain 'descendants', got %q", stderr)
+		}
+		// stdout should be empty on abort.
+		if stdout != "" {
+			t.Errorf("stdout should be empty on abort, got %q", stdout)
+		}
+	})
+
 	t.Run("it does not modify JSONL when validation fails", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Protected", Status: task.StatusOpen,
