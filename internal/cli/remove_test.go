@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -32,6 +34,16 @@ func runRemoveWithStdin(t *testing.T, dir string, stdin string, args ...string) 
 func runRemove(t *testing.T, dir string, args ...string) (stdout string, stderr string, exitCode int) {
 	t.Helper()
 	return runRemoveWithStdin(t, dir, "", args...)
+}
+
+// readJSONLBytes reads the raw bytes of the tasks.jsonl file.
+func readJSONLBytes(t *testing.T, tickDir string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(tickDir, "tasks.jsonl"))
+	if err != nil {
+		t.Fatalf("failed to read tasks.jsonl: %v", err)
+	}
+	return data
 }
 
 func TestRunRemove(t *testing.T) {
@@ -618,6 +630,237 @@ func TestRunRemove(t *testing.T) {
 		}
 		if strings.Contains(stderr, "Error:") {
 			t.Errorf("stderr should not contain 'Error:' on abort, got %q", stderr)
+		}
+	})
+
+	t.Run("it removes multiple tasks when all IDs are valid", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "First task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Second task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskC := task.Task{
+			ID: "tick-ccc333", Title: "Survivor", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB, taskC})
+
+		stdout, _, exitCode := runRemove(t, dir, "tick-aaa111", "tick-bbb222", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-ccc333" {
+			t.Errorf("remaining task ID = %q, want %q", tasks[0].ID, "tick-ccc333")
+		}
+
+		// Output should mention both removed tasks.
+		if !strings.Contains(stdout, "tick-aaa111") {
+			t.Errorf("stdout should mention tick-aaa111, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "tick-bbb222") {
+			t.Errorf("stdout should mention tick-bbb222, got %q", stdout)
+		}
+	})
+
+	t.Run("it fails with not-found error when first ID is valid but second is invalid", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Valid task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemove(t, dir, "tick-aaa111", "tick-nonexist", "--force")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "task 'tick-nonexist' not found") {
+			t.Errorf("stderr should contain \"task 'tick-nonexist' not found\", got %q", stderr)
+		}
+
+		// All-or-nothing: valid task must still exist.
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task (no removal), got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-aaa111" {
+			t.Errorf("task ID = %q, want %q", tasks[0].ID, "tick-aaa111")
+		}
+	})
+
+	t.Run("it fails with not-found error when all IDs are invalid", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Existing task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemove(t, dir, "tick-nonexist", "tick-alsofake", "--force")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "task 'tick-nonexist' not found") {
+			t.Errorf("stderr should contain \"task 'tick-nonexist' not found\", got %q", stderr)
+		}
+
+		// No tasks should be removed.
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task (no removal), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it removes zero tasks when any ID is invalid (all-or-nothing)", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Keep me A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Keep me B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, _, exitCode := runRemove(t, dir, "tick-aaa111", "tick-bbb222", "tick-fake99", "--force")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks (no removal), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it reports the first invalid ID in the error message", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Valid", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemove(t, dir, "tick-aaa111", "tick-bad111", "tick-bad222", "--force")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		wantErr := "Error: task 'tick-bad111' not found\n"
+		if stderr != wantErr {
+			t.Errorf("stderr = %q, want %q", stderr, wantErr)
+		}
+	})
+
+	t.Run("it cleans up BlockedBy references for all removed task IDs", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Blocker A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Blocker B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskC := task.Task{
+			ID: "tick-ccc333", Title: "Survivor blocked by both", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+			BlockedBy: []string{"tick-aaa111", "tick-bbb222", "tick-ddd444"},
+		}
+		taskD := task.Task{
+			ID: "tick-ddd444", Title: "Another survivor", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+			BlockedBy: []string{"tick-aaa111"},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB, taskC, taskD})
+
+		_, _, exitCode := runRemove(t, dir, "tick-aaa111", "tick-bbb222", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(tasks))
+		}
+
+		for _, tk := range tasks {
+			for _, dep := range tk.BlockedBy {
+				if dep == "tick-aaa111" || dep == "tick-bbb222" {
+					t.Errorf("task %s still has removed ID %s in BlockedBy", tk.ID, dep)
+				}
+			}
+		}
+
+		// taskC should retain only tick-ddd444.
+		for _, tk := range tasks {
+			if tk.ID == "tick-ccc333" {
+				if len(tk.BlockedBy) != 1 || tk.BlockedBy[0] != "tick-ddd444" {
+					t.Errorf("task tick-ccc333 BlockedBy = %v, want [tick-ddd444]", tk.BlockedBy)
+				}
+			}
+		}
+
+		// taskD should have empty BlockedBy.
+		for _, tk := range tasks {
+			if tk.ID == "tick-ddd444" {
+				if len(tk.BlockedBy) != 0 {
+					t.Errorf("task tick-ddd444 BlockedBy = %v, want []", tk.BlockedBy)
+				}
+			}
+		}
+	})
+
+	t.Run("it preserves single-ID removal behavior", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Single remove", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Unrelated", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		stdout, _, exitCode := runRemove(t, dir, "tick-aaa111", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-bbb222" {
+			t.Errorf("remaining task ID = %q, want %q", tasks[0].ID, "tick-bbb222")
+		}
+		if !strings.Contains(stdout, "Removed tick-aaa111") {
+			t.Errorf("stdout should contain 'Removed tick-aaa111', got %q", stdout)
+		}
+	})
+
+	t.Run("it does not modify JSONL when validation fails", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Protected", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		// Read JSONL content before the failed remove attempt.
+		jsonlBefore := readJSONLBytes(t, tickDir)
+
+		_, _, exitCode := runRemove(t, dir, "tick-aaa111", "tick-nonexist", "--force")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+
+		// JSONL content should be byte-identical.
+		jsonlAfter := readJSONLBytes(t, tickDir)
+		if !bytes.Equal(jsonlBefore, jsonlAfter) {
+			t.Errorf("JSONL was modified when validation failed\nbefore: %q\nafter:  %q", jsonlBefore, jsonlAfter)
 		}
 	})
 }

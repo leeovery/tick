@@ -40,8 +40,8 @@ func parseRemoveArgs(args []string) ([]string, bool) {
 	return ids, force
 }
 
-// RunRemove executes the remove command: parses args, locates the target task,
-// prompts for confirmation (unless --force), filters it from the task slice,
+// RunRemove executes the remove command: parses args, validates all IDs exist (all-or-nothing),
+// prompts for confirmation (unless --force), filters targets from the task slice,
 // cleans up dependency references on surviving tasks, and outputs the result through the formatter.
 func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin io.Reader, stderr io.Writer, stdout io.Writer) error {
 	ids, force := parseRemoveArgs(args)
@@ -50,9 +50,6 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin
 		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...]")
 	}
 
-	// Tasks 3-2 through 3-5 extend to full slice; for now use first ID only.
-	id := ids[0]
-
 	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
@@ -60,7 +57,7 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin
 	defer store.Close()
 
 	if !force {
-		if err := confirmRemoval(store, id, stdin, stderr); err != nil {
+		if err := confirmRemoval(store, ids, stdin, stderr); err != nil {
 			return err
 		}
 	}
@@ -68,34 +65,41 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin
 	var result RemovalResult
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
-		// Find the target task.
-		targetIdx := -1
+		// Build lookup of existing task IDs for O(1) validation.
+		existingIDs := make(map[string]int, len(tasks))
 		for i := range tasks {
-			if task.NormalizeID(tasks[i].ID) == id {
-				targetIdx = i
-				break
+			existingIDs[task.NormalizeID(tasks[i].ID)] = i
+		}
+
+		// Validate all IDs exist before any mutation (all-or-nothing).
+		for _, id := range ids {
+			if _, ok := existingIDs[id]; !ok {
+				return nil, fmt.Errorf("task '%s' not found", id)
 			}
 		}
-		if targetIdx == -1 {
-			return nil, fmt.Errorf("task '%s' not found", id)
+
+		// Build remove set for O(1) filtering and collect removal info.
+		removeSet := make(map[string]bool, len(ids))
+		for _, id := range ids {
+			idx := existingIDs[id]
+			result.Removed = append(result.Removed, RemovedTask{
+				ID:    tasks[idx].ID,
+				Title: tasks[idx].Title,
+			})
+			removeSet[id] = true
 		}
 
-		// Record removal info.
-		result.Removed = []RemovedTask{
-			{ID: tasks[targetIdx].ID, Title: tasks[targetIdx].Title},
-		}
-
-		// Filter out the target task.
-		filtered := make([]task.Task, 0, len(tasks)-1)
+		// Filter out removed tasks.
+		filtered := make([]task.Task, 0, len(tasks)-len(ids))
 		for i := range tasks {
-			if i != targetIdx {
+			if !removeSet[task.NormalizeID(tasks[i].ID)] {
 				filtered = append(filtered, tasks[i])
 			}
 		}
 
-		// Strip removed ID from surviving tasks' BlockedBy arrays.
+		// Strip all removed IDs from surviving tasks' BlockedBy arrays.
 		for i := range filtered {
-			cleaned := stripFromBlockedBy(filtered[i].BlockedBy, id)
+			cleaned := stripIDsFromBlockedBy(filtered[i].BlockedBy, removeSet)
 			if len(cleaned) != len(filtered[i].BlockedBy) {
 				result.DepsUpdated = append(result.DepsUpdated, filtered[i].ID)
 				filtered[i].BlockedBy = cleaned
@@ -115,31 +119,48 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin
 	return nil
 }
 
-// stripFromBlockedBy returns a new slice with all occurrences of removedID removed.
-func stripFromBlockedBy(blockedBy []string, removedID string) []string {
+// stripIDsFromBlockedBy returns a new slice with all IDs in removeSet removed.
+func stripIDsFromBlockedBy(blockedBy []string, removeSet map[string]bool) []string {
 	var result []string
 	for _, dep := range blockedBy {
-		if task.NormalizeID(dep) != removedID {
+		if !removeSet[task.NormalizeID(dep)] {
 			result = append(result, dep)
 		}
 	}
 	return result
 }
 
-// confirmRemoval looks up the task title and prompts the user for confirmation.
+// confirmRemoval looks up task titles for all IDs and prompts the user for confirmation.
 // Returns nil if the user confirms, or errAborted if they decline.
 func confirmRemoval(store interface {
 	Query(func(*sql.DB) error) error
-}, id string, stdin io.Reader, stderr io.Writer) error {
-	var title string
-	err := store.Query(func(db *sql.DB) error {
-		return db.QueryRow("SELECT title FROM tasks WHERE id = ?", id).Scan(&title)
-	})
-	if err != nil {
-		return fmt.Errorf("task '%s' not found", id)
+}, ids []string, stdin io.Reader, stderr io.Writer) error {
+	// Look up each task's title for the prompt.
+	type idTitle struct {
+		id    string
+		title string
+	}
+	targets := make([]idTitle, 0, len(ids))
+	for _, id := range ids {
+		var title string
+		err := store.Query(func(db *sql.DB) error {
+			return db.QueryRow("SELECT title FROM tasks WHERE id = ?", id).Scan(&title)
+		})
+		if err != nil {
+			return fmt.Errorf("task '%s' not found", id)
+		}
+		targets = append(targets, idTitle{id: id, title: title})
 	}
 
-	fmt.Fprintf(stderr, "Remove task %s %q? [y/N] ", id, title)
+	if len(targets) == 1 {
+		fmt.Fprintf(stderr, "Remove task %s %q? [y/N] ", targets[0].id, targets[0].title)
+	} else {
+		fmt.Fprintf(stderr, "Remove %d tasks?\n", len(targets))
+		for _, t := range targets {
+			fmt.Fprintf(stderr, "  %s %q\n", t.id, t.title)
+		}
+		fmt.Fprint(stderr, "Proceed? [y/N] ")
+	}
 
 	line, _ := bufio.NewReader(stdin).ReadString('\n')
 	response := strings.ToLower(strings.TrimSpace(line))
