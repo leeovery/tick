@@ -119,6 +119,48 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin
 	return nil
 }
 
+// collectDescendants returns the union of targetIDs and all their transitive descendants
+// found in the given task slice. It builds a parent-to-children index and walks recursively.
+// ID comparison uses task.NormalizeID for case-insensitive matching.
+func collectDescendants(targetIDs map[string]bool, tasks []task.Task) map[string]bool {
+	result := make(map[string]bool, len(targetIDs))
+	for id := range targetIDs {
+		result[id] = true
+	}
+
+	if len(targetIDs) == 0 {
+		return result
+	}
+
+	// Build parent -> children index using normalized IDs.
+	childrenOf := make(map[string][]string)
+	for i := range tasks {
+		if tasks[i].Parent == "" {
+			continue
+		}
+		parentNorm := task.NormalizeID(tasks[i].Parent)
+		childNorm := task.NormalizeID(tasks[i].ID)
+		childrenOf[parentNorm] = append(childrenOf[parentNorm], childNorm)
+	}
+
+	// Recursively collect descendants for each target.
+	var walk func(id string)
+	walk = func(id string) {
+		for _, child := range childrenOf[id] {
+			if !result[child] {
+				result[child] = true
+				walk(child)
+			}
+		}
+	}
+
+	for id := range targetIDs {
+		walk(id)
+	}
+
+	return result
+}
+
 // stripIDsFromBlockedBy returns a new slice with all IDs in removeSet removed.
 func stripIDsFromBlockedBy(blockedBy []string, removeSet map[string]bool) []string {
 	var result []string

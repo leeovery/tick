@@ -1018,3 +1018,183 @@ func TestParseRemoveArgs(t *testing.T) {
 		}
 	})
 }
+
+func TestCollectDescendants(t *testing.T) {
+	// Helper to build a task with just ID and Parent set (other fields irrelevant for this function).
+	mkTask := func(id, parent string) task.Task {
+		return task.Task{ID: id, Parent: parent}
+	}
+
+	t.Run("target with no children returns only target", func(t *testing.T) {
+		tasks := []task.Task{
+			mkTask("tick-aaa111", ""),
+			mkTask("tick-bbb222", ""),
+		}
+		targets := map[string]bool{"tick-aaa111": true}
+
+		got := collectDescendants(targets, tasks)
+
+		if len(got) != 1 {
+			t.Fatalf("len(got) = %d, want 1", len(got))
+		}
+		if !got["tick-aaa111"] {
+			t.Errorf("expected tick-aaa111 in result, got %v", got)
+		}
+	})
+
+	t.Run("target with direct children collects them", func(t *testing.T) {
+		tasks := []task.Task{
+			mkTask("tick-parent", ""),
+			mkTask("tick-child1", "tick-parent"),
+			mkTask("tick-child2", "tick-parent"),
+			mkTask("tick-other", ""),
+		}
+		targets := map[string]bool{"tick-parent": true}
+
+		got := collectDescendants(targets, tasks)
+
+		if len(got) != 3 {
+			t.Fatalf("len(got) = %d, want 3", len(got))
+		}
+		for _, id := range []string{"tick-parent", "tick-child1", "tick-child2"} {
+			if !got[id] {
+				t.Errorf("expected %s in result, got %v", id, got)
+			}
+		}
+		if got["tick-other"] {
+			t.Errorf("tick-other should not be in result, got %v", got)
+		}
+	})
+
+	t.Run("deep hierarchy collects all levels", func(t *testing.T) {
+		// A -> B -> C -> D
+		tasks := []task.Task{
+			mkTask("tick-a", ""),
+			mkTask("tick-b", "tick-a"),
+			mkTask("tick-c", "tick-b"),
+			mkTask("tick-d", "tick-c"),
+			mkTask("tick-unrelated", ""),
+		}
+		targets := map[string]bool{"tick-a": true}
+
+		got := collectDescendants(targets, tasks)
+
+		if len(got) != 4 {
+			t.Fatalf("len(got) = %d, want 4", len(got))
+		}
+		for _, id := range []string{"tick-a", "tick-b", "tick-c", "tick-d"} {
+			if !got[id] {
+				t.Errorf("expected %s in result, got %v", id, got)
+			}
+		}
+		if got["tick-unrelated"] {
+			t.Errorf("tick-unrelated should not be in result")
+		}
+	})
+
+	t.Run("child removal does not cascade upward", func(t *testing.T) {
+		tasks := []task.Task{
+			mkTask("tick-parent", ""),
+			mkTask("tick-child1", "tick-parent"),
+			mkTask("tick-child2", "tick-parent"),
+		}
+		targets := map[string]bool{"tick-child1": true}
+
+		got := collectDescendants(targets, tasks)
+
+		if len(got) != 1 {
+			t.Fatalf("len(got) = %d, want 1", len(got))
+		}
+		if !got["tick-child1"] {
+			t.Errorf("expected tick-child1 in result, got %v", got)
+		}
+		if got["tick-parent"] {
+			t.Errorf("tick-parent should not be in result (no upward cascade)")
+		}
+		if got["tick-child2"] {
+			t.Errorf("tick-child2 should not be in result (sibling)")
+		}
+	})
+
+	t.Run("target already includes descendant deduplicates", func(t *testing.T) {
+		tasks := []task.Task{
+			mkTask("tick-parent", ""),
+			mkTask("tick-child", "tick-parent"),
+		}
+		// Both parent and child explicitly targeted.
+		targets := map[string]bool{"tick-parent": true, "tick-child": true}
+
+		got := collectDescendants(targets, tasks)
+
+		if len(got) != 2 {
+			t.Fatalf("len(got) = %d, want 2", len(got))
+		}
+		if !got["tick-parent"] {
+			t.Errorf("expected tick-parent in result")
+		}
+		if !got["tick-child"] {
+			t.Errorf("expected tick-child in result")
+		}
+	})
+
+	t.Run("multiple targets with overlapping descendants", func(t *testing.T) {
+		// Tree: A -> B -> D, A -> C
+		// Also target B explicitly (overlaps with A's descendants)
+		tasks := []task.Task{
+			mkTask("tick-a", ""),
+			mkTask("tick-b", "tick-a"),
+			mkTask("tick-c", "tick-a"),
+			mkTask("tick-d", "tick-b"),
+			mkTask("tick-other", ""),
+		}
+		targets := map[string]bool{"tick-a": true, "tick-b": true}
+
+		got := collectDescendants(targets, tasks)
+
+		if len(got) != 4 {
+			t.Fatalf("len(got) = %d, want 4", len(got))
+		}
+		for _, id := range []string{"tick-a", "tick-b", "tick-c", "tick-d"} {
+			if !got[id] {
+				t.Errorf("expected %s in result, got %v", id, got)
+			}
+		}
+		if got["tick-other"] {
+			t.Errorf("tick-other should not be in result")
+		}
+	})
+
+	t.Run("empty target set returns empty result", func(t *testing.T) {
+		tasks := []task.Task{
+			mkTask("tick-aaa111", ""),
+			mkTask("tick-bbb222", "tick-aaa111"),
+		}
+		targets := map[string]bool{}
+
+		got := collectDescendants(targets, tasks)
+
+		if len(got) != 0 {
+			t.Fatalf("len(got) = %d, want 0", len(got))
+		}
+	})
+
+	t.Run("case-insensitive ID matching", func(t *testing.T) {
+		tasks := []task.Task{
+			mkTask("tick-parent", ""),
+			mkTask("tick-child", "TICK-PARENT"), // Parent stored with uppercase
+		}
+		targets := map[string]bool{"tick-parent": true}
+
+		got := collectDescendants(targets, tasks)
+
+		if len(got) != 2 {
+			t.Fatalf("len(got) = %d, want 2", len(got))
+		}
+		if !got["tick-parent"] {
+			t.Errorf("expected tick-parent in result")
+		}
+		if !got["tick-child"] {
+			t.Errorf("expected tick-child in result, got %v", got)
+		}
+	})
+}
