@@ -12,8 +12,8 @@ task_list_gate_mode: gated
 author_gate_mode: gated
 finding_gate_mode: gated
 planning:
-  phase: 1
-  task: 4
+  phase: 2
+  task: ~
 ---
 
 # Plan: Task Removal
@@ -43,7 +43,7 @@ approved_at: 2026-02-19
 | task-removal-1-1 | Add FormatRemoval to Formatter interface and all implementations | none | authored | tick-7314b0 |
 | task-removal-1-2 | Implement RunRemove handler with --force flag and wire into App.Run | case-insensitive ID matching | authored | tick-64566b |
 | task-removal-1-3 | Handle remove error cases | no-args message matches spec exactly | authored | tick-0607a0 |
-| task-removal-1-4 | Register remove command help text | none | pending | |
+| task-removal-1-4 | Register remove command help text | none | authored | tick-1777bc |
 
 ### Phase 2: Interactive Confirmation Prompt
 status: approved
