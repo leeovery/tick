@@ -1541,6 +1541,177 @@ func TestBulkCascadeInteraction(t *testing.T) {
 	})
 }
 
+func TestComputeBlastRadius(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+
+	t.Run("it returns target tasks for valid IDs", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-abc123", Title: "Target", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-def456", Title: "Other", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+
+		br, err := computeBlastRadius(tasks, []string{"tick-abc123"})
+		if err != nil {
+			t.Fatalf("computeBlastRadius returned error: %v", err)
+		}
+		if len(br.targetTasks) != 1 {
+			t.Fatalf("targetTasks length = %d, want 1", len(br.targetTasks))
+		}
+		if br.targetTasks[0].ID != "tick-abc123" {
+			t.Errorf("targetTasks[0].ID = %q, want %q", br.targetTasks[0].ID, "tick-abc123")
+		}
+	})
+
+	t.Run("it returns error for nonexistent ID", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-abc123", Title: "Exists", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+
+		_, err := computeBlastRadius(tasks, []string{"tick-nonexist"})
+		if err == nil {
+			t.Fatal("expected error for nonexistent ID")
+		}
+		if !strings.Contains(err.Error(), "task 'tick-nonexist' not found") {
+			t.Errorf("error = %q, want to contain %q", err.Error(), "task 'tick-nonexist' not found")
+		}
+	})
+
+	t.Run("it includes cascaded descendants", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-parent", Title: "Parent", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-child1", Title: "Child", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now, Parent: "tick-parent"},
+		}
+
+		br, err := computeBlastRadius(tasks, []string{"tick-parent"})
+		if err != nil {
+			t.Fatalf("computeBlastRadius returned error: %v", err)
+		}
+		if len(br.cascadedTasks) != 1 {
+			t.Fatalf("cascadedTasks length = %d, want 1", len(br.cascadedTasks))
+		}
+		if br.cascadedTasks[0].ID != "tick-child1" {
+			t.Errorf("cascadedTasks[0].ID = %q, want %q", br.cascadedTasks[0].ID, "tick-child1")
+		}
+	})
+
+	t.Run("it identifies affected dependency tasks", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-abc123", Title: "Blocker", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-def456", Title: "Blocked", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now,
+				BlockedBy: []string{"tick-abc123"}},
+		}
+
+		br, err := computeBlastRadius(tasks, []string{"tick-abc123"})
+		if err != nil {
+			t.Fatalf("computeBlastRadius returned error: %v", err)
+		}
+		if len(br.affectedDeps) != 1 {
+			t.Fatalf("affectedDeps length = %d, want 1", len(br.affectedDeps))
+		}
+		if br.affectedDeps[0].ID != "tick-def456" {
+			t.Errorf("affectedDeps[0].ID = %q, want %q", br.affectedDeps[0].ID, "tick-def456")
+		}
+	})
+
+	t.Run("it does not modify the input task slice", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-abc123", Title: "Target", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		origLen := len(tasks)
+
+		_, err := computeBlastRadius(tasks, []string{"tick-abc123"})
+		if err != nil {
+			t.Fatalf("computeBlastRadius returned error: %v", err)
+		}
+		if len(tasks) != origLen {
+			t.Errorf("tasks slice length changed from %d to %d", origLen, len(tasks))
+		}
+	})
+}
+
+func TestApplyRemoval(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+
+	t.Run("it removes target task and returns filtered slice", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-abc123", Title: "Remove me", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-def456", Title: "Keep me", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+
+		filtered, result, err := applyRemoval(tasks, []string{"tick-abc123"})
+		if err != nil {
+			t.Fatalf("applyRemoval returned error: %v", err)
+		}
+		if len(filtered) != 1 {
+			t.Fatalf("filtered length = %d, want 1", len(filtered))
+		}
+		if filtered[0].ID != "tick-def456" {
+			t.Errorf("filtered[0].ID = %q, want %q", filtered[0].ID, "tick-def456")
+		}
+		if len(result.Removed) != 1 {
+			t.Fatalf("result.Removed length = %d, want 1", len(result.Removed))
+		}
+		if result.Removed[0].ID != "tick-abc123" {
+			t.Errorf("result.Removed[0].ID = %q, want %q", result.Removed[0].ID, "tick-abc123")
+		}
+	})
+
+	t.Run("it cleans BlockedBy references and reports DepsUpdated", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-abc123", Title: "Blocker", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-def456", Title: "Blocked", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now,
+				BlockedBy: []string{"tick-abc123"}},
+		}
+
+		filtered, result, err := applyRemoval(tasks, []string{"tick-abc123"})
+		if err != nil {
+			t.Fatalf("applyRemoval returned error: %v", err)
+		}
+		if len(filtered) != 1 {
+			t.Fatalf("filtered length = %d, want 1", len(filtered))
+		}
+		if len(filtered[0].BlockedBy) != 0 {
+			t.Errorf("filtered[0].BlockedBy = %v, want empty", filtered[0].BlockedBy)
+		}
+		if len(result.DepsUpdated) != 1 || result.DepsUpdated[0] != "tick-def456" {
+			t.Errorf("result.DepsUpdated = %v, want [tick-def456]", result.DepsUpdated)
+		}
+	})
+
+	t.Run("it returns error for nonexistent ID", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-abc123", Title: "Exists", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+
+		_, _, err := applyRemoval(tasks, []string{"tick-nonexist"})
+		if err == nil {
+			t.Fatal("expected error for nonexistent ID")
+		}
+	})
+
+	t.Run("it cascades to descendants", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-parent", Title: "Parent", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-child1", Title: "Child", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now, Parent: "tick-parent"},
+			{ID: "tick-surviv", Title: "Survivor", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+
+		filtered, result, err := applyRemoval(tasks, []string{"tick-parent"})
+		if err != nil {
+			t.Fatalf("applyRemoval returned error: %v", err)
+		}
+		if len(filtered) != 1 {
+			t.Fatalf("filtered length = %d, want 1", len(filtered))
+		}
+		if filtered[0].ID != "tick-surviv" {
+			t.Errorf("filtered[0].ID = %q, want %q", filtered[0].ID, "tick-surviv")
+		}
+		if len(result.Removed) != 2 {
+			t.Errorf("result.Removed length = %d, want 2", len(result.Removed))
+		}
+	})
+}
+
 func TestParseRemoveArgs(t *testing.T) {
 	t.Run("single ID returns slice of length 1", func(t *testing.T) {
 		ids, force := parseRemoveArgs([]string{"tick-abc123"})
@@ -1695,12 +1866,11 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 }
 
-// TestRunRemoveSignature verifies RunRemove follows the standard 5-parameter handler signature
-// and can be called directly without stdin/stderr (confirmation handled by handleRemove).
+// TestRunRemoveSignature verifies RunRemove accepts pre-parsed IDs (not raw args).
 func TestRunRemoveSignature(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 
-	t.Run("RunRemove callable with standard 5-param signature (dir, fc, fmtr, args, stdout)", func(t *testing.T) {
+	t.Run("RunRemove callable with pre-parsed ID slice (dir, fc, fmtr, ids, stdout)", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-abc123", Title: "Direct call", Status: task.StatusOpen,
 			Priority: 2, Created: now, Updated: now,
@@ -1711,7 +1881,7 @@ func TestRunRemoveSignature(t *testing.T) {
 		fc := FormatConfig{Format: FormatPretty}
 		fmtr := NewFormatter(FormatPretty)
 
-		err := RunRemove(dir, fc, fmtr, []string{"tick-abc123", "--force"}, &buf)
+		err := RunRemove(dir, fc, fmtr, []string{"tick-abc123"}, &buf)
 		if err != nil {
 			t.Fatalf("RunRemove returned error: %v", err)
 		}
@@ -1739,7 +1909,7 @@ func TestRunRemoveSignature(t *testing.T) {
 		fmtr := NewFormatter(FormatPretty)
 
 		// Call with exactly 5 args — this is the standard handler signature.
-		err := RunRemove(dir, fc, fmtr, []string{"tick-abc123", "--force"}, &buf)
+		err := RunRemove(dir, fc, fmtr, []string{"tick-abc123"}, &buf)
 		if err != nil {
 			t.Fatalf("RunRemove returned error: %v", err)
 		}

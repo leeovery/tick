@@ -129,6 +129,29 @@ func (s *Store) removeCache() error {
 	return nil
 }
 
+// ReadTasks reads and parses the JSONL file under a shared lock without writing.
+// This is a lightweight read-only operation that does not touch the cache or JSONL file.
+func (s *Store) ReadTasks() ([]task.Task, error) {
+	unlock, err := s.acquireShared()
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+
+	s.verbose("reading JSONL (read-only)")
+	rawJSONL, err := os.ReadFile(s.jsonlPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read tasks.jsonl: %w", err)
+	}
+
+	tasks, err := ParseJSONL(rawJSONL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse tasks.jsonl: %w", err)
+	}
+
+	return tasks, nil
+}
+
 // Mutate executes a write mutation with exclusive file locking.
 // The full flow: lock -> read JSONL -> freshness check -> mutate -> atomic write -> update cache -> unlock.
 func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {

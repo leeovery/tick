@@ -965,6 +965,159 @@ func TestStoreCacheFreshnessRecovery(t *testing.T) {
 	})
 }
 
+func TestReadTasks(t *testing.T) {
+	t.Run("it returns parsed tasks from JSONL under shared lock", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+			{ID: "tick-bbbbbb", Title: "Task B", Status: task.StatusDone, Priority: 1, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		got, err := store.ReadTasks()
+		if err != nil {
+			t.Fatalf("ReadTasks returned error: %v", err)
+		}
+		if len(got) != 2 {
+			t.Fatalf("ReadTasks returned %d tasks, want 2", len(got))
+		}
+		if got[0].ID != "tick-aaaaaa" {
+			t.Errorf("got[0].ID = %q, want %q", got[0].ID, "tick-aaaaaa")
+		}
+		if got[1].ID != "tick-bbbbbb" {
+			t.Errorf("got[1].ID = %q, want %q", got[1].ID, "tick-bbbbbb")
+		}
+	})
+
+	t.Run("it returns empty slice for empty JSONL", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		got, err := store.ReadTasks()
+		if err != nil {
+			t.Fatalf("ReadTasks returned error: %v", err)
+		}
+		if len(got) != 0 {
+			t.Errorf("ReadTasks returned %d tasks, want 0", len(got))
+		}
+	})
+
+	t.Run("it uses shared lock (not exclusive)", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+		lockPath := filepath.Join(tickDir, "lock")
+
+		// Hold a shared lock externally — ReadTasks should still work
+		// because it also uses a shared lock.
+		externalLock := flock.New(lockPath)
+		if err := externalLock.RLock(); err != nil {
+			t.Fatalf("failed to acquire external shared lock: %v", err)
+		}
+		defer func() { _ = externalLock.Unlock() }()
+
+		store, err := NewStore(tickDir, WithLockTimeout(500*time.Millisecond))
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		got, err := store.ReadTasks()
+		if err != nil {
+			t.Fatalf("ReadTasks should succeed with concurrent shared lock, got error: %v", err)
+		}
+		if len(got) != 1 {
+			t.Errorf("ReadTasks returned %d tasks, want 1", len(got))
+		}
+	})
+
+	t.Run("it blocks when exclusive lock is held", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+		lockPath := filepath.Join(tickDir, "lock")
+
+		// Hold an exclusive lock externally.
+		externalLock := flock.New(lockPath)
+		if err := externalLock.Lock(); err != nil {
+			t.Fatalf("failed to acquire external lock: %v", err)
+		}
+		defer func() { _ = externalLock.Unlock() }()
+
+		store, err := NewStore(tickDir, WithLockTimeout(100*time.Millisecond))
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		_, err = store.ReadTasks()
+		if err == nil {
+			t.Fatal("expected lock timeout error, got nil")
+		}
+
+		expected := "could not acquire lock on .tick/lock - another process may be using tick"
+		if err.Error() != expected {
+			t.Errorf("error = %q, want %q", err.Error(), expected)
+		}
+	})
+
+	t.Run("it does not write to JSONL", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+		beforeStat, err := os.Stat(jsonlPath)
+		if err != nil {
+			t.Fatalf("failed to stat JSONL before: %v", err)
+		}
+		beforeContent, err := os.ReadFile(jsonlPath)
+		if err != nil {
+			t.Fatalf("failed to read JSONL before: %v", err)
+		}
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		_, err = store.ReadTasks()
+		if err != nil {
+			t.Fatalf("ReadTasks returned error: %v", err)
+		}
+
+		afterStat, err := os.Stat(jsonlPath)
+		if err != nil {
+			t.Fatalf("failed to stat JSONL after: %v", err)
+		}
+		afterContent, err := os.ReadFile(jsonlPath)
+		if err != nil {
+			t.Fatalf("failed to read JSONL after: %v", err)
+		}
+
+		if !beforeStat.ModTime().Equal(afterStat.ModTime()) {
+			t.Errorf("JSONL mod time changed: before=%v, after=%v", beforeStat.ModTime(), afterStat.ModTime())
+		}
+		if string(beforeContent) != string(afterContent) {
+			t.Errorf("JSONL content changed after ReadTasks")
+		}
+	})
+}
+
 func TestStoreStaleCacheRebuild(t *testing.T) {
 	t.Run("it rebuilds stale cache during write before applying mutation", func(t *testing.T) {
 		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)

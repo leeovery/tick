@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/leeovery/tick/internal/task"
 )
 
 // App is the top-level CLI application, testable via injected writers and working directory.
@@ -209,9 +207,9 @@ func (a *App) handleRebuild(fc FormatConfig, fmtr Formatter) error {
 }
 
 // handleRemove implements the remove subcommand.
-// It parses args, computes the blast radius for non-force removals,
-// runs the interactive confirmation prompt using App's Stdin/Stderr,
-// then delegates to RunRemove for the actual mutation and formatting.
+// It parses args once, validates IDs, computes the blast radius for non-force removals
+// using Store.ReadTasks (shared lock, read-only), runs the interactive confirmation
+// prompt using App's Stdin/Stderr, then delegates to RunRemove for the actual mutation.
 func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
@@ -229,13 +227,12 @@ func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) er
 		if err != nil {
 			return err
 		}
-		var br blastRadius
-		err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
-			var execErr error
-			tasks, br, _, execErr = executeRemoval(tasks, ids, true)
-			return tasks, execErr
-		})
+		tasks, err := store.ReadTasks()
 		store.Close()
+		if err != nil {
+			return err
+		}
+		br, err := computeBlastRadius(tasks, ids)
 		if err != nil {
 			return err
 		}
@@ -244,7 +241,7 @@ func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) er
 		}
 	}
 
-	return RunRemove(dir, fc, fmtr, subArgs, a.Stdout)
+	return RunRemove(dir, fc, fmtr, ids, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.

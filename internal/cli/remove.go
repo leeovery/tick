@@ -46,13 +46,9 @@ type blastRadius struct {
 	affectedDeps  []RemovedTask
 }
 
-// executeRemoval validates IDs, expands descendants, computes blast radius, and optionally
-// performs the removal. When computeOnly is true, it returns the original task slice unmodified
-// (for confirmation prompts). When false, it filters removed tasks and cleans up dependencies.
-func executeRemoval(tasks []task.Task, ids []string, computeOnly bool) ([]task.Task, blastRadius, RemovalResult, error) {
-	var br blastRadius
-	var result RemovalResult
-
+// validateAndExpand validates that all IDs exist, builds the target set, and expands
+// it with transitive descendants. Returns the existingIDs index, targetSet, and full removeSet.
+func validateAndExpand(tasks []task.Task, ids []string) (map[string]int, map[string]bool, map[string]bool, error) {
 	// Build lookup of existing task IDs for O(1) validation.
 	existingIDs := make(map[string]int, len(tasks))
 	for i := range tasks {
@@ -61,14 +57,9 @@ func executeRemoval(tasks []task.Task, ids []string, computeOnly bool) ([]task.T
 
 	// Validate all IDs exist before any mutation (all-or-nothing).
 	for _, id := range ids {
-		idx, ok := existingIDs[id]
-		if !ok {
-			return nil, br, result, fmt.Errorf("task '%s' not found", id)
+		if _, ok := existingIDs[id]; !ok {
+			return nil, nil, nil, fmt.Errorf("task '%s' not found", id)
 		}
-		br.targetTasks = append(br.targetTasks, RemovedTask{
-			ID:    tasks[idx].ID,
-			Title: tasks[idx].Title,
-		})
 	}
 
 	// Build initial remove set from explicit targets.
@@ -79,6 +70,28 @@ func executeRemoval(tasks []task.Task, ids []string, computeOnly bool) ([]task.T
 
 	// Expand remove set with all transitive descendants.
 	removeSet := collectDescendants(targetSet, tasks)
+
+	return existingIDs, targetSet, removeSet, nil
+}
+
+// computeBlastRadius validates IDs, expands descendants, and returns the blast radius
+// (targets, cascaded descendants, affected dependencies) without modifying any data.
+func computeBlastRadius(tasks []task.Task, ids []string) (blastRadius, error) {
+	var br blastRadius
+
+	existingIDs, targetSet, removeSet, err := validateAndExpand(tasks, ids)
+	if err != nil {
+		return br, err
+	}
+
+	// Collect target tasks.
+	for _, id := range ids {
+		idx := existingIDs[id]
+		br.targetTasks = append(br.targetTasks, RemovedTask{
+			ID:    tasks[idx].ID,
+			Title: tasks[idx].Title,
+		})
+	}
 
 	// Identify cascaded descendants (in removeSet but not in explicit targets).
 	for id := range removeSet {
@@ -109,8 +122,17 @@ func executeRemoval(tasks []task.Task, ids []string, computeOnly bool) ([]task.T
 		}
 	}
 
-	if computeOnly {
-		return tasks, br, result, nil
+	return br, nil
+}
+
+// applyRemoval validates IDs, expands descendants, filters removed tasks from the slice,
+// cleans up BlockedBy references on surviving tasks, and returns the filtered slice and result.
+func applyRemoval(tasks []task.Task, ids []string) ([]task.Task, RemovalResult, error) {
+	var result RemovalResult
+
+	existingIDs, _, removeSet, err := validateAndExpand(tasks, ids)
+	if err != nil {
+		return nil, result, err
 	}
 
 	// Collect removal info from the expanded set.
@@ -140,33 +162,25 @@ func executeRemoval(tasks []task.Task, ids []string, computeOnly bool) ([]task.T
 		}
 	}
 
-	return filtered, br, result, nil
+	return filtered, result, nil
 }
 
-// RunRemove executes the remove command: parses args, validates all IDs exist (all-or-nothing),
-// expands the remove set with cascade descendants, filters targets from the task slice,
-// cleans up dependency references on surviving tasks, and outputs the result through the formatter.
-// Confirmation prompts are handled by handleRemove before calling this function.
-func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	ids, _ := parseRemoveArgs(args)
-
-	if len(ids) == 0 {
-		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...]")
-	}
-
+// RunRemove executes the remove command with pre-parsed, validated task IDs.
+// It opens the store, applies the removal mutation (cascade + dep cleanup),
+// and outputs the result through the formatter.
+// Argument parsing and confirmation prompts are handled by handleRemove.
+func RunRemove(dir string, fc FormatConfig, fmtr Formatter, ids []string, stdout io.Writer) error {
 	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}
 	defer store.Close()
 
-	// Real removal: compute and persist.
 	var result RemovalResult
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
-		var filtered []task.Task
-		var execErr error
-		filtered, _, result, execErr = executeRemoval(tasks, ids, false)
-		return filtered, execErr
+		filtered, r, mutErr := applyRemoval(tasks, ids)
+		result = r
+		return filtered, mutErr
 	})
 	if err != nil {
 		return err
