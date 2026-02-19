@@ -19,8 +19,9 @@ planning:
 # Plan: Task Removal
 
 ### Phase 1: Walking Skeleton — Single Task Removal
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-02-19
 
 **Goal**: Remove a single task by ID using `--force`, filtering it from JSONL via `Store.Mutate()`, with output through all three formatters and help text registration.
 
@@ -37,8 +38,9 @@ ext_id:
 - [ ] All existing tests continue to pass
 
 ### Phase 2: Interactive Confirmation Prompt
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-02-19
 
 **Goal**: Add the interactive confirmation gate when `--force` is not provided, reading user input from stdin and writing prompts/abort messages to stderr.
 
@@ -53,8 +55,9 @@ ext_id:
 - [ ] `--force` continues to skip the prompt entirely (Phase 1 behavior preserved)
 
 ### Phase 3: Cascade Deletion, Dependency Cleanup, and Bulk Removal
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-02-19
 
 **Goal**: Support cascade deletion of parent-child hierarchies, automatic dependency reference cleanup on surviving tasks, and bulk removal of multiple task IDs with deduplication — all in a single atomic `Store.Mutate` call.
 
