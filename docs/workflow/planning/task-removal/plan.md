@@ -13,8 +13,8 @@ author_gate_mode: gated
 finding_gate_mode: gated
 review_cycle: 1
 planning:
-  phase: 3
-  task: 5
+  phase: 4
+  task: ~
 ---
 
 # Plan: Task Removal
@@ -100,3 +100,15 @@ approved_at: 2026-02-19
 | task-removal-3-3 | Cascade descendant collection | deep hierarchy (3+ levels), task with no children, child removal does not cascade upward | authored | tick-5b74ec |
 | task-removal-3-4 | Integrate cascade into removal flow with confirmation prompt | cascade with --force skips prompt, prompt lists all cascaded descendants, dependency cleanup covers all removed IDs | authored | tick-9e0c27 |
 | task-removal-3-5 | Bulk and cascade interaction with cross-target deduplication | task appears as both explicit arg and cascaded descendant, two targets share a common descendant, bulk removal of unrelated leaf tasks | authored | tick-0424d3 |
+
+### Phase 4: Analysis (cycle 1)
+status: approved
+ext_id: tick-d5946b
+
+**Goal**: Address findings from implementation analysis cycle 1.
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| task-removal-4-1 | Consolidate blast radius computation into Mutate callback | none | authored | tick-cf66a9 |
+| task-removal-4-2 | Align RunRemove signature with handler convention | none | authored | tick-21f1ab |

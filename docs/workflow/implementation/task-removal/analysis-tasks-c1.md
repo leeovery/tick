@@ -6,7 +6,7 @@ total_proposed: 2
 # Analysis Tasks: Task Removal (Cycle 1)
 
 ## Task 1: Consolidate blast radius computation into Mutate callback
-status: pending
+status: approved
 severity: high
 sources: duplication, architecture
 
@@ -40,7 +40,7 @@ sources: duplication, architecture
 - Verify force and non-force paths produce same output by comparing formatter output in existing test cases that test both paths
 
 ## Task 2: Align RunRemove signature with handler convention
-status: pending
+status: approved
 severity: medium
 sources: architecture
 
