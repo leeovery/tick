@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bufio"
-	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -42,102 +41,106 @@ func parseRemoveArgs(args []string) ([]string, bool) {
 
 // blastRadius holds pre-computed cascade and dependency information for the confirmation prompt.
 type blastRadius struct {
-	targetTasks   []idTitle
-	cascadedTasks []idTitle
-	affectedDeps  []idTitle
+	targetTasks   []RemovedTask
+	cascadedTasks []RemovedTask
+	affectedDeps  []RemovedTask
 }
 
-// idTitle pairs a task ID with its title for display.
-type idTitle struct {
-	id    string
-	title string
-}
-
-// computeBlastRadius queries the store to validate IDs, compute cascade descendants,
-// and identify surviving tasks with dependency references to be cleaned.
-func computeBlastRadius(store interface {
-	Query(func(*sql.DB) error) error
-}, ids []string) (blastRadius, error) {
+// executeRemoval validates IDs, expands descendants, computes blast radius, and optionally
+// performs the removal. When computeOnly is true, it returns the original task slice unmodified
+// (for confirmation prompts). When false, it filters removed tasks and cleans up dependencies.
+func executeRemoval(tasks []task.Task, ids []string, computeOnly bool) ([]task.Task, blastRadius, RemovalResult, error) {
 	var br blastRadius
+	var result RemovalResult
 
-	err := store.Query(func(db *sql.DB) error {
-		// Validate all IDs exist (all-or-nothing).
-		for _, id := range ids {
-			var title string
-			if err := db.QueryRow("SELECT title FROM tasks WHERE id = ?", id).Scan(&title); err != nil {
-				return fmt.Errorf("task '%s' not found", id)
-			}
-			br.targetTasks = append(br.targetTasks, idTitle{id: id, title: title})
-		}
+	// Build lookup of existing task IDs for O(1) validation.
+	existingIDs := make(map[string]int, len(tasks))
+	for i := range tasks {
+		existingIDs[task.NormalizeID(tasks[i].ID)] = i
+	}
 
-		// Build the initial remove set from explicit targets.
-		removeSet := make(map[string]bool, len(ids))
-		for _, id := range ids {
-			removeSet[id] = true
+	// Validate all IDs exist before any mutation (all-or-nothing).
+	for _, id := range ids {
+		idx, ok := existingIDs[id]
+		if !ok {
+			return nil, br, result, fmt.Errorf("task '%s' not found", id)
 		}
+		br.targetTasks = append(br.targetTasks, RemovedTask{
+			ID:    tasks[idx].ID,
+			Title: tasks[idx].Title,
+		})
+	}
 
-		// Expand with transitive descendants via parent column.
-		// Read all tasks with parents once, then iterate until stable.
-		type taskInfo struct {
-			id, title, parent string
-		}
-		var allTasks []taskInfo
-		rows, err := db.Query("SELECT id, title, COALESCE(parent, '') FROM tasks")
-		if err != nil {
-			return fmt.Errorf("failed to query tasks: %w", err)
-		}
-		for rows.Next() {
-			var ti taskInfo
-			if err := rows.Scan(&ti.id, &ti.title, &ti.parent); err != nil {
-				rows.Close()
-				return fmt.Errorf("failed to scan task: %w", err)
-			}
-			allTasks = append(allTasks, ti)
-		}
-		rows.Close()
+	// Build initial remove set from explicit targets.
+	targetSet := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		targetSet[id] = true
+	}
 
-		// Iteratively expand until no new descendants found.
-		changed := true
-		for changed {
-			changed = false
-			for _, ti := range allTasks {
-				normID := task.NormalizeID(ti.id)
-				normParent := task.NormalizeID(ti.parent)
-				if ti.parent != "" && removeSet[normParent] && !removeSet[normID] {
-					removeSet[normID] = true
-					br.cascadedTasks = append(br.cascadedTasks, idTitle{id: ti.id, title: ti.title})
-					changed = true
-				}
+	// Expand remove set with all transitive descendants.
+	removeSet := collectDescendants(targetSet, tasks)
+
+	// Identify cascaded descendants (in removeSet but not in explicit targets).
+	for id := range removeSet {
+		if !targetSet[id] {
+			if idx, ok := existingIDs[id]; ok {
+				br.cascadedTasks = append(br.cascadedTasks, RemovedTask{
+					ID:    tasks[idx].ID,
+					Title: tasks[idx].Title,
+				})
 			}
 		}
+	}
 
-		// Find surviving tasks whose BlockedBy references any removed ID.
-		depRows, err := db.Query("SELECT task_id, blocked_by FROM dependencies")
-		if err != nil {
-			return fmt.Errorf("failed to query dependencies: %w", err)
+	// Identify surviving tasks with dependency references to removed IDs.
+	for i := range tasks {
+		normID := task.NormalizeID(tasks[i].ID)
+		if removeSet[normID] {
+			continue
 		}
-		affectedSet := make(map[string]bool)
-		for depRows.Next() {
-			var taskID, blockedBy string
-			if err := depRows.Scan(&taskID, &blockedBy); err != nil {
-				depRows.Close()
-				return fmt.Errorf("failed to scan dependency: %w", err)
-			}
-			normTaskID := task.NormalizeID(taskID)
-			normBlockedBy := task.NormalizeID(blockedBy)
-			if removeSet[normBlockedBy] && !removeSet[normTaskID] && !affectedSet[normTaskID] {
-				affectedSet[normTaskID] = true
-				var title string
-				_ = db.QueryRow("SELECT title FROM tasks WHERE id = ?", taskID).Scan(&title)
-				br.affectedDeps = append(br.affectedDeps, idTitle{id: taskID, title: title})
+		for _, dep := range tasks[i].BlockedBy {
+			if removeSet[task.NormalizeID(dep)] {
+				br.affectedDeps = append(br.affectedDeps, RemovedTask{
+					ID:    tasks[i].ID,
+					Title: tasks[i].Title,
+				})
+				break
 			}
 		}
-		depRows.Close()
+	}
 
-		return nil
-	})
+	if computeOnly {
+		return tasks, br, result, nil
+	}
 
-	return br, err
+	// Collect removal info from the expanded set.
+	for id := range removeSet {
+		if idx, ok := existingIDs[id]; ok {
+			result.Removed = append(result.Removed, RemovedTask{
+				ID:    tasks[idx].ID,
+				Title: tasks[idx].Title,
+			})
+		}
+	}
+
+	// Filter out removed tasks.
+	filtered := make([]task.Task, 0, len(tasks)-len(removeSet))
+	for i := range tasks {
+		if !removeSet[task.NormalizeID(tasks[i].ID)] {
+			filtered = append(filtered, tasks[i])
+		}
+	}
+
+	// Strip all removed IDs from surviving tasks' BlockedBy arrays.
+	for i := range filtered {
+		cleaned := stripIDsFromBlockedBy(filtered[i].BlockedBy, removeSet)
+		if len(cleaned) != len(filtered[i].BlockedBy) {
+			result.DepsUpdated = append(result.DepsUpdated, filtered[i].ID)
+			filtered[i].BlockedBy = cleaned
+		}
+	}
+
+	return filtered, br, result, nil
 }
 
 // RunRemove executes the remove command: parses args, validates all IDs exist (all-or-nothing),
@@ -158,7 +161,13 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin
 	defer store.Close()
 
 	if !force {
-		br, err := computeBlastRadius(store, ids)
+		// Dry-run: compute blast radius without persisting, for the confirmation prompt.
+		var br blastRadius
+		err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
+			var execErr error
+			tasks, br, _, execErr = executeRemoval(tasks, ids, true)
+			return tasks, execErr
+		})
 		if err != nil {
 			return err
 		}
@@ -167,59 +176,13 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin
 		}
 	}
 
+	// Real removal: compute and persist.
 	var result RemovalResult
-
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
-		// Build lookup of existing task IDs for O(1) validation.
-		existingIDs := make(map[string]int, len(tasks))
-		for i := range tasks {
-			existingIDs[task.NormalizeID(tasks[i].ID)] = i
-		}
-
-		// Validate all IDs exist before any mutation (all-or-nothing).
-		for _, id := range ids {
-			if _, ok := existingIDs[id]; !ok {
-				return nil, fmt.Errorf("task '%s' not found", id)
-			}
-		}
-
-		// Build initial remove set from explicit targets.
-		removeSet := make(map[string]bool, len(ids))
-		for _, id := range ids {
-			removeSet[id] = true
-		}
-
-		// Expand remove set with all transitive descendants.
-		removeSet = collectDescendants(removeSet, tasks)
-
-		// Collect removal info from the expanded set.
-		for id := range removeSet {
-			if idx, ok := existingIDs[id]; ok {
-				result.Removed = append(result.Removed, RemovedTask{
-					ID:    tasks[idx].ID,
-					Title: tasks[idx].Title,
-				})
-			}
-		}
-
-		// Filter out removed tasks.
-		filtered := make([]task.Task, 0, len(tasks)-len(removeSet))
-		for i := range tasks {
-			if !removeSet[task.NormalizeID(tasks[i].ID)] {
-				filtered = append(filtered, tasks[i])
-			}
-		}
-
-		// Strip all removed IDs from surviving tasks' BlockedBy arrays.
-		for i := range filtered {
-			cleaned := stripIDsFromBlockedBy(filtered[i].BlockedBy, removeSet)
-			if len(cleaned) != len(filtered[i].BlockedBy) {
-				result.DepsUpdated = append(result.DepsUpdated, filtered[i].ID)
-				filtered[i].BlockedBy = cleaned
-			}
-		}
-
-		return filtered, nil
+		var filtered []task.Task
+		var execErr error
+		filtered, _, result, execErr = executeRemoval(tasks, ids, false)
+		return filtered, execErr
 	})
 	if err != nil {
 		return err
@@ -240,35 +203,35 @@ func confirmRemovalWithCascade(br blastRadius, stdin io.Reader, stderr io.Writer
 
 	if !hasCascade && !hasDeps && len(br.targetTasks) == 1 {
 		// Simple prompt: single target, no cascade, no dep impact.
-		fmt.Fprintf(stderr, "Remove task %s %q? [y/N] ", br.targetTasks[0].id, br.targetTasks[0].title)
+		fmt.Fprintf(stderr, "Remove task %s %q? [y/N] ", br.targetTasks[0].ID, br.targetTasks[0].Title)
 	} else if len(br.targetTasks) == 1 && !hasCascade && hasDeps {
 		// Single target with dep impact only.
-		fmt.Fprintf(stderr, "Remove task %s %q?\n", br.targetTasks[0].id, br.targetTasks[0].title)
+		fmt.Fprintf(stderr, "Remove task %s %q?\n", br.targetTasks[0].ID, br.targetTasks[0].Title)
 		fmt.Fprintf(stderr, "Will update dependencies on:\n")
 		for _, d := range br.affectedDeps {
-			fmt.Fprintf(stderr, "  %s %q\n", d.id, d.title)
+			fmt.Fprintf(stderr, "  %s %q\n", d.ID, d.Title)
 		}
 		fmt.Fprint(stderr, "Proceed? [y/N] ")
 	} else {
 		// Multi-target or cascade scenario.
 		if len(br.targetTasks) == 1 {
-			fmt.Fprintf(stderr, "Remove task %s %q?\n", br.targetTasks[0].id, br.targetTasks[0].title)
+			fmt.Fprintf(stderr, "Remove task %s %q?\n", br.targetTasks[0].ID, br.targetTasks[0].Title)
 		} else {
 			fmt.Fprintf(stderr, "Remove %d tasks?\n", len(br.targetTasks))
 			for _, t := range br.targetTasks {
-				fmt.Fprintf(stderr, "  %s %q\n", t.id, t.title)
+				fmt.Fprintf(stderr, "  %s %q\n", t.ID, t.Title)
 			}
 		}
 		if hasCascade {
 			fmt.Fprintf(stderr, "Will also remove descendants:\n")
 			for _, c := range br.cascadedTasks {
-				fmt.Fprintf(stderr, "  %s %q\n", c.id, c.title)
+				fmt.Fprintf(stderr, "  %s %q\n", c.ID, c.Title)
 			}
 		}
 		if hasDeps {
 			fmt.Fprintf(stderr, "Will update dependencies on:\n")
 			for _, d := range br.affectedDeps {
-				fmt.Fprintf(stderr, "  %s %q\n", d.id, d.title)
+				fmt.Fprintf(stderr, "  %s %q\n", d.ID, d.Title)
 			}
 		}
 		fmt.Fprint(stderr, "Proceed? [y/N] ")
