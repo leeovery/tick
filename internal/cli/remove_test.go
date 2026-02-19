@@ -254,6 +254,62 @@ func TestRunRemove(t *testing.T) {
 		}
 	})
 
+	t.Run("it returns exact spec-mandated message when no arguments provided", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, exitCode := runRemove(t, dir)
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		wantErr := "Error: task ID is required. Usage: tick remove <id> [<id>...]\n"
+		if stderr != wantErr {
+			t.Errorf("stderr = %q, want %q", stderr, wantErr)
+		}
+	})
+
+	t.Run("it returns not-found error for nonexistent task ID", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, exitCode := runRemove(t, dir, "tick-nonexist", "--force")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		wantErr := "Error: task 'tick-nonexist' not found\n"
+		if stderr != wantErr {
+			t.Errorf("stderr = %q, want %q", stderr, wantErr)
+		}
+	})
+
+	t.Run("it returns error when --force flag is missing", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "My task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemove(t, dir, "tick-abc123")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		wantErr := "Error: remove requires --force flag (interactive confirmation not yet implemented)\n"
+		if stderr != wantErr {
+			t.Errorf("stderr = %q, want %q", stderr, wantErr)
+		}
+	})
+
+	t.Run("it returns exact spec-mandated message when only --force provided without ID", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, exitCode := runRemove(t, dir, "--force")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		wantErr := "Error: task ID is required. Usage: tick remove <id> [<id>...]\n"
+		if stderr != wantErr {
+			t.Errorf("stderr = %q, want %q", stderr, wantErr)
+		}
+	})
+
 	t.Run("it does not modify other tasks when removing one", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-abc123", Title: "Task to remove", Status: task.StatusOpen,

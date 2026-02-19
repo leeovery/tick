@@ -9,9 +9,8 @@ import (
 )
 
 // parseRemoveArgs extracts the task ID and --force flag from remove command arguments.
-// Returns the normalized task ID, whether --force was set, and any error.
-// Returns an error if --force is not provided.
-func parseRemoveArgs(args []string) (string, bool, error) {
+// Returns the normalized task ID and whether --force was set.
+func parseRemoveArgs(args []string) (string, bool) {
 	var id string
 	var force bool
 
@@ -26,24 +25,21 @@ func parseRemoveArgs(args []string) (string, bool, error) {
 		}
 	}
 
-	if !force {
-		return "", false, fmt.Errorf("remove requires --force flag (interactive confirmation not yet implemented)")
-	}
-
-	return id, force, nil
+	return id, force
 }
 
 // RunRemove executes the remove command: parses args, locates the target task,
 // filters it from the task slice, cleans up dependency references on surviving tasks,
 // and outputs the result through the formatter.
 func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	id, _, err := parseRemoveArgs(args)
-	if err != nil {
-		return err
-	}
+	id, force := parseRemoveArgs(args)
 
 	if id == "" {
-		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...] --force")
+		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...]")
+	}
+
+	if !force {
+		return fmt.Errorf("remove requires --force flag (interactive confirmation not yet implemented)")
 	}
 
 	store, err := openStore(dir, fc)
