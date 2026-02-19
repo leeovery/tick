@@ -199,6 +199,33 @@ func (f *JSONFormatter) FormatMessage(msg string) string {
 	return marshalIndentJSON(jsonMessage{Message: msg})
 }
 
+// jsonRemovedTask represents a removed task in JSON output.
+type jsonRemovedTask struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+// jsonRemovalResult represents the removal operation result in JSON output.
+type jsonRemovalResult struct {
+	Removed     []jsonRemovedTask `json:"removed"`
+	DepsUpdated []string          `json:"deps_updated"`
+}
+
+// FormatRemoval renders a removal result as a JSON object with removed array and deps_updated array.
+// Both arrays are always [] not null when empty.
+func (f *JSONFormatter) FormatRemoval(result RemovalResult) string {
+	removed := make([]jsonRemovedTask, 0, len(result.Removed))
+	for _, r := range result.Removed {
+		removed = append(removed, jsonRemovedTask(r))
+	}
+	depsUpdated := make([]string, 0, len(result.DepsUpdated))
+	depsUpdated = append(depsUpdated, result.DepsUpdated...)
+	return marshalIndentJSON(jsonRemovalResult{
+		Removed:     removed,
+		DepsUpdated: depsUpdated,
+	})
+}
+
 // marshalIndentJSON marshals v as 2-space indented JSON.
 // Returns "null" on marshal failure (should not happen with controlled types).
 func marshalIndentJSON(v interface{}) string {

@@ -353,6 +353,19 @@ func TestPrettyFormatter(t *testing.T) {
 		}
 	})
 
+	t.Run("it formats single task removal via baseFormatter", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		result := f.FormatRemoval(RemovalResult{
+			Removed: []RemovedTask{
+				{ID: "tick-a1b2", Title: "My task"},
+			},
+		})
+		expected := `Removed tick-a1b2 "My task"`
+		if result != expected {
+			t.Errorf("result = %q, want %q", result, expected)
+		}
+	})
+
 	t.Run("it formats message as plain text passthrough", func(t *testing.T) {
 		f := &PrettyFormatter{}
 		result := f.FormatMessage("Tick initialized in /path/to/project")

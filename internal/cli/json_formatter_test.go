@@ -553,6 +553,157 @@ func TestJSONFormatter(t *testing.T) {
 		}
 	})
 
+	t.Run("it formats single task removal as JSON", func(t *testing.T) {
+		f := &JSONFormatter{}
+		result := f.FormatRemoval(RemovalResult{
+			Removed: []RemovedTask{
+				{ID: "tick-a1b2", Title: "My task"},
+			},
+			DepsUpdated: []string{},
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		removed, ok := parsed["removed"].([]interface{})
+		if !ok {
+			t.Fatalf("removed should be array, got %T: %v", parsed["removed"], parsed["removed"])
+		}
+		if len(removed) != 1 {
+			t.Fatalf("removed length = %d, want 1", len(removed))
+		}
+		item := removed[0].(map[string]interface{})
+		if item["id"] != "tick-a1b2" {
+			t.Errorf("removed[0].id = %v, want %q", item["id"], "tick-a1b2")
+		}
+		if item["title"] != "My task" {
+			t.Errorf("removed[0].title = %v, want %q", item["title"], "My task")
+		}
+
+		depsUpdated, ok := parsed["deps_updated"].([]interface{})
+		if !ok {
+			t.Fatalf("deps_updated should be array, got %T: %v", parsed["deps_updated"], parsed["deps_updated"])
+		}
+		if len(depsUpdated) != 0 {
+			t.Errorf("deps_updated length = %d, want 0", len(depsUpdated))
+		}
+	})
+
+	t.Run("it formats multiple task removal as JSON", func(t *testing.T) {
+		f := &JSONFormatter{}
+		result := f.FormatRemoval(RemovalResult{
+			Removed: []RemovedTask{
+				{ID: "tick-a1b2", Title: "First task"},
+				{ID: "tick-c3d4", Title: "Second task"},
+			},
+			DepsUpdated: []string{},
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		removed, ok := parsed["removed"].([]interface{})
+		if !ok {
+			t.Fatalf("removed should be array, got %T: %v", parsed["removed"], parsed["removed"])
+		}
+		if len(removed) != 2 {
+			t.Fatalf("removed length = %d, want 2", len(removed))
+		}
+		first := removed[0].(map[string]interface{})
+		if first["id"] != "tick-a1b2" {
+			t.Errorf("removed[0].id = %v, want %q", first["id"], "tick-a1b2")
+		}
+		second := removed[1].(map[string]interface{})
+		if second["id"] != "tick-c3d4" {
+			t.Errorf("removed[1].id = %v, want %q", second["id"], "tick-c3d4")
+		}
+	})
+
+	t.Run("it formats removal with dependency updates as JSON", func(t *testing.T) {
+		f := &JSONFormatter{}
+		result := f.FormatRemoval(RemovalResult{
+			Removed: []RemovedTask{
+				{ID: "tick-a1b2", Title: "My task"},
+			},
+			DepsUpdated: []string{"tick-e5f6", "tick-g7h8"},
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		depsUpdated, ok := parsed["deps_updated"].([]interface{})
+		if !ok {
+			t.Fatalf("deps_updated should be array, got %T: %v", parsed["deps_updated"], parsed["deps_updated"])
+		}
+		if len(depsUpdated) != 2 {
+			t.Fatalf("deps_updated length = %d, want 2", len(depsUpdated))
+		}
+		if depsUpdated[0] != "tick-e5f6" {
+			t.Errorf("deps_updated[0] = %v, want %q", depsUpdated[0], "tick-e5f6")
+		}
+		if depsUpdated[1] != "tick-g7h8" {
+			t.Errorf("deps_updated[1] = %v, want %q", depsUpdated[1], "tick-g7h8")
+		}
+	})
+
+	t.Run("it formats removal with empty deps_updated as empty array in JSON", func(t *testing.T) {
+		f := &JSONFormatter{}
+		result := f.FormatRemoval(RemovalResult{
+			Removed: []RemovedTask{
+				{ID: "tick-a1b2", Title: "My task"},
+			},
+			DepsUpdated: nil,
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		depsUpdated, ok := parsed["deps_updated"].([]interface{})
+		if !ok {
+			t.Fatalf("deps_updated should be array (not null), got %T: %v", parsed["deps_updated"], parsed["deps_updated"])
+		}
+		if len(depsUpdated) != 0 {
+			t.Errorf("deps_updated should be empty, got %d items", len(depsUpdated))
+		}
+	})
+
+	t.Run("it formats removal with empty removed as empty array in JSON", func(t *testing.T) {
+		f := &JSONFormatter{}
+		result := f.FormatRemoval(RemovalResult{
+			Removed:     nil,
+			DepsUpdated: nil,
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		removed, ok := parsed["removed"].([]interface{})
+		if !ok {
+			t.Fatalf("removed should be array (not null), got %T: %v", parsed["removed"], parsed["removed"])
+		}
+		if len(removed) != 0 {
+			t.Errorf("removed should be empty, got %d items", len(removed))
+		}
+
+		depsUpdated, ok := parsed["deps_updated"].([]interface{})
+		if !ok {
+			t.Fatalf("deps_updated should be array (not null), got %T: %v", parsed["deps_updated"], parsed["deps_updated"])
+		}
+		if len(depsUpdated) != 0 {
+			t.Errorf("deps_updated should be empty, got %d items", len(depsUpdated))
+		}
+	})
+
 	t.Run("it uses 2-space indentation", func(t *testing.T) {
 		f := &JSONFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)

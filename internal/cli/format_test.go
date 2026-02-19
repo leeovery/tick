@@ -237,6 +237,29 @@ func TestFormatterInterface(t *testing.T) {
 		if result != "" {
 			t.Errorf("FormatMessage = %q, want empty string", result)
 		}
+
+		// FormatRemoval
+		result = f.FormatRemoval(RemovalResult{
+			Removed:     []RemovedTask{{ID: "tick-abc123", Title: "test"}},
+			DepsUpdated: []string{"tick-def456"},
+		})
+		if result != "" {
+			t.Errorf("FormatRemoval = %q, want empty string", result)
+		}
+	})
+}
+
+func TestStubFormatterFormatRemoval(t *testing.T) {
+	t.Run("it returns empty string", func(t *testing.T) {
+		f := &StubFormatter{}
+		result := f.FormatRemoval(RemovalResult{
+			Removed: []RemovedTask{
+				{ID: "tick-a1b2", Title: "My task"},
+			},
+		})
+		if result != "" {
+			t.Errorf("result = %q, want empty string", result)
+		}
 	})
 }
 

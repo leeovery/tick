@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/leeovery/tick/internal/task"
 )
@@ -111,6 +112,18 @@ type Stats struct {
 	ByPriority [5]int // index 0-4 maps to priority P0-P4
 }
 
+// RemovedTask holds the ID and title of a task that was removed.
+type RemovedTask struct {
+	ID    string
+	Title string
+}
+
+// RemovalResult holds the outcome of a remove operation for rendering by formatters.
+type RemovalResult struct {
+	Removed     []RemovedTask
+	DepsUpdated []string
+}
+
 // Formatter defines the interface for rendering CLI output in different formats.
 // Concrete implementations (Toon, Pretty, JSON) are provided by tasks 4-2 through 4-4.
 type Formatter interface {
@@ -118,7 +131,7 @@ type Formatter interface {
 	FormatTaskList(tasks []task.Task) string
 	// FormatTaskDetail renders a single task with full details including related context.
 	FormatTaskDetail(detail TaskDetail) string
-	// FormatTransition renders a status transition (e.g., "open \u2192 in_progress").
+	// FormatTransition renders a status transition (e.g., "open → in_progress").
 	FormatTransition(id string, oldStatus string, newStatus string) string
 	// FormatDepChange renders a dependency add/remove confirmation.
 	FormatDepChange(action string, taskID string, depID string) string
@@ -126,15 +139,18 @@ type Formatter interface {
 	FormatStats(stats Stats) string
 	// FormatMessage renders a general-purpose message.
 	FormatMessage(msg string) string
+	// FormatRemoval renders the result of a task removal operation.
+	FormatRemoval(result RemovalResult) string
 }
 
-// baseFormatter provides shared implementations of FormatTransition and FormatDepChange
-// for text-based formatters (Toon and Pretty). Embedded by ToonFormatter and PrettyFormatter.
+// baseFormatter provides shared implementations of FormatTransition, FormatDepChange,
+// and FormatRemoval for text-based formatters (Toon and Pretty).
+// Embedded by ToonFormatter and PrettyFormatter.
 type baseFormatter struct{}
 
 // FormatTransition renders a status transition as plain text with the Unicode right arrow.
 func (b *baseFormatter) FormatTransition(id string, oldStatus string, newStatus string) string {
-	return fmt.Sprintf("%s: %s \u2192 %s", id, oldStatus, newStatus)
+	return fmt.Sprintf("%s: %s → %s", id, oldStatus, newStatus)
 }
 
 // FormatDepChange renders a dependency add/remove confirmation as plain text.
@@ -143,6 +159,20 @@ func (b *baseFormatter) FormatDepChange(action string, taskID string, depID stri
 		return fmt.Sprintf("Dependency removed: %s no longer blocked by %s", taskID, depID)
 	}
 	return fmt.Sprintf("Dependency added: %s blocked by %s", taskID, depID)
+}
+
+// FormatRemoval renders the result of a task removal as plain text.
+// One line per removed task as 'Removed {id} "{title}"', plus an optional
+// dependency update line if DepsUpdated is non-empty.
+func (b *baseFormatter) FormatRemoval(result RemovalResult) string {
+	var lines []string
+	for _, r := range result.Removed {
+		lines = append(lines, fmt.Sprintf("Removed %s %q", r.ID, r.Title))
+	}
+	if len(result.DepsUpdated) > 0 {
+		lines = append(lines, fmt.Sprintf("Updated dependencies on %s", strings.Join(result.DepsUpdated, ", ")))
+	}
+	return strings.Join(lines, "\n")
 }
 
 // StubFormatter is a placeholder implementation of Formatter.
@@ -169,6 +199,9 @@ func (s *StubFormatter) FormatStats(_ Stats) string { return "" }
 
 // FormatMessage returns an empty string (stub).
 func (s *StubFormatter) FormatMessage(_ string) string { return "" }
+
+// FormatRemoval returns an empty string (stub).
+func (s *StubFormatter) FormatRemoval(_ RemovalResult) string { return "" }
 
 // NewFormatter creates a Formatter for the given Format.
 func NewFormatter(f Format) Formatter {

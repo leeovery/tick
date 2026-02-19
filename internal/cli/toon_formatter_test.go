@@ -371,6 +371,19 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 
+	t.Run("it formats single task removal via baseFormatter", func(t *testing.T) {
+		f := &ToonFormatter{}
+		result := f.FormatRemoval(RemovalResult{
+			Removed: []RemovedTask{
+				{ID: "tick-a1b2", Title: "My task"},
+			},
+		})
+		expected := `Removed tick-a1b2 "My task"`
+		if result != expected {
+			t.Errorf("result = %q, want %q", result, expected)
+		}
+	})
+
 	t.Run("it includes both parent and closed in show schema when both present", func(t *testing.T) {
 		f := &ToonFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
