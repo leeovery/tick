@@ -40,3 +40,5 @@ docs/workflow/planning/doctor-validation/plan.md: 007
 docs/workflow/planning/installation/plan.md: 007
 docs/workflow/planning/migration/plan.md: 007
 docs/workflow/planning/tick-core/plan.md: 007
+docs/workflow/discussion/task-removal.md: 001
+docs/workflow/planning/task-removal/plan.md: 007

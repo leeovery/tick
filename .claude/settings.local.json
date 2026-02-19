@@ -38,7 +38,10 @@
       "Bash(~/go/bin/goreleaser release:*)",
       "Bash(gh pr create:*)",
       "Bash(git push:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Skill(continue-feature)",
+      "Skill(begin-planning)",
+      "Bash(golangci-lint run:*)"
     ]
   },
   "sandbox": {
