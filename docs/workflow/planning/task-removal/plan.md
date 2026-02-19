@@ -12,8 +12,8 @@ task_list_gate_mode: gated
 author_gate_mode: gated
 finding_gate_mode: gated
 planning:
-  phase: 2
-  task: 2
+  phase: 3
+  task: ~
 ---
 
 # Plan: Task Removal
@@ -66,7 +66,7 @@ approved_at: 2026-02-19
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
 | task-removal-2-1 | Add Stdin to App and thread through remove handler | none | authored | tick-8bc489 |
-| task-removal-2-2 | Implement confirmation prompt with accept and abort paths | case-insensitive y/yes, empty Enter aborts, whitespace-padded input, --force bypass preserved | pending | |
+| task-removal-2-2 | Implement confirmation prompt with accept and abort paths | case-insensitive y/yes, empty Enter aborts, whitespace-padded input, --force bypass preserved | authored | tick-0c56d2 |
 
 ### Phase 3: Cascade Deletion, Dependency Cleanup, and Bulk Removal
 status: approved
