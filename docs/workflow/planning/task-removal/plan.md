@@ -1,6 +1,6 @@
 ---
 topic: task-removal
-status: planning
+status: concluded
 format: tick
 ext_id: tick-132530
 specification: ../specification/task-removal/specification.md
