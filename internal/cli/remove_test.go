@@ -1695,6 +1695,62 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 }
 
+// TestRunRemoveSignature verifies RunRemove follows the standard 5-parameter handler signature
+// and can be called directly without stdin/stderr (confirmation handled by handleRemove).
+func TestRunRemoveSignature(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+
+	t.Run("RunRemove callable with standard 5-param signature (dir, fc, fmtr, args, stdout)", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Direct call", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		var buf bytes.Buffer
+		fc := FormatConfig{Format: FormatPretty}
+		fmtr := NewFormatter(FormatPretty)
+
+		err := RunRemove(dir, fc, fmtr, []string{"tick-abc123", "--force"}, &buf)
+		if err != nil {
+			t.Fatalf("RunRemove returned error: %v", err)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks after direct RunRemove, got %d", len(tasks))
+		}
+		if !strings.Contains(buf.String(), "Removed tick-abc123") {
+			t.Errorf("stdout should contain 'Removed tick-abc123', got %q", buf.String())
+		}
+	})
+
+	t.Run("RunRemove has no stdin or stderr parameters", func(t *testing.T) {
+		// This test documents the signature. If someone adds stdin/stderr back,
+		// the compiler will reject the 5-argument call above.
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "No stdin test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		var buf bytes.Buffer
+		fc := FormatConfig{Format: FormatPretty}
+		fmtr := NewFormatter(FormatPretty)
+
+		// Call with exactly 5 args — this is the standard handler signature.
+		err := RunRemove(dir, fc, fmtr, []string{"tick-abc123", "--force"}, &buf)
+		if err != nil {
+			t.Fatalf("RunRemove returned error: %v", err)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks, got %d", len(tasks))
+		}
+	})
+}
+
 func TestCollectDescendants(t *testing.T) {
 	// Helper to build a task with just ID and Parent set (other fields irrelevant for this function).
 	mkTask := func(id, parent string) task.Task {

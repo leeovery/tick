@@ -144,11 +144,11 @@ func executeRemoval(tasks []task.Task, ids []string, computeOnly bool) ([]task.T
 }
 
 // RunRemove executes the remove command: parses args, validates all IDs exist (all-or-nothing),
-// expands the remove set with cascade descendants, prompts for confirmation (unless --force),
-// filters targets from the task slice, cleans up dependency references on surviving tasks,
-// and outputs the result through the formatter.
-func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin io.Reader, stderr io.Writer, stdout io.Writer) error {
-	ids, force := parseRemoveArgs(args)
+// expands the remove set with cascade descendants, filters targets from the task slice,
+// cleans up dependency references on surviving tasks, and outputs the result through the formatter.
+// Confirmation prompts are handled by handleRemove before calling this function.
+func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
+	ids, _ := parseRemoveArgs(args)
 
 	if len(ids) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...]")
@@ -159,22 +159,6 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin
 		return err
 	}
 	defer store.Close()
-
-	if !force {
-		// Dry-run: compute blast radius without persisting, for the confirmation prompt.
-		var br blastRadius
-		err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
-			var execErr error
-			tasks, br, _, execErr = executeRemoval(tasks, ids, true)
-			return tasks, execErr
-		})
-		if err != nil {
-			return err
-		}
-		if err := confirmRemovalWithCascade(br, stdin, stderr); err != nil {
-			return err
-		}
-	}
 
 	// Real removal: compute and persist.
 	var result RemovalResult

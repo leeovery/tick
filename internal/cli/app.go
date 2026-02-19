@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/leeovery/tick/internal/task"
 )
 
 // App is the top-level CLI application, testable via injected writers and working directory.
@@ -207,12 +209,42 @@ func (a *App) handleRebuild(fc FormatConfig, fmtr Formatter) error {
 }
 
 // handleRemove implements the remove subcommand.
+// It parses args, computes the blast radius for non-force removals,
+// runs the interactive confirmation prompt using App's Stdin/Stderr,
+// then delegates to RunRemove for the actual mutation and formatting.
 func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunRemove(dir, fc, fmtr, subArgs, a.Stdin, a.Stderr, a.Stdout)
+
+	ids, force := parseRemoveArgs(subArgs)
+
+	if len(ids) == 0 {
+		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...]")
+	}
+
+	if !force {
+		store, err := openStore(dir, fc)
+		if err != nil {
+			return err
+		}
+		var br blastRadius
+		err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
+			var execErr error
+			tasks, br, _, execErr = executeRemoval(tasks, ids, true)
+			return tasks, execErr
+		})
+		store.Close()
+		if err != nil {
+			return err
+		}
+		if err := confirmRemovalWithCascade(br, a.Stdin, a.Stderr); err != nil {
+			return err
+		}
+	}
+
+	return RunRemove(dir, fc, fmtr, subArgs, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
