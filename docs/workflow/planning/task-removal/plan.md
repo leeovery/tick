@@ -2,25 +2,25 @@
 topic: task-removal
 status: planning
 format: tick
-ext_id:
+ext_id: tick-132530
 specification: ../specification/task-removal/specification.md
 spec_commit: 739e6f02a7f56e6c4d785b981f74bf75b08ef36a
 created: 2026-02-18
-updated: 2026-02-18
+updated: 2026-02-19
 external_dependencies: []
 task_list_gate_mode: gated
 author_gate_mode: gated
 finding_gate_mode: gated
 planning:
   phase: 1
-  task: 1
+  task: 2
 ---
 
 # Plan: Task Removal
 
 ### Phase 1: Walking Skeleton — Single Task Removal
 status: approved
-ext_id:
+ext_id: tick-cf0a05
 approved_at: 2026-02-19
 
 **Goal**: Remove a single task by ID using `--force`, filtering it from JSONL via `Store.Mutate()`, with output through all three formatters and help text registration.
@@ -40,7 +40,7 @@ approved_at: 2026-02-19
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| task-removal-1-1 | Add FormatRemoval to Formatter interface and all implementations | none | pending | |
+| task-removal-1-1 | Add FormatRemoval to Formatter interface and all implementations | none | authored | tick-7314b0 |
 | task-removal-1-2 | Implement RunRemove handler with --force flag and wire into App.Run | case-insensitive ID matching | pending | |
 | task-removal-1-3 | Handle remove error cases | no-args message matches spec exactly | pending | |
 | task-removal-1-4 | Register remove command help text | none | pending | |
