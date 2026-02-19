@@ -13,7 +13,7 @@ author_gate_mode: gated
 finding_gate_mode: gated
 review_cycle: 1
 planning:
-  phase: 4
+  phase: 5
   task: ~
 ---
 
@@ -112,3 +112,14 @@ ext_id: tick-d5946b
 |----|------|------------|--------|--------|
 | task-removal-4-1 | Consolidate blast radius computation into Mutate callback | none | authored | tick-cf66a9 |
 | task-removal-4-2 | Align RunRemove signature with handler convention | none | authored | tick-21f1ab |
+
+### Phase 5: Analysis (cycle 2)
+status: approved
+ext_id: tick-9c6995
+
+**Goal**: Address findings from implementation analysis cycle 2.
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| task-removal-5-1 | Replace read-only Mutate with Store.ReadTasks and restructure handleRemove into a single-open flow | none | authored | tick-0c7c52 |

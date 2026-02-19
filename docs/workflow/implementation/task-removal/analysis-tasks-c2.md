@@ -6,7 +6,7 @@ total_proposed: 1
 # Analysis Tasks: Task Removal (Cycle 2)
 
 ## Task 1: Replace read-only Mutate with Store.ReadTasks and restructure handleRemove into a single-open flow
-status: pending
+status: approved
 severity: high
 sources: duplication, architecture
 
