@@ -37,6 +37,14 @@ approved_at: 2026-02-19
 - [ ] `--quiet` flag suppresses removal output
 - [ ] All existing tests continue to pass
 
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| task-removal-1-1 | Add FormatRemoval to Formatter interface and all implementations | none | pending | |
+| task-removal-1-2 | Implement RunRemove handler with --force flag and wire into App.Run | case-insensitive ID matching | pending | |
+| task-removal-1-3 | Handle remove error cases | no-args message matches spec exactly | pending | |
+| task-removal-1-4 | Register remove command help text | none | pending | |
+
 ### Phase 2: Interactive Confirmation Prompt
 status: approved
 ext_id:
