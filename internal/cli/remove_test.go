@@ -1289,6 +1289,258 @@ func TestRunRemove(t *testing.T) {
 	})
 }
 
+func TestBulkCascadeInteraction(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+
+	t.Run("explicit arg that is also a cascaded descendant is removed once", func(t *testing.T) {
+		// A -> B -> C, plus unrelated D.
+		// Remove [A, B, --force]. Expect: A, B, C removed; D survives.
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Root A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Child B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-aaa111",
+		}
+		taskC := task.Task{
+			ID: "tick-ccc333", Title: "Grandchild C", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-bbb222",
+		}
+		taskD := task.Task{
+			ID: "tick-ddd444", Title: "Unrelated D", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB, taskC, taskD})
+
+		stdout, _, exitCode := runRemove(t, dir, "tick-aaa111", "tick-bbb222", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-ddd444" {
+			t.Errorf("remaining task ID = %q, want %q", tasks[0].ID, "tick-ddd444")
+		}
+
+		// Verify output mentions exactly 3 removed tasks, no duplicates.
+		removedCount := strings.Count(stdout, "Removed")
+		if removedCount != 3 {
+			t.Errorf("expected 3 'Removed' entries in output, got %d; stdout = %q", removedCount, stdout)
+		}
+	})
+
+	t.Run("two targets where one is ancestor of the other", func(t *testing.T) {
+		// A -> B -> C. Remove [A, C, --force]. All three removed once.
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Root A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Child B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-aaa111",
+		}
+		taskC := task.Task{
+			ID: "tick-ccc333", Title: "Grandchild C", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-bbb222",
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB, taskC})
+
+		stdout, _, exitCode := runRemove(t, dir, "tick-aaa111", "tick-ccc333", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Fatalf("expected 0 tasks, got %d", len(tasks))
+		}
+
+		// Verify output mentions exactly 3 removed tasks.
+		removedCount := strings.Count(stdout, "Removed")
+		if removedCount != 3 {
+			t.Errorf("expected 3 'Removed' entries in output, got %d; stdout = %q", removedCount, stdout)
+		}
+	})
+
+	t.Run("bulk removal of unrelated leaf tasks", func(t *testing.T) {
+		// A, B, C, D (all leaves). Remove [A, C, --force]. A and C removed; B and D survive.
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Leaf A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Leaf B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskC := task.Task{
+			ID: "tick-ccc333", Title: "Leaf C", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskD := task.Task{
+			ID: "tick-ddd444", Title: "Leaf D", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB, taskC, taskD})
+
+		stdout, _, exitCode := runRemove(t, dir, "tick-aaa111", "tick-ccc333", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(tasks))
+		}
+
+		remaining := make(map[string]bool)
+		for _, tk := range tasks {
+			remaining[tk.ID] = true
+		}
+		if !remaining["tick-bbb222"] {
+			t.Errorf("expected tick-bbb222 to survive")
+		}
+		if !remaining["tick-ddd444"] {
+			t.Errorf("expected tick-ddd444 to survive")
+		}
+
+		// Verify output mentions exactly 2 removed tasks (no cascade side effects).
+		removedCount := strings.Count(stdout, "Removed")
+		if removedCount != 2 {
+			t.Errorf("expected 2 'Removed' entries in output, got %d; stdout = %q", removedCount, stdout)
+		}
+	})
+
+	t.Run("dependency cleanup covers all expanded cascade IDs", func(t *testing.T) {
+		// Parent -> Child1, Parent -> Child2. Survivor blocked by [Child1, Child2].
+		// Remove [Parent, --force]. Parent, Child1, Child2 removed. Survivor.BlockedBy empty.
+		parent := task.Task{
+			ID: "tick-parent", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child1 := task.Task{
+			ID: "tick-chld01", Title: "Child1", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		child2 := task.Task{
+			ID: "tick-chld02", Title: "Child2", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-parent",
+		}
+		survivor := task.Task{
+			ID: "tick-surviv", Title: "Survivor", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+			BlockedBy: []string{"tick-chld01", "tick-chld02"},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parent, child1, child2, survivor})
+
+		stdout, _, exitCode := runRemove(t, dir, "tick-parent", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].ID != "tick-surviv" {
+			t.Errorf("remaining task ID = %q, want %q", tasks[0].ID, "tick-surviv")
+		}
+		if len(tasks[0].BlockedBy) != 0 {
+			t.Errorf("survivor BlockedBy = %v, want empty", tasks[0].BlockedBy)
+		}
+
+		// Output should report dependency update on survivor.
+		if !strings.Contains(stdout, "Updated dependencies") {
+			t.Errorf("stdout should contain 'Updated dependencies', got %q", stdout)
+		}
+		if !strings.Contains(stdout, "tick-surviv") {
+			t.Errorf("stdout should mention tick-surviv in dep update, got %q", stdout)
+		}
+	})
+
+	t.Run("confirmation prompt shows deduplicated blast radius for bulk+cascade", func(t *testing.T) {
+		// A -> B -> C, plus leaf D. Remove [A, B, D] (no --force), stdin "y\n".
+		// Prompt should mention A, B, C, D. B not listed twice. All four removed.
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Root A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Child B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-aaa111",
+		}
+		taskC := task.Task{
+			ID: "tick-ccc333", Title: "Grandchild C", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-bbb222",
+		}
+		taskD := task.Task{
+			ID: "tick-ddd444", Title: "Leaf D", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB, taskC, taskD})
+
+		_, stderr, exitCode := runRemoveWithStdin(t, dir, "y\n", "tick-aaa111", "tick-bbb222", "tick-ddd444")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		// All four tasks should be removed.
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Fatalf("expected 0 tasks, got %d", len(tasks))
+		}
+
+		// Prompt (stderr) should mention all four task IDs.
+		for _, id := range []string{"tick-aaa111", "tick-bbb222", "tick-ccc333", "tick-ddd444"} {
+			if !strings.Contains(stderr, id) {
+				t.Errorf("stderr should mention %s, got %q", id, stderr)
+			}
+		}
+
+		// B should not appear twice in stderr (once as target, once as cascaded).
+		// Count occurrences of tick-bbb222 in stderr.
+		bCount := strings.Count(stderr, "tick-bbb222")
+		if bCount > 1 {
+			t.Errorf("tick-bbb222 appears %d times in stderr (should appear once, deduplicated); stderr = %q", bCount, stderr)
+		}
+	})
+
+	t.Run("confirmation prompt abort prevents any removal for bulk+cascade", func(t *testing.T) {
+		// A -> B, C (leaf). Remove [A, C] (no --force), stdin "n\n".
+		// All tasks survive. stderr contains "Aborted."
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Parent A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Child B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now, Parent: "tick-aaa111",
+		}
+		taskC := task.Task{
+			ID: "tick-ccc333", Title: "Leaf C", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB, taskC})
+
+		_, stderr, exitCode := runRemoveWithStdin(t, dir, "n\n", "tick-aaa111", "tick-ccc333")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "Aborted.") {
+			t.Errorf("stderr should contain 'Aborted.', got %q", stderr)
+		}
+
+		// All tasks should remain.
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 3 {
+			t.Fatalf("expected 3 tasks (no removal), got %d", len(tasks))
+		}
+	})
+}
+
 func TestParseRemoveArgs(t *testing.T) {
 	t.Run("single ID returns slice of length 1", func(t *testing.T) {
 		ids, force := parseRemoveArgs([]string{"tick-abc123"})
