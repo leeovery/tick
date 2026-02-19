@@ -13,7 +13,7 @@ author_gate_mode: gated
 finding_gate_mode: gated
 planning:
   phase: 2
-  task: 1
+  task: 2
 ---
 
 # Plan: Task Removal
@@ -47,7 +47,7 @@ approved_at: 2026-02-19
 
 ### Phase 2: Interactive Confirmation Prompt
 status: approved
-ext_id:
+ext_id: tick-fca658
 approved_at: 2026-02-19
 
 **Goal**: Add the interactive confirmation gate when `--force` is not provided, reading user input from stdin and writing prompts/abort messages to stderr.
@@ -65,7 +65,7 @@ approved_at: 2026-02-19
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| task-removal-2-1 | Add Stdin to App and thread through remove handler | none | pending | |
+| task-removal-2-1 | Add Stdin to App and thread through remove handler | none | authored | tick-8bc489 |
 | task-removal-2-2 | Implement confirmation prompt with accept and abort paths | case-insensitive y/yes, empty Enter aborts, whitespace-padded input, --force bypass preserved | pending | |
 
 ### Phase 3: Cascade Deletion, Dependency Cleanup, and Bulk Removal
