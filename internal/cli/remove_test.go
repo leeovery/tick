@@ -621,3 +621,157 @@ func TestRunRemove(t *testing.T) {
 		}
 	})
 }
+
+func TestParseRemoveArgs(t *testing.T) {
+	t.Run("single ID returns slice of length 1", func(t *testing.T) {
+		ids, force := parseRemoveArgs([]string{"tick-abc123"})
+		if len(ids) != 1 {
+			t.Fatalf("len(ids) = %d, want 1", len(ids))
+		}
+		if ids[0] != "tick-abc123" {
+			t.Errorf("ids[0] = %q, want %q", ids[0], "tick-abc123")
+		}
+		if force {
+			t.Errorf("force = true, want false")
+		}
+	})
+
+	t.Run("multiple IDs returned in order", func(t *testing.T) {
+		ids, _ := parseRemoveArgs([]string{"tick-aaa111", "tick-bbb222", "tick-ccc333"})
+		if len(ids) != 3 {
+			t.Fatalf("len(ids) = %d, want 3", len(ids))
+		}
+		want := []string{"tick-aaa111", "tick-bbb222", "tick-ccc333"}
+		for i, w := range want {
+			if ids[i] != w {
+				t.Errorf("ids[%d] = %q, want %q", i, ids[i], w)
+			}
+		}
+	})
+
+	t.Run("IDs normalized to lowercase", func(t *testing.T) {
+		ids, _ := parseRemoveArgs([]string{"TICK-AAA111", "Tick-Bbb222"})
+		if len(ids) != 2 {
+			t.Fatalf("len(ids) = %d, want 2", len(ids))
+		}
+		if ids[0] != "tick-aaa111" {
+			t.Errorf("ids[0] = %q, want %q", ids[0], "tick-aaa111")
+		}
+		if ids[1] != "tick-bbb222" {
+			t.Errorf("ids[1] = %q, want %q", ids[1], "tick-bbb222")
+		}
+	})
+
+	t.Run("deduplicates identical IDs", func(t *testing.T) {
+		ids, _ := parseRemoveArgs([]string{"tick-aaa111", "tick-aaa111"})
+		if len(ids) != 1 {
+			t.Fatalf("len(ids) = %d, want 1", len(ids))
+		}
+		if ids[0] != "tick-aaa111" {
+			t.Errorf("ids[0] = %q, want %q", ids[0], "tick-aaa111")
+		}
+	})
+
+	t.Run("deduplicates case-variant IDs", func(t *testing.T) {
+		ids, _ := parseRemoveArgs([]string{"TICK-AAA111", "tick-aaa111"})
+		if len(ids) != 1 {
+			t.Fatalf("len(ids) = %d, want 1", len(ids))
+		}
+		if ids[0] != "tick-aaa111" {
+			t.Errorf("ids[0] = %q, want %q", ids[0], "tick-aaa111")
+		}
+	})
+
+	t.Run("preserves first-occurrence order after dedup", func(t *testing.T) {
+		ids, _ := parseRemoveArgs([]string{"tick-bbb222", "tick-aaa111", "tick-bbb222", "tick-ccc333"})
+		if len(ids) != 3 {
+			t.Fatalf("len(ids) = %d, want 3", len(ids))
+		}
+		want := []string{"tick-bbb222", "tick-aaa111", "tick-ccc333"}
+		for i, w := range want {
+			if ids[i] != w {
+				t.Errorf("ids[%d] = %q, want %q", i, ids[i], w)
+			}
+		}
+	})
+
+	t.Run("extracts --force from between IDs", func(t *testing.T) {
+		ids, force := parseRemoveArgs([]string{"tick-aaa111", "--force", "tick-bbb222"})
+		if !force {
+			t.Errorf("force = false, want true")
+		}
+		if len(ids) != 2 {
+			t.Fatalf("len(ids) = %d, want 2", len(ids))
+		}
+		if ids[0] != "tick-aaa111" {
+			t.Errorf("ids[0] = %q, want %q", ids[0], "tick-aaa111")
+		}
+		if ids[1] != "tick-bbb222" {
+			t.Errorf("ids[1] = %q, want %q", ids[1], "tick-bbb222")
+		}
+	})
+
+	t.Run("extracts -f shorthand flag", func(t *testing.T) {
+		ids, force := parseRemoveArgs([]string{"tick-aaa111", "-f"})
+		if !force {
+			t.Errorf("force = false, want true")
+		}
+		if len(ids) != 1 {
+			t.Fatalf("len(ids) = %d, want 1", len(ids))
+		}
+		if ids[0] != "tick-aaa111" {
+			t.Errorf("ids[0] = %q, want %q", ids[0], "tick-aaa111")
+		}
+	})
+
+	t.Run("handles --force before and after all IDs", func(t *testing.T) {
+		ids, force := parseRemoveArgs([]string{"--force", "tick-aaa111", "tick-bbb222"})
+		if !force {
+			t.Errorf("force = false, want true (before)")
+		}
+		if len(ids) != 2 {
+			t.Fatalf("len(ids) = %d, want 2", len(ids))
+		}
+
+		ids2, force2 := parseRemoveArgs([]string{"tick-aaa111", "tick-bbb222", "--force"})
+		if !force2 {
+			t.Errorf("force = false, want true (after)")
+		}
+		if len(ids2) != 2 {
+			t.Fatalf("len(ids2) = %d, want 2", len(ids2))
+		}
+	})
+
+	t.Run("skips unknown flags mixed with IDs", func(t *testing.T) {
+		ids, force := parseRemoveArgs([]string{"--verbose", "tick-aaa111", "-x", "tick-bbb222"})
+		if force {
+			t.Errorf("force = true, want false")
+		}
+		if len(ids) != 2 {
+			t.Fatalf("len(ids) = %d, want 2", len(ids))
+		}
+		if ids[0] != "tick-aaa111" {
+			t.Errorf("ids[0] = %q, want %q", ids[0], "tick-aaa111")
+		}
+		if ids[1] != "tick-bbb222" {
+			t.Errorf("ids[1] = %q, want %q", ids[1], "tick-bbb222")
+		}
+	})
+
+	t.Run("returns empty slice when only flags or no args provided", func(t *testing.T) {
+		ids, _ := parseRemoveArgs([]string{"--force", "-x"})
+		if len(ids) != 0 {
+			t.Errorf("len(ids) = %d, want 0", len(ids))
+		}
+
+		ids2, _ := parseRemoveArgs([]string{})
+		if len(ids2) != 0 {
+			t.Errorf("len(ids2) = %d, want 0", len(ids2))
+		}
+
+		ids3, _ := parseRemoveArgs(nil)
+		if len(ids3) != 0 {
+			t.Errorf("len(ids3) = %d, want 0", len(ids3))
+		}
+	})
+}

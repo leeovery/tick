@@ -15,35 +15,43 @@ import (
 // App.Run detects this to return exit code 1 without the "Error: " prefix.
 var errAborted = errors.New("aborted")
 
-// parseRemoveArgs extracts the task ID and --force flag from remove command arguments.
-// Returns the normalized task ID and whether --force was set.
-func parseRemoveArgs(args []string) (string, bool) {
-	var id string
+// parseRemoveArgs extracts task IDs and --force flag from remove command arguments.
+// Returns deduplicated, normalized task IDs (preserving first-occurrence order) and whether --force was set.
+func parseRemoveArgs(args []string) ([]string, bool) {
+	var ids []string
 	var force bool
+	seen := map[string]bool{}
 
 	for _, arg := range args {
 		switch {
 		case arg == "--force" || arg == "-f":
 			force = true
-		case !strings.HasPrefix(arg, "-"):
-			if id == "" {
-				id = task.NormalizeID(arg)
+		case strings.HasPrefix(arg, "-"):
+			// Skip unknown flags.
+		default:
+			normalized := task.NormalizeID(arg)
+			if !seen[normalized] {
+				seen[normalized] = true
+				ids = append(ids, normalized)
 			}
 		}
 	}
 
-	return id, force
+	return ids, force
 }
 
 // RunRemove executes the remove command: parses args, locates the target task,
 // prompts for confirmation (unless --force), filters it from the task slice,
 // cleans up dependency references on surviving tasks, and outputs the result through the formatter.
 func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin io.Reader, stderr io.Writer, stdout io.Writer) error {
-	id, force := parseRemoveArgs(args)
+	ids, force := parseRemoveArgs(args)
 
-	if id == "" {
+	if len(ids) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...]")
 	}
+
+	// Tasks 3-2 through 3-5 extend to full slice; for now use first ID only.
+	id := ids[0]
 
 	store, err := openStore(dir, fc)
 	if err != nil {
