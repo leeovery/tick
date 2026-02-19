@@ -10,6 +10,8 @@ import (
 type App struct {
 	Stdout io.Writer
 	Stderr io.Writer
+	// Stdin is the standard input reader. Injected for testability (confirmation prompts).
+	Stdin io.Reader
 	// Getwd returns the current working directory. Injected for testability.
 	Getwd func() (string, error)
 	// IsTTY indicates whether stdout is a terminal. Set during flag parsing.
@@ -206,7 +208,7 @@ func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) er
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunRemove(dir, fc, fmtr, subArgs, a.Stdout)
+	return RunRemove(dir, fc, fmtr, subArgs, a.Stdin, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.

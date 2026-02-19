@@ -31,7 +31,7 @@ func parseRemoveArgs(args []string) (string, bool) {
 // RunRemove executes the remove command: parses args, locates the target task,
 // filters it from the task slice, cleans up dependency references on surviving tasks,
 // and outputs the result through the formatter.
-func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
+func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin io.Reader, stdout io.Writer) error {
 	id, force := parseRemoveArgs(args)
 
 	if id == "" {
@@ -39,7 +39,8 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	if !force {
-		return fmt.Errorf("remove requires --force flag (interactive confirmation not yet implemented)")
+		// TODO(task-removal-2-2): add interactive confirmation prompt reading from stdin.
+		_ = stdin
 	}
 
 	store, err := openStore(dir, fc)

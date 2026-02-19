@@ -11,6 +11,7 @@ func main() {
 	app := &cli.App{
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
+		Stdin:  os.Stdin,
 		Getwd:  os.Getwd,
 		IsTTY:  cli.DetectTTY(os.Stdout),
 	}

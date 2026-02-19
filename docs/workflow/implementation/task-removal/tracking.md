@@ -18,7 +18,7 @@ project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro/SKILL.md
 current_phase: 2
-current_task: task-removal-2-1
+current_task: task-removal-2-2
 completed_phases:
   - 1
 completed_tasks:
@@ -26,6 +26,7 @@ completed_tasks:
   - task-removal-1-2
   - task-removal-1-3
   - task-removal-1-4
+  - task-removal-2-1
 started: 2026-02-19
 updated: 2026-02-19
 completed: ~

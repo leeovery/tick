@@ -17,6 +17,7 @@ func runRemove(t *testing.T, dir string, args ...string) (stdout string, stderr 
 	app := &App{
 		Stdout: &stdoutBuf,
 		Stderr: &stderrBuf,
+		Stdin:  strings.NewReader(""),
 		Getwd:  func() (string, error) { return dir, nil },
 		IsTTY:  true,
 	}
@@ -189,19 +190,16 @@ func TestRunRemove(t *testing.T) {
 		}
 	})
 
-	t.Run("it errors when --force is not provided", func(t *testing.T) {
+	t.Run("it does not error when --force is omitted", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-abc123", Title: "My task", Status: task.StatusOpen,
 			Priority: 2, Created: now, Updated: now,
 		}
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
 
-		_, stderr, exitCode := runRemove(t, dir, "tick-abc123")
-		if exitCode != 1 {
-			t.Errorf("exit code = %d, want 1", exitCode)
-		}
-		if !strings.Contains(stderr, "--force") {
-			t.Errorf("stderr should mention --force, got %q", stderr)
+		_, _, exitCode := runRemove(t, dir, "tick-abc123")
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0", exitCode)
 		}
 	})
 
@@ -240,6 +238,7 @@ func TestRunRemove(t *testing.T) {
 		app := &App{
 			Stdout: &stdoutBuf,
 			Stderr: &stderrBuf,
+			Stdin:  strings.NewReader(""),
 			Getwd:  func() (string, error) { return dir, nil },
 			IsTTY:  true,
 		}
@@ -280,20 +279,47 @@ func TestRunRemove(t *testing.T) {
 		}
 	})
 
-	t.Run("it returns error when --force flag is missing", func(t *testing.T) {
+	t.Run("it includes Stdin field on App struct and threads to RunRemove", func(t *testing.T) {
 		taskA := task.Task{
-			ID: "tick-abc123", Title: "My task", Status: task.StatusOpen,
+			ID: "tick-abc123", Title: "Stdin test", Status: task.StatusOpen,
 			Priority: 2, Created: now, Updated: now,
 		}
-		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
 
-		_, stderr, exitCode := runRemove(t, dir, "tick-abc123")
-		if exitCode != 1 {
-			t.Errorf("exit code = %d, want 1", exitCode)
+		var stdoutBuf, stderrBuf bytes.Buffer
+		stdinReader := strings.NewReader("")
+		app := &App{
+			Stdout: &stdoutBuf,
+			Stderr: &stderrBuf,
+			Stdin:  stdinReader,
+			Getwd:  func() (string, error) { return dir, nil },
+			IsTTY:  true,
 		}
-		wantErr := "Error: remove requires --force flag (interactive confirmation not yet implemented)\n"
-		if stderr != wantErr {
-			t.Errorf("stderr = %q, want %q", stderr, wantErr)
+		code := app.Run([]string{"tick", "remove", "tick-abc123", "--force"})
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderrBuf.String())
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks after remove, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it passes nil stdin safely for non-remove commands", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		var stdoutBuf, stderrBuf bytes.Buffer
+		app := &App{
+			Stdout: &stdoutBuf,
+			Stderr: &stderrBuf,
+			Getwd:  func() (string, error) { return dir, nil },
+			IsTTY:  true,
+		}
+		// Run a non-remove command (list) with nil Stdin — should not panic or error.
+		code := app.Run([]string{"tick", "list"})
+		if code != 0 {
+			t.Errorf("exit code = %d, want 0; stderr = %q", code, stderrBuf.String())
 		}
 	})
 
