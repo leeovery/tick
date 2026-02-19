@@ -1,12 +1,19 @@
 package cli
 
 import (
+	"bufio"
+	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/leeovery/tick/internal/task"
 )
+
+// errAborted is a sentinel error returned when the user declines a confirmation prompt.
+// App.Run detects this to return exit code 1 without the "Error: " prefix.
+var errAborted = errors.New("aborted")
 
 // parseRemoveArgs extracts the task ID and --force flag from remove command arguments.
 // Returns the normalized task ID and whether --force was set.
@@ -29,18 +36,13 @@ func parseRemoveArgs(args []string) (string, bool) {
 }
 
 // RunRemove executes the remove command: parses args, locates the target task,
-// filters it from the task slice, cleans up dependency references on surviving tasks,
-// and outputs the result through the formatter.
-func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin io.Reader, stdout io.Writer) error {
+// prompts for confirmation (unless --force), filters it from the task slice,
+// cleans up dependency references on surviving tasks, and outputs the result through the formatter.
+func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin io.Reader, stderr io.Writer, stdout io.Writer) error {
 	id, force := parseRemoveArgs(args)
 
 	if id == "" {
 		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...]")
-	}
-
-	if !force {
-		// TODO(task-removal-2-2): add interactive confirmation prompt reading from stdin.
-		_ = stdin
 	}
 
 	store, err := openStore(dir, fc)
@@ -48,6 +50,12 @@ func RunRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdin
 		return err
 	}
 	defer store.Close()
+
+	if !force {
+		if err := confirmRemoval(store, id, stdin, stderr); err != nil {
+			return err
+		}
+	}
 
 	var result RemovalResult
 
@@ -108,4 +116,30 @@ func stripFromBlockedBy(blockedBy []string, removedID string) []string {
 		}
 	}
 	return result
+}
+
+// confirmRemoval looks up the task title and prompts the user for confirmation.
+// Returns nil if the user confirms, or errAborted if they decline.
+func confirmRemoval(store interface {
+	Query(func(*sql.DB) error) error
+}, id string, stdin io.Reader, stderr io.Writer) error {
+	var title string
+	err := store.Query(func(db *sql.DB) error {
+		return db.QueryRow("SELECT title FROM tasks WHERE id = ?", id).Scan(&title)
+	})
+	if err != nil {
+		return fmt.Errorf("task '%s' not found", id)
+	}
+
+	fmt.Fprintf(stderr, "Remove task %s %q? [y/N] ", id, title)
+
+	line, _ := bufio.NewReader(stdin).ReadString('\n')
+	response := strings.ToLower(strings.TrimSpace(line))
+
+	if response == "y" || response == "yes" {
+		return nil
+	}
+
+	fmt.Fprintln(stderr, "Aborted.")
+	return errAborted
 }

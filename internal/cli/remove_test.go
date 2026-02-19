@@ -9,21 +9,29 @@ import (
 	"github.com/leeovery/tick/internal/task"
 )
 
-// runRemove runs a tick remove command and returns stdout, stderr, and exit code.
+// runRemoveWithStdin runs a tick remove command with custom stdin and returns stdout, stderr, and exit code.
 // Uses IsTTY=true to default to PrettyFormatter for consistent test output.
-func runRemove(t *testing.T, dir string, args ...string) (stdout string, stderr string, exitCode int) {
+func runRemoveWithStdin(t *testing.T, dir string, stdin string, args ...string) (stdout string, stderr string, exitCode int) {
 	t.Helper()
 	var stdoutBuf, stderrBuf bytes.Buffer
 	app := &App{
 		Stdout: &stdoutBuf,
 		Stderr: &stderrBuf,
-		Stdin:  strings.NewReader(""),
+		Stdin:  strings.NewReader(stdin),
 		Getwd:  func() (string, error) { return dir, nil },
 		IsTTY:  true,
 	}
 	fullArgs := append([]string{"tick", "remove"}, args...)
 	code := app.Run(fullArgs)
 	return stdoutBuf.String(), stderrBuf.String(), code
+}
+
+// runRemove runs a tick remove command and returns stdout, stderr, and exit code.
+// Uses IsTTY=true to default to PrettyFormatter for consistent test output.
+// Provides empty stdin — for tests that need custom stdin, use runRemoveWithStdin.
+func runRemove(t *testing.T, dir string, args ...string) (stdout string, stderr string, exitCode int) {
+	t.Helper()
+	return runRemoveWithStdin(t, dir, "", args...)
 }
 
 func TestRunRemove(t *testing.T) {
@@ -190,16 +198,19 @@ func TestRunRemove(t *testing.T) {
 		}
 	})
 
-	t.Run("it does not error when --force is omitted", func(t *testing.T) {
+	t.Run("it aborts when --force is omitted and stdin is empty (EOF)", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-abc123", Title: "My task", Status: task.StatusOpen,
 			Priority: 2, Created: now, Updated: now,
 		}
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
 
-		_, _, exitCode := runRemove(t, dir, "tick-abc123")
-		if exitCode != 0 {
-			t.Errorf("exit code = %d, want 0", exitCode)
+		_, stderr, exitCode := runRemove(t, dir, "tick-abc123")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "Aborted.") {
+			t.Errorf("stderr should contain 'Aborted.', got %q", stderr)
 		}
 	})
 
@@ -371,6 +382,242 @@ func TestRunRemove(t *testing.T) {
 		}
 		if tasks[0].Description != "Keep me intact" {
 			t.Errorf("description = %q, want %q", tasks[0].Description, "Keep me intact")
+		}
+	})
+
+	t.Run("it prompts for confirmation on stderr when --force is not provided", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "My task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, _ := runRemoveWithStdin(t, dir, "n\n", "tick-abc123")
+		wantPrompt := `Remove task tick-abc123 "My task"? [y/N] `
+		if !strings.Contains(stderr, wantPrompt) {
+			t.Errorf("stderr should contain prompt %q, got %q", wantPrompt, stderr)
+		}
+	})
+
+	t.Run("it proceeds with removal when user enters y", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Confirm me", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		stdout, _, exitCode := runRemoveWithStdin(t, dir, "y\n", "tick-abc123")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks after confirmed remove, got %d", len(tasks))
+		}
+		if !strings.Contains(stdout, "Removed tick-abc123") {
+			t.Errorf("stdout should contain 'Removed tick-abc123', got %q", stdout)
+		}
+	})
+
+	t.Run("it proceeds with removal when user enters Y (uppercase)", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Upper Y", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, _, exitCode := runRemoveWithStdin(t, dir, "Y\n", "tick-abc123")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks after confirmed remove, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it proceeds with removal when user enters yes", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Yes test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, _, exitCode := runRemoveWithStdin(t, dir, "yes\n", "tick-abc123")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks after confirmed remove, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it proceeds with removal when user enters YES (case-insensitive)", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "YES test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, _, exitCode := runRemoveWithStdin(t, dir, "YES\n", "tick-abc123")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks after confirmed remove, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it aborts when user presses Enter (empty input)", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Empty enter", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemoveWithStdin(t, dir, "\n", "tick-abc123")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "Aborted.") {
+			t.Errorf("stderr should contain 'Aborted.', got %q", stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Errorf("expected 1 task (no removal), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it aborts when user enters n", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "No test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemoveWithStdin(t, dir, "n\n", "tick-abc123")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "Aborted.") {
+			t.Errorf("stderr should contain 'Aborted.', got %q", stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Errorf("expected 1 task (no removal), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it aborts when user enters arbitrary text", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Arbitrary test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemoveWithStdin(t, dir, "maybe\n", "tick-abc123")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "Aborted.") {
+			t.Errorf("stderr should contain 'Aborted.', got %q", stderr)
+		}
+	})
+
+	t.Run("it trims whitespace from user input before comparing", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Trim test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, _, exitCode := runRemoveWithStdin(t, dir, "  y  \n", "tick-abc123")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks after confirmed remove, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it writes Aborted message to stderr on decline", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Abort stderr test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemoveWithStdin(t, dir, "n\n", "tick-abc123")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "Aborted.") {
+			t.Errorf("stderr should contain 'Aborted.', got %q", stderr)
+		}
+	})
+
+	t.Run("it does not write to stdout on abort", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "No stdout test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		stdout, _, exitCode := runRemoveWithStdin(t, dir, "n\n", "tick-abc123")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if stdout != "" {
+			t.Errorf("stdout should be empty on abort, got %q", stdout)
+		}
+	})
+
+	t.Run("it skips prompt entirely when --force is provided", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Force test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemove(t, dir, "tick-abc123", "--force")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		// stderr should not contain the confirmation prompt.
+		if strings.Contains(stderr, "[y/N]") {
+			t.Errorf("stderr should not contain prompt with --force, got %q", stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 0 {
+			t.Errorf("expected 0 tasks after forced remove, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it returns exit code 1 on abort without Error prefix via App.Run", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-abc123", Title: "Exit code test", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runRemoveWithStdin(t, dir, "n\n", "tick-abc123")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if strings.Contains(stderr, "Error:") {
+			t.Errorf("stderr should not contain 'Error:' on abort, got %q", stderr)
 		}
 	})
 }

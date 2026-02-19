@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -103,6 +104,9 @@ func (a *App) Run(args []string) int {
 	}
 
 	if err != nil {
+		if errors.Is(err, errAborted) {
+			return 1
+		}
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
 	}
@@ -208,7 +212,7 @@ func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) er
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunRemove(dir, fc, fmtr, subArgs, a.Stdin, a.Stdout)
+	return RunRemove(dir, fc, fmtr, subArgs, a.Stdin, a.Stderr, a.Stdout)
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
