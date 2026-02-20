@@ -1,6 +1,6 @@
 ---
 topic: blocked-ancestor-ready
-status: planning
+status: concluded
 format: tick
 ext_id: tick-e679e0
 specification: ../specification/blocked-ancestor-ready/specification.md
