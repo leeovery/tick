@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-20
 cycle: 1
 phase: Traceability Review
@@ -41,8 +41,8 @@ Tests:
 - "BlockedConditions includes ancestor blocker in OR clause" (unit)
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied automatically (auto mode).
 
 ---
 
@@ -67,5 +67,5 @@ The spec's stats consistency scenario only requires that "ReadyWhereClause() cou
 - Stats ready count matches list --ready count for mixed scenario
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied automatically (auto mode).
