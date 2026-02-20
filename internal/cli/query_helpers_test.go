@@ -76,6 +76,58 @@ func TestReadyConditions(t *testing.T) {
 		}
 	})
 
+	t.Run("BlockedConditions derives subqueries from ReadyNo helpers", func(t *testing.T) {
+		conditions := BlockedConditions()
+		if len(conditions) != 2 {
+			t.Fatalf("BlockedConditions() returned %d conditions, want 2", len(conditions))
+		}
+		orClause := conditions[1]
+
+		// Each ReadyNo*() helper returns "NOT EXISTS (...)". The blocked
+		// condition should use "EXISTS (...)" with the identical inner body.
+		// Verify by stripping the "NOT " prefix from each helper and checking
+		// that the resulting "EXISTS (...)" string appears in the OR clause.
+		helpers := []struct {
+			name   string
+			output string
+		}{
+			{"ReadyNoUnclosedBlockers", ReadyNoUnclosedBlockers()},
+			{"ReadyNoOpenChildren", ReadyNoOpenChildren()},
+			{"ReadyNoBlockedAncestor", ReadyNoBlockedAncestor()},
+		}
+		for _, h := range helpers {
+			negated := strings.TrimPrefix(h.output, "NOT ")
+			if negated == h.output {
+				t.Fatalf("%s() output does not start with 'NOT ': %q", h.name, h.output)
+			}
+			if !strings.Contains(orClause, negated) {
+				t.Errorf("BlockedConditions OR clause does not contain negated %s().\nWant substring:\n%s\nGot:\n%s", h.name, negated, orClause)
+			}
+		}
+	})
+
+	t.Run("BlockedConditions contains no SQL literals beyond status check", func(t *testing.T) {
+		conditions := BlockedConditions()
+		if len(conditions) != 2 {
+			t.Fatalf("BlockedConditions() returned %d conditions, want 2", len(conditions))
+		}
+		// The status condition is the only SQL literal allowed
+		if conditions[0] != `t.status = 'open'` {
+			t.Errorf("conditions[0] = %q, want %q", conditions[0], `t.status = 'open'`)
+		}
+		// The OR clause must not contain SELECT directly — it should be
+		// composed from the ReadyNo*() helpers, not hand-written SQL.
+		// If someone adds a hand-written EXISTS subquery, this catches it:
+		// count the EXISTS occurrences and ensure they match exactly 3
+		// (one per helper).
+		orClause := conditions[1]
+		existsCount := strings.Count(orClause, "EXISTS")
+		// Each helper contributes one "EXISTS" — exactly 3 total
+		if existsCount != 3 {
+			t.Errorf("expected exactly 3 EXISTS in OR clause, got %d", existsCount)
+		}
+	})
+
 	t.Run("ReadyWhereClause returns composable SQL WHERE fragment", func(t *testing.T) {
 		clause := ReadyWhereClause()
 		if clause == "" {

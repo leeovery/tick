@@ -57,39 +57,25 @@ func ReadyConditions() []string {
 	}
 }
 
+// negateNotExists converts a "NOT EXISTS (...)" condition to "EXISTS (...)"
+// by stripping the leading "NOT " prefix.
+func negateNotExists(s string) string {
+	return strings.TrimPrefix(s, "NOT ")
+}
+
 // BlockedConditions returns the SQL WHERE conditions that define a "blocked"
 // task: open status AND (has unclosed blockers OR has open children OR has
 // dependency-blocked ancestor). This is the De Morgan inverse of the ready
-// NOT EXISTS conditions.
+// NOT EXISTS conditions, derived from the ReadyNo*() helpers.
 func BlockedConditions() []string {
+	parts := []string{
+		negateNotExists(ReadyNoUnclosedBlockers()),
+		negateNotExists(ReadyNoOpenChildren()),
+		negateNotExists(ReadyNoBlockedAncestor()),
+	}
 	return []string{
 		`t.status = 'open'`,
-		`(
-				EXISTS (
-					SELECT 1 FROM dependencies d
-					JOIN tasks blocker ON blocker.id = d.blocked_by
-					WHERE d.task_id = t.id
-					  AND blocker.status NOT IN ('done', 'cancelled')
-				)
-				OR EXISTS (
-					SELECT 1 FROM tasks child
-					WHERE child.parent = t.id
-					  AND child.status IN ('open', 'in_progress')
-				)
-				OR EXISTS (
-					WITH RECURSIVE ancestors(id) AS (
-						SELECT parent FROM tasks WHERE id = t.id AND parent IS NOT NULL
-						UNION ALL
-						SELECT t2.parent FROM tasks t2
-						JOIN ancestors a ON t2.id = a.id
-						WHERE t2.parent IS NOT NULL
-					)
-					SELECT 1 FROM ancestors a
-					JOIN dependencies d ON d.task_id = a.id
-					JOIN tasks blocker ON blocker.id = d.blocked_by
-					WHERE blocker.status NOT IN ('done', 'cancelled')
-				)
-			)`,
+		"(" + strings.Join(parts, "\n\t\t\t\tOR ") + ")",
 	}
 }
 
