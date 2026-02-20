@@ -18,8 +18,9 @@ planning:
 # Plan: Blocked Ancestor Ready
 
 ### Phase 1: Blocked Ancestor Ready Check
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-02-20
 
 **Goal**: Tasks with dependency-blocked ancestors are excluded from ready results and included in blocked results across all code paths (list --ready, list --blocked, tick ready, stats).
 
