@@ -7,7 +7,7 @@ review_cycle: 0
 finding_gate_mode: gated
 sources:
   - name: blocked-ancestor-ready
-    status: pending
+    status: incorporated
 ---
 
 # Specification: Blocked Ancestor Ready
@@ -114,3 +114,23 @@ This follows the existing pattern: each concern is a separate helper, composed i
 ### Edge Case: Closed Ancestors in the Chain
 
 Don't stop walking at closed/cancelled ancestors. A closed parent with open children is an inconsistency that shouldn't occur in practice, and stopping early adds complexity for no benefit. The CTE walks unconditionally to the root.
+
+## Test Scenarios
+
+| Scenario | Setup | Expected |
+|----------|-------|----------|
+| **Child of blocked parent** | Parent blocked by unclosed dep; child is open with no own blockers | Child is NOT ready, IS blocked |
+| **Grandchild of blocked grandparent** | Grandparent blocked; intermediate parent has no own blockers; grandchild is open | Grandchild is NOT ready, IS blocked |
+| **Intermediate grouping task** | Phase 2 blocked by Phase 1; Group A under Phase 2 has no own blockers; subtask under Group A | Subtask is NOT ready, IS blocked |
+| **Ancestor blocker resolved** | Same as above, but blocker is done/cancelled | Descendant IS ready, NOT blocked |
+| **No ancestors (root task)** | Root task with no parent, no own blockers, no open children | Remains ready (no ancestor check needed) |
+| **Stats count consistency** | Mix of tasks with and without blocked ancestors | `ReadyWhereClause()` counts match `list --ready` output |
+
+## Dependencies
+
+Prerequisites that must exist before implementation can begin:
+
+### Notes
+
+- No external dependencies. All required infrastructure (recursive CTE support in SQLite, `query_helpers.go` helper pattern, `dependencies` and `tasks` tables) already exists.
+- Implementation is self-contained within `internal/cli/query_helpers.go` and its test file.
