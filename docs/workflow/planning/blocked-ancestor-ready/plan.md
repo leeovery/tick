@@ -44,3 +44,14 @@ approved_at: 2026-02-20
 |----|------|------------|--------|--------|
 | blocked-ancestor-ready-1-1 | Add ReadyNoBlockedAncestor helper and integrate into ReadyConditions | grandchild of blocked grandparent, intermediate grouping task, root task unaffected, ancestor blocker resolved | authored | tick-fb9d84 |
 | blocked-ancestor-ready-1-2 | Add blocked-ancestor EXISTS condition to BlockedConditions | grandchild appears in blocked, blocker resolution removes from blocked, stats count consistency | authored | tick-52f1cf |
+
+### Phase 2: Analysis (Cycle 1)
+status: approved
+ext_id: tick-884d97
+
+**Goal**: Address findings from Analysis (Cycle 1).
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| blocked-ancestor-ready-2-1 | Compose BlockedConditions() from ReadyNo*() helpers instead of duplicating SQL | none | authored | tick-cbdae7 |

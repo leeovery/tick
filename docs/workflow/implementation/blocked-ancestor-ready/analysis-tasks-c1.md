@@ -6,7 +6,7 @@ total_proposed: 1
 # Analysis Tasks: blocked-ancestor-ready (Cycle 1)
 
 ## Task 1: Compose BlockedConditions() from ReadyNo*() helpers instead of duplicating SQL
-status: pending
+status: approved
 severity: high
 sources: duplication, architecture
 
