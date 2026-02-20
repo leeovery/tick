@@ -50,6 +50,7 @@ release                   → release script with AI-generated notes via Claude 
 - **Error wrapping:** `fmt.Errorf("context: %w", err)` throughout.
 - **Task IDs:** `tick-` prefix + 6 hex chars (3 random bytes).
 - **Status transitions:** open → in_progress → done/cancelled, reopen back to open.
+- **Ready/blocked queries:** `query_helpers.go` defines `ReadyNo*()` SQL helpers composed into `ReadyConditions()` and `BlockedConditions()` (De Morgan inverse). Ancestor blocking uses a recursive CTE walking the parent chain.
 - **Tests:** stdlib `testing` only (no testify), `t.Run()` subtests, `t.TempDir()` for isolation, `t.Helper()` on helpers.
 
 ## Release & Distribution

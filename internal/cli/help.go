@@ -55,7 +55,7 @@ var commands = []commandInfo{
 			{"--status", "<open|in_progress|done|cancelled>", "Filter by status", false},
 			{"--priority", "<0-4>", "Filter by priority", false},
 			{"--parent", "<id>", "Filter by parent task", false},
-			{"--ready", "", "Show only ready tasks (no unresolved blockers)", false},
+			{"--ready", "", "Show only ready tasks (no blockers, children, or blocked ancestor)", false},
 			{"--blocked", "", "Show only blocked tasks", false},
 		},
 	},
@@ -129,7 +129,8 @@ var commands = []commandInfo{
 		Name:    "ready",
 		Summary: "List ready tasks (alias: list --ready)",
 		Usage:   "tick ready [flags]",
-		Description: "Lists tasks that have no unresolved blockers. Alias for list --ready.\n" +
+		Description: "Lists tasks with no unresolved blockers, no open children, and no\n" +
+			"dependency-blocked ancestor. Alias for list --ready.\n" +
 			"Accepts the same additional filters as list.",
 		Flags: []flagInfo{
 			{"--status", "<open|in_progress|done|cancelled>", "Filter by status", false},
@@ -141,7 +142,8 @@ var commands = []commandInfo{
 		Name:    "blocked",
 		Summary: "List blocked tasks (alias: list --blocked)",
 		Usage:   "tick blocked [flags]",
-		Description: "Lists tasks that have unresolved blockers. Alias for list --blocked.\n" +
+		Description: "Lists tasks that have unresolved blockers, open children, or a\n" +
+			"dependency-blocked ancestor. Alias for list --blocked.\n" +
 			"Accepts the same additional filters as list.",
 		Flags: []flagInfo{
 			{"--status", "<open|in_progress|done|cancelled>", "Filter by status", false},

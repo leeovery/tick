@@ -119,8 +119,8 @@ tick list [flags]
 | `--status` | string | | Filter by status: `open`, `in_progress`, `done`, `cancelled` |
 | `--priority` | `0-4` | | Filter by priority level |
 | `--parent` | ID | | Show descendants of a task |
-| `--ready` | bool | `false` | Show only ready tasks (open, no unresolved blockers, no open children) |
-| `--blocked` | bool | `false` | Show only blocked tasks (open with unresolved blockers or open children) |
+| `--ready` | bool | `false` | Show only ready tasks (open, no unresolved blockers, no open children, no dependency-blocked ancestor) |
+| `--blocked` | bool | `false` | Show only blocked tasks (open with unresolved blockers, open children, or dependency-blocked ancestor) |
 
 `--ready` and `--blocked` are mutually exclusive.
 
@@ -133,7 +133,7 @@ tick list --parent tick-a1b2        # descendants of a task
 
 ### `ready`
 
-Alias for `tick list --ready`. Shows tasks that are open, have no unresolved blockers, and no open children.
+Alias for `tick list --ready`. Shows tasks that are open, have no unresolved blockers, no open children, and no dependency-blocked ancestor.
 
 ```bash
 tick ready
@@ -141,7 +141,7 @@ tick ready
 
 ### `blocked`
 
-Alias for `tick list --blocked`. Shows tasks that are open but waiting on dependencies or have open children.
+Alias for `tick list --blocked`. Shows tasks that are open but waiting on dependencies, have open children, or have an ancestor with unresolved blockers.
 
 ```bash
 tick blocked
@@ -167,6 +167,7 @@ tick update <task-id> [flags]
 |---|---|---|
 | `--title` | string | Set a new title |
 | `--description` | string | Set or replace the description |
+| `--clear-description` | bool | Remove the description (mutually exclusive with `--description`) |
 | `--priority` | `0-4` | Change priority level |
 | `--parent` | ID | Set or change the parent task (pass empty string to clear) |
 | `--blocks` | IDs | Comma-separated list of tasks this blocks |
@@ -188,6 +189,25 @@ tick reopen <task-id>               # done/cancelled → open
 ```
 
 `done` and `cancel` set a closed timestamp. `reopen` clears it.
+
+### `remove`
+
+Permanently delete one or more tasks. Removing a parent cascades to all descendants. Dependency references on surviving tasks are automatically cleaned up.
+
+```bash
+tick remove <id> [<id>...] [flags]
+```
+
+| Flag | Type | Description |
+|---|---|---|
+| `--force, -f` | bool | Skip confirmation prompt |
+
+```bash
+tick remove tick-a1b2                  # remove with confirmation
+tick remove tick-a1b2 tick-c3d4 -f     # remove multiple, skip prompt
+```
+
+Since `tasks.jsonl` is tracked in git, accidental removals can be recovered from history.
 
 ### `dep`
 
@@ -236,6 +256,7 @@ Show usage information. With no argument, lists all commands and global flags. W
 ```bash
 tick help                           # list all commands
 tick help create                    # detailed help for create
+tick help --all                     # full reference of all commands and flags
 tick create --help                  # same as tick help create
 tick -h                             # same as tick help
 ```
@@ -351,13 +372,13 @@ Standard 2-space indented JSON with snake_case keys.
 Tick stores data in a `.tick/` directory at your project root:
 
 - `tasks.jsonl` — append-only source of truth (one JSON object per line, human-editable, git-friendly)
-- `.store` — SQLite cache (auto-rebuilt when JSONL changes, do not commit)
+- `cache.db` — SQLite cache (auto-rebuilt when JSONL changes, do not commit)
 - `lock` — file lock for safe concurrent access
 
 Add to `.gitignore`:
 
 ```
-.tick/.store
+.tick/cache.db
 .tick/lock
 ```
 
