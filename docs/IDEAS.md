@@ -24,6 +24,12 @@ Timestamped text entries appended to a task. Not multi-user "comments" — just 
 ### Dependency Tree Visualization
 Render the dependency graph as a tree in the terminal. All the data already exists — this is purely a formatter addition. `tick dep tree <id>` or similar.
 
+### List Count/Limit
+`--count N` flag on `list`, `ready`, `blocked` to cap results. Primary use case: `tick ready --count 1` to get just the next actionable task. Simple, no architectural impact — just a LIMIT clause on the query.
+
+### Auto-Cascade Parent Status
+When a child task is started, automatically set its parent to `in_progress`, recursively up the ancestor chain. Currently parents just sit as `open` until manually started, even when children are actively being worked. Needs discussion — implications for explicit vs implicit status transitions, undo behavior, and whether this should apply to `done`/`cancel` cascading downward too.
+
 ## Considered / Future
 
 Ideas worth tracking but not building now:

@@ -1,10 +1,11 @@
 {
   "plugins": {
     "@leeovery/claude-technical-workflows": {
-      "version": "2.1.33",
+      "version": "2.1.37",
       "files": [
         "skills/begin-implementation",
         "skills/begin-planning",
+        "skills/begin-review",
         "skills/continue-feature",
         "skills/link-dependencies",
         "skills/migrate",
@@ -36,7 +37,7 @@
         "agents/planning-review-traceability.md",
         "agents/planning-task-author.md",
         "agents/planning-task-designer.md",
-        "agents/review-product-assessor.md",
+        "agents/review-findings-synthesizer.md",
         "agents/review-task-verifier.md",
         "hooks/workflows"
       ]
