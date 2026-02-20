@@ -12,7 +12,7 @@ author_gate_mode: gated
 finding_gate_mode: gated
 planning:
   phase: 1
-  task: ~
+  task: 1
 ---
 
 # Plan: Blocked Ancestor Ready
