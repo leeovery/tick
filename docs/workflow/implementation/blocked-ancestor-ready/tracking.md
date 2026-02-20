@@ -2,7 +2,7 @@
 topic: blocked-ancestor-ready
 plan: ../../planning/blocked-ancestor-ready/plan.md
 format: tick
-status: in-progress
+status: completed
 task_gate_mode: gated
 fix_gate_mode: gated
 fix_attempts: 0
@@ -28,7 +28,7 @@ completed_tasks:
   - blocked-ancestor-ready-2-1
 started: 2026-02-20
 updated: 2026-02-20
-completed: ~
+completed: 2026-02-20
 ---
 
 # Implementation: Blocked Ancestor Ready
