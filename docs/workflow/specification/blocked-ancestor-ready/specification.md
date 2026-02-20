@@ -3,7 +3,7 @@ topic: blocked-ancestor-ready
 status: in-progress
 type: feature
 date: 2026-02-20
-review_cycle: 0
+review_cycle: 1
 finding_gate_mode: gated
 sources:
   - name: blocked-ancestor-ready
