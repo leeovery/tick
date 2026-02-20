@@ -36,9 +36,9 @@ The subtasks pass all ready checks because they personally have no blockers — 
 
 ## Questions
 
-- [ ] What does "blocked ancestor" mean — dependency blockers only, or any blocked state?
-- [ ] How deep to check — immediate parent or full ancestor chain?
-- [ ] Implementation approach — recursive CTE shape?
+- [x] What does "blocked ancestor" mean — dependency blockers only, or any blocked state?
+- [x] How deep to check — immediate parent or full ancestor chain?
+- [x] Implementation approach — recursive CTE shape?
 
 ---
 
@@ -88,9 +88,9 @@ Should we check only the immediate parent, or walk the full ancestor chain?
 - Existing pattern in codebase: `queryDescendantIDs()` in `list.go` already uses recursive CTE
 - Slightly heavier query, but ancestor chains are typically shallow (2-4 levels)
 
-### Journey
-
 ### Decision
+
+**Option B — full ancestor chain.** Immediate-parent-only has a real gap with intermediate grouping tasks. The recursive CTE is already an established pattern in the codebase (`queryDescendantIDs`), and ancestor chains are shallow enough that performance is a non-issue.
 
 ---
 
@@ -100,19 +100,48 @@ Should we check only the immediate parent, or walk the full ancestor chain?
 
 How to add the ancestor-blocker check to the SQL query helpers.
 
-### Options Considered
-
-### Journey
-
 ### Decision
+
+New `ReadyNoBlockedAncestor()` helper in `query_helpers.go` using a recursive CTE inside NOT EXISTS:
+
+```sql
+NOT EXISTS (
+    WITH RECURSIVE ancestors(id) AS (
+        SELECT parent FROM tasks WHERE id = t.id AND parent IS NOT NULL
+        UNION ALL
+        SELECT t2.parent FROM tasks t2
+        JOIN ancestors a ON t2.id = a.id
+        WHERE t2.parent IS NOT NULL
+    )
+    SELECT 1 FROM ancestors a
+    JOIN dependencies d ON d.task_id = a.id
+    JOIN tasks blocker ON blocker.id = d.blocked_by
+    WHERE blocker.status NOT IN ('done', 'cancelled')
+)
+```
+
+- `ReadyConditions()` gains this as a 4th condition
+- `BlockedConditions()` gains the EXISTS inverse in its OR clause
+- Follows existing pattern: each concern is a separate helper, composed into conditions
+- `ReadyWhereClause()` and stats automatically pick up the change since they compose from `ReadyConditions()`
+
+**Edge case — closed ancestors in the chain:** Don't stop walking at closed ancestors. A closed parent with open children is an inconsistency that shouldn't occur in practice, and stopping early adds complexity for no benefit.
 
 ---
 
 ## Summary
 
 ### Key Insights
+1. Only dependency blockers propagate down the ancestor chain — "has open children" is structural, not a sequencing constraint
+2. Full ancestor chain traversal needed to avoid gaps with intermediate grouping tasks
+3. Recursive CTE is the right tool — established pattern in codebase, shallow chains make performance a non-issue
 
 ### Current State
-- Discussion in progress
+- All questions resolved
+- Clear implementation path identified
 
 ### Next Steps
+- [ ] Implement `ReadyNoBlockedAncestor()` helper
+- [ ] Add as 4th condition in `ReadyConditions()`
+- [ ] Add EXISTS inverse to `BlockedConditions()`
+- [ ] Tests: child of blocked parent, grandchild of blocked grandparent, intermediate grouping task
