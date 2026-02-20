@@ -1,6 +1,9 @@
 package cli
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestReadyConditions(t *testing.T) {
 	t.Run("it provides a non-empty no-unclosed-blockers condition", func(t *testing.T) {
@@ -17,10 +20,23 @@ func TestReadyConditions(t *testing.T) {
 		}
 	})
 
-	t.Run("ReadyConditions returns status open plus both NOT EXISTS conditions", func(t *testing.T) {
+	t.Run("it provides a non-empty no-blocked-ancestor condition", func(t *testing.T) {
+		cond := ReadyNoBlockedAncestor()
+		if cond == "" {
+			t.Error("ReadyNoBlockedAncestor() returned empty string")
+		}
+		if !strings.Contains(cond, "NOT EXISTS") {
+			t.Error("ReadyNoBlockedAncestor() should contain NOT EXISTS")
+		}
+		if !strings.Contains(cond, "WITH RECURSIVE") {
+			t.Error("ReadyNoBlockedAncestor() should contain WITH RECURSIVE")
+		}
+	})
+
+	t.Run("ReadyConditions returns status open plus all four conditions", func(t *testing.T) {
 		conditions := ReadyConditions()
-		if len(conditions) != 3 {
-			t.Fatalf("ReadyConditions() returned %d conditions, want 3", len(conditions))
+		if len(conditions) != 4 {
+			t.Fatalf("ReadyConditions() returned %d conditions, want 4", len(conditions))
 		}
 		if conditions[0] != `t.status = 'open'` {
 			t.Errorf("conditions[0] = %q, want %q", conditions[0], `t.status = 'open'`)
@@ -30,6 +46,9 @@ func TestReadyConditions(t *testing.T) {
 		}
 		if conditions[2] != ReadyNoOpenChildren() {
 			t.Errorf("conditions[2] does not match ReadyNoOpenChildren()")
+		}
+		if conditions[3] != ReadyNoBlockedAncestor() {
+			t.Errorf("conditions[3] does not match ReadyNoBlockedAncestor()")
 		}
 	})
 

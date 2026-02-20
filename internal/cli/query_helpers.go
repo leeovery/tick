@@ -25,13 +25,35 @@ func ReadyNoOpenChildren() string {
 			)`
 }
 
+// ReadyNoBlockedAncestor returns a SQL NOT EXISTS subquery with a recursive
+// CTE that walks the ancestor chain via parent pointers. It excludes tasks
+// where any ancestor has an unclosed dependency blocker.
+// Assumes the outer query aliases the tasks table as "t".
+func ReadyNoBlockedAncestor() string {
+	return `NOT EXISTS (
+				WITH RECURSIVE ancestors(id) AS (
+					SELECT parent FROM tasks WHERE id = t.id AND parent IS NOT NULL
+					UNION ALL
+					SELECT t2.parent FROM tasks t2
+					JOIN ancestors a ON t2.id = a.id
+					WHERE t2.parent IS NOT NULL
+				)
+				SELECT 1 FROM ancestors a
+				JOIN dependencies d ON d.task_id = a.id
+				JOIN tasks blocker ON blocker.id = d.blocked_by
+				WHERE blocker.status NOT IN ('done', 'cancelled')
+			)`
+}
+
 // ReadyConditions returns the complete set of SQL WHERE conditions that
-// define a "ready" task: open status, no unclosed blockers, no open children.
+// define a "ready" task: open status, no unclosed blockers, no open children,
+// no dependency-blocked ancestor.
 func ReadyConditions() []string {
 	return []string{
 		`t.status = 'open'`,
 		ReadyNoUnclosedBlockers(),
 		ReadyNoOpenChildren(),
+		ReadyNoBlockedAncestor(),
 	}
 }
 

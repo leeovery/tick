@@ -399,4 +399,120 @@ func TestReady(t *testing.T) {
 			t.Errorf("stdout = %q, want %q", stdout, expected)
 		}
 	})
+
+	t.Run("it excludes child of dependency-blocked parent from ready", func(t *testing.T) {
+		// Phase 1 (open) -- blocker
+		// Phase 2 (open, blocked_by: Phase 1)
+		//   └─ subtask-A (open) -- should NOT be ready
+		tasks := []task.Task{
+			{ID: "tick-phase1", Title: "Phase 1", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-phase2", Title: "Phase 2", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-phase1"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-sub00a", Title: "Subtask A", Status: task.StatusOpen, Priority: 2, Parent: "tick-phase2", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if strings.Contains(stdout, "tick-sub00a") {
+			t.Error("child of dependency-blocked parent should not appear in ready")
+		}
+		// Phase 1 should be ready (open, no blockers, no children)
+		if !strings.Contains(stdout, "tick-phase1") {
+			t.Error("phase 1 (open, no blockers, no children) should appear in ready")
+		}
+	})
+
+	t.Run("it excludes grandchild of dependency-blocked grandparent from ready", func(t *testing.T) {
+		// Blocker (open)
+		// Grandparent (open, blocked_by: Blocker)
+		//   └─ Parent (open, no own blockers)
+		//       └─ Grandchild (open) -- should NOT be ready
+		tasks := []task.Task{
+			{ID: "tick-blkr01", Title: "Blocker", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-gp0001", Title: "Grandparent", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-blkr01"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-par001", Title: "Parent", Status: task.StatusOpen, Priority: 2, Parent: "tick-gp0001", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-gc0001", Title: "Grandchild", Status: task.StatusOpen, Priority: 2, Parent: "tick-par001", Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if strings.Contains(stdout, "tick-gc0001") {
+			t.Error("grandchild of dependency-blocked grandparent should not appear in ready")
+		}
+		if strings.Contains(stdout, "tick-par001") {
+			t.Error("parent under dependency-blocked grandparent should not appear in ready")
+		}
+	})
+
+	t.Run("it excludes descendant behind intermediate grouping task under blocked ancestor", func(t *testing.T) {
+		// Phase 1 (open)
+		// Phase 2 (open, blocked_by: Phase 1)
+		//   └─ Group A (open, no own blockers)
+		//       └─ subtask-X (open) -- should NOT be ready
+		tasks := []task.Task{
+			{ID: "tick-phase1", Title: "Phase 1", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-phase2", Title: "Phase 2", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-phase1"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-grp00a", Title: "Group A", Status: task.StatusOpen, Priority: 2, Parent: "tick-phase2", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-sub00x", Title: "Subtask X", Status: task.StatusOpen, Priority: 2, Parent: "tick-grp00a", Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if strings.Contains(stdout, "tick-sub00x") {
+			t.Error("subtask behind intermediate grouping task under blocked ancestor should not appear in ready")
+		}
+		if strings.Contains(stdout, "tick-grp00a") {
+			t.Error("grouping task under blocked ancestor should not appear in ready")
+		}
+	})
+
+	t.Run("it includes descendant when ancestor blocker is resolved", func(t *testing.T) {
+		// Phase 1 (done) -- blocker is resolved
+		// Phase 2 (open, blocked_by: Phase 1) -- blocker is done, so Phase 2 is unblocked
+		//   └─ subtask-A (open) -- should be ready (ancestor unblocked)
+		closedTime := now.Add(time.Hour)
+		tasks := []task.Task{
+			{ID: "tick-phase1", Title: "Phase 1", Status: task.StatusDone, Priority: 2, Created: now, Updated: now, Closed: &closedTime},
+			{ID: "tick-phase2", Title: "Phase 2", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-phase1"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-sub00a", Title: "Subtask A", Status: task.StatusOpen, Priority: 2, Parent: "tick-phase2", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "tick-sub00a") {
+			t.Error("descendant should be ready when ancestor blocker is resolved")
+		}
+	})
+
+	t.Run("it does not affect root task with no parent", func(t *testing.T) {
+		// Root task (open, no parent, no blockers, no children) -- should be ready
+		tasks := []task.Task{
+			{ID: "tick-root01", Title: "Root task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "tick-root01") {
+			t.Error("root task with no parent should appear in ready")
+		}
+	})
 }
