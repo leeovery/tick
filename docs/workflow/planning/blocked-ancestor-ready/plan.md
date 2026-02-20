@@ -2,24 +2,25 @@
 topic: blocked-ancestor-ready
 status: planning
 format: tick
+ext_id: tick-e679e0
 specification: ../specification/blocked-ancestor-ready/specification.md
 spec_commit: e5c5d2995477fa95787af0a959e7162d1bb39cc3
 created: 2026-02-20
 updated: 2026-02-20
 external_dependencies: []
 task_list_gate_mode: gated
-author_gate_mode: gated
+author_gate_mode: auto
 finding_gate_mode: gated
 planning:
-  phase: 1
-  task: 1
+  phase: ~
+  task: ~
 ---
 
 # Plan: Blocked Ancestor Ready
 
 ### Phase 1: Blocked Ancestor Ready Check
 status: approved
-ext_id:
+ext_id: tick-3cf896
 approved_at: 2026-02-20
 
 **Goal**: Tasks with dependency-blocked ancestors are excluded from ready results and included in blocked results across all code paths (list --ready, list --blocked, tick ready, stats).
@@ -40,5 +41,5 @@ approved_at: 2026-02-20
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| blocked-ancestor-ready-1-1 | Add ReadyNoBlockedAncestor helper and integrate into ReadyConditions | grandchild of blocked grandparent, intermediate grouping task, root task unaffected, ancestor blocker resolved | pending | |
-| blocked-ancestor-ready-1-2 | Add blocked-ancestor EXISTS condition to BlockedConditions | grandchild appears in blocked, blocker resolution removes from blocked, stats count consistency | pending | |
+| blocked-ancestor-ready-1-1 | Add ReadyNoBlockedAncestor helper and integrate into ReadyConditions | grandchild of blocked grandparent, intermediate grouping task, root task unaffected, ancestor blocker resolved | authored | tick-fb9d84 |
+| blocked-ancestor-ready-1-2 | Add blocked-ancestor EXISTS condition to BlockedConditions | grandchild appears in blocked, blocker resolution removes from blocked, stats count consistency | authored | tick-52f1cf |
