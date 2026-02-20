@@ -13,7 +13,7 @@ linters:
     command: gofmt -l ./internal ./cmd
   - name: golangci-lint
     command: golangci-lint run ./...
-analysis_cycle: 0
+analysis_cycle: 1
 project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro/SKILL.md
