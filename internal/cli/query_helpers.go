@@ -58,8 +58,9 @@ func ReadyConditions() []string {
 }
 
 // BlockedConditions returns the SQL WHERE conditions that define a "blocked"
-// task: open status AND (has unclosed blockers OR has open children).
-// This is the De Morgan inverse of the ready NOT EXISTS conditions.
+// task: open status AND (has unclosed blockers OR has open children OR has
+// dependency-blocked ancestor). This is the De Morgan inverse of the ready
+// NOT EXISTS conditions.
 func BlockedConditions() []string {
 	return []string{
 		`t.status = 'open'`,
@@ -74,6 +75,19 @@ func BlockedConditions() []string {
 					SELECT 1 FROM tasks child
 					WHERE child.parent = t.id
 					  AND child.status IN ('open', 'in_progress')
+				)
+				OR EXISTS (
+					WITH RECURSIVE ancestors(id) AS (
+						SELECT parent FROM tasks WHERE id = t.id AND parent IS NOT NULL
+						UNION ALL
+						SELECT t2.parent FROM tasks t2
+						JOIN ancestors a ON t2.id = a.id
+						WHERE t2.parent IS NOT NULL
+					)
+					SELECT 1 FROM ancestors a
+					JOIN dependencies d ON d.task_id = a.id
+					JOIN tasks blocker ON blocker.id = d.blocked_by
+					WHERE blocker.status NOT IN ('done', 'cancelled')
 				)
 			)`,
 	}

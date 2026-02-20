@@ -66,6 +66,16 @@ func TestReadyConditions(t *testing.T) {
 		}
 	})
 
+	t.Run("BlockedConditions includes ancestor blocker in OR clause", func(t *testing.T) {
+		conditions := BlockedConditions()
+		if len(conditions) != 2 {
+			t.Fatalf("BlockedConditions() returned %d conditions, want 2", len(conditions))
+		}
+		if !strings.Contains(conditions[1], "ancestors") {
+			t.Error("conditions[1] should contain 'ancestors' for the ancestor blocker CTE")
+		}
+	})
+
 	t.Run("ReadyWhereClause returns composable SQL WHERE fragment", func(t *testing.T) {
 		clause := ReadyWhereClause()
 		if clause == "" {

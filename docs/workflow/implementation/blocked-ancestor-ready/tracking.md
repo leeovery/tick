@@ -18,10 +18,12 @@ project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro/SKILL.md
 current_phase: 1
-current_task: blocked-ancestor-ready-1-2
-completed_phases: []
+current_task: ~
+completed_phases:
+  - 1
 completed_tasks:
   - blocked-ancestor-ready-1-1
+  - blocked-ancestor-ready-1-2
 started: 2026-02-20
 updated: 2026-02-20
 completed: ~

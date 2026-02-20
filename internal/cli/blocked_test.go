@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -304,6 +305,148 @@ func TestBlocked(t *testing.T) {
 		expected := "tick-aaa111\ntick-bbb222\n"
 		if stdout != expected {
 			t.Errorf("stdout = %q, want %q", stdout, expected)
+		}
+	})
+
+	t.Run("it returns child of dependency-blocked parent in blocked", func(t *testing.T) {
+		// Phase 1 (open) -- blocker
+		// Phase 2 (open, blocked_by: Phase 1)
+		//   └─ subtask-A (open) -- should be blocked due to ancestor
+		tasks := []task.Task{
+			{ID: "tick-phase1", Title: "Phase 1", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-phase2", Title: "Phase 2", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-phase1"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-sub00a", Title: "Subtask A", Status: task.StatusOpen, Priority: 2, Parent: "tick-phase2", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runBlocked(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "tick-sub00a") {
+			t.Error("child of dependency-blocked parent should appear in blocked")
+		}
+	})
+
+	t.Run("it returns grandchild of dependency-blocked grandparent in blocked", func(t *testing.T) {
+		// Blocker (open)
+		// Grandparent (open, blocked_by: Blocker)
+		//   └─ Parent (open, no own blockers)
+		//       └─ Grandchild (open) -- should be blocked
+		tasks := []task.Task{
+			{ID: "tick-blkr01", Title: "Blocker", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-gp0001", Title: "Grandparent", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-blkr01"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-par001", Title: "Parent", Status: task.StatusOpen, Priority: 2, Parent: "tick-gp0001", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-gc0001", Title: "Grandchild", Status: task.StatusOpen, Priority: 2, Parent: "tick-par001", Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runBlocked(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "tick-gc0001") {
+			t.Error("grandchild of dependency-blocked grandparent should appear in blocked")
+		}
+	})
+
+	t.Run("it returns descendant behind intermediate grouping task under blocked ancestor in blocked", func(t *testing.T) {
+		// Phase 1 (open)
+		// Phase 2 (open, blocked_by: Phase 1)
+		//   └─ Group A (open, no own blockers)
+		//       └─ subtask-X (open) -- should be blocked
+		tasks := []task.Task{
+			{ID: "tick-phase1", Title: "Phase 1", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-phase2", Title: "Phase 2", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-phase1"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-grp00a", Title: "Group A", Status: task.StatusOpen, Priority: 2, Parent: "tick-phase2", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-sub00x", Title: "Subtask X", Status: task.StatusOpen, Priority: 2, Parent: "tick-grp00a", Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runBlocked(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "tick-sub00x") {
+			t.Error("subtask behind intermediate grouping task under blocked ancestor should appear in blocked")
+		}
+	})
+
+	t.Run("it excludes descendant from blocked when ancestor blocker resolved", func(t *testing.T) {
+		// Phase 1 (done) -- blocker is resolved
+		// Phase 2 (open, blocked_by: Phase 1) -- blocker is done, so Phase 2 is unblocked
+		//   └─ subtask-A (open) -- should NOT be blocked (ancestor unblocked)
+		closedTime := now.Add(time.Hour)
+		tasks := []task.Task{
+			{ID: "tick-phase1", Title: "Phase 1", Status: task.StatusDone, Priority: 2, Created: now, Updated: now, Closed: &closedTime},
+			{ID: "tick-phase2", Title: "Phase 2", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-phase1"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-sub00a", Title: "Subtask A", Status: task.StatusOpen, Priority: 2, Parent: "tick-phase2", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runBlocked(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if strings.Contains(stdout, "tick-sub00a") {
+			t.Error("descendant should not appear in blocked when ancestor blocker is resolved")
+		}
+	})
+
+	t.Run("it maintains stats count consistency with blocked ancestors", func(t *testing.T) {
+		// Mixed scenario with ancestor-blocked tasks:
+		// Phase 1 (open) -- blocker, should be ready
+		// Phase 2 (open, blocked_by: Phase 1) -- blocked (own dep)
+		//   └─ subtask-A (open) -- blocked (ancestor)
+		// Independent (open) -- ready
+		tasks := []task.Task{
+			{ID: "tick-phase1", Title: "Phase 1", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-phase2", Title: "Phase 2", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-phase1"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-sub00a", Title: "Subtask A", Status: task.StatusOpen, Priority: 2, Parent: "tick-phase2", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-indep1", Title: "Independent", Status: task.StatusOpen, Priority: 2, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		// Count ready tasks from list --ready
+		readyStdout, _, exitCode := runReady(t, dir, "--quiet")
+		if exitCode != 0 {
+			t.Fatalf("ready exit code = %d, want 0", exitCode)
+		}
+		readyIDs := strings.Split(strings.TrimRight(readyStdout, "\n"), "\n")
+		readyCount := len(readyIDs)
+		if readyIDs[0] == "" {
+			readyCount = 0
+		}
+
+		// Get stats
+		statsStdout, _, exitCode := runStats(t, dir, "--json")
+		if exitCode != 0 {
+			t.Fatalf("stats exit code = %d, want 0", exitCode)
+		}
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(strings.TrimSpace(statsStdout)), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nstdout: %s", err, statsStdout)
+		}
+
+		workflow := parsed["workflow"].(map[string]interface{})
+		statsReady := int(workflow["ready"].(float64))
+		statsBlocked := int(workflow["blocked"].(float64))
+
+		if statsReady != readyCount {
+			t.Errorf("stats ready = %d, list --ready count = %d; should match", statsReady, readyCount)
+		}
+
+		// Verify ready + blocked = open count
+		byStatus := parsed["by_status"].(map[string]interface{})
+		openCount := int(byStatus["open"].(float64))
+		if statsReady+statsBlocked != openCount {
+			t.Errorf("ready(%d) + blocked(%d) = %d, but open = %d; should match",
+				statsReady, statsBlocked, statsReady+statsBlocked, openCount)
 		}
 	})
 
