@@ -1,6 +1,6 @@
 ---
 topic: blocked-ancestor-ready
-status: in-progress
+status: concluded
 date: 2026-02-20
 ---
 
