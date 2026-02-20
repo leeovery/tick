@@ -36,3 +36,9 @@ approved_at: 2026-02-20
 - [ ] When the ancestor's blocker is resolved (done/cancelled), descendants become ready again
 - [ ] Root tasks with no parent remain unaffected by the ancestor check
 - [ ] Stats ready count matches `list --ready` output for mixed scenarios with blocked ancestors
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| blocked-ancestor-ready-1-1 | Add ReadyNoBlockedAncestor helper and integrate into ReadyConditions | grandchild of blocked grandparent, intermediate grouping task, root task unaffected, ancestor blocker resolved | pending | |
+| blocked-ancestor-ready-1-2 | Add blocked-ancestor EXISTS condition to BlockedConditions | grandchild appears in blocked, blocker resolution removes from blocked, stats count consistency | pending | |
