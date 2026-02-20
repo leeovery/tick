@@ -69,3 +69,48 @@ Phase 2 (open, blocked_by: Phase 1)
 With immediate-parent-only, subtask-X checks Group A (not blocked), so subtask-X incorrectly appears ready despite Phase 2 being dependency-blocked.
 
 **Why full chain is safe:** Recursive CTE is an established pattern in the codebase (`queryDescendantIDs()` in `list.go`). Ancestor chains are typically shallow (2-4 levels), so performance is a non-issue.
+
+## Implementation
+
+### New Helper: `ReadyNoBlockedAncestor()`
+
+Add a new helper function in `internal/cli/query_helpers.go` that returns a NOT EXISTS subquery using a recursive CTE to walk the ancestor chain:
+
+```sql
+NOT EXISTS (
+    WITH RECURSIVE ancestors(id) AS (
+        SELECT parent FROM tasks WHERE id = t.id AND parent IS NOT NULL
+        UNION ALL
+        SELECT t2.parent FROM tasks t2
+        JOIN ancestors a ON t2.id = a.id
+        WHERE t2.parent IS NOT NULL
+    )
+    SELECT 1 FROM ancestors a
+    JOIN dependencies d ON d.task_id = a.id
+    JOIN tasks blocker ON blocker.id = d.blocked_by
+    WHERE blocker.status NOT IN ('done', 'cancelled')
+)
+```
+
+The CTE collects all ancestor IDs by walking `parent` pointers up to the root. The outer query then checks whether any ancestor has an unclosed dependency blocker.
+
+### Integration Points
+
+**`ReadyConditions()`** — Add `ReadyNoBlockedAncestor()` as the 4th condition. All consumers (`list --ready`, `tick ready`, stats) automatically pick up the change since they compose from `ReadyConditions()`.
+
+**`BlockedConditions()`** — Add the EXISTS inverse to the OR clause:
+```sql
+OR EXISTS (
+    WITH RECURSIVE ancestors(id) AS ( ... )
+    SELECT 1 FROM ancestors a
+    JOIN dependencies d ON d.task_id = a.id
+    JOIN tasks blocker ON blocker.id = d.blocked_by
+    WHERE blocker.status NOT IN ('done', 'cancelled')
+)
+```
+
+This follows the existing pattern: each concern is a separate helper, composed into conditions.
+
+### Edge Case: Closed Ancestors in the Chain
+
+Don't stop walking at closed/cancelled ancestors. A closed parent with open children is an inconsistency that shouldn't occur in practice, and stopping early adds complexity for no benefit. The CTE walks unconditionally to the root.
