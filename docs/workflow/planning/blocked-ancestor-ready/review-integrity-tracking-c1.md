@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-20
 cycle: 1
 phase: Plan Integrity Review
@@ -40,8 +40,8 @@ Outcome: ReadyConditions() includes ancestor-chain dependency checking so that n
 Do:
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied automatically (auto mode).
 
 ---
 
@@ -75,5 +75,5 @@ Outcome: BlockedConditions() includes ancestor-blocker detection so that descend
 Do:
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied automatically (auto mode).
