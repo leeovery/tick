@@ -55,6 +55,7 @@ release                   → release script with AI-generated notes via Claude 
 
 ## Release & Distribution
 
+- Version injected at build time via ldflags (`-X github.com/leeovery/tick/internal/cli.Version={{.Version}}`); defaults to `"dev"`
 - goreleaser builds static binaries (CGO_ENABLED=0) for darwin/linux × amd64/arm64
 - Archives named `tick_{version}_{os}_{arch}.tar.gz`
 - macOS install: `brew install leeovery/tools/tick` (formula lives in separate `homebrew-tools` repo, updated via GitHub Actions `repository_dispatch`)

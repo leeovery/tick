@@ -15,7 +15,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w
+      - -s -w -X github.com/leeovery/tick/internal/cli.Version={{.Version}}
 
 archives:
   - id: tick

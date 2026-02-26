@@ -249,6 +249,14 @@ Force a full SQLite cache rebuild from the JSONL source file, bypassing the fres
 tick rebuild
 ```
 
+### `version`
+
+Print the tick version and exit.
+
+```bash
+tick version
+```
+
 ### `help`
 
 Show usage information. With no argument, lists all commands and global flags. With a command name, shows detailed help including flags.

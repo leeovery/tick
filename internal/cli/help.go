@@ -182,6 +182,12 @@ var commands = []commandInfo{
 		},
 	},
 	{
+		Name:        "version",
+		Summary:     "Show tick version",
+		Usage:       "tick version",
+		Description: "Prints the tick version and exits.",
+	},
+	{
 		Name:        "help",
 		Summary:     "Show help for a command",
 		Usage:       "tick help [<command>]",

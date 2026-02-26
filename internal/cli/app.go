@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+// Version is set at build time via ldflags:
+//
+//	go build -ldflags "-X github.com/leeovery/tick/internal/cli.Version=1.2.3"
+var Version = "dev"
+
 // App is the top-level CLI application, testable via injected writers and working directory.
 type App struct {
 	Stdout io.Writer
@@ -26,6 +31,12 @@ func (a *App) Run(args []string) int {
 
 	if subcmd == "" {
 		printTopLevelHelp(a.Stdout)
+		return 0
+	}
+
+	// Version bypasses format/formatter machinery — always plain text.
+	if subcmd == "version" {
+		fmt.Fprintf(a.Stdout, "tick version %s\n", Version)
 		return 0
 	}
 
