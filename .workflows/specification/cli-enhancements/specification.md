@@ -59,6 +59,37 @@ A string field on Task classifying the kind of work.
 - List output: shown as a column — ID, Status, Priority, Type, Title. Dash (`-`) when not set.
 - Show output: displayed with other fields
 
+### Tags
+
+A `[]string` field on Task for user-defined labels.
+
+**Validation:**
+- Strict kebab-case: `[a-z0-9]+(-[a-z0-9]+)*`
+- No spaces, no commas, no leading/trailing hyphens, no double hyphens
+- Input trimmed and lowercased (normalize, don't error on case)
+- Max 30 chars per tag
+- Max 10 tags per task (validated after deduplication)
+- Silently deduplicate on input (e.g. `--tags ui,backend,ui` stores `[ui, backend]`)
+
+**CLI flags:**
+- `--tags <comma-separated>` on `create` and `update` — sets or replaces all tags
+- `--clear-tags` on `update` — explicitly removes all tags
+- `--tags` and `--clear-tags` are mutually exclusive
+- Empty value on `--tags` errors (protective against accidental erasure)
+
+**Filtering:**
+- `--tag <comma-separated>` on `list`, `ready`, `blocked` — comma-separated values are AND (task must have all listed tags)
+- Multiple `--tag` flags are OR (task matches any group)
+- Composable: `--tag ui,backend --tag api` means "(ui AND backend) OR api"
+
+**Storage:**
+- JSONL: JSON array with `omitempty` (empty slices omitted entirely)
+- SQLite: junction table `task_tags(task_id, tag)` — follows the established `blocked_by` → `dependencies` pattern. Populated during `Cache.Rebuild()`.
+
+**Display:**
+- List output: not shown (variable-length, would clutter the table)
+- Show output: displayed with other fields
+
 ---
 
 ## Working Notes
