@@ -136,6 +136,7 @@ Timestamped text entries appended to a task — a log of context, decisions, pro
 **Validation:**
 - Empty note text: error
 - Max length: 500 chars
+- Note remove index must be >= 1 and <= number of existing notes; out-of-bounds errors
 
 **Storage:**
 - JSONL: JSON array with `omitempty`

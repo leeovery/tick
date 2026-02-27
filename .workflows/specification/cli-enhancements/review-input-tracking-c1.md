@@ -37,8 +37,9 @@ Add to the Resolution rules list: `- Case-insensitive: input normalized to lower
 The spec says `tick note remove <id> <index>` removes by 1-based position but doesn't specify behavior for out-of-bounds indices (e.g., index 5 when only 3 notes exist, index 0, negative values).
 
 **Proposed Addition**:
+Add to the Notes Validation section: `- Note remove index must be >= 1 and <= number of existing notes; out-of-bounds errors`
 
-**Resolution**: Pending
+**Resolution**: Approved
 **Notes**:
 
 ---
