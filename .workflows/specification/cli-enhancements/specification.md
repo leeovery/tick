@@ -7,7 +7,7 @@ review_cycle: 0
 finding_gate_mode: gated
 sources:
   - name: cli-enhancements
-    status: pending
+    status: incorporated
 ---
 
 # Specification: CLI Enhancements
@@ -148,6 +148,17 @@ Timestamped text entries appended to a task — a log of context, decisions, pro
     2026-02-27 10:00  Started investigating the auth flow
     2026-02-27 14:30  Root cause found — token refresh race condition
   ```
+
+### List Count/Limit
+
+A `--count N` flag to cap the number of results returned.
+
+**Behaviour:**
+- Translates to a SQL `LIMIT` clause
+- Must be >= 1; zero or negative values error
+
+**CLI flags:**
+- `--count N` on `list`, `ready`, `blocked`
 
 ---
 
