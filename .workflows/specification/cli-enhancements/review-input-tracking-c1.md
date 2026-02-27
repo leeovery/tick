@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-27
 cycle: 1
 phase: Input Review
@@ -54,6 +54,8 @@ Add to the Notes Validation section: `- Note remove index must be >= 1 and <= nu
 The spec specifies input normalization (trim, lowercase) for create/update but doesn't state whether filter flags (`--tag`, `--type` on list commands) also normalize input before matching. Without normalization, `--tag UI` wouldn't match stored `ui`.
 
 **Proposed Addition**:
+Add to Tags Filtering section: `- Filter input normalized (trimmed, lowercased) before matching`
+Add to Task Types Filtering section: `- Filter input normalized (trimmed, lowercased) before matching`
 
-**Resolution**: Pending
+**Resolution**: Approved
 **Notes**:

@@ -51,6 +51,7 @@ A string field on Task classifying the kind of work.
 **Filtering:**
 - `--type <value>` on `list`, `ready`, `blocked` — single value filter only
 - No comma-separated, no multiple flags (keeps comma semantics consistent with tags where comma = AND; AND is meaningless for a single-value field)
+- Filter input normalized (trimmed, lowercased) before matching
 
 **Storage:**
 - JSONL: string field with `omitempty`
@@ -82,6 +83,7 @@ A `[]string` field on Task for user-defined labels.
 - `--tag <comma-separated>` on `list`, `ready`, `blocked` — comma-separated values are AND (task must have all listed tags)
 - Multiple `--tag` flags are OR (task matches any group)
 - Composable: `--tag ui,backend --tag api` means "(ui AND backend) OR api"
+- Filter input normalized (trimmed, lowercased) before matching
 
 **Storage:**
 - JSONL: JSON array with `omitempty` (empty slices omitted entirely)
