@@ -29,7 +29,7 @@ Six feature additions bundled as one feature, all from the IDEAS.md planned list
 - [x] How should Notes work as a subcommand — add/list/show?
 - [x] Should tags and type be settable at creation only, or also via update?
 - [x] How should filtering work for tags and type on list commands?
-- [ ] What validation rules apply to task types and tags?
+- [x] What validation rules apply to task types and tags?
 
 ---
 
@@ -188,5 +188,34 @@ Confirmed all filters (`--tag`, `--type`, `--count`) apply to `list`, `ready`, a
 **Count:**
 - `--count N` → LIMIT on results
 - Available on `list`, `ready`, `blocked`
+
+---
+
+## What validation rules apply to task types and tags?
+
+### Context
+New fields need validation rules. Types are a closed set, tags are user-defined, refs are freeform references to external systems.
+
+### Decision
+
+**Types:**
+- Closed set: `bug`, `feature`, `task`, `chore`
+- Anything else errors
+- Case-insensitive input, trimmed, stored lowercase
+- Validated on create and update
+
+**Tags:**
+- Strict kebab-case: `[a-z0-9]+(-[a-z0-9]+)*`
+- No spaces, no commas, no leading/trailing hyphens, no double hyphens
+- Input trimmed and lowercased (normalize, don't error on case)
+- Max 30 chars per tag
+- Max 10 tags per task
+- Validated on create and update
+
+**Refs:**
+- Minimal validation: non-empty, no commas (comma-separated input)
+- Max 200 chars per ref
+- No format validation — accept any ticket format, URL, or identifier
+- Validated on create and update
 
 ---
