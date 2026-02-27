@@ -28,7 +28,7 @@ Six feature additions bundled as one feature, all from the IDEAS.md planned list
 - [x] What's the right UX for partial ID matching — where does resolution happen?
 - [x] How should Notes work as a subcommand — add/list/show?
 - [x] Should tags and type be settable at creation only, or also via update?
-- [ ] How should filtering work for tags and type on list commands?
+- [x] How should filtering work for tags and type on list commands?
 - [ ] What validation rules apply to task types and tags?
 
 ---
@@ -157,5 +157,36 @@ Straightforward that both create and update should support all three fields (tag
 - Empty value on any of them: error (protective against accidental erasure)
 - `--clear-tags`, `--clear-refs`, `--clear-type`: explicit clearing flags
 - Mutually exclusive: `--tags` and `--clear-tags` can't be used together (same as `--description` / `--clear-description`)
+
+---
+
+## How should filtering work for tags and type on list commands?
+
+### Context
+Tags and type need filtering on list-style commands. Tags are multi-value (a task can have many), type is single-value. Need to decide filter semantics and which commands support them.
+
+### Journey
+Started with simple `--tag` filter. Explored AND vs OR semantics — considered using pipe (`|`) for OR but rejected due to shell metacharacter quoting issues. Settled on comma-separated = AND, multiple flags = OR. This reads naturally: `--tag ui,backend` is a single grouped condition ("both of these"), `--tag ui --tag backend` is two separate filters ("this or that"). Composable: `--tag ui,backend --tag api` means "(ui AND backend) OR api".
+
+For type, initially considered comma-separated OR and multiple `--type` flags. But comma = AND for tags and comma = OR for type would be inconsistent syntax with different semantics. Since AND is meaningless for a single-value field, the cleanest answer is: type supports single value filter only. No comma-separated, no multiple flags.
+
+Confirmed all filters (`--tag`, `--type`, `--count`) apply to `list`, `ready`, and `blocked` — they're all just additional WHERE clauses.
+
+### Decision
+
+**Tags:**
+- `--tag ui,backend` → AND (task has both tags)
+- `--tag ui --tag backend` → OR (task has either tag)
+- Composable: `--tag ui,backend --tag api` → "(ui AND backend) OR api"
+- Available on `list`, `ready`, `blocked`
+
+**Type:**
+- `--type bug` → single value filter only
+- No comma-separated, no multiple flags — keeps comma semantics consistent (always AND) and AND is meaningless for single-value field
+- Available on `list`, `ready`, `blocked`
+
+**Count:**
+- `--count N` → LIMIT on results
+- Available on `list`, `ready`, `blocked`
 
 ---
