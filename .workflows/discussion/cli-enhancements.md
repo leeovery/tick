@@ -1,6 +1,6 @@
 ---
 topic: cli-enhancements
-status: in-progress
+status: concluded
 work_type: feature
 date: 2026-02-27
 ---
@@ -293,3 +293,21 @@ New fields need validation rules. Types are a closed set, tags are user-defined,
 - Validated after deduplication
 
 ---
+
+## Summary
+
+### Key Insights
+1. Junction tables for slice fields (tags, refs) follow the established blocked_by → dependencies pattern — JSONL stays flat, SQLite gets relational structure
+2. Comma-separated = AND, multiple flags = OR provides intuitive composable tag filtering without shell metacharacter issues
+3. Protective clearing pattern (explicit `--clear-*` flags, empty values error) prevents accidental data loss, especially in agent workflows
+4. Partial ID resolution belongs in the storage layer, centralized, used everywhere an ID is accepted
+
+### Current State
+- All 12 questions resolved
+- Six features fully designed: list count/limit, partial ID matching, task types, external references, tags, notes
+- No open uncertainties
+
+### Next Steps
+- [ ] Specification
+- [ ] Planning
+- [ ] Implementation
