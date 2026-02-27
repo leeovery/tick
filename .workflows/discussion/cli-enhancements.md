@@ -27,7 +27,7 @@ Six feature additions bundled as one feature, all from the IDEAS.md planned list
 - [x] How should new fields (tags, type, refs) be stored in JSONL and cached in SQLite?
 - [x] What's the right UX for partial ID matching — where does resolution happen?
 - [x] How should Notes work as a subcommand — add/list/show?
-- [ ] Should tags and type be settable at creation only, or also via update?
+- [x] Should tags and type be settable at creation only, or also via update?
 - [ ] How should filtering work for tags and type on list commands?
 - [ ] What validation rules apply to task types and tags?
 
@@ -137,5 +137,25 @@ Notes:
   2026-02-27 10:00  Started investigating the auth flow
   2026-02-27 14:30  Root cause found — token refresh race condition
 ```
+
+---
+
+## Should tags and type be settable at creation only, or also via update?
+
+### Context
+Need to decide lifecycle of new fields — create-only or mutable via update? And if mutable, how to handle clearing.
+
+### Journey
+Straightforward that both create and update should support all three fields (tags, type, refs). The interesting question was clearing. The `--clear-description` pattern already exists — it was added specifically because empty `--description ""` was erroring, and agents were accidentally erasing descriptions. Same protective philosophy applies here: empty values on `--tags`/`--refs`/`--type` should error, clearing requires an explicit flag.
+
+### Decision
+
+**All fields settable on both create and update. Replace semantics.**
+
+- `--tags`, `--refs`, `--type` on create: set initial values
+- `--tags`, `--refs`, `--type` on update: replace entire value
+- Empty value on any of them: error (protective against accidental erasure)
+- `--clear-tags`, `--clear-refs`, `--clear-type`: explicit clearing flags
+- Mutually exclusive: `--tags` and `--clear-tags` can't be used together (same as `--description` / `--clear-description`)
 
 ---
