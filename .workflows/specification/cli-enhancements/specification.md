@@ -90,6 +90,35 @@ A `[]string` field on Task for user-defined labels.
 - List output: not shown (variable-length, would clutter the table)
 - Show output: displayed with other fields
 
+### External References
+
+A `[]string` field on Task for cross-system links (`gh-123`, `JIRA-456`, URLs).
+
+**Validation:**
+- Non-empty, no commas, no whitespace (contiguous strings only)
+- Input trimmed before validation
+- Max 200 chars per ref
+- Max 10 refs per task (validated after deduplication)
+- No format validation — accept any ticket format, URL, or identifier
+- Silently deduplicate on input
+
+**CLI flags:**
+- `--refs <comma-separated>` on `create` and `update` — sets or replaces all refs
+- `--clear-refs` on `update` — explicitly removes all refs
+- `--refs` and `--clear-refs` are mutually exclusive
+- Empty value on `--refs` errors (protective against accidental erasure)
+
+**Filtering:**
+- Not filterable on `list`, `ready`, `blocked`. Refs are a "look up" thing — visible on `show`, followed as links. Add later if demand emerges.
+
+**Storage:**
+- JSONL: JSON array with `omitempty` (empty slices omitted entirely)
+- SQLite: junction table `task_refs(task_id, ref)` — follows the same pattern as tags and dependencies. Populated during `Cache.Rebuild()`.
+
+**Display:**
+- List output: not shown
+- Show output: displayed with other fields
+
 ---
 
 ## Working Notes
