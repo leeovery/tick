@@ -119,6 +119,36 @@ A `[]string` field on Task for cross-system links (`gh-123`, `JIRA-456`, URLs).
 - List output: not shown
 - Show output: displayed with other fields
 
+### Notes
+
+Timestamped text entries appended to a task — a log of context, decisions, progress.
+
+**Data model:**
+- Task struct gets `Notes []Note` where `Note` is `{Text string, Created time.Time}`
+- Adding or removing a note updates the task's `Updated` timestamp
+
+**Subcommands:**
+- `tick note add <id> <text>` — append a timestamped note. Text is multi-word from remaining args after ID.
+- `tick note remove <id> <index>` — remove by 1-based position
+- No `tick note list` — view notes via `tick show`. Can add later if needed.
+
+**Validation:**
+- Empty note text: error
+- Max length: 500 chars
+
+**Storage:**
+- JSONL: JSON array with `omitempty`
+- SQLite: `task_notes(task_id, text, created)` table
+
+**Display (in `tick show`):**
+- Notes shown chronologically (most recent last)
+- Format:
+  ```
+  Notes:
+    2026-02-27 10:00  Started investigating the auth flow
+    2026-02-27 14:30  Root cause found — token refresh race condition
+  ```
+
 ---
 
 ## Working Notes
