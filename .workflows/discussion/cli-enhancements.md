@@ -30,6 +30,12 @@ Six feature additions bundled as one feature, all from the IDEAS.md planned list
 - [x] Should tags and type be settable at creation only, or also via update?
 - [x] How should filtering work for tags and type on list commands?
 - [x] What validation rules apply to task types and tags?
+- [x] Should partial ID matching apply to reference flags (--parent, --blocked-by, --blocks)?
+- [x] Should refs be filterable on list commands?
+- [x] What new fields show in list output vs show output?
+- [x] Does adding/removing a note update the task's Updated timestamp?
+- [x] What are the note text constraints?
+- [x] What are the edge case rules for --count, dedup, partial ID min length, and ref limits?
 
 ---
 
@@ -217,5 +223,73 @@ New fields need validation rules. Types are a closed set, tags are user-defined,
 - Max 200 chars per ref
 - No format validation — accept any ticket format, URL, or identifier
 - Validated on create and update
+
+---
+
+## Should partial ID matching apply to reference flags (--parent, --blocked-by, --blocks)?
+
+### Decision
+
+**Yes — everywhere an ID is accepted.** Partial matching applies to `--parent`, `--blocked-by`, `--blocks`, and any other flag that takes a task ID. The resolution function is centralized in the storage layer, so all ID inputs go through it. Users will expect consistent behaviour across all ID inputs.
+
+---
+
+## Should refs be filterable on list commands?
+
+### Decision
+
+**No, not initially.** Refs are a "look up" thing — visible on `show`, followed as links. Filtering by ref is a niche search use case. Keep it simple: refs are set on create/update, displayed on show, no filtering on list/ready/blocked. Add later if demand emerges.
+
+---
+
+## What new fields show in list output vs show output?
+
+### Decision
+
+**List output adds type only.** List becomes: ID, Status, Priority, Type, Title. Type is a single short word, high signal for scanning. Tags and refs are variable-length and would clutter the table — they belong in `show` detail only. When type is not set, display a dash (`-`) to keep alignment clean.
+
+**Show output adds all new fields:** type, tags, refs, notes.
+
+---
+
+## Does adding/removing a note update the task's Updated timestamp?
+
+### Decision
+
+**Yes.** It is a mutation to the task record — the JSONL line changes. Consistent with how every other mutation updates the timestamp. Useful to know a task was touched recently even if the touch was just a note.
+
+---
+
+## What are the note text constraints?
+
+### Decision
+
+- Empty note text: error
+- Max length: 500 chars
+- Multi-word text from remaining args after ID
+
+---
+
+## What are the edge case rules for --count, dedup, partial ID min length, and ref limits?
+
+### Decision
+
+**`--count` edge cases:**
+- Must be >= 1, error on zero or negative values
+
+**Tag/ref deduplication:**
+- Silently deduplicate on input (e.g. `--tags ui,backend,ui` stores `[ui, backend]`)
+
+**Partial ID minimum length:**
+- Minimum 3 hex chars required for prefix matching
+- Prevents overly broad matches like `tick show a`
+
+**Refs input format:**
+- `--refs gh-123,JIRA-456` comma-separated on create/update, same pattern as tags
+- `--clear-refs` to explicitly remove all refs
+
+**Max refs per task:**
+- 10, consistent with tags
+- Validated after deduplication
 
 ---
