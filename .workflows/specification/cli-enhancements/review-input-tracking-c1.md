@@ -20,8 +20,9 @@ topic: cli-enhancements
 The discussion mentions existing ID resolution is case-insensitive via `NormalizeID`. The spec doesn't state whether partial prefix matching should also be case-insensitive. Since hex chars can be typed uppercase (`A3F`) or lowercase (`a3f`), this should be explicit.
 
 **Proposed Addition**:
+Add to the Resolution rules list: `- Case-insensitive: input normalized to lowercase before matching`
 
-**Resolution**: Pending
+**Resolution**: Approved
 **Notes**:
 
 ---

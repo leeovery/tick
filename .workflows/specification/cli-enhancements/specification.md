@@ -25,6 +25,7 @@ Allow users to reference tasks by a prefix of the hex portion instead of the ful
 - Minimum 3 hex chars required for prefix matching (prevents overly broad matches)
 - Ambiguity (2+ matches): error listing the matching IDs
 - Zero matches: "not found" error
+- Case-insensitive: input normalized to lowercase before matching
 
 **Implementation location:**
 - Storage layer — `ResolveID(prefix)` method querying `WHERE id LIKE 'tick-{prefix}%'`
