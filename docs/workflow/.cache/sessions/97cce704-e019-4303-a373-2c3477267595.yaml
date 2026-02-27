@@ -1,6 +1,0 @@
-topic: task-removal
-skill: skills/technical-implementation/SKILL.md
-artifact: docs/workflow/implementation/task-removal/tracking.md
-pipeline:
-  after_conclude: |
-    This session is part of the feature pipeline. After implementation completes, return to the continue-feature skill and execute Step 6 (Phase Bridge). Load: skills/continue-feature/references/phase-bridge.md
