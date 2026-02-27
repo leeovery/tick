@@ -31,6 +31,34 @@ Allow users to reference tasks by a prefix of the hex portion instead of the ful
 - Centralized: all commands resolve first, then proceed with the full ID
 - Applies everywhere an ID is accepted: positional args, `--parent`, `--blocked-by`, `--blocks`
 
+### Task Types
+
+A string field on Task classifying the kind of work.
+
+**Allowed values:** `bug`, `feature`, `task`, `chore` (closed set — anything else errors).
+
+**Validation:**
+- Case-insensitive input, trimmed, stored lowercase
+- Validated on create and update
+
+**CLI flags:**
+- `--type <value>` on `create` and `update` — sets or replaces the type
+- `--clear-type` on `update` — explicitly removes the type
+- `--type` and `--clear-type` are mutually exclusive
+- Empty value on `--type` errors (protective against accidental erasure)
+
+**Filtering:**
+- `--type <value>` on `list`, `ready`, `blocked` — single value filter only
+- No comma-separated, no multiple flags (keeps comma semantics consistent with tags where comma = AND; AND is meaningless for a single-value field)
+
+**Storage:**
+- JSONL: string field with `omitempty`
+- SQLite: `TEXT` column on `tasks` table
+
+**Display:**
+- List output: shown as a column — ID, Status, Priority, Type, Title. Dash (`-`) when not set.
+- Show output: displayed with other fields
+
 ---
 
 ## Working Notes
