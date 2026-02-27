@@ -160,6 +160,12 @@ A `--count N` flag to cap the number of results returned.
 **CLI flags:**
 - `--count N` on `list`, `ready`, `blocked`
 
+## Dependencies
+
+All six features are additive enhancements to the existing CLI. They build on the current Task struct, storage layer (JSONL + SQLite cache), and command handlers — all of which already exist.
+
+No blocking prerequisites. Implementation can begin immediately.
+
 ---
 
 ## Working Notes
