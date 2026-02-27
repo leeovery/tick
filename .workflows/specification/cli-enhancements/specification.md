@@ -1,7 +1,8 @@
 ---
 topic: cli-enhancements
-status: in-progress
+status: concluded
 type: feature
+work_type: feature
 date: 2026-02-27
 review_cycle: 2
 finding_gate_mode: gated
