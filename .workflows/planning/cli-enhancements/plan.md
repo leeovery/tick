@@ -65,6 +65,16 @@ approved_at: 2026-02-28
 - [ ] All three formatters (ToonFormatter, PrettyFormatter, JSONFormatter) updated
 - [ ] `--count N` on `list`, `ready`, `blocked` appends `LIMIT N` to query; value must be >= 1
 
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| cli-enhancements-2-1 | Add Type field to Task model and JSONL serialization | empty string on --type, mixed-case input, invalid type value, whitespace-only input | pending | |
+| cli-enhancements-2-2 | Add Type column to SQLite schema and Cache.Rebuild | none | pending | |
+| cli-enhancements-2-3 | Create and update commands with --type and --clear-type flags | --type and --clear-type together on update, empty --type value | pending | |
+| cli-enhancements-2-4 | List/ready/blocked filtering by --type | invalid type value in filter, filter with no matching tasks | pending | |
+| cli-enhancements-2-5 | Display Type in list and show output across all formatters | type unset showing as dash in list | pending | |
+| cli-enhancements-2-6 | Add --count flag to list/ready/blocked | --count 0, --count negative, --count non-integer, --count larger than result set | pending | |
+
 ### Phase 3: Tags
 status: approved
 ext_id:
