@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-28
 cycle: 1
 phase: Plan Integrity Review
@@ -46,8 +46,8 @@ Both note subcommand tasks instruct the implementer to use `task.NormalizeID` fo
     - Find task by resolved full ID
 ```
 
-**Resolution**: Pending
-**Notes**: Both tasks need the same fix. The note add task also needs its acceptance criteria test for "task not found" to clarify this uses ResolveID error messaging.
+**Resolution**: Fixed
+**Notes**: Both tasks updated to use store.ResolveID. Acceptance criteria clarified to reference ResolveID error messaging.
 
 ---
 
@@ -109,8 +109,8 @@ The task template requires Problem, Solution, and Outcome as mandatory fields. F
   Do:
 ```
 
-**Resolution**: Pending
-**Notes**: The Outcome content is derived from each task's own acceptance criteria and solution -- just making implicit success criteria explicit.
+**Resolution**: Fixed
+**Notes**: Outcome fields added to all four tasks.
 
 ---
 
@@ -138,5 +138,5 @@ This is a minor style issue. The natural order still produces correct results si
 | cli-enhancements-3-4 | Tags display in show output and all formatters | task with no tags, task with 10 tags | authored | tick-d17558 |
 ```
 
-**Resolution**: Pending
-**Notes**: This would require re-creating the Tick tasks (creation order determines natural execution order). Since both tasks are independently testable the current order is functional -- this is purely about implementer ergonomics.
+**Resolution**: Skipped
+**Notes**: Both tasks are independently testable and the current order is functional. Re-creating Tick tasks to swap creation order for a minor cosmetic concern is not worth the effort.
