@@ -218,38 +218,52 @@ func (a *App) handleRebuild(fc FormatConfig, fmtr Formatter) error {
 }
 
 // handleRemove implements the remove subcommand.
-// It parses args once, validates IDs, computes the blast radius for non-force removals
-// using Store.ReadTasks (shared lock, read-only), runs the interactive confirmation
-// prompt using App's Stdin/Stderr, then delegates to RunRemove for the actual mutation.
+// It parses args once, resolves partial IDs via store.ResolveID, computes the blast radius
+// for non-force removals using Store.ReadTasks (shared lock, read-only), runs the interactive
+// confirmation prompt using App's Stdin/Stderr, then delegates to RunRemove for the actual mutation.
 func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 
-	ids, force := parseRemoveArgs(subArgs)
+	rawIDs, force := parseRemoveArgs(subArgs)
 
-	if len(ids) == 0 {
+	if len(rawIDs) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...]")
 	}
 
+	// Resolve partial IDs to full canonical IDs.
+	store, err := openStore(dir, fc)
+	if err != nil {
+		return err
+	}
+
+	ids := make([]string, len(rawIDs))
+	for i, raw := range rawIDs {
+		resolved, resolveErr := store.ResolveID(raw)
+		if resolveErr != nil {
+			store.Close()
+			return resolveErr
+		}
+		ids[i] = resolved
+	}
+
 	if !force {
-		store, err := openStore(dir, fc)
-		if err != nil {
-			return err
-		}
-		tasks, err := store.ReadTasks()
+		tasks, readErr := store.ReadTasks()
 		store.Close()
-		if err != nil {
-			return err
+		if readErr != nil {
+			return readErr
 		}
-		br, err := computeBlastRadius(tasks, ids)
-		if err != nil {
-			return err
+		br, brErr := computeBlastRadius(tasks, ids)
+		if brErr != nil {
+			return brErr
 		}
 		if err := confirmRemovalWithCascade(br, a.Stdin, a.Stderr); err != nil {
 			return err
 		}
+	} else {
+		store.Close()
 	}
 
 	return RunRemove(dir, fc, fmtr, ids, a.Stdout)

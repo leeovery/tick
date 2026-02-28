@@ -8,20 +8,23 @@ import (
 )
 
 // RunTransition executes a status transition command (start, done, cancel, reopen).
-// It normalizes the task ID, looks up the task, applies the transition, persists the change,
-// and outputs the transition via the Formatter.
+// It resolves the task ID (supporting partial prefixes), looks up the task, applies the
+// transition, persists the change, and outputs the transition via the Formatter.
 func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	if len(args) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick %s <id>", command)
 	}
-
-	id := task.NormalizeID(args[0])
 
 	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}
 	defer store.Close()
+
+	id, err := store.ResolveID(args[0])
+	if err != nil {
+		return err
+	}
 
 	var result task.TransitionResult
 

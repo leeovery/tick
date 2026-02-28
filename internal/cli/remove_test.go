@@ -1739,16 +1739,16 @@ func TestParseRemoveArgs(t *testing.T) {
 		}
 	})
 
-	t.Run("IDs normalized to lowercase", func(t *testing.T) {
+	t.Run("IDs preserved as raw input", func(t *testing.T) {
 		ids, _ := parseRemoveArgs([]string{"TICK-AAA111", "Tick-Bbb222"})
 		if len(ids) != 2 {
 			t.Fatalf("len(ids) = %d, want 2", len(ids))
 		}
-		if ids[0] != "tick-aaa111" {
-			t.Errorf("ids[0] = %q, want %q", ids[0], "tick-aaa111")
+		if ids[0] != "TICK-AAA111" {
+			t.Errorf("ids[0] = %q, want %q", ids[0], "TICK-AAA111")
 		}
-		if ids[1] != "tick-bbb222" {
-			t.Errorf("ids[1] = %q, want %q", ids[1], "tick-bbb222")
+		if ids[1] != "Tick-Bbb222" {
+			t.Errorf("ids[1] = %q, want %q", ids[1], "Tick-Bbb222")
 		}
 	})
 
@@ -1767,8 +1767,8 @@ func TestParseRemoveArgs(t *testing.T) {
 		if len(ids) != 1 {
 			t.Fatalf("len(ids) = %d, want 1", len(ids))
 		}
-		if ids[0] != "tick-aaa111" {
-			t.Errorf("ids[0] = %q, want %q", ids[0], "tick-aaa111")
+		if ids[0] != "TICK-AAA111" {
+			t.Errorf("ids[0] = %q, want %q", ids[0], "TICK-AAA111")
 		}
 	})
 

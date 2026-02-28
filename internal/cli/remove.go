@@ -14,8 +14,9 @@ import (
 // App.Run detects this to return exit code 1 without the "Error: " prefix.
 var errAborted = errors.New("aborted")
 
-// parseRemoveArgs extracts task IDs and --force flag from remove command arguments.
-// Returns deduplicated, normalized task IDs (preserving first-occurrence order) and whether --force was set.
+// parseRemoveArgs extracts raw task ID arguments and --force flag from remove command arguments.
+// Returns raw positional args (preserving first-occurrence order, deduped by lowercase) and whether --force was set.
+// ID resolution happens after the store is opened.
 func parseRemoveArgs(args []string) ([]string, bool) {
 	var ids []string
 	var force bool
@@ -28,10 +29,10 @@ func parseRemoveArgs(args []string) ([]string, bool) {
 		case strings.HasPrefix(arg, "-"):
 			// Skip unknown flags.
 		default:
-			normalized := task.NormalizeID(arg)
-			if !seen[normalized] {
-				seen[normalized] = true
-				ids = append(ids, normalized)
+			lower := strings.ToLower(arg)
+			if !seen[lower] {
+				seen[lower] = true
+				ids = append(ids, arg)
 			}
 		}
 	}

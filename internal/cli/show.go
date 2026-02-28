@@ -33,13 +33,16 @@ func RunShow(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout 
 		return fmt.Errorf("task ID is required. Usage: tick show <id>")
 	}
 
-	id := task.NormalizeID(args[0])
-
 	store, err := openStore(dir, fc)
 	if err != nil {
 		return err
 	}
 	defer store.Close()
+
+	id, err := store.ResolveID(args[0])
+	if err != nil {
+		return err
+	}
 
 	data, err := queryShowData(store, id)
 	if err != nil {
