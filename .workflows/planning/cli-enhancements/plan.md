@@ -10,11 +10,11 @@ created: 2026-02-28
 updated: 2026-02-28
 external_dependencies: []
 task_list_gate_mode: gated
-author_gate_mode: gated
+author_gate_mode: auto
 finding_gate_mode: gated
 planning:
-  phase: 2
-  task: 1
+  phase: 3
+  task: ~
 ---
 
 # Plan: CLI Enhancements
@@ -47,7 +47,7 @@ approved_at: 2026-02-28
 
 ### Phase 2: Task Types and List Count
 status: approved
-ext_id:
+ext_id: tick-ccdecb
 approved_at: 2026-02-28
 
 **Goal**: Add the `type` field to the Task model with create/update/filter/display support, and add the `--count` flag for capping list results.
@@ -68,12 +68,12 @@ approved_at: 2026-02-28
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| cli-enhancements-2-1 | Add Type field to Task model and JSONL serialization | empty string on --type, mixed-case input, invalid type value, whitespace-only input | pending | |
-| cli-enhancements-2-2 | Add Type column to SQLite schema and Cache.Rebuild | none | pending | |
-| cli-enhancements-2-3 | Create and update commands with --type and --clear-type flags | --type and --clear-type together on update, empty --type value | pending | |
-| cli-enhancements-2-4 | List/ready/blocked filtering by --type | invalid type value in filter, filter with no matching tasks | pending | |
-| cli-enhancements-2-5 | Display Type in list and show output across all formatters | type unset showing as dash in list | pending | |
-| cli-enhancements-2-6 | Add --count flag to list/ready/blocked | --count 0, --count negative, --count non-integer, --count larger than result set | pending | |
+| cli-enhancements-2-1 | Add Type field to Task model and JSONL serialization | empty string on --type, mixed-case input, invalid type value, whitespace-only input | authored | tick-5a322f |
+| cli-enhancements-2-2 | Add Type column to SQLite schema and Cache.Rebuild | none | authored | tick-9e1481 |
+| cli-enhancements-2-3 | Create and update commands with --type and --clear-type flags | --type and --clear-type together on update, empty --type value | authored | tick-811654 |
+| cli-enhancements-2-4 | List/ready/blocked filtering by --type | invalid type value in filter, filter with no matching tasks | authored | tick-3357ef |
+| cli-enhancements-2-5 | Display Type in list and show output across all formatters | type unset showing as dash in list | authored | tick-2a23a5 |
+| cli-enhancements-2-6 | Add --count flag to list/ready/blocked | --count 0, --count negative, --count non-integer, --count larger than result set | authored | tick-3e1ed5 |
 
 ### Phase 3: Tags
 status: approved
