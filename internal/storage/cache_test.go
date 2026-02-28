@@ -29,7 +29,7 @@ func TestCacheSchema(t *testing.T) {
 		taskCols := queryColumns(t, db, "tasks")
 		expectedTaskCols := map[string]bool{
 			"id": true, "title": true, "status": true, "priority": true,
-			"description": true, "parent": true, "created": true,
+			"type": true, "description": true, "parent": true, "created": true,
 			"updated": true, "closed": true,
 		}
 		if len(taskCols) != len(expectedTaskCols) {
@@ -144,6 +144,7 @@ func TestCacheRebuild(t *testing.T) {
 				Title:       "Full task",
 				Status:      task.StatusInProgress,
 				Priority:    1,
+				Type:        "feature",
 				Description: "Detailed description",
 				BlockedBy:   []string{"tick-x1y2z3"},
 				Parent:      "tick-p1a2b3",
@@ -164,9 +165,10 @@ func TestCacheRebuild(t *testing.T) {
 		// Query the task back and verify all fields.
 		var id, title, status, createdStr, updatedStr string
 		var priority int
+		var typeStr sql.NullString
 		var description, parent, closedStr sql.NullString
-		err = db.QueryRow("SELECT id, title, status, priority, description, parent, created, updated, closed FROM tasks WHERE id = ?", "tick-a1b2c3").
-			Scan(&id, &title, &status, &priority, &description, &parent, &createdStr, &updatedStr, &closedStr)
+		err = db.QueryRow("SELECT id, title, status, priority, type, description, parent, created, updated, closed FROM tasks WHERE id = ?", "tick-a1b2c3").
+			Scan(&id, &title, &status, &priority, &typeStr, &description, &parent, &createdStr, &updatedStr, &closedStr)
 		if err != nil {
 			t.Fatalf("querying task: %v", err)
 		}
@@ -182,6 +184,9 @@ func TestCacheRebuild(t *testing.T) {
 		}
 		if priority != 1 {
 			t.Errorf("priority = %d, want %d", priority, 1)
+		}
+		if !typeStr.Valid || typeStr.String != "feature" {
+			t.Errorf("type = %v, want %q", typeStr, "feature")
 		}
 		if !description.Valid || description.String != "Detailed description" {
 			t.Errorf("description = %v, want %q", description, "Detailed description")
@@ -255,6 +260,79 @@ func TestCacheRebuild(t *testing.T) {
 		}
 		if deps[1].blockedBy != "tick-g7h8i9" {
 			t.Errorf("deps[1].blocked_by = %q, want %q", deps[1].blockedBy, "tick-g7h8i9")
+		}
+	})
+
+	t.Run("it stores type value in SQLite after rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Typed task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Type:     "bug",
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		var typeVal sql.NullString
+		err = cache.DB().QueryRow("SELECT type FROM tasks WHERE id = ?", "tick-a1b2c3").Scan(&typeVal)
+		if err != nil {
+			t.Fatalf("querying type: %v", err)
+		}
+		if !typeVal.Valid || typeVal.String != "bug" {
+			t.Errorf("type = %v, want %q", typeVal, "bug")
+		}
+	})
+
+	t.Run("it stores NULL for empty type after rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "No type task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		var typeVal sql.NullString
+		err = cache.DB().QueryRow("SELECT type FROM tasks WHERE id = ?", "tick-a1b2c3").Scan(&typeVal)
+		if err != nil {
+			t.Fatalf("querying type: %v", err)
+		}
+		if typeVal.Valid {
+			t.Errorf("type = %q, want NULL", typeVal.String)
 		}
 	})
 

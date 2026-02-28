@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   status TEXT NOT NULL DEFAULT 'open',
   priority INTEGER NOT NULL DEFAULT 2,
   description TEXT,
+  type TEXT,
   parent TEXT,
   created TEXT NOT NULL,
   updated TEXT NOT NULL,
@@ -88,7 +89,7 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 	}
 
 	// Insert all tasks.
-	insertTask, err := tx.Prepare(`INSERT INTO tasks (id, title, status, priority, description, parent, created, updated, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	insertTask, err := tx.Prepare(`INSERT INTO tasks (id, title, status, priority, description, type, parent, created, updated, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare task insert: %w", err)
 	}
@@ -112,6 +113,11 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 			parentStr = &t.Parent
 		}
 
+		var typeStr *string
+		if t.Type != "" {
+			typeStr = &t.Type
+		}
+
 		var descStr *string
 		if t.Description != "" {
 			descStr = &t.Description
@@ -123,6 +129,7 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 			string(t.Status),
 			t.Priority,
 			descStr,
+			typeStr,
 			parentStr,
 			task.FormatTimestamp(t.Created),
 			task.FormatTimestamp(t.Updated),
