@@ -46,6 +46,7 @@ type Task struct {
 	Status      Status     `json:"status"`
 	Priority    int        `json:"priority"`
 	Type        string     `json:"type,omitempty"`
+	Tags        []string   `json:"tags,omitempty"`
 	Description string     `json:"description,omitempty"`
 	BlockedBy   []string   `json:"blocked_by,omitempty"`
 	Parent      string     `json:"parent,omitempty"`
@@ -61,6 +62,7 @@ type taskJSON struct {
 	Status      string   `json:"status"`
 	Priority    int      `json:"priority"`
 	Type        string   `json:"type,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
 	Description string   `json:"description,omitempty"`
 	BlockedBy   []string `json:"blocked_by,omitempty"`
 	Parent      string   `json:"parent,omitempty"`
@@ -77,6 +79,7 @@ func (t Task) MarshalJSON() ([]byte, error) {
 		Status:      string(t.Status),
 		Priority:    t.Priority,
 		Type:        t.Type,
+		Tags:        t.Tags,
 		Description: t.Description,
 		BlockedBy:   t.BlockedBy,
 		Parent:      t.Parent,
@@ -110,6 +113,7 @@ func (t *Task) UnmarshalJSON(data []byte) error {
 	t.Status = Status(jt.Status)
 	t.Priority = jt.Priority
 	t.Type = jt.Type
+	t.Tags = jt.Tags
 	t.Description = jt.Description
 	t.BlockedBy = jt.BlockedBy
 	t.Parent = jt.Parent
