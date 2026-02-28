@@ -262,16 +262,16 @@ func TestBlocked(t *testing.T) {
 
 		// Check header (dynamic column widths: ID=14, STATUS=8, PRI=5)
 		header := lines[0]
-		if header != "ID            STATUS  PRI  TITLE" {
-			t.Errorf("header = %q, want %q", header, "ID            STATUS  PRI  TITLE")
+		if header != "ID            STATUS  PRI  TYPE  TITLE" {
+			t.Errorf("header = %q, want %q", header, "ID            STATUS  PRI  TYPE  TITLE")
 		}
 
 		// Check aligned rows
-		if lines[1] != "tick-aaa111   open    1    Setup Sanctum" {
-			t.Errorf("row 1 = %q, want %q", lines[1], "tick-aaa111   open    1    Setup Sanctum")
+		if lines[1] != "tick-aaa111   open    1    -     Setup Sanctum" {
+			t.Errorf("row 1 = %q, want %q", lines[1], "tick-aaa111   open    1    -     Setup Sanctum")
 		}
-		if lines[2] != "tick-bbb222   open    2    Login endpoint" {
-			t.Errorf("row 2 = %q, want %q", lines[2], "tick-bbb222   open    2    Login endpoint")
+		if lines[2] != "tick-bbb222   open    2    -     Login endpoint" {
+			t.Errorf("row 2 = %q, want %q", lines[2], "tick-bbb222   open    2    -     Login endpoint")
 		}
 	})
 

@@ -21,9 +21,9 @@ func TestPrettyFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskList(tasks)
 		expected := "" +
-			"ID          STATUS       PRI  TITLE\n" +
-			"tick-a1b2   done         1    Setup Sanctum\n" +
-			"tick-c3d4   in_progress  1    Login endpoint"
+			"ID          STATUS       PRI  TYPE  TITLE\n" +
+			"tick-a1b2   done         1    -     Setup Sanctum\n" +
+			"tick-c3d4   in_progress  1    -     Login endpoint"
 		if result != expected {
 			t.Errorf("result:\n%s\nwant:\n%s", result, expected)
 		}
@@ -109,6 +109,7 @@ func TestPrettyFormatter(t *testing.T) {
 			"Title:    Login endpoint\n" +
 			"Status:   in_progress\n" +
 			"Priority: 1\n" +
+			"Type:     -\n" +
 			"Parent:   tick-e5f6 (Auth System)\n" +
 			"Created:  2026-01-19T10:00:00Z\n" +
 			"Updated:  2026-01-19T14:30:00Z\n" +
@@ -147,6 +148,7 @@ func TestPrettyFormatter(t *testing.T) {
 			"Title:    Simple task\n" +
 			"Status:   open\n" +
 			"Priority: 2\n" +
+			"Type:     -\n" +
 			"Created:  2026-01-19T10:00:00Z\n" +
 			"Updated:  2026-01-19T10:00:00Z"
 		if result != expected {
@@ -363,6 +365,118 @@ func TestPrettyFormatter(t *testing.T) {
 		expected := `Removed tick-a1b2 "My task"`
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
+		}
+	})
+
+	t.Run("it shows type column in pretty list output", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-a1b2", Title: "Fix login bug", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
+			{ID: "tick-c3d4", Title: "Add search", Status: task.StatusInProgress, Priority: 2, Type: "feature", Created: now, Updated: now},
+		}
+		result := f.FormatTaskList(tasks)
+		lines := strings.Split(result, "\n")
+		if len(lines) != 3 {
+			t.Fatalf("expected 3 lines, got %d:\n%s", len(lines), result)
+		}
+		// Header must have TYPE column between PRI and TITLE
+		header := lines[0]
+		priIdx := strings.Index(header, "PRI")
+		typeIdx := strings.Index(header, "TYPE")
+		titleIdx := strings.Index(header, "TITLE")
+		if typeIdx < 0 {
+			t.Fatalf("TYPE column not found in header: %q", header)
+		}
+		if typeIdx <= priIdx {
+			t.Errorf("TYPE should come after PRI: PRI at %d, TYPE at %d", priIdx, typeIdx)
+		}
+		if typeIdx >= titleIdx {
+			t.Errorf("TYPE should come before TITLE: TYPE at %d, TITLE at %d", typeIdx, titleIdx)
+		}
+		// Rows must contain type values
+		if !strings.Contains(lines[1], "bug") {
+			t.Errorf("row 1 should contain type 'bug': %q", lines[1])
+		}
+		if !strings.Contains(lines[2], "feature") {
+			t.Errorf("row 2 should contain type 'feature': %q", lines[2])
+		}
+	})
+
+	t.Run("it shows dash for unset type in pretty list", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-a1b2", Title: "No type task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		result := f.FormatTaskList(tasks)
+		lines := strings.Split(result, "\n")
+		if len(lines) != 2 {
+			t.Fatalf("expected 2 lines, got %d:\n%s", len(lines), result)
+		}
+		// The TYPE column should show "-" for unset type
+		header := lines[0]
+		typeIdx := strings.Index(header, "TYPE")
+		if typeIdx < 0 {
+			t.Fatalf("TYPE column not found in header: %q", header)
+		}
+		// Check that the row contains a dash in the type column area
+		row := lines[1]
+		// Extract the type value from the row at the same position as TYPE in header
+		// The type value starts at typeIdx and ends before TITLE starts
+		titleIdx := strings.Index(header, "TITLE")
+		typeVal := strings.TrimSpace(row[typeIdx:titleIdx])
+		if typeVal != "-" {
+			t.Errorf("type column for unset type = %q, want %q", typeVal, "-")
+		}
+	})
+
+	t.Run("it shows type in pretty show output", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Fix login bug",
+				Status:   task.StatusOpen,
+				Priority: 1,
+				Type:     "bug",
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if !strings.Contains(result, "Type:     bug") {
+			t.Errorf("show output should contain 'Type:     bug', got:\n%s", result)
+		}
+		// Type should appear after Priority
+		priIdx := strings.Index(result, "Priority:")
+		typeIdx := strings.Index(result, "Type:")
+		if typeIdx < priIdx {
+			t.Errorf("Type should appear after Priority: Priority at %d, Type at %d", priIdx, typeIdx)
+		}
+	})
+
+	t.Run("it shows dash for unset type in pretty show output", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "No type task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if !strings.Contains(result, "Type:     -") {
+			t.Errorf("show output should contain 'Type:     -' for unset type, got:\n%s", result)
 		}
 	})
 

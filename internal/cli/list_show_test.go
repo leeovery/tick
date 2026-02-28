@@ -62,18 +62,18 @@ func TestList(t *testing.T) {
 
 		// Check header (dynamic column widths based on data: ID=14, STATUS=13, PRI=5)
 		header := lines[0]
-		if header != "ID            STATUS       PRI  TITLE" {
-			t.Errorf("header = %q, want %q", header, "ID            STATUS       PRI  TITLE")
+		if header != "ID            STATUS       PRI  TYPE  TITLE" {
+			t.Errorf("header = %q, want %q", header, "ID            STATUS       PRI  TYPE  TITLE")
 		}
 
 		// Check first data row
-		if lines[1] != "tick-aaa111   done         1    Setup Sanctum" {
-			t.Errorf("row 1 = %q, want %q", lines[1], "tick-aaa111   done         1    Setup Sanctum")
+		if lines[1] != "tick-aaa111   done         1    -     Setup Sanctum" {
+			t.Errorf("row 1 = %q, want %q", lines[1], "tick-aaa111   done         1    -     Setup Sanctum")
 		}
 
 		// Check second data row
-		if lines[2] != "tick-bbb222   in_progress  1    Login endpoint" {
-			t.Errorf("row 2 = %q, want %q", lines[2], "tick-bbb222   in_progress  1    Login endpoint")
+		if lines[2] != "tick-bbb222   in_progress  1    -     Login endpoint" {
+			t.Errorf("row 2 = %q, want %q", lines[2], "tick-bbb222   in_progress  1    -     Login endpoint")
 		}
 	})
 
@@ -187,6 +187,7 @@ func TestShow(t *testing.T) {
 			"Title:    Login endpoint\n" +
 			"Status:   in_progress\n" +
 			"Priority: 1\n" +
+			"Type:     -\n" +
 			"Created:  2026-01-19T10:00:00Z\n" +
 			"Updated:  2026-01-19T14:30:00Z\n"
 

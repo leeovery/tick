@@ -24,15 +24,15 @@ func TestToonFormatter(t *testing.T) {
 		if len(lines) != 3 {
 			t.Fatalf("expected 3 lines, got %d: %q", len(lines), result)
 		}
-		expectedHeader := "tasks[2]{id,title,status,priority}:"
+		expectedHeader := "tasks[2]{id,title,status,priority,type}:"
 		if lines[0] != expectedHeader {
 			t.Errorf("header = %q, want %q", lines[0], expectedHeader)
 		}
-		expectedRow1 := "  tick-a1b2,Setup Sanctum,done,1"
+		expectedRow1 := `  tick-a1b2,Setup Sanctum,done,1,""`
 		if lines[1] != expectedRow1 {
 			t.Errorf("row 1 = %q, want %q", lines[1], expectedRow1)
 		}
-		expectedRow2 := "  tick-c3d4,Login endpoint,open,1"
+		expectedRow2 := `  tick-c3d4,Login endpoint,open,1,""`
 		if lines[2] != expectedRow2 {
 			t.Errorf("row 2 = %q, want %q", lines[2], expectedRow2)
 		}
@@ -41,7 +41,7 @@ func TestToonFormatter(t *testing.T) {
 	t.Run("it formats zero tasks as empty section", func(t *testing.T) {
 		f := &ToonFormatter{}
 		result := f.FormatTaskList([]task.Task{})
-		expected := "tasks[0]{id,title,status,priority}:"
+		expected := "tasks[0]{id,title,status,priority,type}:"
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
 		}
@@ -50,7 +50,7 @@ func TestToonFormatter(t *testing.T) {
 	t.Run("it formats zero tasks from nil slice as empty section", func(t *testing.T) {
 		f := &ToonFormatter{}
 		result := f.FormatTaskList(nil)
-		expected := "tasks[0]{id,title,status,priority}:"
+		expected := "tasks[0]{id,title,status,priority,type}:"
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
 		}
@@ -240,7 +240,7 @@ func TestToonFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskList(tasks)
 		lines := strings.Split(result, "\n")
-		expectedRow := `  tick-a1b2,"Setup, Deploy",open,1`
+		expectedRow := `  tick-a1b2,"Setup, Deploy",open,1,""`
 		if lines[1] != expectedRow {
 			t.Errorf("row = %q, want %q", lines[1], expectedRow)
 		}
@@ -381,6 +381,94 @@ func TestToonFormatter(t *testing.T) {
 		expected := `Removed tick-a1b2 "My task"`
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
+		}
+	})
+
+	t.Run("it includes type in toon list rows", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-a1b2", Title: "Fix login bug", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
+			{ID: "tick-c3d4", Title: "Add search", Status: task.StatusDone, Priority: 2, Type: "feature", Created: now, Updated: now},
+		}
+		result := f.FormatTaskList(tasks)
+		lines := strings.Split(result, "\n")
+		if len(lines) != 3 {
+			t.Fatalf("expected 3 lines, got %d: %q", len(lines), result)
+		}
+		// Header should include type in schema
+		expectedHeader := "tasks[2]{id,title,status,priority,type}:"
+		if lines[0] != expectedHeader {
+			t.Errorf("header = %q, want %q", lines[0], expectedHeader)
+		}
+		// Rows should include type value
+		expectedRow1 := "  tick-a1b2,Fix login bug,open,1,bug"
+		if lines[1] != expectedRow1 {
+			t.Errorf("row 1 = %q, want %q", lines[1], expectedRow1)
+		}
+		expectedRow2 := "  tick-c3d4,Add search,done,2,feature"
+		if lines[2] != expectedRow2 {
+			t.Errorf("row 2 = %q, want %q", lines[2], expectedRow2)
+		}
+	})
+
+	t.Run("it includes type in toon show when set", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Fix login bug",
+				Status:   task.StatusOpen,
+				Priority: 1,
+				Type:     "bug",
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		sections := strings.Split(result, "\n\n")
+		taskLines := strings.Split(sections[0], "\n")
+		// Header should include type in schema
+		expectedHeader := "task{id,title,status,priority,type,created,updated}:"
+		if taskLines[0] != expectedHeader {
+			t.Errorf("header = %q, want %q", taskLines[0], expectedHeader)
+		}
+		// Row should include type value
+		expectedRow := `  tick-a1b2,Fix login bug,open,1,bug,"2026-01-19T10:00:00Z","2026-01-19T10:00:00Z"`
+		if taskLines[1] != expectedRow {
+			t.Errorf("row = %q, want %q", taskLines[1], expectedRow)
+		}
+	})
+
+	t.Run("it omits type from toon show when empty", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Simple task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		sections := strings.Split(result, "\n\n")
+		taskLines := strings.Split(sections[0], "\n")
+		// Header should NOT include type when empty
+		expectedHeader := "task{id,title,status,priority,created,updated}:"
+		if taskLines[0] != expectedHeader {
+			t.Errorf("header = %q, want %q", taskLines[0], expectedHeader)
+		}
+		// Row should not contain type field
+		if strings.Contains(taskLines[1], ",type") || strings.Count(taskLines[1], ",") > 5 {
+			t.Errorf("row should not contain type when empty: %q", taskLines[1])
 		}
 	})
 

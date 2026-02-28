@@ -30,6 +30,7 @@ func (f *PrettyFormatter) FormatTaskList(tasks []task.Task) string {
 	idWidth := len("ID")
 	statusWidth := len("STATUS")
 	priWidth := len("PRI")
+	typeWidth := len("TYPE")
 
 	for _, t := range tasks {
 		if len(t.ID) > idWidth {
@@ -43,25 +44,32 @@ func (f *PrettyFormatter) FormatTaskList(tasks []task.Task) string {
 		if len(p) > priWidth {
 			priWidth = len(p)
 		}
+		tv := typeOrDash(t.Type)
+		if len(tv) > typeWidth {
+			typeWidth = len(tv)
+		}
 	}
 
 	// Add gutter spacing (3 spaces between columns).
 	idCol := idWidth + 3
 	statusCol := statusWidth + 2
 	priCol := priWidth + 2
+	typeCol := typeWidth + 2
 
 	var b strings.Builder
 	// Header
-	fmt.Fprintf(&b, "%-*s%-*s%-*s%s", idCol, "ID", statusCol, "STATUS", priCol, "PRI", "TITLE")
+	fmt.Fprintf(&b, "%-*s%-*s%-*s%-*s%s", idCol, "ID", statusCol, "STATUS", priCol, "PRI", typeCol, "TYPE", "TITLE")
 
 	// Rows
 	for _, t := range tasks {
 		title := truncateTitle(t.Title)
+		tv := typeOrDash(t.Type)
 		b.WriteString("\n")
-		fmt.Fprintf(&b, "%-*s%-*s%-*d%s",
+		fmt.Fprintf(&b, "%-*s%-*s%-*d%-*s%s",
 			idCol, t.ID,
 			statusCol, string(t.Status),
 			priCol, t.Priority,
+			typeCol, tv,
 			title,
 		)
 	}
@@ -79,6 +87,8 @@ func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
 	fmt.Fprintf(&b, "Title:    %s\n", t.Title)
 	fmt.Fprintf(&b, "Status:   %s\n", string(t.Status))
 	fmt.Fprintf(&b, "Priority: %d\n", t.Priority)
+
+	fmt.Fprintf(&b, "Type:     %s\n", typeOrDash(t.Type))
 
 	if t.Parent != "" {
 		if detail.ParentTitle != "" {
@@ -156,6 +166,14 @@ func (f *PrettyFormatter) FormatStats(stats Stats) string {
 // FormatMessage renders a general-purpose message as plain text.
 func (f *PrettyFormatter) FormatMessage(msg string) string {
 	return msg
+}
+
+// typeOrDash returns the type string or "-" if empty, for Pretty formatter display.
+func typeOrDash(typ string) string {
+	if typ == "" {
+		return "-"
+	}
+	return typ
 }
 
 // truncateTitle truncates a title to maxListTitleLen characters, appending "..." if truncated.

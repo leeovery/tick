@@ -19,6 +19,7 @@ type jsonTaskListItem struct {
 	Title    string `json:"title"`
 	Status   string `json:"status"`
 	Priority int    `json:"priority"`
+	Type     string `json:"type"`
 }
 
 // FormatTaskList renders a list of tasks as a JSON array.
@@ -31,6 +32,7 @@ func (f *JSONFormatter) FormatTaskList(tasks []task.Task) string {
 			Title:    t.Title,
 			Status:   string(t.Status),
 			Priority: t.Priority,
+			Type:     t.Type,
 		})
 	}
 	return marshalIndentJSON(items)
@@ -52,6 +54,7 @@ type jsonTaskDetail struct {
 	Title       string            `json:"title"`
 	Status      string            `json:"status"`
 	Priority    int               `json:"priority"`
+	Type        string            `json:"type"`
 	Description string            `json:"description"`
 	Parent      string            `json:"parent,omitempty"`
 	Created     string            `json:"created"`
@@ -77,6 +80,7 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 		Title:       t.Title,
 		Status:      string(t.Status),
 		Priority:    t.Priority,
+		Type:        t.Type,
 		Description: t.Description,
 		Parent:      t.Parent,
 		Created:     task.FormatTimestamp(t.Created),

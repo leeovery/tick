@@ -24,6 +24,7 @@ type toonTaskRow struct {
 	Title    string `toon:"title"`
 	Status   string `toon:"status"`
 	Priority int    `toon:"priority"`
+	Type     string `toon:"type"`
 }
 
 // toonRelatedRow is a TOON-serializable row for blocked_by/children sections.
@@ -53,7 +54,7 @@ type toonPriorityRow struct {
 // FormatTaskList renders a list of tasks in TOON tabular format.
 func (f *ToonFormatter) FormatTaskList(tasks []task.Task) string {
 	if len(tasks) == 0 {
-		return "tasks[0]{id,title,status,priority}:"
+		return "tasks[0]{id,title,status,priority,type}:"
 	}
 	rows := make([]toonTaskRow, len(tasks))
 	for i, t := range tasks {
@@ -62,6 +63,7 @@ func (f *ToonFormatter) FormatTaskList(tasks []task.Task) string {
 			Title:    t.Title,
 			Status:   string(t.Status),
 			Priority: t.Priority,
+			Type:     t.Type,
 		}
 	}
 	return encodeToonSection("tasks", rows)
@@ -129,6 +131,10 @@ func buildTaskSection(t task.Task) string {
 		toon.Field{Key: "status", Value: string(t.Status)},
 		toon.Field{Key: "priority", Value: t.Priority},
 	)
+
+	if t.Type != "" {
+		fields = append(fields, toon.Field{Key: "type", Value: t.Type})
+	}
 
 	if t.Parent != "" {
 		fields = append(fields, toon.Field{Key: "parent", Value: t.Parent})

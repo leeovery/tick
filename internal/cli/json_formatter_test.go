@@ -704,6 +704,85 @@ func TestJSONFormatter(t *testing.T) {
 		}
 	})
 
+	t.Run("it includes type in json list items", func(t *testing.T) {
+		f := &JSONFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-a1b2", Title: "Fix login bug", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
+			{ID: "tick-c3d4", Title: "Add search", Status: task.StatusDone, Priority: 2, Type: "feature", Created: now, Updated: now},
+		}
+		result := f.FormatTaskList(tasks)
+
+		var parsed []map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+		if len(parsed) != 2 {
+			t.Fatalf("expected 2 items, got %d", len(parsed))
+		}
+		if parsed[0]["type"] != "bug" {
+			t.Errorf("first task type = %v, want %q", parsed[0]["type"], "bug")
+		}
+		if parsed[1]["type"] != "feature" {
+			t.Errorf("second task type = %v, want %q", parsed[1]["type"], "feature")
+		}
+	})
+
+	t.Run("it includes type in json show output", func(t *testing.T) {
+		f := &JSONFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Fix login bug",
+				Status:   task.StatusOpen,
+				Priority: 1,
+				Type:     "bug",
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+		if parsed["type"] != "bug" {
+			t.Errorf("type = %v, want %q", parsed["type"], "bug")
+		}
+	})
+
+	t.Run("it includes empty type string in json list when unset", func(t *testing.T) {
+		f := &JSONFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-a1b2", Title: "No type task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		result := f.FormatTaskList(tasks)
+
+		var parsed []map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+		if len(parsed) != 1 {
+			t.Fatalf("expected 1 item, got %d", len(parsed))
+		}
+		typeVal, exists := parsed[0]["type"]
+		if !exists {
+			t.Fatal("type key should be present even when unset")
+		}
+		typeStr, ok := typeVal.(string)
+		if !ok {
+			t.Fatalf("type should be string, got %T: %v", typeVal, typeVal)
+		}
+		if typeStr != "" {
+			t.Errorf("type = %q, want empty string", typeStr)
+		}
+	})
+
 	t.Run("it uses 2-space indentation", func(t *testing.T) {
 		f := &JSONFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
