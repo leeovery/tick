@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-28
 cycle: 1
 phase: Traceability Review
@@ -72,7 +72,7 @@ Edge Cases:
 Spec Reference: .workflows/specification/cli-enhancements/specification.md -- Notes section
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**:
 
 ---
@@ -133,7 +133,7 @@ Edge Cases:
 Spec Reference: .workflows/specification/cli-enhancements/specification.md -- Notes section, Storage subsection
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**:
 
 ---
@@ -202,7 +202,7 @@ Edge Cases:
 Spec Reference: .workflows/specification/cli-enhancements/specification.md -- Notes section, Subcommands subsection
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**:
 
 ---
@@ -273,7 +273,7 @@ Edge Cases:
 Spec Reference: .workflows/specification/cli-enhancements/specification.md -- Notes section, Subcommands and Validation subsections
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**:
 
 ---
@@ -338,7 +338,7 @@ Edge Cases:
 Spec Reference: .workflows/specification/cli-enhancements/specification.md -- Notes section, Display subsection
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**:
 
 ---
@@ -397,7 +397,7 @@ In tick-56001c acceptance criteria (add after "tick ready --tag ui and tick bloc
 - Single --tag value works as single-element AND group
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**:
 
 ---
@@ -499,7 +499,7 @@ In tick-d17558 acceptance criteria (add after "10 tags all displayed"):
 - Tags not shown in list output (show/detail only)
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**:
 
 ---
