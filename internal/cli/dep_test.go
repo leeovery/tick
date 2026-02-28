@@ -447,7 +447,11 @@ func TestDepRm(t *testing.T) {
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
 			Priority: 2, Created: now, Updated: now,
 		}
-		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
 		_, stderr, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-bbb222")
 		if exitCode != 1 {
@@ -574,16 +578,41 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("rm does not validate blocked_by_id exists as a task", func(t *testing.T) {
-		// Task has a stale ref in blocked_by that no longer exists as a task
+	t.Run("rm errors when blocked_by_id is a stale reference", func(t *testing.T) {
+		// Task has a stale ref in blocked_by that no longer exists as a task.
+		// ResolveID catches this before the mutation.
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
-			Priority: 2, BlockedBy: []string{"tick-deleted"},
+			Priority: 2, BlockedBy: []string{"tick-delete"},
 			Created: now, Updated: now,
 		}
-		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
 
-		_, _, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-deleted")
+		_, stderr, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-delete")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "not found") {
+			t.Errorf("stderr should contain 'not found', got %q", stderr)
+		}
+	})
+}
+
+func TestDepAddPartialID(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+
+	t.Run("it adds a dependency using partial IDs for both args", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-b2c3d4", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, _, exitCode := runDep(t, dir, "add", "a3f", "b2c")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
@@ -591,7 +620,230 @@ func TestDepRm(t *testing.T) {
 		tasks := readPersistedTasks(t, tickDir)
 		var found task.Task
 		for _, tk := range tasks {
-			if tk.ID == "tick-aaa111" {
+			if tk.ID == "tick-a3f1b2" {
+				found = tk
+				break
+			}
+		}
+		if len(found.BlockedBy) != 1 || found.BlockedBy[0] != "tick-b2c3d4" {
+			t.Errorf("blocked_by = %v, want [tick-b2c3d4]", found.BlockedBy)
+		}
+	})
+
+	t.Run("it resolves mixed full and partial IDs in dep add", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-b2c3d4", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, _, exitCode := runDep(t, dir, "add", "tick-a3f1b2", "b2c")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		var found task.Task
+		for _, tk := range tasks {
+			if tk.ID == "tick-a3f1b2" {
+				found = tk
+				break
+			}
+		}
+		if len(found.BlockedBy) != 1 || found.BlockedBy[0] != "tick-b2c3d4" {
+			t.Errorf("blocked_by = %v, want [tick-b2c3d4]", found.BlockedBy)
+		}
+	})
+
+	t.Run("it errors when both partial IDs resolve to the same task", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		_, stderr, exitCode := runDep(t, dir, "add", "a3f", "a3f")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "cycle") {
+			t.Errorf("stderr should contain 'cycle', got %q", stderr)
+		}
+	})
+
+	t.Run("it errors with ambiguous prefix in first arg of dep add", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskA2 := task.Task{
+			ID: "tick-a3f9c8", Title: "Task A2", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-b2c3d4", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskA2, taskB})
+
+		_, stderr, exitCode := runDep(t, dir, "add", "a3f", "b2c")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "ambiguous") {
+			t.Errorf("stderr should contain 'ambiguous', got %q", stderr)
+		}
+	})
+
+	t.Run("it errors with ambiguous prefix in second arg of dep add", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-b2c3d4", Title: "Task B1", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB2 := task.Task{
+			ID: "tick-b2c9e8", Title: "Task B2", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskB, taskB2})
+
+		_, stderr, exitCode := runDep(t, dir, "add", "a3f", "b2c")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "ambiguous") {
+			t.Errorf("stderr should contain 'ambiguous', got %q", stderr)
+		}
+	})
+
+	t.Run("it errors with not-found prefix in dep add first arg", func(t *testing.T) {
+		taskB := task.Task{
+			ID: "tick-b2c3d4", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskB})
+
+		_, stderr, exitCode := runDep(t, dir, "add", "zzz", "b2c")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "not found") {
+			t.Errorf("stderr should contain 'not found', got %q", stderr)
+		}
+	})
+
+	t.Run("it still works with full IDs in dep add", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-b2c3d4", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, _, exitCode := runDep(t, dir, "add", "tick-a3f1b2", "tick-b2c3d4")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		var found task.Task
+		for _, tk := range tasks {
+			if tk.ID == "tick-a3f1b2" {
+				found = tk
+				break
+			}
+		}
+		if len(found.BlockedBy) != 1 || found.BlockedBy[0] != "tick-b2c3d4" {
+			t.Errorf("blocked_by = %v, want [tick-b2c3d4]", found.BlockedBy)
+		}
+	})
+}
+
+func TestDepRmPartialID(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+
+	t.Run("it removes a dependency using partial IDs for both args", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, BlockedBy: []string{"tick-b2c3d4"},
+			Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-b2c3d4", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, _, exitCode := runDep(t, dir, "rm", "a3f", "b2c")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		var found task.Task
+		for _, tk := range tasks {
+			if tk.ID == "tick-a3f1b2" {
+				found = tk
+				break
+			}
+		}
+		if len(found.BlockedBy) != 0 {
+			t.Errorf("blocked_by = %v, want empty", found.BlockedBy)
+		}
+	})
+
+	t.Run("it errors with not-found prefix in dep rm", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, BlockedBy: []string{"tick-b2c3d4"},
+			Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-b2c3d4", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, stderr, exitCode := runDep(t, dir, "rm", "zzz", "b2c")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "not found") {
+			t.Errorf("stderr should contain 'not found', got %q", stderr)
+		}
+	})
+
+	t.Run("it still works with full IDs in dep rm", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, BlockedBy: []string{"tick-b2c3d4"},
+			Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-b2c3d4", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, _, exitCode := runDep(t, dir, "rm", "tick-a3f1b2", "tick-b2c3d4")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		var found task.Task
+		for _, tk := range tasks {
+			if tk.ID == "tick-a3f1b2" {
 				found = tk
 				break
 			}

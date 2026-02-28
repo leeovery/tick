@@ -54,8 +54,8 @@ func parseDepArgs(args []string, subCmd string) (string, string, error) {
 	return taskID, blockedByID, nil
 }
 
-// RunDepAdd executes the dep add command: validates inputs, adds the dependency,
-// persists via the storage engine, and outputs confirmation via the Formatter.
+// RunDepAdd executes the dep add command: validates inputs, resolves partial IDs,
+// adds the dependency, persists via the storage engine, and outputs confirmation via the Formatter.
 func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	taskID, blockedByID, err := parseDepArgs(args, "add")
 	if err != nil {
@@ -67,6 +67,15 @@ func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 	defer store.Close()
+
+	taskID, err = store.ResolveID(taskID)
+	if err != nil {
+		return err
+	}
+	blockedByID, err = store.ResolveID(blockedByID)
+	if err != nil {
+		return err
+	}
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Find task_id.
@@ -122,8 +131,8 @@ func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	return nil
 }
 
-// RunDepRm executes the dep rm command: finds the task, removes the dependency
-// from blocked_by, persists via the storage engine, and outputs confirmation via the Formatter.
+// RunDepRm executes the dep rm command: resolves partial IDs, finds the task, removes the
+// dependency from blocked_by, persists via the storage engine, and outputs confirmation via the Formatter.
 func RunDepRm(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	taskID, blockedByID, err := parseDepArgs(args, "rm")
 	if err != nil {
@@ -135,6 +144,15 @@ func RunDepRm(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout
 		return err
 	}
 	defer store.Close()
+
+	taskID, err = store.ResolveID(taskID)
+	if err != nil {
+		return err
+	}
+	blockedByID, err = store.ResolveID(blockedByID)
+	if err != nil {
+		return err
+	}
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Find task_id.
