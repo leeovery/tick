@@ -40,14 +40,15 @@ func openStore(dir string, fc FormatConfig) (*storage.Store, error) {
 }
 
 // parseCommaSeparatedIDs splits a comma-separated string of task IDs,
-// trims whitespace, normalizes to lowercase, and filters empty values.
+// trims whitespace, lowercases, and filters empty values.
+// Does not normalize to full IDs — callers resolve via store.ResolveID.
 func parseCommaSeparatedIDs(s string) []string {
 	parts := strings.Split(s, ",")
 	var ids []string
 	for _, part := range parts {
-		normalized := task.NormalizeID(strings.TrimSpace(part))
-		if normalized != "" {
-			ids = append(ids, normalized)
+		trimmed := strings.ToLower(strings.TrimSpace(part))
+		if trimmed != "" {
+			ids = append(ids, trimmed)
 		}
 	}
 	return ids

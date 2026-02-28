@@ -65,10 +65,7 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 			if i >= len(args) {
 				return opts, fmt.Errorf("--parent requires a value")
 			}
-			v := args[i]
-			if v != "" {
-				v = task.NormalizeID(strings.TrimSpace(v))
-			}
+			v := strings.ToLower(strings.TrimSpace(args[i]))
 			opts.parent = &v
 		case arg == "--clear-description":
 			opts.clearDescription = true
@@ -83,7 +80,7 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 		default:
 			// Positional argument: task ID (first one wins)
 			if opts.id == "" {
-				opts.id = task.NormalizeID(arg)
+				opts.id = strings.ToLower(strings.TrimSpace(arg))
 			}
 		}
 		i++
@@ -138,6 +135,25 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 	defer store.Close()
+
+	// Resolve partial IDs via store.ResolveID.
+	opts.id, err = store.ResolveID(opts.id)
+	if err != nil {
+		return err
+	}
+	if opts.parent != nil && *opts.parent != "" {
+		resolved, resolveErr := store.ResolveID(*opts.parent)
+		if resolveErr != nil {
+			return resolveErr
+		}
+		opts.parent = &resolved
+	}
+	for i, blockID := range opts.blocks {
+		opts.blocks[i], err = store.ResolveID(blockID)
+		if err != nil {
+			return err
+		}
+	}
 
 	var updatedID string
 

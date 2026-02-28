@@ -62,7 +62,7 @@ func parseCreateArgs(args []string) (createOpts, error) {
 			if i >= len(args) {
 				return opts, fmt.Errorf("--parent requires a value")
 			}
-			opts.parent = task.NormalizeID(strings.TrimSpace(args[i]))
+			opts.parent = strings.ToLower(strings.TrimSpace(args[i]))
 		case strings.HasPrefix(arg, "-"):
 			// Unknown flag — skip (global flags already extracted)
 		default:
@@ -105,6 +105,26 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 	defer store.Close()
+
+	// Resolve partial IDs via store.ResolveID.
+	if opts.parent != "" {
+		opts.parent, err = store.ResolveID(opts.parent)
+		if err != nil {
+			return err
+		}
+	}
+	for i, id := range opts.blockedBy {
+		opts.blockedBy[i], err = store.ResolveID(id)
+		if err != nil {
+			return err
+		}
+	}
+	for i, id := range opts.blocks {
+		opts.blocks[i], err = store.ResolveID(id)
+		if err != nil {
+			return err
+		}
+	}
 
 	var createdTask task.Task
 
