@@ -603,4 +603,191 @@ func TestListFilter(t *testing.T) {
 			t.Errorf("stderr = %q, want to contain '--type requires a value'", stderr)
 		}
 	})
+
+	t.Run("it limits list results with --count", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task 1", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Task 2", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-ccc333", Title: "Task 3", Status: task.StatusOpen, Priority: 3, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir, "--count", "2")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+		// header + 2 data rows
+		if len(lines) != 3 {
+			t.Fatalf("expected 3 lines (header + 2 tasks), got %d: %q", len(lines), stdout)
+		}
+		if !strings.HasPrefix(lines[1], "tick-aaa111") {
+			t.Errorf("row 1 should start with tick-aaa111, got %q", lines[1])
+		}
+		if !strings.HasPrefix(lines[2], "tick-bbb222") {
+			t.Errorf("row 2 should start with tick-bbb222, got %q", lines[2])
+		}
+	})
+
+	t.Run("it returns all tasks when --count exceeds result set size", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task 1", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Task 2", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-ccc333", Title: "Task 3", Status: task.StatusOpen, Priority: 3, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir, "--count", "100")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+		// header + 3 data rows
+		if len(lines) != 4 {
+			t.Fatalf("expected 4 lines (header + 3 tasks), got %d: %q", len(lines), stdout)
+		}
+	})
+
+	t.Run("it errors on --count 0", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, exitCode := runList(t, dir, "--count", "0")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+
+		if !strings.Contains(stderr, "must be >= 1") {
+			t.Errorf("stderr = %q, want to contain 'must be >= 1'", stderr)
+		}
+	})
+
+	t.Run("it errors on --count negative", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, exitCode := runList(t, dir, "--count", "-1")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+
+		if !strings.Contains(stderr, "must be >= 1") {
+			t.Errorf("stderr = %q, want to contain 'must be >= 1'", stderr)
+		}
+	})
+
+	t.Run("it errors on --count non-integer", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, exitCode := runList(t, dir, "--count", "abc")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+
+		if !strings.Contains(stderr, "invalid count") {
+			t.Errorf("stderr = %q, want to contain 'invalid count'", stderr)
+		}
+	})
+
+	t.Run("it errors on --count without value", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, exitCode := runList(t, dir, "--count")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+
+		if !strings.Contains(stderr, "--count requires a value") {
+			t.Errorf("stderr = %q, want to contain '--count requires a value'", stderr)
+		}
+	})
+
+	t.Run("it limits ready results with --count", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Ready 1", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Ready 2", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-ccc333", Title: "Ready 3", Status: task.StatusOpen, Priority: 3, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runReady(t, dir, "--count", "2")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+		if len(lines) != 3 {
+			t.Fatalf("expected 3 lines (header + 2 tasks), got %d: %q", len(lines), stdout)
+		}
+	})
+
+	t.Run("it limits blocked results with --count", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-blk000", Title: "Blocker", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-aaa111", Title: "Blocked 1", Status: task.StatusOpen, Priority: 1, BlockedBy: []string{"tick-blk000"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-bbb222", Title: "Blocked 2", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-blk000"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-ccc333", Title: "Blocked 3", Status: task.StatusOpen, Priority: 3, BlockedBy: []string{"tick-blk000"}, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runBlocked(t, dir, "--count", "2")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+		if len(lines) != 3 {
+			t.Fatalf("expected 3 lines (header + 2 tasks), got %d: %q", len(lines), stdout)
+		}
+	})
+
+	t.Run("it combines --count with --type filter", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-bug111", Title: "Bug 1", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
+			{ID: "tick-bug222", Title: "Bug 2", Status: task.StatusOpen, Priority: 2, Type: "bug", Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-bug333", Title: "Bug 3", Status: task.StatusOpen, Priority: 3, Type: "bug", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-feat11", Title: "Feature 1", Status: task.StatusOpen, Priority: 1, Type: "feature", Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir, "--type", "bug", "--count", "2")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+		// header + 2 bug tasks
+		if len(lines) != 3 {
+			t.Fatalf("expected 3 lines (header + 2 bug tasks), got %d: %q", len(lines), stdout)
+		}
+		if !strings.HasPrefix(lines[1], "tick-bug111") {
+			t.Errorf("row 1 should start with tick-bug111, got %q", lines[1])
+		}
+		if !strings.HasPrefix(lines[2], "tick-bug222") {
+			t.Errorf("row 2 should start with tick-bug222, got %q", lines[2])
+		}
+		if strings.Contains(stdout, "tick-feat11") {
+			t.Error("feature task should not appear with --type bug")
+		}
+	})
+
+	t.Run("it returns all results when --count not specified", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task 1", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Task 2", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-ccc333", Title: "Task 3", Status: task.StatusOpen, Priority: 3, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+		// header + 3 data rows
+		if len(lines) != 4 {
+			t.Fatalf("expected 4 lines (header + 3 tasks), got %d: %q", len(lines), stdout)
+		}
+	})
 }

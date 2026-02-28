@@ -22,6 +22,10 @@ type ListFilter struct {
 	Parent string
 	// Type restricts results to tasks of the specified type (e.g. "bug", "feature").
 	Type string
+	// Count limits the number of results returned.
+	Count int
+	// HasCount indicates whether --count was explicitly set.
+	HasCount bool
 }
 
 // parseListFlags parses list-specific flags from subArgs.
@@ -63,6 +67,17 @@ func parseListFlags(args []string) (ListFilter, error) {
 			}
 			i++
 			f.Type = task.NormalizeType(args[i])
+		case "--count":
+			if i+1 >= len(args) {
+				return f, fmt.Errorf("--count requires a value")
+			}
+			i++
+			c, err := strconv.Atoi(args[i])
+			if err != nil {
+				return f, fmt.Errorf("invalid count '%s': must be an integer", args[i])
+			}
+			f.Count = c
+			f.HasCount = true
 		}
 	}
 
@@ -92,6 +107,10 @@ func parseListFlags(args []string) (ListFilter, error) {
 		if err := task.ValidateType(f.Type); err != nil {
 			return f, err
 		}
+	}
+
+	if f.HasCount && f.Count < 1 {
+		return f, fmt.Errorf("invalid count '%d': must be >= 1", f.Count)
 	}
 
 	return f, nil
@@ -258,6 +277,11 @@ func buildListQuery(f ListFilter, descendantIDs []string) (string, []interface{}
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 	query += " ORDER BY t.priority ASC, t.created ASC"
+
+	if f.HasCount {
+		query += " LIMIT ?"
+		args = append(args, f.Count)
+	}
 
 	return query, args
 }
