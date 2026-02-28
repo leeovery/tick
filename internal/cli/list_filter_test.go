@@ -400,4 +400,207 @@ func TestListFilter(t *testing.T) {
 			t.Errorf("stdout = %q, want %q", stdout, expected)
 		}
 	})
+
+	t.Run("it filters list by --type bug", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-bug111", Title: "Fix crash", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
+			{ID: "tick-feat11", Title: "Add feature", Status: task.StatusOpen, Priority: 2, Type: "feature", Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-notype", Title: "No type", Status: task.StatusOpen, Priority: 2, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir, "--type", "bug")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "tick-bug111") {
+			t.Error("bug task should appear with --type bug")
+		}
+		if strings.Contains(stdout, "tick-feat11") {
+			t.Error("feature task should not appear with --type bug")
+		}
+		if strings.Contains(stdout, "tick-notype") {
+			t.Error("untyped task should not appear with --type bug")
+		}
+	})
+
+	t.Run("it normalizes --type filter input to lowercase", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-bug111", Title: "Fix crash", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
+			{ID: "tick-feat11", Title: "Add feature", Status: task.StatusOpen, Priority: 2, Type: "feature", Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir, "--type", "BUG")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "tick-bug111") {
+			t.Error("bug task should appear with --type BUG (normalized)")
+		}
+		if strings.Contains(stdout, "tick-feat11") {
+			t.Error("feature task should not appear with --type BUG")
+		}
+	})
+
+	t.Run("it errors on invalid --type filter value", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, exitCode := runList(t, dir, "--type", "epic")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+
+		if !strings.Contains(stderr, "invalid type") {
+			t.Errorf("stderr = %q, want to contain 'invalid type'", stderr)
+		}
+		if !strings.Contains(stderr, "bug") || !strings.Contains(stderr, "feature") || !strings.Contains(stderr, "task") || !strings.Contains(stderr, "chore") {
+			t.Errorf("stderr = %q, want to contain allowed type values", stderr)
+		}
+	})
+
+	t.Run("it returns empty list when no tasks match --type filter", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-bug111", Title: "Fix crash", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir, "--type", "chore")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		expected := "No tasks found.\n"
+		if stdout != expected {
+			t.Errorf("stdout = %q, want %q", stdout, expected)
+		}
+	})
+
+	t.Run("it filters ready tasks by --type", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-feat11", Title: "Feature ready", Status: task.StatusOpen, Priority: 2, Type: "feature", Created: now, Updated: now},
+			{ID: "tick-bug111", Title: "Bug ready", Status: task.StatusOpen, Priority: 2, Type: "bug", Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runReady(t, dir, "--type", "feature")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "tick-feat11") {
+			t.Error("feature task should appear in ready with --type feature")
+		}
+		if strings.Contains(stdout, "tick-bug111") {
+			t.Error("bug task should not appear in ready with --type feature")
+		}
+	})
+
+	t.Run("it filters blocked tasks by --type", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-blk000", Title: "Blocker", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-chore1", Title: "Chore blocked", Status: task.StatusOpen, Priority: 2, Type: "chore", BlockedBy: []string{"tick-blk000"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-feat11", Title: "Feature blocked", Status: task.StatusOpen, Priority: 2, Type: "feature", BlockedBy: []string{"tick-blk000"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runBlocked(t, dir, "--type", "chore")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "tick-chore1") {
+			t.Error("chore task should appear in blocked with --type chore")
+		}
+		if strings.Contains(stdout, "tick-feat11") {
+			t.Error("feature task should not appear in blocked with --type chore")
+		}
+	})
+
+	t.Run("it combines --type with --status filter", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-bug111", Title: "Bug open", Status: task.StatusOpen, Priority: 2, Type: "bug", Created: now, Updated: now},
+			{ID: "tick-bug222", Title: "Bug in progress", Status: task.StatusInProgress, Priority: 2, Type: "bug", Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-feat11", Title: "Feature open", Status: task.StatusOpen, Priority: 2, Type: "feature", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir, "--type", "bug", "--status", "open")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "tick-bug111") {
+			t.Error("open bug task should appear with --type bug --status open")
+		}
+		if strings.Contains(stdout, "tick-bug222") {
+			t.Error("in_progress bug should not appear with --status open")
+		}
+		if strings.Contains(stdout, "tick-feat11") {
+			t.Error("feature task should not appear with --type bug")
+		}
+	})
+
+	t.Run("it combines --type with --priority filter", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-bug111", Title: "Bug p1", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
+			{ID: "tick-bug222", Title: "Bug p2", Status: task.StatusOpen, Priority: 2, Type: "bug", Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-feat11", Title: "Feature p1", Status: task.StatusOpen, Priority: 1, Type: "feature", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir, "--type", "bug", "--priority", "1")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "tick-bug111") {
+			t.Error("bug priority 1 task should appear with --type bug --priority 1")
+		}
+		if strings.Contains(stdout, "tick-bug222") {
+			t.Error("bug priority 2 task should not appear with --priority 1")
+		}
+		if strings.Contains(stdout, "tick-feat11") {
+			t.Error("feature task should not appear with --type bug")
+		}
+	})
+
+	t.Run("it returns all tasks when --type not specified", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-bug111", Title: "Bug task", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
+			{ID: "tick-feat11", Title: "Feature task", Status: task.StatusOpen, Priority: 2, Type: "feature", Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-notype", Title: "No type task", Status: task.StatusOpen, Priority: 3, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "tick-bug111") {
+			t.Error("bug task should appear with no --type filter")
+		}
+		if !strings.Contains(stdout, "tick-feat11") {
+			t.Error("feature task should appear with no --type filter")
+		}
+		if !strings.Contains(stdout, "tick-notype") {
+			t.Error("untyped task should appear with no --type filter")
+		}
+	})
+
+	t.Run("it errors when --type flag has no value", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, exitCode := runList(t, dir, "--type")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+
+		if !strings.Contains(stderr, "--type requires a value") {
+			t.Errorf("stderr = %q, want to contain '--type requires a value'", stderr)
+		}
+	})
 }

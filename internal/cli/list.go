@@ -20,6 +20,8 @@ type ListFilter struct {
 	HasPriority bool
 	// Parent restricts results to descendants of the specified task ID.
 	Parent string
+	// Type restricts results to tasks of the specified type (e.g. "bug", "feature").
+	Type string
 }
 
 // parseListFlags parses list-specific flags from subArgs.
@@ -55,6 +57,12 @@ func parseListFlags(args []string) (ListFilter, error) {
 			}
 			i++
 			f.Parent = task.NormalizeID(args[i])
+		case "--type":
+			if i+1 >= len(args) {
+				return f, fmt.Errorf("--type requires a value")
+			}
+			i++
+			f.Type = task.NormalizeType(args[i])
 		}
 	}
 
@@ -80,6 +88,12 @@ func parseListFlags(args []string) (ListFilter, error) {
 		}
 	}
 
+	if f.Type != "" {
+		if err := task.ValidateType(f.Type); err != nil {
+			return f, err
+		}
+	}
+
 	return f, nil
 }
 
@@ -97,6 +111,7 @@ func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, std
 		status   string
 		priority int
 		title    string
+		taskType *string
 	}
 
 	var rows []listRow
@@ -132,7 +147,7 @@ func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, std
 
 		for sqlRows.Next() {
 			var r listRow
-			if err := sqlRows.Scan(&r.id, &r.status, &r.priority, &r.title); err != nil {
+			if err := sqlRows.Scan(&r.id, &r.status, &r.priority, &r.title, &r.taskType); err != nil {
 				return fmt.Errorf("failed to scan task row: %w", err)
 			}
 			rows = append(rows, r)
@@ -151,6 +166,9 @@ func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, std
 			Title:    r.title,
 			Status:   task.Status(r.status),
 			Priority: r.priority,
+		}
+		if r.taskType != nil {
+			tasks[i].Type = *r.taskType
 		}
 	}
 
@@ -218,6 +236,11 @@ func buildListQuery(f ListFilter, descendantIDs []string) (string, []interface{}
 		args = append(args, f.Priority)
 	}
 
+	if f.Type != "" {
+		conditions = append(conditions, `t.type = ?`)
+		args = append(args, f.Type)
+	}
+
 	if len(descendantIDs) > 0 {
 		placeholders := make([]string, len(descendantIDs))
 		for i, id := range descendantIDs {
@@ -230,7 +253,7 @@ func buildListQuery(f ListFilter, descendantIDs []string) (string, []interface{}
 		conditions = append(conditions, `1 = 0`)
 	}
 
-	query := `SELECT t.id, t.status, t.priority, t.title FROM tasks t`
+	query := `SELECT t.id, t.status, t.priority, t.title, t.type FROM tasks t`
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
