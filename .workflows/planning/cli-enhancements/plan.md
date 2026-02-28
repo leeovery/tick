@@ -1,6 +1,6 @@
 ---
 topic: cli-enhancements
-status: planning
+status: concluded
 format: tick
 work_type: feature
 ext_id: tick-db58ad
