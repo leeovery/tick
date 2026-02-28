@@ -14,7 +14,7 @@ author_gate_mode: auto
 finding_gate_mode: gated
 planning:
   phase: 4
-  task: ~
+  task: 1
 ---
 
 # Plan: CLI Enhancements
@@ -123,3 +123,16 @@ approved_at: 2026-02-28
 - [ ] Adding/removing a note updates the task's `Updated` timestamp
 - [ ] Show output displays refs and notes; notes shown chronologically (most recent last) with timestamp format `YYYY-MM-DD HH:MM`
 - [ ] All three formatters updated for refs and notes display in detail views
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| cli-enhancements-4-1 | Refs field on Task model with validation and JSONL serialization | ref containing commas, ref containing whitespace, ref exactly 200 chars, 201-char ref, 11 refs deduped to 10, 11 unique refs, empty string in list, whitespace-only ref | pending | |
+| cli-enhancements-4-2 | Refs junction table in SQLite schema and Cache.Rebuild | task with empty refs slice, rebuild clearing stale refs | pending | |
+| cli-enhancements-4-3 | Create and update with --refs and --clear-refs flags | --refs and --clear-refs together, empty --refs value, --refs with duplicates, --clear-refs on task with no refs | pending | |
+| cli-enhancements-4-4 | Refs display in show output and all formatters | task with no refs, task with 10 refs | pending | |
+| cli-enhancements-4-5 | Note data model with validation and JSONL serialization | empty note text, note exactly 500 chars, 501-char note, whitespace-only text | pending | |
+| cli-enhancements-4-6 | Notes table in SQLite schema and Cache.Rebuild | task with empty notes slice, rebuild clearing stale notes, note ordering preserved | pending | |
+| cli-enhancements-4-7 | Note add subcommand | missing id, missing text, text from multiple remaining args, task not found | pending | |
+| cli-enhancements-4-8 | Note remove subcommand | index 0, index exceeding note count, negative index, non-integer index, task with no notes | pending | |
+| cli-enhancements-4-9 | Notes display in show output and all formatters | task with no notes, task with multiple notes, note with long text | pending | |
