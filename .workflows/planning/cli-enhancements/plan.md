@@ -20,8 +20,9 @@ planning:
 # Plan: CLI Enhancements
 
 ### Phase 1: Partial ID Matching
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-02-28
 
 **Goal**: Enable prefix-based task ID resolution so users can reference tasks by shortened hex prefixes across all commands.
 
@@ -37,8 +38,9 @@ ext_id:
 - [ ] All commands accepting task IDs resolve through `ResolveID`: show, update, start, done, cancel, reopen, dep add/rm, remove, and ID-accepting flags (`--parent`, `--blocked-by`, `--blocks`)
 
 ### Phase 2: Task Types and List Count
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-02-28
 
 **Goal**: Add the `type` field to the Task model with create/update/filter/display support, and add the `--count` flag for capping list results.
 
@@ -56,8 +58,9 @@ ext_id:
 - [ ] `--count N` on `list`, `ready`, `blocked` appends `LIMIT N` to query; value must be >= 1
 
 ### Phase 3: Tags
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-02-28
 
 **Goal**: Add multi-value tags with kebab-case validation, junction table storage, and composable AND/OR filtering on list commands.
 
@@ -74,8 +77,9 @@ ext_id:
 - [ ] All three formatters updated for tags in show/detail views
 
 ### Phase 4: External References and Notes
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-02-28
 
 **Goal**: Add external reference links and timestamped notes to tasks, with refs on create/update and notes via a new `tick note` subcommand.
 
