@@ -3,7 +3,7 @@ topic: cli-enhancements
 status: planning
 format: tick
 work_type: feature
-ext_id:
+ext_id: tick-db58ad
 specification: ../specification/cli-enhancements/specification.md
 spec_commit: 8aae967aad70c57432f9d24dcd226594f295358a
 created: 2026-02-28
@@ -14,14 +14,14 @@ author_gate_mode: gated
 finding_gate_mode: gated
 planning:
   phase: 1
-  task: 1
+  task: 2
 ---
 
 # Plan: CLI Enhancements
 
 ### Phase 1: Partial ID Matching
 status: approved
-ext_id:
+ext_id: tick-bc42b5
 approved_at: 2026-02-28
 
 **Goal**: Enable prefix-based task ID resolution so users can reference tasks by shortened hex prefixes across all commands.
@@ -40,7 +40,7 @@ approved_at: 2026-02-28
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| cli-enhancements-1-1 | ResolveID method in storage layer | prefix shorter than 3 hex chars, ambiguous prefix matching 2+ tasks, exact full-ID bypass, mixed-case input, tick- prefix stripping | pending | |
+| cli-enhancements-1-1 | ResolveID method in storage layer | prefix shorter than 3 hex chars, ambiguous prefix matching 2+ tasks, exact full-ID bypass, mixed-case input, tick- prefix stripping | authored | tick-9283bb |
 | cli-enhancements-1-2 | Integrate ResolveID into positional ID commands | none | pending | |
 | cli-enhancements-1-3 | Integrate ResolveID into update and create ID-referencing flags | partial ID resolving to self-reference in --parent or --blocked-by | pending | |
 | cli-enhancements-1-4 | Integrate ResolveID into dep add/rm | both arguments resolving to same task | pending | |
