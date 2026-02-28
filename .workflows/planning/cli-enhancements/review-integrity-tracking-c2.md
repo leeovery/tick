@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-02-28
 cycle: 2
 phase: Plan Integrity Review
@@ -130,5 +130,5 @@ Tests:
 - "it does not show refs in list output"
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: All five tasks updated with individually named test lists.
