@@ -13,8 +13,8 @@ task_list_gate_mode: auto
 author_gate_mode: auto
 finding_gate_mode: gated
 planning:
-  phase: 3
-  task: 1
+  phase: 4
+  task: ~
 ---
 
 # Plan: CLI Enhancements
@@ -77,7 +77,7 @@ approved_at: 2026-02-28
 
 ### Phase 3: Tags
 status: approved
-ext_id:
+ext_id: tick-f33a8b
 approved_at: 2026-02-28
 
 **Goal**: Add multi-value tags with kebab-case validation, junction table storage, and composable AND/OR filtering on list commands.
@@ -97,11 +97,11 @@ approved_at: 2026-02-28
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| cli-enhancements-3-1 | Tags field on Task model with validation and JSONL serialization | double hyphens, leading/trailing hyphens, mixed-case normalization, 31-char tag, 11 tags deduped to 10, empty string in list, tag with spaces | pending | |
-| cli-enhancements-3-2 | Tags junction table in SQLite schema and Cache.Rebuild | task with empty tags slice, rebuild clearing stale tags | pending | |
-| cli-enhancements-3-3 | Tags display in show output and all formatters | task with no tags, task with 10 tags | pending | |
-| cli-enhancements-3-4 | Create and update with --tags and --clear-tags flags | --tags and --clear-tags together, empty --tags value, --tags with duplicates, --clear-tags on task with no tags | pending | |
-| cli-enhancements-3-5 | Tag filtering on list/ready/blocked with AND/OR composition | invalid kebab-case in filter, no matching tasks, single tag value, multiple --tag flags, combined with other filters | pending | |
+| cli-enhancements-3-1 | Tags field on Task model with validation and JSONL serialization | double hyphens, leading/trailing hyphens, mixed-case normalization, 31-char tag, 11 tags deduped to 10, empty string in list, tag with spaces | authored | tick-7d56c4 |
+| cli-enhancements-3-2 | Tags junction table in SQLite schema and Cache.Rebuild | task with empty tags slice, rebuild clearing stale tags | authored | tick-17334e |
+| cli-enhancements-3-3 | Tags display in show output and all formatters | task with no tags, task with 10 tags | authored | tick-d17558 |
+| cli-enhancements-3-4 | Create and update with --tags and --clear-tags flags | --tags and --clear-tags together, empty --tags value, --tags with duplicates, --clear-tags on task with no tags | authored | tick-f713ec |
+| cli-enhancements-3-5 | Tag filtering on list/ready/blocked with AND/OR composition | invalid kebab-case in filter, no matching tasks, single tag value, multiple --tag flags, combined with other filters | authored | tick-56001c |
 
 ### Phase 4: External References and Notes
 status: approved
