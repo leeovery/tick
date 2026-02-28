@@ -477,10 +477,173 @@ func TestTaskMarshalJSON(t *testing.T) {
 		}
 
 		s := string(data)
-		for _, field := range []string{"description", "blocked_by", "parent", "closed"} {
+		for _, field := range []string{"description", "blocked_by", "parent", "closed", "type"} {
 			if strings.Contains(s, `"`+field+`"`) {
 				t.Errorf("optional field %q should be omitted, got: %s", field, s)
 			}
+		}
+	})
+
+	t.Run("it marshals type field when set", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tk := Task{
+			ID:       "tick-a1b2c3",
+			Title:    "Typed task",
+			Status:   StatusOpen,
+			Priority: 2,
+			Type:     "bug",
+			Created:  created,
+			Updated:  created,
+		}
+
+		data, err := json.Marshal(tk)
+		if err != nil {
+			t.Fatalf("Marshal error: %v", err)
+		}
+
+		var raw map[string]interface{}
+		if err := json.Unmarshal(data, &raw); err != nil {
+			t.Fatalf("Unmarshal raw error: %v", err)
+		}
+		typ, ok := raw["type"]
+		if !ok {
+			t.Fatal("expected 'type' key in JSON output, not found")
+		}
+		if typ != "bug" {
+			t.Errorf("type = %q, want %q", typ, "bug")
+		}
+	})
+
+	t.Run("it omits type field when empty", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tk := Task{
+			ID:       "tick-a1b2c3",
+			Title:    "No type",
+			Status:   StatusOpen,
+			Priority: 2,
+			Created:  created,
+			Updated:  created,
+		}
+
+		data, err := json.Marshal(tk)
+		if err != nil {
+			t.Fatalf("Marshal error: %v", err)
+		}
+
+		s := string(data)
+		if strings.Contains(s, `"type"`) {
+			t.Errorf("type field should be omitted when empty, got: %s", s)
+		}
+	})
+
+	t.Run("it unmarshals type field from JSON", func(t *testing.T) {
+		jsonStr := `{"id":"tick-a1b2c3","title":"Typed","status":"open","priority":2,"type":"feature","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+		var tk Task
+		if err := json.Unmarshal([]byte(jsonStr), &tk); err != nil {
+			t.Fatalf("Unmarshal error: %v", err)
+		}
+		if tk.Type != "feature" {
+			t.Errorf("Type = %q, want %q", tk.Type, "feature")
+		}
+	})
+
+	t.Run("it unmarshals task without type field (backward compat)", func(t *testing.T) {
+		jsonStr := `{"id":"tick-a1b2c3","title":"Legacy","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+		var tk Task
+		if err := json.Unmarshal([]byte(jsonStr), &tk); err != nil {
+			t.Fatalf("Unmarshal error: %v", err)
+		}
+		if tk.Type != "" {
+			t.Errorf("Type = %q, want empty string for backward compat", tk.Type)
+		}
+	})
+}
+
+func TestValidateType(t *testing.T) {
+	t.Run("it validates allowed type values", func(t *testing.T) {
+		for _, typ := range []string{"bug", "feature", "task", "chore"} {
+			t.Run(typ, func(t *testing.T) {
+				err := ValidateType(typ)
+				if err != nil {
+					t.Errorf("ValidateType(%q) returned error: %v", typ, err)
+				}
+			})
+		}
+	})
+
+	t.Run("it rejects invalid type value", func(t *testing.T) {
+		err := ValidateType("enhancement")
+		if err == nil {
+			t.Fatal("expected error for invalid type, got nil")
+		}
+		// Error should list allowed values
+		for _, allowed := range []string{"bug", "feature", "task", "chore"} {
+			if !strings.Contains(err.Error(), allowed) {
+				t.Errorf("error should list allowed value %q, got: %q", allowed, err.Error())
+			}
+		}
+	})
+
+	t.Run("it allows empty type (optional field)", func(t *testing.T) {
+		err := ValidateType("")
+		if err != nil {
+			t.Errorf("ValidateType(%q) should allow empty, got: %v", "", err)
+		}
+	})
+
+	t.Run("it rejects mixed-case invalid type after normalization", func(t *testing.T) {
+		// Even after normalization, "Enhancement" -> "enhancement" is still invalid
+		normalized := NormalizeType("Enhancement")
+		err := ValidateType(normalized)
+		if err == nil {
+			t.Fatal("expected error for invalid type 'enhancement' (normalized from 'Enhancement'), got nil")
+		}
+	})
+}
+
+func TestNormalizeType(t *testing.T) {
+	t.Run("it normalizes type input to trimmed lowercase", func(t *testing.T) {
+		tests := []struct {
+			input string
+			want  string
+		}{
+			{"  BUG  ", "bug"},
+			{"Feature", "feature"},
+			{" TASK ", "task"},
+			{"  chore  ", "chore"},
+			{"", ""},
+			{"  ", ""},
+		}
+		for _, tt := range tests {
+			t.Run(fmt.Sprintf("input=%q", tt.input), func(t *testing.T) {
+				got := NormalizeType(tt.input)
+				if got != tt.want {
+					t.Errorf("NormalizeType(%q) = %q, want %q", tt.input, got, tt.want)
+				}
+			})
+		}
+	})
+}
+
+func TestValidateTypeNotEmpty(t *testing.T) {
+	t.Run("it rejects empty string on --type flag context", func(t *testing.T) {
+		err := ValidateTypeNotEmpty("")
+		if err == nil {
+			t.Fatal("expected error for empty type on --type flag, got nil")
+		}
+		if !strings.Contains(err.Error(), "--clear-type") {
+			t.Errorf("error should mention --clear-type, got: %q", err.Error())
+		}
+	})
+
+	t.Run("it rejects whitespace-only input on --type flag context", func(t *testing.T) {
+		normalized := NormalizeType("   ")
+		err := ValidateTypeNotEmpty(normalized)
+		if err == nil {
+			t.Fatal("expected error for whitespace-only type on --type flag, got nil")
+		}
+		if !strings.Contains(err.Error(), "--clear-type") {
+			t.Errorf("error should mention --clear-type, got: %q", err.Error())
 		}
 	})
 }

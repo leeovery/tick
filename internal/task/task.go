@@ -39,12 +39,13 @@ const (
 // TimestampFormat is the ISO 8601 UTC format used for all task timestamps.
 const TimestampFormat = "2006-01-02T15:04:05Z"
 
-// Task represents a work item in Tick with all 10 schema fields.
+// Task represents a work item in Tick with all schema fields.
 type Task struct {
 	ID          string     `json:"id"`
 	Title       string     `json:"title"`
 	Status      Status     `json:"status"`
 	Priority    int        `json:"priority"`
+	Type        string     `json:"type,omitempty"`
 	Description string     `json:"description,omitempty"`
 	BlockedBy   []string   `json:"blocked_by,omitempty"`
 	Parent      string     `json:"parent,omitempty"`
@@ -59,6 +60,7 @@ type taskJSON struct {
 	Title       string   `json:"title"`
 	Status      string   `json:"status"`
 	Priority    int      `json:"priority"`
+	Type        string   `json:"type,omitempty"`
 	Description string   `json:"description,omitempty"`
 	BlockedBy   []string `json:"blocked_by,omitempty"`
 	Parent      string   `json:"parent,omitempty"`
@@ -74,6 +76,7 @@ func (t Task) MarshalJSON() ([]byte, error) {
 		Title:       t.Title,
 		Status:      string(t.Status),
 		Priority:    t.Priority,
+		Type:        t.Type,
 		Description: t.Description,
 		BlockedBy:   t.BlockedBy,
 		Parent:      t.Parent,
@@ -106,6 +109,7 @@ func (t *Task) UnmarshalJSON(data []byte) error {
 	t.Title = jt.Title
 	t.Status = Status(jt.Status)
 	t.Priority = jt.Priority
+	t.Type = jt.Type
 	t.Description = jt.Description
 	t.BlockedBy = jt.BlockedBy
 	t.Parent = jt.Parent
@@ -207,6 +211,36 @@ func ValidateParent(taskID string, parent string) error {
 	}
 	if NormalizeID(parent) == NormalizeID(taskID) {
 		return fmt.Errorf("task %s cannot be its own parent", taskID)
+	}
+	return nil
+}
+
+// allowedTypes is the closed set of valid task type values.
+var allowedTypes = []string{"bug", "feature", "task", "chore"}
+
+// ValidateType checks that typ is one of the allowed task types or empty (optional).
+func ValidateType(typ string) error {
+	if typ == "" {
+		return nil
+	}
+	for _, a := range allowedTypes {
+		if typ == a {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid type %q: must be one of bug, feature, task, chore", typ)
+}
+
+// NormalizeType trims whitespace and lowercases a type string.
+func NormalizeType(typ string) string {
+	return strings.ToLower(strings.TrimSpace(typ))
+}
+
+// ValidateTypeNotEmpty checks that typ is non-empty, for use when --type flag is provided.
+// If empty, the error message directs the user to --clear-type.
+func ValidateTypeNotEmpty(typ string) error {
+	if typ == "" {
+		return errors.New("--type cannot be empty; use --clear-type to remove the type")
 	}
 	return nil
 }
