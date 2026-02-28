@@ -9,12 +9,12 @@ spec_commit: 8aae967aad70c57432f9d24dcd226594f295358a
 created: 2026-02-28
 updated: 2026-02-28
 external_dependencies: []
-task_list_gate_mode: gated
+task_list_gate_mode: auto
 author_gate_mode: auto
 finding_gate_mode: gated
 planning:
   phase: 3
-  task: ~
+  task: 1
 ---
 
 # Plan: CLI Enhancements
