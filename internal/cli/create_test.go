@@ -801,6 +801,84 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
+	t.Run("it creates a task with --type bug", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Fix login", "--type", "bug")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].Type != "bug" {
+			t.Errorf("type = %q, want %q", tasks[0].Type, "bug")
+		}
+	})
+
+	t.Run("it creates a task with --type normalized from uppercase", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Add feature", "--type", "FEATURE")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].Type != "feature" {
+			t.Errorf("type = %q, want %q", tasks[0].Type, "feature")
+		}
+	})
+
+	t.Run("it creates a task without --type (optional)", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "No type task")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].Type != "" {
+			t.Errorf("type = %q, want empty", tasks[0].Type)
+		}
+	})
+
+	t.Run("it errors on create with empty --type value", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Bad type", "--type", "")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--clear-type") {
+			t.Errorf("stderr should mention --clear-type, got %q", stderr)
+		}
+	})
+
+	t.Run("it errors on create with invalid --type value", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Bad type", "--type", "epic")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "invalid type") {
+			t.Errorf("stderr should contain 'invalid type', got %q", stderr)
+		}
+	})
+
+	t.Run("it errors on create with whitespace-only --type", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Bad type", "--type", "   ")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--clear-type") {
+			t.Errorf("stderr should mention --clear-type, got %q", stderr)
+		}
+	})
+
 	t.Run("it allows valid dependencies through create --blocked-by and --blocks", func(t *testing.T) {
 		now := time.Now().UTC().Truncate(time.Second)
 		taskA := task.Task{

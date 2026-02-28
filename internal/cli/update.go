@@ -20,11 +20,13 @@ type updateOpts struct {
 	parent           *string
 	blocks           []string
 	clearDescription bool
+	taskType         *string
+	clearType        bool
 }
 
 // hasChanges reports whether at least one update flag was provided.
 func (o updateOpts) hasChanges() bool {
-	return o.title != nil || o.description != nil || o.priority != nil || o.parent != nil || len(o.blocks) > 0 || o.clearDescription
+	return o.title != nil || o.description != nil || o.priority != nil || o.parent != nil || len(o.blocks) > 0 || o.clearDescription || o.taskType != nil || o.clearType
 }
 
 // parseUpdateArgs parses the subcommand arguments for `tick update`.
@@ -69,6 +71,15 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 			opts.parent = &v
 		case arg == "--clear-description":
 			opts.clearDescription = true
+		case arg == "--type":
+			i++
+			if i >= len(args) {
+				return opts, fmt.Errorf("--type requires a value")
+			}
+			v := args[i]
+			opts.taskType = &v
+		case arg == "--clear-type":
+			opts.clearType = true
 		case arg == "--blocks":
 			i++
 			if i >= len(args) {
@@ -101,7 +112,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	if !opts.hasChanges() {
-		return fmt.Errorf("at least one flag is required: --title, --description, --clear-description, --priority, --parent, --blocks")
+		return fmt.Errorf("at least one flag is required: --title, --description, --clear-description, --priority, --type, --clear-type, --parent, --blocks")
 	}
 
 	// Validate title if provided.
@@ -121,6 +132,21 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		if err := task.ValidateDescriptionUpdate(trimmed); err != nil {
 			return err
 		}
+	}
+
+	// Validate type flags.
+	if opts.taskType != nil && opts.clearType {
+		return fmt.Errorf("--type and --clear-type are mutually exclusive")
+	}
+	if opts.taskType != nil {
+		normalized := task.NormalizeType(*opts.taskType)
+		if err := task.ValidateTypeNotEmpty(normalized); err != nil {
+			return err
+		}
+		if err := task.ValidateType(normalized); err != nil {
+			return err
+		}
+		opts.taskType = &normalized
 	}
 
 	// Validate priority if provided.
@@ -199,6 +225,11 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			}
 			if opts.priority != nil {
 				tasks[i].Priority = *opts.priority
+			}
+			if opts.clearType {
+				tasks[i].Type = ""
+			} else if opts.taskType != nil {
+				tasks[i].Type = *opts.taskType
 			}
 			if opts.parent != nil {
 				tasks[i].Parent = *opts.parent

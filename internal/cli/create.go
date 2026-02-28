@@ -18,6 +18,8 @@ type createOpts struct {
 	blockedBy   []string
 	blocks      []string
 	parent      string
+	taskType    string
+	hasType     bool
 }
 
 // parseCreateArgs parses the subcommand arguments for `tick create`.
@@ -63,6 +65,13 @@ func parseCreateArgs(args []string) (createOpts, error) {
 				return opts, fmt.Errorf("--parent requires a value")
 			}
 			opts.parent = strings.ToLower(strings.TrimSpace(args[i]))
+		case arg == "--type":
+			i++
+			if i >= len(args) {
+				return opts, fmt.Errorf("--type requires a value")
+			}
+			opts.taskType = args[i]
+			opts.hasType = true
 		case strings.HasPrefix(arg, "-"):
 			// Unknown flag — skip (global flags already extracted)
 		default:
@@ -97,6 +106,17 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	// Validate priority.
 	if err := task.ValidatePriority(opts.priority); err != nil {
 		return err
+	}
+
+	// Validate type if provided.
+	if opts.hasType {
+		opts.taskType = task.NormalizeType(opts.taskType)
+		if err := task.ValidateTypeNotEmpty(opts.taskType); err != nil {
+			return err
+		}
+		if err := task.ValidateType(opts.taskType); err != nil {
+			return err
+		}
 	}
 
 	// Open store.
@@ -156,6 +176,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			Title:       trimmedTitle,
 			Status:      task.StatusOpen,
 			Priority:    opts.priority,
+			Type:        opts.taskType,
 			Description: task.TrimDescription(opts.description),
 			BlockedBy:   opts.blockedBy,
 			Parent:      opts.parent,

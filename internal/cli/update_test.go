@@ -630,6 +630,102 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
+	t.Run("it updates task type with --type chore", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--type", "chore")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if persisted[0].Type != "chore" {
+			t.Errorf("type = %q, want %q", persisted[0].Type, "chore")
+		}
+	})
+
+	t.Run("it clears task type with --clear-type", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Type: "bug", Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--clear-type")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if persisted[0].Type != "" {
+			t.Errorf("type = %q, want empty", persisted[0].Type)
+		}
+	})
+
+	t.Run("it errors on update with --type and --clear-type together", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--type", "bug", "--clear-type")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "mutually exclusive") {
+			t.Errorf("stderr should mention 'mutually exclusive', got %q", stderr)
+		}
+	})
+
+	t.Run("it errors on update with empty --type value", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Type: "bug", Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--type", "")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--clear-type") {
+			t.Errorf("stderr should mention --clear-type, got %q", stderr)
+		}
+
+		// Type should be unchanged
+		persisted := readPersistedTasks(t, tickDir)
+		if persisted[0].Type != "bug" {
+			t.Errorf("type = %q, want %q (unchanged)", persisted[0].Type, "bug")
+		}
+	})
+
+	t.Run("it errors on update with invalid --type value", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Type: "bug", Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--type", "epic")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "invalid type") {
+			t.Errorf("stderr should contain 'invalid type', got %q", stderr)
+		}
+
+		// Type should be unchanged
+		persisted := readPersistedTasks(t, tickDir)
+		if persisted[0].Type != "bug" {
+			t.Errorf("type = %q, want %q (unchanged)", persisted[0].Type, "bug")
+		}
+	})
+
 	t.Run("it rejects --blocks that would create a cycle", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		// taskA is blocked by taskB. Updating taskB --blocks taskA would create:
