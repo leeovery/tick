@@ -30,6 +30,12 @@ CREATE TABLE IF NOT EXISTS dependencies (
   PRIMARY KEY (task_id, blocked_by)
 );
 
+CREATE TABLE IF NOT EXISTS task_tags (
+  task_id TEXT NOT NULL,
+  tag TEXT NOT NULL,
+  PRIMARY KEY (task_id, tag)
+);
+
 CREATE TABLE IF NOT EXISTS metadata (
   key TEXT PRIMARY KEY,
   value TEXT
@@ -38,6 +44,7 @@ CREATE TABLE IF NOT EXISTS metadata (
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
 CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent);
+CREATE INDEX IF NOT EXISTS idx_task_tags_tag ON task_tags(tag);
 `
 
 // Cache wraps a SQLite database used as a query cache for Tick tasks.
@@ -81,6 +88,9 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 	defer func() { _ = tx.Rollback() }()
 
 	// Clear existing data.
+	if _, err := tx.Exec("DELETE FROM task_tags"); err != nil {
+		return fmt.Errorf("failed to clear task_tags: %w", err)
+	}
 	if _, err := tx.Exec("DELETE FROM dependencies"); err != nil {
 		return fmt.Errorf("failed to clear dependencies: %w", err)
 	}
@@ -100,6 +110,12 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 		return fmt.Errorf("failed to prepare dependency insert: %w", err)
 	}
 	defer insertDep.Close()
+
+	insertTag, err := tx.Prepare(`INSERT INTO task_tags (task_id, tag) VALUES (?, ?)`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare tag insert: %w", err)
+	}
+	defer insertTag.Close()
 
 	for _, t := range tasks {
 		var closedStr *string
@@ -141,6 +157,12 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 		for _, dep := range t.BlockedBy {
 			if _, err := insertDep.Exec(t.ID, dep); err != nil {
 				return fmt.Errorf("failed to insert dependency %s -> %s: %w", t.ID, dep, err)
+			}
+		}
+
+		for _, tag := range t.Tags {
+			if _, err := insertTag.Exec(t.ID, tag); err != nil {
+				return fmt.Errorf("failed to insert tag %s -> %s: %w", t.ID, tag, err)
 			}
 		}
 	}

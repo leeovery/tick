@@ -78,6 +78,37 @@ func TestCacheSchema(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("it creates task_tags table in schema", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		db := cache.DB()
+
+		// Verify task_tags table exists with correct columns
+		tagCols := queryColumns(t, db, "task_tags")
+		expectedTagCols := map[string]bool{"task_id": true, "tag": true}
+		if len(tagCols) != len(expectedTagCols) {
+			t.Errorf("task_tags table: expected %d columns, got %d: %v", len(expectedTagCols), len(tagCols), tagCols)
+		}
+		for col := range expectedTagCols {
+			if !tagCols[col] {
+				t.Errorf("task_tags table missing column %q", col)
+			}
+		}
+
+		// Verify index on tag column
+		indexes := queryIndexes(t, db)
+		if !indexes["idx_task_tags_tag"] {
+			t.Errorf("missing index %q", "idx_task_tags_tag")
+		}
+	})
 }
 
 // queryColumns returns a set of column names for the given table.
@@ -361,6 +392,267 @@ func TestCacheRebuild(t *testing.T) {
 
 		if storedHash != expectedHash {
 			t.Errorf("stored hash = %q, want %q", storedHash, expectedHash)
+		}
+	})
+
+	t.Run("it populates task_tags during rebuild for task with tags", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Tagged task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Tags:     []string{"frontend", "urgent", "v2"},
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		db := cache.DB()
+		rows, err := db.Query("SELECT task_id, tag FROM task_tags WHERE task_id = ? ORDER BY tag", "tick-a1b2c3")
+		if err != nil {
+			t.Fatalf("querying task_tags: %v", err)
+		}
+		defer rows.Close()
+
+		type tagRow struct {
+			taskID string
+			tag    string
+		}
+		var tags []tagRow
+		for rows.Next() {
+			var r tagRow
+			if err := rows.Scan(&r.taskID, &r.tag); err != nil {
+				t.Fatalf("scanning tag row: %v", err)
+			}
+			tags = append(tags, r)
+		}
+
+		if len(tags) != 3 {
+			t.Fatalf("expected 3 tag rows, got %d", len(tags))
+		}
+		expectedTags := []string{"frontend", "urgent", "v2"}
+		for i, want := range expectedTags {
+			if tags[i].tag != want {
+				t.Errorf("tags[%d].tag = %q, want %q", i, tags[i].tag, want)
+			}
+			if tags[i].taskID != "tick-a1b2c3" {
+				t.Errorf("tags[%d].task_id = %q, want %q", i, tags[i].taskID, "tick-a1b2c3")
+			}
+		}
+	})
+
+	t.Run("it inserts no rows for task with empty tags slice", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Untagged task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		var count int
+		err = cache.DB().QueryRow("SELECT COUNT(*) FROM task_tags WHERE task_id = ?", "tick-a1b2c3").Scan(&count)
+		if err != nil {
+			t.Fatalf("querying task_tags count: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("expected 0 tag rows, got %d", count)
+		}
+	})
+
+	t.Run("it clears stale tags on rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+
+		// First rebuild with tags
+		tasksV1 := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Tagged task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Tags:     []string{"frontend", "urgent"},
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		if err := cache.Rebuild(tasksV1, []byte("v1")); err != nil {
+			t.Fatalf("first Rebuild returned error: %v", err)
+		}
+
+		// Second rebuild with different tags (old ones should be gone)
+		tasksV2 := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Tagged task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Tags:     []string{"backend"},
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		if err := cache.Rebuild(tasksV2, []byte("v2")); err != nil {
+			t.Fatalf("second Rebuild returned error: %v", err)
+		}
+
+		var count int
+		err = cache.DB().QueryRow("SELECT COUNT(*) FROM task_tags").Scan(&count)
+		if err != nil {
+			t.Fatalf("querying task_tags count: %v", err)
+		}
+		if count != 1 {
+			t.Errorf("expected 1 tag row after rebuild, got %d", count)
+		}
+
+		var tag string
+		err = cache.DB().QueryRow("SELECT tag FROM task_tags WHERE task_id = ?", "tick-a1b2c3").Scan(&tag)
+		if err != nil {
+			t.Fatalf("querying tag: %v", err)
+		}
+		if tag != "backend" {
+			t.Errorf("tag = %q, want %q", tag, "backend")
+		}
+	})
+
+	t.Run("it handles rebuild with multiple tasks having different tag sets", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-aaaaaa",
+				Title:    "Task A",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Tags:     []string{"frontend", "urgent"},
+				Created:  created,
+				Updated:  created,
+			},
+			{
+				ID:       "tick-bbbbbb",
+				Title:    "Task B",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Tags:     []string{"backend"},
+				Created:  created,
+				Updated:  created,
+			},
+			{
+				ID:       "tick-cccccc",
+				Title:    "Task C (no tags)",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		db := cache.DB()
+
+		// Total tag rows: 2 (A) + 1 (B) + 0 (C) = 3
+		var totalCount int
+		err = db.QueryRow("SELECT COUNT(*) FROM task_tags").Scan(&totalCount)
+		if err != nil {
+			t.Fatalf("querying total task_tags count: %v", err)
+		}
+		if totalCount != 3 {
+			t.Errorf("expected 3 total tag rows, got %d", totalCount)
+		}
+
+		// Task A has 2 tags
+		var countA int
+		err = db.QueryRow("SELECT COUNT(*) FROM task_tags WHERE task_id = ?", "tick-aaaaaa").Scan(&countA)
+		if err != nil {
+			t.Fatalf("querying task A tags count: %v", err)
+		}
+		if countA != 2 {
+			t.Errorf("expected 2 tags for task A, got %d", countA)
+		}
+
+		// Task B has 1 tag
+		var countB int
+		err = db.QueryRow("SELECT COUNT(*) FROM task_tags WHERE task_id = ?", "tick-bbbbbb").Scan(&countB)
+		if err != nil {
+			t.Fatalf("querying task B tags count: %v", err)
+		}
+		if countB != 1 {
+			t.Errorf("expected 1 tag for task B, got %d", countB)
+		}
+
+		// Task C has 0 tags
+		var countC int
+		err = db.QueryRow("SELECT COUNT(*) FROM task_tags WHERE task_id = ?", "tick-cccccc").Scan(&countC)
+		if err != nil {
+			t.Fatalf("querying task C tags count: %v", err)
+		}
+		if countC != 0 {
+			t.Errorf("expected 0 tags for task C, got %d", countC)
+		}
+
+		// Rebuild again with same data — idempotent
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("second Rebuild returned error: %v", err)
+		}
+
+		var totalCountAfter int
+		err = db.QueryRow("SELECT COUNT(*) FROM task_tags").Scan(&totalCountAfter)
+		if err != nil {
+			t.Fatalf("querying total task_tags count after second rebuild: %v", err)
+		}
+		if totalCountAfter != 3 {
+			t.Errorf("expected 3 total tag rows after idempotent rebuild, got %d", totalCountAfter)
 		}
 	})
 }
