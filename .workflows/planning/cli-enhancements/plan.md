@@ -37,6 +37,14 @@ approved_at: 2026-02-28
 - [ ] Zero matches returns "not found" error
 - [ ] All commands accepting task IDs resolve through `ResolveID`: show, update, start, done, cancel, reopen, dep add/rm, remove, and ID-accepting flags (`--parent`, `--blocked-by`, `--blocks`)
 
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| cli-enhancements-1-1 | ResolveID method in storage layer | prefix shorter than 3 hex chars, ambiguous prefix matching 2+ tasks, exact full-ID bypass, mixed-case input, tick- prefix stripping | pending | |
+| cli-enhancements-1-2 | Integrate ResolveID into positional ID commands | none | pending | |
+| cli-enhancements-1-3 | Integrate ResolveID into update and create ID-referencing flags | partial ID resolving to self-reference in --parent or --blocked-by | pending | |
+| cli-enhancements-1-4 | Integrate ResolveID into dep add/rm | both arguments resolving to same task | pending | |
+
 ### Phase 2: Task Types and List Count
 status: approved
 ext_id:
