@@ -14,7 +14,7 @@ author_gate_mode: gated
 finding_gate_mode: gated
 planning:
   phase: 1
-  task: 3
+  task: 4
 ---
 
 # Plan: CLI Enhancements
@@ -42,7 +42,7 @@ approved_at: 2026-02-28
 |----|------|------------|--------|--------|
 | cli-enhancements-1-1 | ResolveID method in storage layer | prefix shorter than 3 hex chars, ambiguous prefix matching 2+ tasks, exact full-ID bypass, mixed-case input, tick- prefix stripping | authored | tick-9283bb |
 | cli-enhancements-1-2 | Integrate ResolveID into positional ID commands | none | authored | tick-b45af0 |
-| cli-enhancements-1-3 | Integrate ResolveID into update and create ID-referencing flags | partial ID resolving to self-reference in --parent or --blocked-by | pending | |
+| cli-enhancements-1-3 | Integrate ResolveID into update and create ID-referencing flags | partial ID resolving to self-reference in --parent or --blocked-by | authored | tick-9540a5 |
 | cli-enhancements-1-4 | Integrate ResolveID into dep add/rm | both arguments resolving to same task | pending | |
 
 ### Phase 2: Task Types and List Count
