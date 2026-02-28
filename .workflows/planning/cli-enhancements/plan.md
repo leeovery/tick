@@ -14,7 +14,7 @@ author_gate_mode: auto
 finding_gate_mode: gated
 planning:
   phase: 4
-  task: 1
+  task: done
 ---
 
 # Plan: CLI Enhancements
@@ -105,7 +105,7 @@ approved_at: 2026-02-28
 
 ### Phase 4: External References and Notes
 status: approved
-ext_id:
+ext_id: tick-af518b
 approved_at: 2026-02-28
 
 **Goal**: Add external reference links and timestamped notes to tasks, with refs on create/update and notes via a new `tick note` subcommand.
@@ -127,12 +127,12 @@ approved_at: 2026-02-28
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| cli-enhancements-4-1 | Refs field on Task model with validation and JSONL serialization | ref containing commas, ref containing whitespace, ref exactly 200 chars, 201-char ref, 11 refs deduped to 10, 11 unique refs, empty string in list, whitespace-only ref | pending | |
-| cli-enhancements-4-2 | Refs junction table in SQLite schema and Cache.Rebuild | task with empty refs slice, rebuild clearing stale refs | pending | |
-| cli-enhancements-4-3 | Create and update with --refs and --clear-refs flags | --refs and --clear-refs together, empty --refs value, --refs with duplicates, --clear-refs on task with no refs | pending | |
-| cli-enhancements-4-4 | Refs display in show output and all formatters | task with no refs, task with 10 refs | pending | |
-| cli-enhancements-4-5 | Note data model with validation and JSONL serialization | empty note text, note exactly 500 chars, 501-char note, whitespace-only text | pending | |
-| cli-enhancements-4-6 | Notes table in SQLite schema and Cache.Rebuild | task with empty notes slice, rebuild clearing stale notes, note ordering preserved | pending | |
-| cli-enhancements-4-7 | Note add subcommand | missing id, missing text, text from multiple remaining args, task not found | pending | |
-| cli-enhancements-4-8 | Note remove subcommand | index 0, index exceeding note count, negative index, non-integer index, task with no notes | pending | |
-| cli-enhancements-4-9 | Notes display in show output and all formatters | task with no notes, task with multiple notes, note with long text | pending | |
+| cli-enhancements-4-1 | Refs field on Task model with validation and JSONL serialization | ref containing commas, ref containing whitespace, ref exactly 200 chars, 201-char ref, 11 refs deduped to 10, 11 unique refs, empty string in list, whitespace-only ref | authored | tick-e7bb22 |
+| cli-enhancements-4-2 | Refs junction table in SQLite schema and Cache.Rebuild | task with empty refs slice, rebuild clearing stale refs | authored | tick-80ad02 |
+| cli-enhancements-4-3 | Create and update with --refs and --clear-refs flags | --refs and --clear-refs together, empty --refs value, --refs with duplicates, --clear-refs on task with no refs | authored | tick-6d5863 |
+| cli-enhancements-4-4 | Refs display in show output and all formatters | task with no refs, task with 10 refs | authored | tick-4b4e4b |
+| cli-enhancements-4-5 | Note data model with validation and JSONL serialization | empty note text, note exactly 500 chars, 501-char note, whitespace-only text | authored | tick-6cd164 |
+| cli-enhancements-4-6 | Notes table in SQLite schema and Cache.Rebuild | task with empty notes slice, rebuild clearing stale notes, note ordering preserved | authored | tick-17373b |
+| cli-enhancements-4-7 | Note add subcommand | missing id, missing text, text from multiple remaining args, task not found | authored | tick-a4c883 |
+| cli-enhancements-4-8 | Note remove subcommand | index 0, index exceeding note count, negative index, non-integer index, task with no notes | authored | tick-7402d4 |
+| cli-enhancements-4-9 | Notes display in show output and all formatters | task with no notes, task with multiple notes, note with long text | authored | tick-8b1edf |
