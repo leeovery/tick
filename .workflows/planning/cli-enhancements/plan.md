@@ -94,6 +94,15 @@ approved_at: 2026-02-28
 - [ ] Tags displayed in show output; not displayed in list output
 - [ ] All three formatters updated for tags in show/detail views
 
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| cli-enhancements-3-1 | Tags field on Task model with validation and JSONL serialization | double hyphens, leading/trailing hyphens, mixed-case normalization, 31-char tag, 11 tags deduped to 10, empty string in list, tag with spaces | pending | |
+| cli-enhancements-3-2 | Tags junction table in SQLite schema and Cache.Rebuild | task with empty tags slice, rebuild clearing stale tags | pending | |
+| cli-enhancements-3-3 | Tags display in show output and all formatters | task with no tags, task with 10 tags | pending | |
+| cli-enhancements-3-4 | Create and update with --tags and --clear-tags flags | --tags and --clear-tags together, empty --tags value, --tags with duplicates, --clear-tags on task with no tags | pending | |
+| cli-enhancements-3-5 | Tag filtering on list/ready/blocked with AND/OR composition | invalid kebab-case in filter, no matching tasks, single tag value, multiple --tag flags, combined with other filters | pending | |
+
 ### Phase 4: External References and Notes
 status: approved
 ext_id:
