@@ -3,25 +3,25 @@ topic: cache-schema-versioning
 status: planning
 format: tick
 work_type: bugfix
-ext_id:
+ext_id: tick-598752
 specification: ../specification/cache-schema-versioning/specification.md
 spec_commit: 1874c3b2085398bee1254e9773aba96fdd925c24
 created: 2026-03-01
 updated: 2026-03-01
 external_dependencies: []
 task_list_gate_mode: gated
-author_gate_mode: gated
+author_gate_mode: auto
 finding_gate_mode: gated
 planning:
   phase: 1
-  task: 1
+  task: 2
 ---
 
 # Plan: Cache Schema Versioning
 
 ### Phase 1: Schema Version Check and Rebuild
 status: approved
-ext_id:
+ext_id: tick-796ea9
 approved_at: 2026-03-01
 
 **Goal**: Add a schema version constant to the cache, store it in metadata during rebuild, and check it early in `ensureFresh()` — triggering a full delete-and-rebuild when the version is missing or mismatched. This is the complete fix for the broken upgrade path.
@@ -41,6 +41,6 @@ approved_at: 2026-03-01
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| cache-schema-versioning-1-1 | Add schema version constant and store in metadata during rebuild | none | pending | |
+| cache-schema-versioning-1-1 | Add schema version constant and store in metadata during rebuild | none | authored | tick-477711 |
 | cache-schema-versioning-1-2 | Check schema version in ensureFresh and delete-rebuild on mismatch | missing schema_version row (pre-versioning cache.db), new empty cache extra rebuild cycle | pending | |
 | cache-schema-versioning-1-3 | End-to-end query success after version-triggered rebuild | none | pending | |
