@@ -137,3 +137,18 @@ approved_at: 2026-02-28
 | cli-enhancements-4-7 | Note add subcommand | missing id, missing text, text from multiple remaining args, task not found | authored | tick-a4c883 |
 | cli-enhancements-4-8 | Note remove subcommand | index 0, index exceeding note count, negative index, non-integer index, task with no notes | authored | tick-7402d4 |
 | cli-enhancements-4-9 | Notes display in show output and all formatters | task with no notes, task with multiple notes, note with long text | authored | tick-8b1edf |
+
+### Phase 5: Analysis (Cycle 1)
+status: approved
+ext_id: tick-ebe119
+
+**Goal**: Address findings from Analysis (Cycle 1).
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| cli-enhancements-5-1 | Add type column to queryShowData SQL query | none | authored | tick-2d8194 |
+| cli-enhancements-5-2 | Extract generic deduplication and validation helpers in internal/task | none | authored | tick-8cf37e |
+| cli-enhancements-5-3 | Extract shared buildStringListSection in toon_formatter.go | none | authored | tick-219286 |
+| cli-enhancements-5-4 | Extract shared validation helpers for type/tags/refs flags in CLI layer | none | authored | tick-4dcb23 |
+| cli-enhancements-5-5 | Consolidate ResolveID into a single Query call | none | authored | tick-8bd9fb |

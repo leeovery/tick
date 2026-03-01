@@ -6,7 +6,7 @@ total_proposed: 5
 # Analysis Tasks: cli-enhancements (Cycle 1)
 
 ## Task 1: Add type column to queryShowData SQL query
-status: pending
+status: approved
 severity: high
 sources: standards, architecture
 
@@ -32,7 +32,7 @@ sources: standards, architecture
 - Create a task with `--type feature`, run `tick update <id> --title newtitle --pretty`, verify post-mutation output contains "Type: feature"
 
 ## Task 2: Extract generic deduplication and validation helpers in internal/task
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -54,7 +54,7 @@ sources: duplication
 - All existing tag and ref validation tests pass unchanged
 
 ## Task 3: Extract shared buildStringListSection in toon_formatter.go
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -74,7 +74,7 @@ sources: duplication
 - Verify `tick show` with --toon on a task with tags and refs produces identical output
 
 ## Task 4: Extract shared validation helpers for type/tags/refs flags in CLI layer
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -99,7 +99,7 @@ sources: duplication
 - Verify that invalid type/tags/refs still produce the same error messages
 
 ## Task 5: Consolidate ResolveID into a single Query call
-status: pending
+status: approved
 severity: medium
 sources: architecture
 
