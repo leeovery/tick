@@ -39,6 +39,7 @@ Add a hard-coded schema version constant. Store it in the existing `metadata` ta
 - Version check happens **before** `IsFresh()` to avoid querying a schema-incompatible cache
 - Simple integer version, not a schema hash — explicit, conventional, no false triggers from whitespace changes
 - No `ALTER TABLE` migrations — the cache is ephemeral by design, full rebuild is correct
+- On a new cache the missing version triggers the same delete+rebuild path; the extra cycle is acceptable since cache creation is infrequent
 
 **Files affected:**
 - `internal/storage/cache.go` — add version constant, store version in metadata on rebuild, add version check function
