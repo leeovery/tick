@@ -17,10 +17,11 @@ linters:
 analysis_cycle: 0
 project_skills: ["golang-pro"]
 current_phase: 1
-current_task: cache-schema-versioning-1-2
+current_task: cache-schema-versioning-1-3
 completed_phases: []
 completed_tasks:
   - cache-schema-versioning-1-1
+  - cache-schema-versioning-1-2
 started: 2026-03-01
 updated: 2026-03-01
 completed: ~

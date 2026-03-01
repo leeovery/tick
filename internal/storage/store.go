@@ -130,6 +130,22 @@ func (s *Store) removeCache() error {
 	return nil
 }
 
+// recreateCache closes the current cache, deletes the file, and opens a fresh one.
+// Used when the cache is detected as corrupt, schema-incompatible, or otherwise unusable.
+func (s *Store) recreateCache(reason string) error {
+	s.cache.Close()
+	s.cache = nil
+	if err := s.removeCache(); err != nil {
+		return err
+	}
+	cache, err := OpenCache(s.cachePath)
+	if err != nil {
+		return fmt.Errorf("failed to recreate cache (%s): %w", reason, err)
+	}
+	s.cache = cache
+	return nil
+}
+
 // ReadTasks reads and parses the JSONL file under a shared lock without writing.
 // This is a lightweight read-only operation that does not touch the cache or JSONL file.
 func (s *Store) ReadTasks() ([]task.Task, error) {
@@ -376,20 +392,29 @@ func (s *Store) ensureFresh(rawJSONL []byte, tasks []task.Task) error {
 		s.cache = cache
 	}
 
+	// Schema version check: detect incompatible or pre-versioning caches
+	// before querying. A mismatch (or missing row returning 0) triggers
+	// delete+reopen; the fresh empty cache has no hash, so IsFresh() below
+	// will return false and Rebuild() will repopulate it.
+	ver, err := s.cache.SchemaVersion()
+	if err != nil {
+		log.Printf("warning: schema version check failed, recreating: %v", err)
+		if err := s.recreateCache("schema version error"); err != nil {
+			return err
+		}
+	} else if ver != CurrentSchemaVersion() {
+		s.verbose(fmt.Sprintf("schema version mismatch: got %d, want %d", ver, CurrentSchemaVersion()))
+		if err := s.recreateCache("schema version mismatch"); err != nil {
+			return err
+		}
+	}
+
 	fresh, err := s.cache.IsFresh(rawJSONL)
 	if err != nil {
-		// Query error — corrupted schema. Close, delete, and recreate.
 		log.Printf("warning: cache freshness check failed, recreating: %v", err)
-		s.cache.Close()
-		s.cache = nil
-		if rmErr := s.removeCache(); rmErr != nil {
-			return rmErr
+		if err := s.recreateCache("freshness check corruption"); err != nil {
+			return err
 		}
-		cache, err := OpenCache(s.cachePath)
-		if err != nil {
-			return fmt.Errorf("failed to recreate cache after corruption: %w", err)
-		}
-		s.cache = cache
 		fresh = false
 	}
 

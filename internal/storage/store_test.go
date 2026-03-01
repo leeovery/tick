@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -1258,4 +1259,257 @@ func TestStoreStaleCacheRebuild(t *testing.T) {
 			t.Fatalf("Query returned error: %v", err)
 		}
 	})
+}
+
+func TestStoreSchemaVersionCheck(t *testing.T) {
+	t.Run("it deletes and rebuilds cache when schema_version is wrong", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+
+		// Prime the cache.
+		err = store.Query(func(db *sql.DB) error { return nil })
+		if err != nil {
+			t.Fatalf("initial Query returned error: %v", err)
+		}
+		store.Close()
+
+		// Directly update schema_version to a wrong value using raw SQL.
+		cachePath := filepath.Join(tickDir, "cache.db")
+		db, err := sql.Open("sqlite", cachePath)
+		if err != nil {
+			t.Fatalf("failed to open cache for tampering: %v", err)
+		}
+		_, err = db.Exec("UPDATE metadata SET value = '999' WHERE key = 'schema_version'")
+		if err != nil {
+			t.Fatalf("failed to update schema_version: %v", err)
+		}
+		db.Close()
+
+		// Open a new store and trigger Query. The version mismatch should
+		// cause delete+rebuild.
+		store2, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store2.Close()
+
+		err = store2.Query(func(db *sql.DB) error {
+			// Task data should be correct after rebuild.
+			var count int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); qErr != nil {
+				return qErr
+			}
+			if count != 1 {
+				t.Errorf("expected 1 task after version-triggered rebuild, got %d", count)
+			}
+
+			var title string
+			if qErr := db.QueryRow("SELECT title FROM tasks WHERE id = ?", "tick-aaaaaa").Scan(&title); qErr != nil {
+				return qErr
+			}
+			if title != "Task A" {
+				t.Errorf("title = %q, want %q", title, "Task A")
+			}
+
+			// schema_version should now equal CurrentSchemaVersion.
+			var verStr string
+			if qErr := db.QueryRow("SELECT value FROM metadata WHERE key = 'schema_version'").Scan(&verStr); qErr != nil {
+				return fmt.Errorf("schema_version not found after rebuild: %w", qErr)
+			}
+			if verStr != fmt.Sprintf("%d", CurrentSchemaVersion()) {
+				t.Errorf("schema_version = %q, want %q", verStr, fmt.Sprintf("%d", CurrentSchemaVersion()))
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query returned error: %v", err)
+		}
+	})
+
+	t.Run("it deletes and rebuilds cache when schema_version row is missing", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+
+		// Prime the cache.
+		err = store.Query(func(db *sql.DB) error { return nil })
+		if err != nil {
+			t.Fatalf("initial Query returned error: %v", err)
+		}
+		store.Close()
+
+		// Directly delete the schema_version row (simulates pre-versioning cache).
+		cachePath := filepath.Join(tickDir, "cache.db")
+		db, err := sql.Open("sqlite", cachePath)
+		if err != nil {
+			t.Fatalf("failed to open cache for tampering: %v", err)
+		}
+		_, err = db.Exec("DELETE FROM metadata WHERE key = 'schema_version'")
+		if err != nil {
+			t.Fatalf("failed to delete schema_version: %v", err)
+		}
+		db.Close()
+
+		// Open a new store and trigger Query. The missing version should
+		// cause delete+rebuild.
+		store2, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store2.Close()
+
+		err = store2.Query(func(db *sql.DB) error {
+			var count int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); qErr != nil {
+				return qErr
+			}
+			if count != 1 {
+				t.Errorf("expected 1 task after missing-version rebuild, got %d", count)
+			}
+
+			// schema_version should now exist and equal CurrentSchemaVersion.
+			var verStr string
+			if qErr := db.QueryRow("SELECT value FROM metadata WHERE key = 'schema_version'").Scan(&verStr); qErr != nil {
+				return fmt.Errorf("schema_version not found after rebuild: %w", qErr)
+			}
+			if verStr != fmt.Sprintf("%d", CurrentSchemaVersion()) {
+				t.Errorf("schema_version = %q, want %q", verStr, fmt.Sprintf("%d", CurrentSchemaVersion()))
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query returned error: %v", err)
+		}
+	})
+
+	t.Run("it preserves cache when schema_version matches", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		var logged []string
+		store, err := NewStore(tickDir, WithVerbose(func(msg string) {
+			logged = append(logged, msg)
+		}))
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		// Prime the cache (first query triggers build).
+		err = store.Query(func(db *sql.DB) error { return nil })
+		if err != nil {
+			t.Fatalf("initial Query returned error: %v", err)
+		}
+
+		// Clear logs from the priming query.
+		logged = nil
+
+		// Second query on the same store — cache is fresh, version matches.
+		err = store.Query(func(db *sql.DB) error {
+			var count int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); qErr != nil {
+				return qErr
+			}
+			if count != 1 {
+				t.Errorf("expected 1 task, got %d", count)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("second Query returned error: %v", err)
+		}
+
+		// Verify no "schema version mismatch" message was logged.
+		for _, msg := range logged {
+			if msg == "schema version mismatch" || containsSubstring(msg, "schema version mismatch") {
+				t.Errorf("unexpected schema version mismatch log: %q", msg)
+			}
+		}
+	})
+
+	t.Run("it handles SchemaVersion query error gracefully", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+
+		// Prime the cache.
+		err = store.Query(func(db *sql.DB) error { return nil })
+		if err != nil {
+			t.Fatalf("initial Query returned error: %v", err)
+		}
+		store.Close()
+
+		// Corrupt the metadata table so SchemaVersion() returns an error.
+		cachePath := filepath.Join(tickDir, "cache.db")
+		db, err := sql.Open("sqlite", cachePath)
+		if err != nil {
+			t.Fatalf("failed to open cache for corruption: %v", err)
+		}
+		_, err = db.Exec("DROP TABLE metadata; CREATE TABLE metadata (broken INTEGER)")
+		if err != nil {
+			t.Fatalf("failed to corrupt metadata: %v", err)
+		}
+		db.Close()
+
+		// Open a new store and trigger Query. The SchemaVersion error should
+		// cause delete+rebuild recovery.
+		store2, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store2.Close()
+
+		err = store2.Query(func(db *sql.DB) error {
+			var count int
+			if qErr := db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&count); qErr != nil {
+				return qErr
+			}
+			if count != 1 {
+				t.Errorf("expected 1 task after schema error recovery, got %d", count)
+			}
+
+			// schema_version should be correct after recovery.
+			var verStr string
+			if qErr := db.QueryRow("SELECT value FROM metadata WHERE key = 'schema_version'").Scan(&verStr); qErr != nil {
+				return fmt.Errorf("schema_version not found after recovery: %w", qErr)
+			}
+			if verStr != fmt.Sprintf("%d", CurrentSchemaVersion()) {
+				t.Errorf("schema_version = %q, want %q", verStr, fmt.Sprintf("%d", CurrentSchemaVersion()))
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Query returned error: %v", err)
+		}
+	})
+}
+
+// containsSubstring checks if s contains substr.
+func containsSubstring(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && strings.Contains(s, substr))
 }
