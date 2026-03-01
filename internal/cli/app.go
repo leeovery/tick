@@ -103,6 +103,8 @@ func (a *App) Run(args []string) int {
 		err = a.handleBlocked(fc, fmtr, subArgs)
 	case "dep":
 		err = a.handleDep(fc, fmtr, subArgs)
+	case "note":
+		err = a.handleNote(fc, fmtr, subArgs)
 	case "remove":
 		err = a.handleRemove(fc, fmtr, subArgs)
 	case "stats":
