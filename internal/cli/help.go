@@ -40,6 +40,9 @@ var commands = []commandInfo{
 		Flags: []flagInfo{
 			{"--priority", "<0-4>", "Task priority (default: 2)", false},
 			{"--description", "<text>", "Task description", false},
+			{"--type", "<bug|feature|task|chore>", "Task type", false},
+			{"--tags", "<tag,...>", "Comma-separated tags (kebab-case)", false},
+			{"--refs", "<ref,...>", "Comma-separated external references", false},
 			{"--parent", "<id>", "Parent task ID (creates a subtask)", false},
 			{"--blocked-by", "<id,...>", "Task IDs this is blocked by", false},
 			{"--blocks", "<id,...>", "Task IDs this blocks", false},
@@ -54,9 +57,12 @@ var commands = []commandInfo{
 		Flags: []flagInfo{
 			{"--status", "<open|in_progress|done|cancelled>", "Filter by status", false},
 			{"--priority", "<0-4>", "Filter by priority", false},
+			{"--type", "<bug|feature|task|chore>", "Filter by type", false},
+			{"--tag", "<tag,...>", "Filter by tag (AND within flag, OR across flags)", false},
 			{"--parent", "<id>", "Filter by parent task", false},
 			{"--ready", "", "Show only ready tasks (no blockers, children, or blocked ancestor)", false},
 			{"--blocked", "", "Show only blocked tasks", false},
+			{"--count", "<n>", "Limit results to N tasks", false},
 		},
 	},
 	{
@@ -76,6 +82,12 @@ var commands = []commandInfo{
 			{"--description", "<text>", "New description", false},
 			{"--clear-description", "", "Remove description", false},
 			{"--priority", "<0-4>", "New priority", false},
+			{"--type", "<bug|feature|task|chore>", "Set task type", false},
+			{"--clear-type", "", "Remove type", false},
+			{"--tags", "<tag,...>", "Replace tags (comma-separated)", false},
+			{"--clear-tags", "", "Remove all tags", false},
+			{"--refs", "<ref,...>", "Replace refs (comma-separated)", false},
+			{"--clear-refs", "", "Remove all refs", false},
 			{"--parent", "<id>", "New parent task ID", false},
 			{"--blocks", "<id,...>", "Task IDs this blocks", false},
 		},
@@ -119,6 +131,14 @@ var commands = []commandInfo{
 		},
 	},
 	{
+		Name:    "note",
+		Summary: "Add or remove task notes",
+		Usage:   "tick note <add|remove> <task-id> <text|index>",
+		Description: "Adds or removes timestamped notes on a task.\n" +
+			"'add' appends a new note with the given text.\n" +
+			"'remove' deletes the note at the given 1-based index.",
+	},
+	{
 		Name:    "dep",
 		Summary: "Manage task dependencies",
 		Usage:   "tick dep <add|rm> <task-id> <blocked-by-id>",
@@ -135,7 +155,10 @@ var commands = []commandInfo{
 		Flags: []flagInfo{
 			{"--status", "<open|in_progress|done|cancelled>", "Filter by status", false},
 			{"--priority", "<0-4>", "Filter by priority", false},
+			{"--type", "<bug|feature|task|chore>", "Filter by type", false},
+			{"--tag", "<tag,...>", "Filter by tag (AND within flag, OR across flags)", false},
 			{"--parent", "<id>", "Filter by parent task", false},
+			{"--count", "<n>", "Limit results to N tasks", false},
 		},
 	},
 	{
@@ -148,7 +171,10 @@ var commands = []commandInfo{
 		Flags: []flagInfo{
 			{"--status", "<open|in_progress|done|cancelled>", "Filter by status", false},
 			{"--priority", "<0-4>", "Filter by priority", false},
+			{"--type", "<bug|feature|task|chore>", "Filter by type", false},
+			{"--tag", "<tag,...>", "Filter by tag (AND within flag, OR across flags)", false},
 			{"--parent", "<id>", "Filter by parent task", false},
+			{"--count", "<n>", "Limit results to N tasks", false},
 		},
 	},
 	{

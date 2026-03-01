@@ -95,15 +95,18 @@ tick create <title> [flags]
 |---|---|---|---|
 | `--priority` | `0-4` | `2` | `0` critical, `1` high, `2` medium, `3` low, `4` backlog |
 | `--description` | string | | Task description (supports multi-line) |
+| `--type` | string | | Task type: `bug`, `feature`, `task`, `chore` |
+| `--tags` | strings | | Comma-separated tags (kebab-case, max 10) |
+| `--refs` | strings | | Comma-separated external references (URLs, issue keys) |
 | `--parent` | ID | | Make this a subtask of another task |
 | `--blocked-by` | IDs | | Comma-separated list of tasks this depends on |
 | `--blocks` | IDs | | Comma-separated list of tasks this blocks |
 
 ```bash
 tick create "Build auth module"
-tick create "Critical fix" --priority 0
-tick create "Write tests" --blocked-by tick-a1b2,tick-c3d4
-tick create "Login endpoint" --parent tick-a1b2
+tick create "Critical fix" --priority 0 --type bug
+tick create "Write tests" --blocked-by tick-a1b2,tick-c3d4 --tags backend,testing
+tick create "Login endpoint" --parent tick-a1b2 --refs https://github.com/org/repo/issues/42
 ```
 
 ### `list`
@@ -118,38 +121,52 @@ tick list [flags]
 |---|---|---|---|
 | `--status` | string | | Filter by status: `open`, `in_progress`, `done`, `cancelled` |
 | `--priority` | `0-4` | | Filter by priority level |
+| `--type` | string | | Filter by type: `bug`, `feature`, `task`, `chore` |
+| `--tag` | string | | Filter by tag (repeatable, see below) |
 | `--parent` | ID | | Show descendants of a task |
 | `--ready` | bool | `false` | Show only ready tasks (open, no unresolved blockers, no open children, no dependency-blocked ancestor) |
 | `--blocked` | bool | `false` | Show only blocked tasks (open with unresolved blockers, open children, or dependency-blocked ancestor) |
+| `--count` | int | | Limit results to N tasks |
 
 `--ready` and `--blocked` are mutually exclusive.
+
+**Tag filtering** supports AND/OR composition:
+- `--tag ui,backend` — AND: tasks must have **both** tags
+- `--tag ui --tag api` — OR: tasks with **either** tag
+- `--tag ui,backend --tag api` — mixed: (ui AND backend) OR api
 
 ```bash
 tick list                           # all tasks
 tick list --status open             # filter by status
 tick list --priority 0              # only critical tasks
+tick list --type bug                # only bugs
+tick list --tag backend             # tasks tagged "backend"
 tick list --parent tick-a1b2        # descendants of a task
+tick list --count 5                 # first 5 results
 ```
 
 ### `ready`
 
-Alias for `tick list --ready`. Shows tasks that are open, have no unresolved blockers, no open children, and no dependency-blocked ancestor.
+Alias for `tick list --ready`. Shows tasks that are open, have no unresolved blockers, no open children, and no dependency-blocked ancestor. Accepts the same filter flags as `list` (`--status`, `--priority`, `--type`, `--tag`, `--parent`, `--count`).
 
 ```bash
 tick ready
+tick ready --count 1                  # next task to work on
+tick ready --type bug --count 3
 ```
 
 ### `blocked`
 
-Alias for `tick list --blocked`. Shows tasks that are open but waiting on dependencies, have open children, or have an ancestor with unresolved blockers.
+Alias for `tick list --blocked`. Shows tasks that are open but waiting on dependencies, have open children, or have an ancestor with unresolved blockers. Accepts the same filter flags as `list`.
 
 ```bash
 tick blocked
+tick blocked --tag backend
 ```
 
 ### `show`
 
-Display full detail for a single task, including blockers, children, and description.
+Display full detail for a single task, including type, tags, refs, notes, blockers, children, and description.
 
 ```bash
 tick show <task-id>
@@ -169,11 +186,18 @@ tick update <task-id> [flags]
 | `--description` | string | Set or replace the description |
 | `--clear-description` | bool | Remove the description (mutually exclusive with `--description`) |
 | `--priority` | `0-4` | Change priority level |
+| `--type` | string | Set task type (`bug`, `feature`, `task`, `chore`) |
+| `--clear-type` | bool | Remove the type |
+| `--tags` | strings | Replace tags (comma-separated) |
+| `--clear-tags` | bool | Remove all tags |
+| `--refs` | strings | Replace refs (comma-separated) |
+| `--clear-refs` | bool | Remove all refs |
 | `--parent` | ID | Set or change the parent task (pass empty string to clear) |
 | `--blocks` | IDs | Comma-separated list of tasks this blocks |
 
 ```bash
 tick update tick-a1b2 --title "Revised title" --priority 1
+tick update tick-a1b2 --type bug --tags critical,backend
 tick update tick-a1b2 --parent tick-c3d4
 ```
 
@@ -208,6 +232,20 @@ tick remove tick-a1b2 tick-c3d4 -f     # remove multiple, skip prompt
 ```
 
 Since `tasks.jsonl` is tracked in git, accidental removals can be recovered from history.
+
+### `note`
+
+Add or remove timestamped notes on a task.
+
+```bash
+tick note add <task-id> <text>
+tick note remove <task-id> <index>
+```
+
+```bash
+tick note add tick-a1b2 "Discussed approach with team"
+tick note remove tick-a1b2 1          # remove note at index 1 (1-based)
+```
 
 ### `dep`
 
@@ -304,10 +342,10 @@ Tick auto-detects the context and picks the right format:
 **Agent / pipe** (TOON)
 ```
 $ tick list
-tasks[3]{id,title,status,priority}:
-  tick-a1b2,Auth middleware,in_progress,1
-  tick-f3e4,Write tests,open,2
-  tick-d5c6,Update docs,open,3
+tasks[3]{id,title,status,priority,type}:
+  tick-a1b2,Auth middleware,in_progress,1,feature
+  tick-f3e4,Write tests,open,2,task
+  tick-d5c6,Update docs,open,3,
 ```
 
 </td>
@@ -316,10 +354,10 @@ tasks[3]{id,title,status,priority}:
 **Terminal** (Pretty)
 ```
 $ tick list
-ID          STATUS        PRI   TITLE
-tick-a1b2   in_progress   1     Auth middleware
-tick-f3e4   open          2     Write tests
-tick-d5c6   open          3     Update docs
+ID          STATUS        PRI   TYPE      TITLE
+tick-a1b2   in_progress   1     feature   Auth middleware
+tick-f3e4   open          2     task      Write tests
+tick-d5c6   open          3     -         Update docs
 ```
 
 </td>
@@ -331,19 +369,29 @@ tick-d5c6   open          3     Update docs
 Designed for AI consumption. Schema is declared once in the header; rows are compact CSV-like lines. Uses 30-60% fewer tokens than equivalent JSON.
 
 ```
-tasks[2]{id,title,status,priority}:
-  tick-a1b2,Setup auth,done,1
-  tick-c3d4,Login endpoint,open,1
+tasks[2]{id,title,status,priority,type}:
+  tick-a1b2,Setup auth,done,1,feature
+  tick-c3d4,Login endpoint,open,1,task
 ```
 
 ```
-task{id,title,status,priority,created,updated}:
-  tick-a1b2,Setup auth,in_progress,1,"2026-01-19T10:00:00Z","2026-01-19T14:30:00Z"
+task{id,title,status,priority,type,created,updated}:
+  tick-a1b2,Setup auth,in_progress,1,feature,"2026-01-19T10:00:00Z","2026-01-19T14:30:00Z"
+
+tags[2]:
+  backend
+  auth
+
+refs[1]:
+  https://github.com/org/repo/issues/42
 
 blocked_by[1]{id,title,status}:
   tick-c3d4,Database migrations,done
 
 children[0]{id,title,status}:
+
+notes[1]{text,created}:
+  Discussed approach with team,"2026-01-19T14:00:00Z"
 
 description:
   Full task description here.
@@ -355,9 +403,9 @@ description:
 Clean aligned columns for terminals. No borders, no colors, no icons.
 
 ```
-ID          STATUS        PRI   TITLE
-tick-a1b2   in_progress   1     Setup auth
-tick-c3d4   open          1     Login endpoint
+ID          STATUS        PRI   TYPE      TITLE
+tick-a1b2   in_progress   1     feature   Setup auth
+tick-c3d4   open          1     task      Login endpoint
 ```
 
 ### JSON
@@ -373,6 +421,16 @@ Standard 2-space indented JSON with snake_case keys.
     "priority": 1
   }
 ]
+```
+
+## Partial ID Matching
+
+Task IDs can be abbreviated to any unique prefix. If only one task matches, it resolves automatically. This works everywhere a task ID is accepted.
+
+```bash
+tick show tick-a1                    # resolves to tick-a1b2c3 if unique
+tick start a1b2                      # tick- prefix is optional
+tick dep add a1 c3                   # both IDs resolved
 ```
 
 ## Storage
