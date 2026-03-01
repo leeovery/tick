@@ -322,6 +322,71 @@ func TestParentScope(t *testing.T) {
 		}
 	})
 
+	t.Run("it resolves partial parent ID and returns children", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-a3f1b2", Title: "Parent task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-ch1111", Title: "Child one", Status: task.StatusOpen, Priority: 2, Parent: "tick-a3f1b2", Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-ch2222", Title: "Child two", Status: task.StatusOpen, Priority: 2, Parent: "tick-a3f1b2", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-other1", Title: "Unrelated", Status: task.StatusOpen, Priority: 2, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runList(t, dir, "--parent", "a3f")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "tick-ch1111") {
+			t.Error("child one should appear in parent-scoped list with partial ID")
+		}
+		if !strings.Contains(stdout, "tick-ch2222") {
+			t.Error("child two should appear in parent-scoped list with partial ID")
+		}
+		if strings.Contains(stdout, "tick-other1") {
+			t.Error("unrelated task should not appear in parent-scoped list")
+		}
+	})
+
+	t.Run("it errors with ambiguous partial parent ID", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-a3f1b2", Title: "Parent A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-a3f1b3", Title: "Parent B", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-ch1111", Title: "Child of A", Status: task.StatusOpen, Priority: 2, Parent: "tick-a3f1b2", Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runList(t, dir, "--parent", "a3f")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+
+		if !strings.Contains(stderr, "ambiguous") {
+			t.Errorf("stderr should contain 'ambiguous', got %q", stderr)
+		}
+		if !strings.Contains(stderr, "tick-a3f1b2") {
+			t.Errorf("stderr should list tick-a3f1b2, got %q", stderr)
+		}
+		if !strings.Contains(stderr, "tick-a3f1b3") {
+			t.Errorf("stderr should list tick-a3f1b3, got %q", stderr)
+		}
+	})
+
+	t.Run("it errors with not found for non-matching partial parent ID", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-a3f1b2", Title: "Some task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runList(t, dir, "--parent", "zzz")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+
+		if !strings.Contains(stderr, "not found") {
+			t.Errorf("stderr should contain 'not found', got %q", stderr)
+		}
+	})
+
 	t.Run("it returns No tasks found when descendants exist but none match filters", func(t *testing.T) {
 		closedTime := now.Add(time.Hour)
 		tasks := []task.Task{

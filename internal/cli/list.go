@@ -153,6 +153,13 @@ func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, std
 	}
 	defer store.Close()
 
+	if filter.Parent != "" {
+		filter.Parent, err = store.ResolveID(filter.Parent)
+		if err != nil {
+			return err
+		}
+	}
+
 	type listRow struct {
 		id       string
 		status   string
@@ -167,17 +174,8 @@ func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, std
 		var descendantIDs []string
 
 		if filter.Parent != "" {
-			// Validate parent exists.
-			var exists int
-			err := db.QueryRow("SELECT COUNT(*) FROM tasks WHERE id = ?", filter.Parent).Scan(&exists)
-			if err != nil {
-				return fmt.Errorf("failed to check parent task: %w", err)
-			}
-			if exists == 0 {
-				return fmt.Errorf("task '%s' not found", filter.Parent)
-			}
-
 			// Collect descendant IDs via recursive CTE.
+			var err error
 			descendantIDs, err = queryDescendantIDs(db, filter.Parent)
 			if err != nil {
 				return err
