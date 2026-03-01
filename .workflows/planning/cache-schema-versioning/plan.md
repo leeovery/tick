@@ -1,6 +1,6 @@
 ---
 topic: cache-schema-versioning
-status: planning
+status: concluded
 format: tick
 work_type: bugfix
 ext_id: tick-598752
