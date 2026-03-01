@@ -1,6 +1,6 @@
 ---
 topic: cache-schema-versioning
-status: in-progress
+status: concluded
 work_type: bugfix
 date: 2026-03-01
 ---
