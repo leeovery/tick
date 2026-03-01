@@ -110,6 +110,37 @@ func TestCacheSchema(t *testing.T) {
 		}
 	})
 
+	t.Run("it creates task_notes table in schema", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		db := cache.DB()
+
+		// Verify task_notes table exists with correct columns
+		noteCols := queryColumns(t, db, "task_notes")
+		expectedNoteCols := map[string]bool{"task_id": true, "text": true, "created": true}
+		if len(noteCols) != len(expectedNoteCols) {
+			t.Errorf("task_notes table: expected %d columns, got %d: %v", len(expectedNoteCols), len(noteCols), noteCols)
+		}
+		for col := range expectedNoteCols {
+			if !noteCols[col] {
+				t.Errorf("task_notes table missing column %q", col)
+			}
+		}
+
+		// Verify index on task_id column
+		indexes := queryIndexes(t, db)
+		if !indexes["idx_task_notes_task_id"] {
+			t.Errorf("missing index %q", "idx_task_notes_task_id")
+		}
+	})
+
 	t.Run("it creates task_refs table in schema", func(t *testing.T) {
 		dir := t.TempDir()
 		dbPath := filepath.Join(dir, "cache.db")
@@ -737,6 +768,249 @@ func TestCacheRebuild(t *testing.T) {
 		}
 		if ref != "https://new-url.com" {
 			t.Errorf("ref = %q, want %q", ref, "https://new-url.com")
+		}
+	})
+
+	t.Run("it populates notes in task_notes during rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		note1Time := time.Date(2026, 1, 20, 9, 0, 0, 0, time.UTC)
+		note2Time := time.Date(2026, 1, 21, 14, 30, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Task with notes",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Notes: []task.Note{
+					{Text: "First note", Created: note1Time},
+					{Text: "Second note", Created: note2Time},
+				},
+				Created: created,
+				Updated: created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		db := cache.DB()
+		rows, err := db.Query("SELECT task_id, text, created FROM task_notes WHERE task_id = ? ORDER BY rowid", "tick-a1b2c3")
+		if err != nil {
+			t.Fatalf("querying task_notes: %v", err)
+		}
+		defer rows.Close()
+
+		type noteRow struct {
+			taskID  string
+			text    string
+			created string
+		}
+		var notes []noteRow
+		for rows.Next() {
+			var r noteRow
+			if err := rows.Scan(&r.taskID, &r.text, &r.created); err != nil {
+				t.Fatalf("scanning note row: %v", err)
+			}
+			notes = append(notes, r)
+		}
+
+		if len(notes) != 2 {
+			t.Fatalf("expected 2 note rows, got %d", len(notes))
+		}
+		if notes[0].taskID != "tick-a1b2c3" {
+			t.Errorf("notes[0].task_id = %q, want %q", notes[0].taskID, "tick-a1b2c3")
+		}
+		if notes[0].text != "First note" {
+			t.Errorf("notes[0].text = %q, want %q", notes[0].text, "First note")
+		}
+		if notes[0].created != "2026-01-20T09:00:00Z" {
+			t.Errorf("notes[0].created = %q, want %q", notes[0].created, "2026-01-20T09:00:00Z")
+		}
+		if notes[1].taskID != "tick-a1b2c3" {
+			t.Errorf("notes[1].task_id = %q, want %q", notes[1].taskID, "tick-a1b2c3")
+		}
+		if notes[1].text != "Second note" {
+			t.Errorf("notes[1].text = %q, want %q", notes[1].text, "Second note")
+		}
+		if notes[1].created != "2026-01-21T14:30:00Z" {
+			t.Errorf("notes[1].created = %q, want %q", notes[1].created, "2026-01-21T14:30:00Z")
+		}
+	})
+
+	t.Run("it inserts no rows for task with empty notes slice", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "No notes task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		var count int
+		err = cache.DB().QueryRow("SELECT COUNT(*) FROM task_notes WHERE task_id = ?", "tick-a1b2c3").Scan(&count)
+		if err != nil {
+			t.Fatalf("querying task_notes count: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("expected 0 note rows, got %d", count)
+		}
+	})
+
+	t.Run("it clears stale notes on rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		noteTime := time.Date(2026, 1, 20, 9, 0, 0, 0, time.UTC)
+
+		// First rebuild with notes
+		tasksV1 := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Noted task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Notes: []task.Note{
+					{Text: "Old note 1", Created: noteTime},
+					{Text: "Old note 2", Created: noteTime},
+				},
+				Created: created,
+				Updated: created,
+			},
+		}
+		if err := cache.Rebuild(tasksV1, []byte("v1")); err != nil {
+			t.Fatalf("first Rebuild returned error: %v", err)
+		}
+
+		// Second rebuild with different note (old ones should be gone)
+		tasksV2 := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Noted task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Notes: []task.Note{
+					{Text: "New note", Created: noteTime},
+				},
+				Created: created,
+				Updated: created,
+			},
+		}
+		if err := cache.Rebuild(tasksV2, []byte("v2")); err != nil {
+			t.Fatalf("second Rebuild returned error: %v", err)
+		}
+
+		var count int
+		err = cache.DB().QueryRow("SELECT COUNT(*) FROM task_notes").Scan(&count)
+		if err != nil {
+			t.Fatalf("querying task_notes count: %v", err)
+		}
+		if count != 1 {
+			t.Errorf("expected 1 note row after rebuild, got %d", count)
+		}
+
+		var text string
+		err = cache.DB().QueryRow("SELECT text FROM task_notes WHERE task_id = ?", "tick-a1b2c3").Scan(&text)
+		if err != nil {
+			t.Fatalf("querying note text: %v", err)
+		}
+		if text != "New note" {
+			t.Errorf("text = %q, want %q", text, "New note")
+		}
+	})
+
+	t.Run("it preserves note ordering", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		// Notes with timestamps out of insertion order to verify slice order is preserved
+		note1Time := time.Date(2026, 1, 22, 12, 0, 0, 0, time.UTC)
+		note2Time := time.Date(2026, 1, 20, 8, 0, 0, 0, time.UTC)
+		note3Time := time.Date(2026, 1, 21, 16, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Ordered notes task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Notes: []task.Note{
+					{Text: "Note A", Created: note1Time},
+					{Text: "Note B", Created: note2Time},
+					{Text: "Note C", Created: note3Time},
+				},
+				Created: created,
+				Updated: created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		db := cache.DB()
+		rows, err := db.Query("SELECT text FROM task_notes WHERE task_id = ? ORDER BY rowid", "tick-a1b2c3")
+		if err != nil {
+			t.Fatalf("querying task_notes: %v", err)
+		}
+		defer rows.Close()
+
+		var texts []string
+		for rows.Next() {
+			var text string
+			if err := rows.Scan(&text); err != nil {
+				t.Fatalf("scanning note row: %v", err)
+			}
+			texts = append(texts, text)
+		}
+
+		if len(texts) != 3 {
+			t.Fatalf("expected 3 note rows, got %d", len(texts))
+		}
+		expectedTexts := []string{"Note A", "Note B", "Note C"}
+		for i, want := range expectedTexts {
+			if texts[i] != want {
+				t.Errorf("texts[%d] = %q, want %q", i, texts[i], want)
+			}
 		}
 	})
 

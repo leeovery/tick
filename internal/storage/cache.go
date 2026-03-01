@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS task_refs (
   PRIMARY KEY (task_id, ref)
 );
 
+CREATE TABLE IF NOT EXISTS task_notes (
+  task_id TEXT NOT NULL,
+  text TEXT NOT NULL,
+  created TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS metadata (
   key TEXT PRIMARY KEY,
   value TEXT
@@ -51,6 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
 CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent);
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag ON task_tags(tag);
+CREATE INDEX IF NOT EXISTS idx_task_notes_task_id ON task_notes(task_id);
 `
 
 // Cache wraps a SQLite database used as a query cache for Tick tasks.
@@ -94,6 +101,9 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 	defer func() { _ = tx.Rollback() }()
 
 	// Clear existing data.
+	if _, err := tx.Exec("DELETE FROM task_notes"); err != nil {
+		return fmt.Errorf("failed to clear task_notes: %w", err)
+	}
 	if _, err := tx.Exec("DELETE FROM task_refs"); err != nil {
 		return fmt.Errorf("failed to clear task_refs: %w", err)
 	}
@@ -131,6 +141,12 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 		return fmt.Errorf("failed to prepare ref insert: %w", err)
 	}
 	defer insertRef.Close()
+
+	insertNote, err := tx.Prepare(`INSERT INTO task_notes (task_id, text, created) VALUES (?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare note insert: %w", err)
+	}
+	defer insertNote.Close()
 
 	for _, t := range tasks {
 		var closedStr *string
@@ -184,6 +200,12 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 		for _, ref := range t.Refs {
 			if _, err := insertRef.Exec(t.ID, ref); err != nil {
 				return fmt.Errorf("failed to insert ref %s -> %s: %w", t.ID, ref, err)
+			}
+		}
+
+		for _, note := range t.Notes {
+			if _, err := insertNote.Exec(t.ID, note.Text, task.FormatTimestamp(note.Created)); err != nil {
+				return fmt.Errorf("failed to insert note for %s: %w", t.ID, err)
 			}
 		}
 	}
