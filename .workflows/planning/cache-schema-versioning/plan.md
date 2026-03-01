@@ -37,3 +37,10 @@ approved_at: 2026-03-01
 - [ ] Test: cache with correct schema version is preserved without unnecessary rebuild
 - [ ] Test: after a version-triggered rebuild, subsequent queries succeed normally
 - [ ] All existing tests in `internal/storage/` continue to pass
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| cache-schema-versioning-1-1 | Add schema version constant and store in metadata during rebuild | none | pending | |
+| cache-schema-versioning-1-2 | Check schema version in ensureFresh and delete-rebuild on mismatch | missing schema_version row (pre-versioning cache.db), new empty cache extra rebuild cycle | pending | |
+| cache-schema-versioning-1-3 | End-to-end query success after version-triggered rebuild | none | pending | |
