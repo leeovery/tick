@@ -70,14 +70,8 @@ func ParseRefs(input string) ([]string, error) {
 	parts := strings.Split(input, ",")
 	refs := DeduplicateRefs(parts)
 
-	for _, ref := range refs {
-		if err := ValidateRef(ref); err != nil {
-			return nil, err
-		}
-	}
-
-	if len(refs) > maxRefsPerTask {
-		return nil, fmt.Errorf("too many refs: %d exceeds maximum of %d per task", len(refs), maxRefsPerTask)
+	if err := ValidateRefs(refs); err != nil {
+		return nil, err
 	}
 
 	return refs, nil
