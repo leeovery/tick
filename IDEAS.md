@@ -6,26 +6,8 @@ Feature ideas for Tick, collected from comparing with [Ticket](https://github.co
 
 Features to spec and build:
 
-### Tags
-Categorization via string labels. `--tags ui,backend` on create/update, `--tag` filter on list. Simple `[]string` field on Task. High value, low complexity.
-
-### Partial ID Matching
-Allow `tick show a3f` to resolve to `tick-a3f2b1`. Prefix matching on the hex portion. Error on ambiguous match (multiple hits). Pure DX improvement.
-
-### Notes
-Timestamped text entries appended to a task. Not multi-user "comments" — just a log of context, decisions, progress. Keeps information with the task instead of relying on memory. Particularly useful in AI-assisted workflows where context is ephemeral.
-
-### Task Types
-`bug`, `feature`, `task`, `chore` (maybe `epic`). String field with validation. Useful for filtering and stats. Keeps things categorizable without over-structuring.
-
-### External References
-`[]string` field for cross-system links: `gh-123`, `JIRA-456`, URLs. Low effort, occasionally very useful for connecting Tick tasks to PRs/issues.
-
 ### Dependency Tree Visualization
 Render the dependency graph as a tree in the terminal. All the data already exists — this is purely a formatter addition. `tick dep tree <id>` or similar.
-
-### List Count/Limit
-`--count N` flag on `list`, `ready`, `blocked` to cap results. Primary use case: `tick ready --count 1` to get just the next actionable task. Simple, no architectural impact — just a LIMIT clause on the query.
 
 ### Auto-Cascade Parent Status
 When a child task is started, automatically set its parent to `in_progress`, recursively up the ancestor chain. Currently parents just sit as `open` until manually started, even when children are actively being worked. Needs discussion — implications for explicit vs implicit status transitions, undo behavior, and whether this should apply to `done`/`cancel` cascading downward too.
