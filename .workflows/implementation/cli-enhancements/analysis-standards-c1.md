@@ -1,0 +1,8 @@
+AGENT: standards
+FINDINGS:
+- FINDING: queryShowData omits `type` column from SQL query, breaking show/create/update output
+  SEVERITY: high
+  FILES: internal/cli/show.go:14, internal/cli/show.go:73, internal/cli/show.go:220
+  DESCRIPTION: The `showData` struct (line 14) has no `type` field, and the SQL SELECT at line 73 does not include the `type` column. The `showDataToTaskDetail` conversion (line 220) therefore never sets `Task.Type`. The spec (section "Task Types > Display") states "Show output: displayed with other fields", meaning the type must appear in `tick show` output. Because `outputMutationResult` in helpers.go:22 also calls `queryShowData`, the same bug affects create, update, and note command output — all render Type as empty (Pretty shows "Type: -", Toon omits it entirely, JSON shows `"type": ""`). Tests pass only because the show test uses a task without a type set, so the expected "Type: -" matches the default zero value.
+  RECOMMENDATION: Add a `taskType` field (or similar) to `showData`, add `type` to the SQL SELECT and Scan, and set `Task.Type` in `showDataToTaskDetail`. Add a test case in list_show_test.go that creates a task with `--type bug` and verifies the show output includes `Type: bug`.
+SUMMARY: One high-severity finding: the show query path omits the task type column from SQLite, causing all detail output (show, create, update, note) to display an empty/missing type regardless of the task's actual type value. All other spec requirements (partial ID matching, tags, refs, notes, list count/limit, validation rules, storage schema, formatter output) conform to the specification.
