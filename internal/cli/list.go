@@ -22,6 +22,9 @@ type ListFilter struct {
 	Parent string
 	// Type restricts results to tasks of the specified type (e.g. "bug", "feature").
 	Type string
+	// TagGroups holds tag filter groups. Comma-separated values within a single --tag
+	// flag form an AND group; multiple --tag flags form OR groups.
+	TagGroups [][]string
 	// Count limits the number of results returned.
 	Count int
 	// HasCount indicates whether --count was explicitly set.
@@ -67,6 +70,23 @@ func parseListFlags(args []string) (ListFilter, error) {
 			}
 			i++
 			f.Type = task.NormalizeType(args[i])
+		case "--tag":
+			if i+1 >= len(args) {
+				return f, fmt.Errorf("--tag requires a value")
+			}
+			i++
+			parts := strings.Split(args[i], ",")
+			var group []string
+			for _, p := range parts {
+				normalized := task.NormalizeTag(p)
+				if normalized == "" {
+					continue
+				}
+				group = append(group, normalized)
+			}
+			if len(group) > 0 {
+				f.TagGroups = append(f.TagGroups, group)
+			}
 		case "--count":
 			if i+1 >= len(args) {
 				return f, fmt.Errorf("--count requires a value")
@@ -106,6 +126,14 @@ func parseListFlags(args []string) (ListFilter, error) {
 	if f.Type != "" {
 		if err := task.ValidateType(f.Type); err != nil {
 			return f, err
+		}
+	}
+
+	for _, group := range f.TagGroups {
+		for _, tag := range group {
+			if err := task.ValidateTag(tag); err != nil {
+				return f, err
+			}
 		}
 	}
 
@@ -260,6 +288,12 @@ func buildListQuery(f ListFilter, descendantIDs []string) (string, []interface{}
 		args = append(args, f.Type)
 	}
 
+	if len(f.TagGroups) > 0 {
+		tagCondition, tagArgs := buildTagFilterSQL(f.TagGroups)
+		conditions = append(conditions, tagCondition)
+		args = append(args, tagArgs...)
+	}
+
 	if len(descendantIDs) > 0 {
 		placeholders := make([]string, len(descendantIDs))
 		for i, id := range descendantIDs {
@@ -284,4 +318,31 @@ func buildListQuery(f ListFilter, descendantIDs []string) (string, []interface{}
 	}
 
 	return query, args
+}
+
+// buildTagFilterSQL generates a SQL condition and args for tag group filtering.
+// Each group is an AND (task must have all tags in the group). Multiple groups
+// are OR'd together: (group1) OR (group2).
+func buildTagFilterSQL(tagGroups [][]string) (string, []interface{}) {
+	var groupClauses []string
+	var args []interface{}
+
+	for _, group := range tagGroups {
+		placeholders := make([]string, len(group))
+		for i, tag := range group {
+			placeholders[i] = "?"
+			args = append(args, tag)
+		}
+		subquery := fmt.Sprintf(
+			`t.id IN (SELECT task_id FROM task_tags WHERE tag IN (%s) GROUP BY task_id HAVING COUNT(DISTINCT tag) = ?)`,
+			strings.Join(placeholders, ","),
+		)
+		args = append(args, len(group))
+		groupClauses = append(groupClauses, subquery)
+	}
+
+	if len(groupClauses) == 1 {
+		return groupClauses[0], args
+	}
+	return "(" + strings.Join(groupClauses, " OR ") + ")", args
 }
