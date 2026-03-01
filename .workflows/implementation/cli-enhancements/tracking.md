@@ -12,7 +12,7 @@ linters:
     command: go vet ./...
   - name: gofmt
     command: gofmt -l .
-analysis_cycle: 1
+analysis_cycle: 2
 project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro/SKILL.md
