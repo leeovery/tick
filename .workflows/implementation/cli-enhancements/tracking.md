@@ -2,7 +2,7 @@
 topic: cli-enhancements
 plan: ../../planning/cli-enhancements/plan.md
 format: tick
-status: in-progress
+status: completed
 task_gate_mode: auto
 fix_gate_mode: auto
 analysis_gate_mode: gated
@@ -59,8 +59,8 @@ completed_tasks:
   - cli-enhancements-6-2
   - cli-enhancements-6-3
 started: 2026-02-28
-updated: 2026-02-28
-completed: ~
+updated: 2026-03-01
+completed: 2026-03-01
 ---
 
 # Implementation: CLI Enhancements
