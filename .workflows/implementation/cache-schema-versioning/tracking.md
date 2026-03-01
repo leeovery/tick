@@ -2,7 +2,7 @@
 topic: cache-schema-versioning
 plan: ../../planning/cache-schema-versioning/plan.md
 format: tick
-status: in-progress
+status: completed
 task_gate_mode: auto
 fix_gate_mode: gated
 analysis_gate_mode: gated
@@ -25,7 +25,7 @@ completed_tasks:
   - cache-schema-versioning-1-3
 started: 2026-03-01
 updated: 2026-03-01
-completed: ~
+completed: 2026-03-01
 ---
 
 # Implementation: Cache Schema Versioning
