@@ -472,6 +472,56 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 
+	t.Run("it displays tags in toon format show output", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Tagged task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			Tags:      []string{"backend", "ui"},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		// tags section should appear with count and values
+		if !strings.Contains(result, "tags[2]:") {
+			t.Errorf("should contain 'tags[2]:', got:\n%s", result)
+		}
+		if !strings.Contains(result, "  backend") {
+			t.Errorf("should contain indented 'backend', got:\n%s", result)
+		}
+		if !strings.Contains(result, "  ui") {
+			t.Errorf("should contain indented 'ui', got:\n%s", result)
+		}
+	})
+
+	t.Run("it omits tags section in toon format when task has no tags", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Simple task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if strings.Contains(result, "tags[") || strings.Contains(result, "tags:") {
+			t.Errorf("should not contain tags section when empty, got:\n%s", result)
+		}
+	})
+
 	t.Run("it includes both parent and closed in show schema when both present", func(t *testing.T) {
 		f := &ToonFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)

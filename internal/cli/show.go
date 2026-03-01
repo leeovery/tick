@@ -24,6 +24,7 @@ type showData struct {
 	closed      string
 	blockedBy   []RelatedTask
 	children    []RelatedTask
+	tags        []string
 }
 
 // RunShow executes the show command: queries a single task by ID from SQLite and
@@ -135,7 +136,28 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 			}
 			data.children = append(data.children, r)
 		}
-		return childRows.Err()
+		if err := childRows.Err(); err != nil {
+			return err
+		}
+
+		// Query tags.
+		tagRows, err := db.Query(
+			`SELECT tag FROM task_tags WHERE task_id = ? ORDER BY tag`,
+			id,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to query tags: %w", err)
+		}
+		defer tagRows.Close()
+
+		for tagRows.Next() {
+			var tag string
+			if err := tagRows.Scan(&tag); err != nil {
+				return fmt.Errorf("failed to scan tag row: %w", err)
+			}
+			data.tags = append(data.tags, tag)
+		}
+		return tagRows.Err()
 	})
 
 	return data, err
@@ -168,5 +190,6 @@ func showDataToTaskDetail(d showData) TaskDetail {
 		BlockedBy:   d.blockedBy,
 		Children:    d.children,
 		ParentTitle: d.parentTitle,
+		Tags:        d.tags,
 	}
 }

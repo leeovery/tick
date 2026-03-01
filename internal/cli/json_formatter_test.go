@@ -728,6 +728,75 @@ func TestJSONFormatter(t *testing.T) {
 		}
 	})
 
+	t.Run("it displays tags in json format show output", func(t *testing.T) {
+		f := &JSONFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Tagged task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			Tags:      []string{"backend", "ui"},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		tags, ok := parsed["tags"].([]interface{})
+		if !ok {
+			t.Fatalf("tags should be array, got %T: %v", parsed["tags"], parsed["tags"])
+		}
+		if len(tags) != 2 {
+			t.Fatalf("tags length = %d, want 2", len(tags))
+		}
+		if tags[0] != "backend" {
+			t.Errorf("tags[0] = %v, want %q", tags[0], "backend")
+		}
+		if tags[1] != "ui" {
+			t.Errorf("tags[1] = %v, want %q", tags[1], "ui")
+		}
+	})
+
+	t.Run("it shows empty tags array in json format when task has no tags", func(t *testing.T) {
+		f := &JSONFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "No tags",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		tags, ok := parsed["tags"].([]interface{})
+		if !ok {
+			t.Fatalf("tags should be array (not null), got %T: %v", parsed["tags"], parsed["tags"])
+		}
+		if len(tags) != 0 {
+			t.Errorf("tags should be empty, got %d items", len(tags))
+		}
+	})
+
 	t.Run("it includes type in json show output", func(t *testing.T) {
 		f := &JSONFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)

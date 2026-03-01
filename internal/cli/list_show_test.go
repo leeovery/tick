@@ -459,6 +459,77 @@ func TestShow(t *testing.T) {
 		}
 	})
 
+	t.Run("it displays tags in show output", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Tagged task", Status: task.StatusOpen, Priority: 2, Tags: []string{"backend", "ui"}, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "Tags:     backend, ui") {
+			t.Errorf("should contain tags line, got:\n%s", stdout)
+		}
+	})
+
+	t.Run("it omits tags section in show output when task has no tags", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "No tags task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if strings.Contains(stdout, "Tags:") {
+			t.Errorf("should not contain Tags section, got:\n%s", stdout)
+		}
+	})
+
+	t.Run("it displays tags in alphabetical order", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Sorted tags", Status: task.StatusOpen, Priority: 2, Tags: []string{"zebra", "alpha", "middle"}, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "Tags:     alpha, middle, zebra") {
+			t.Errorf("tags should be alphabetically sorted, got:\n%s", stdout)
+		}
+	})
+
+	t.Run("it displays all 10 tags when task has maximum tags", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tags := []string{"alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet"}
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Max tags", Status: task.StatusOpen, Priority: 2, Tags: tags, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		for _, tag := range tags {
+			if !strings.Contains(stdout, tag) {
+				t.Errorf("should contain tag %q, got:\n%s", tag, stdout)
+			}
+		}
+	})
+
 	t.Run("queryShowData populates RelatedTask fields for blockers and children", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		tasks := []task.Task{

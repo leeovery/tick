@@ -480,6 +480,55 @@ func TestPrettyFormatter(t *testing.T) {
 		}
 	})
 
+	t.Run("it displays tags in pretty format show output", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Tagged task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			Tags:      []string{"backend", "ui", "urgent"},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if !strings.Contains(result, "Tags:     backend, ui, urgent") {
+			t.Errorf("should contain 'Tags:     backend, ui, urgent', got:\n%s", result)
+		}
+		// Tags should appear after Type
+		typeIdx := strings.Index(result, "Type:")
+		tagsIdx := strings.Index(result, "Tags:")
+		if tagsIdx < typeIdx {
+			t.Errorf("Tags should appear after Type: Type at %d, Tags at %d", typeIdx, tagsIdx)
+		}
+	})
+
+	t.Run("it omits tags section in pretty format when task has no tags", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "No tags task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if strings.Contains(result, "Tags:") {
+			t.Errorf("should not contain Tags section when empty, got:\n%s", result)
+		}
+	})
+
 	t.Run("it formats message as plain text passthrough", func(t *testing.T) {
 		f := &PrettyFormatter{}
 		result := f.FormatMessage("Tick initialized in /path/to/project")

@@ -82,7 +82,12 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 	// Section 3: children (always present, even with count 0)
 	sections = append(sections, buildRelatedSection("children", detail.Children))
 
-	// Section 4: description (omitted when empty)
+	// Section 4: tags (omitted when empty)
+	if len(detail.Tags) > 0 {
+		sections = append(sections, buildTagsSection(detail.Tags))
+	}
+
+	// Section 5: description (omitted when empty)
 	if detail.Task.Description != "" {
 		sections = append(sections, buildDescriptionSection(detail.Task.Description))
 	}
@@ -169,6 +174,17 @@ func buildRelatedSection(name string, related []RelatedTask) string {
 		rows[i] = toonRelatedRow(r)
 	}
 	return encodeToonSection(name, rows)
+}
+
+// buildTagsSection builds the tags section as a TOON array of strings.
+func buildTagsSection(tags []string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "tags[%d]:", len(tags))
+	for _, tag := range tags {
+		b.WriteString("\n  ")
+		b.WriteString(tag)
+	}
+	return b.String()
 }
 
 // buildDescriptionSection builds the description section with indented lines.

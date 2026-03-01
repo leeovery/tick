@@ -90,6 +90,10 @@ func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
 
 	fmt.Fprintf(&b, "Type:     %s\n", typeOrDash(t.Type))
 
+	if len(detail.Tags) > 0 {
+		fmt.Fprintf(&b, "Tags:     %s\n", strings.Join(detail.Tags, ", "))
+	}
+
 	if t.Parent != "" {
 		if detail.ParentTitle != "" {
 			fmt.Fprintf(&b, "Parent:   %s (%s)\n", t.Parent, detail.ParentTitle)
