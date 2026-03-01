@@ -20,8 +20,9 @@ planning:
 # Plan: Cache Schema Versioning
 
 ### Phase 1: Schema Version Check and Rebuild
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-03-01
 
 **Goal**: Add a schema version constant to the cache, store it in metadata during rebuild, and check it early in `ensureFresh()` — triggering a full delete-and-rebuild when the version is missing or mismatched. This is the complete fix for the broken upgrade path.
 
