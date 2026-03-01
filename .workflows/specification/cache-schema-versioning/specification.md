@@ -30,7 +30,7 @@ Add a hard-coded schema version constant. Store it in the existing `metadata` ta
 **Implementation:**
 
 1. Add `const schemaVersion = 1` in `cache.go`
-2. In `OpenCache()` or early in `ensureFresh()`, query `metadata` for key `schema_version`
+2. Early in `ensureFresh()`, query `metadata` for key `schema_version`
 3. If missing or value differs from `schemaVersion` → close DB, delete cache file, reopen, force rebuild
 4. In `Rebuild()`, store `schema_version` in the `metadata` table alongside `jsonl_hash`
 5. Increment `schemaVersion` whenever `schemaSQL` changes in future

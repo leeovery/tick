@@ -23,8 +23,8 @@ Suggest removing the "or" from step 2 and stating the placement definitively: "E
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Removed OpenCache() alternative from step 2, now definitively states ensureFresh().
 
 ---
 
