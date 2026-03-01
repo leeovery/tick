@@ -1,0 +1,3 @@
+AGENT: architecture
+FINDINGS: none
+SUMMARY: Implementation architecture is sound -- clean boundaries, appropriate abstractions, good seam quality. The schema version check is correctly placed before the freshness check in ensureFresh(), the recreateCache helper properly factors the close-delete-reopen pattern used by both version mismatch and corruption recovery, and the Cache/Store boundary is clean with SchemaVersion() as a reader on Cache and CurrentSchemaVersion() as a package-level constant. Tests cover all four spec-required scenarios plus edge cases (corruption, sequential queries, transaction atomicity).
