@@ -935,4 +935,86 @@ func TestJSONFormatter(t *testing.T) {
 			t.Errorf("refs should be empty, got %d items", len(refs))
 		}
 	})
+
+	t.Run("it displays notes in json show output with text and created", func(t *testing.T) {
+		f := &JSONFormatter{}
+		now := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Task with notes",
+				Status:   task.StatusInProgress,
+				Priority: 1,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+			Notes: []task.Note{
+				{Text: "Started investigating the auth flow", Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
+				{Text: "Root cause found", Created: time.Date(2026, 2, 27, 14, 30, 0, 0, time.UTC)},
+			},
+		}
+		result := f.FormatTaskDetail(detail)
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		notes, ok := parsed["notes"].([]interface{})
+		if !ok {
+			t.Fatalf("notes should be array, got %T: %v", parsed["notes"], parsed["notes"])
+		}
+		if len(notes) != 2 {
+			t.Fatalf("notes length = %d, want 2", len(notes))
+		}
+
+		note0 := notes[0].(map[string]interface{})
+		if note0["text"] != "Started investigating the auth flow" {
+			t.Errorf("notes[0].text = %v, want %q", note0["text"], "Started investigating the auth flow")
+		}
+		if note0["created"] != "2026-02-27T10:00:00Z" {
+			t.Errorf("notes[0].created = %v, want %q", note0["created"], "2026-02-27T10:00:00Z")
+		}
+
+		note1 := notes[1].(map[string]interface{})
+		if note1["text"] != "Root cause found" {
+			t.Errorf("notes[1].text = %v, want %q", note1["text"], "Root cause found")
+		}
+		if note1["created"] != "2026-02-27T14:30:00Z" {
+			t.Errorf("notes[1].created = %v, want %q", note1["created"], "2026-02-27T14:30:00Z")
+		}
+	})
+
+	t.Run("it shows empty notes array in json when no notes", func(t *testing.T) {
+		f := &JSONFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "No notes",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		notes, ok := parsed["notes"].([]interface{})
+		if !ok {
+			t.Fatalf("notes should be array (not null), got %T: %v", parsed["notes"], parsed["notes"])
+		}
+		if len(notes) != 0 {
+			t.Errorf("notes should be empty, got %d items", len(notes))
+		}
+	})
 }

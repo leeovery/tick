@@ -45,9 +45,15 @@ type jsonRelatedTask struct {
 	Status string `json:"status"`
 }
 
+// jsonNote represents a note in JSON output.
+type jsonNote struct {
+	Text    string `json:"text"`
+	Created string `json:"created"`
+}
+
 // jsonTaskDetail represents the full task detail in JSON output.
 // parent and closed use omitempty to omit when zero/nil.
-// blocked_by, children, tags, and refs are always present as arrays.
+// blocked_by, children, tags, refs, and notes are always present as arrays.
 // description is always present (empty string, not null/omitted).
 type jsonTaskDetail struct {
 	ID          string            `json:"id"`
@@ -57,6 +63,7 @@ type jsonTaskDetail struct {
 	Type        string            `json:"type"`
 	Tags        []string          `json:"tags"`
 	Refs        []string          `json:"refs"`
+	Notes       []jsonNote        `json:"notes"`
 	Description string            `json:"description"`
 	Parent      string            `json:"parent,omitempty"`
 	Created     string            `json:"created"`
@@ -83,6 +90,14 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 	refs := make([]string, 0, len(detail.Refs))
 	refs = append(refs, detail.Refs...)
 
+	notes := make([]jsonNote, 0, len(detail.Notes))
+	for _, n := range detail.Notes {
+		notes = append(notes, jsonNote{
+			Text:    n.Text,
+			Created: task.FormatTimestamp(n.Created),
+		})
+	}
+
 	obj := jsonTaskDetail{
 		ID:          t.ID,
 		Title:       t.Title,
@@ -91,6 +106,7 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 		Type:        t.Type,
 		Tags:        tags,
 		Refs:        refs,
+		Notes:       notes,
 		Description: t.Description,
 		Parent:      t.Parent,
 		Created:     task.FormatTimestamp(t.Created),

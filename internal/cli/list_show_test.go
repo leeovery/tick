@@ -627,4 +627,50 @@ func TestShow(t *testing.T) {
 			t.Errorf("stdout should not contain 'Refs:' section, got %q", stdout)
 		}
 	})
+
+	t.Run("it displays notes in show output when task has notes", func(t *testing.T) {
+		now := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task with notes", Status: task.StatusInProgress, Priority: 1,
+				Notes: []task.Note{
+					{Text: "Started investigating", Created: now},
+					{Text: "Root cause found", Created: time.Date(2026, 2, 27, 14, 30, 0, 0, time.UTC)},
+				},
+				Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "\nNotes:\n") {
+			t.Errorf("stdout should contain 'Notes:' section, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "  2026-02-27 10:00  Started investigating\n") {
+			t.Errorf("stdout should contain first note, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "  2026-02-27 14:30  Root cause found\n") {
+			t.Errorf("stdout should contain second note, got %q", stdout)
+		}
+	})
+
+	t.Run("it omits notes section in show when task has no notes", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "No notes task", Status: task.StatusOpen, Priority: 2,
+				Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if strings.Contains(stdout, "Notes:") {
+			t.Errorf("stdout should not contain 'Notes:' section, got %q", stdout)
+		}
+	})
 }

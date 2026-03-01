@@ -80,8 +80,8 @@ func TestToonFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 		sections := strings.Split(result, "\n\n")
-		if len(sections) != 4 {
-			t.Fatalf("expected 4 sections, got %d: %q", len(sections), result)
+		if len(sections) != 5 {
+			t.Fatalf("expected 5 sections, got %d: %q", len(sections), result)
 		}
 		// Section 1: task
 		taskLines := strings.Split(sections[0], "\n")
@@ -104,8 +104,13 @@ func TestToonFormatter(t *testing.T) {
 		if sections[2] != expectedChildren {
 			t.Errorf("children section = %q, want %q", sections[2], expectedChildren)
 		}
-		// Section 4: description
-		descLines := strings.Split(sections[3], "\n")
+		// Section 4: notes
+		expectedNotes := "notes[0]{text,created}:"
+		if sections[3] != expectedNotes {
+			t.Errorf("notes section = %q, want %q", sections[3], expectedNotes)
+		}
+		// Section 5: description
+		descLines := strings.Split(sections[4], "\n")
 		if descLines[0] != "description:" {
 			t.Errorf("description header = %q, want %q", descLines[0], "description:")
 		}
@@ -188,10 +193,10 @@ func TestToonFormatter(t *testing.T) {
 		if strings.Contains(result, "description:") {
 			t.Errorf("description section should be omitted when empty, got: %q", result)
 		}
-		// Should have exactly 3 sections (task, blocked_by, children)
+		// Should have exactly 4 sections (task, blocked_by, children, notes)
 		sections := strings.Split(result, "\n\n")
-		if len(sections) != 3 {
-			t.Errorf("expected 3 sections (no description), got %d: %q", len(sections), result)
+		if len(sections) != 4 {
+			t.Errorf("expected 4 sections (no description), got %d: %q", len(sections), result)
 		}
 	})
 
@@ -597,6 +602,64 @@ func TestToonFormatter(t *testing.T) {
 		expectedHeader := "task{id,title,status,priority,parent,created,updated,closed}:"
 		if taskLines[0] != expectedHeader {
 			t.Errorf("header = %q, want %q", taskLines[0], expectedHeader)
+		}
+	})
+
+	t.Run("it displays notes in toon show output", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Task with notes",
+				Status:   task.StatusInProgress,
+				Priority: 1,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+			Notes: []task.Note{
+				{Text: "Started investigating", Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
+				{Text: "Root cause found", Created: time.Date(2026, 2, 27, 14, 30, 0, 0, time.UTC)},
+			},
+		}
+		result := f.FormatTaskDetail(detail)
+		if !strings.Contains(result, "notes[2]{text,created}:") {
+			t.Errorf("should contain notes section header with count, got:\n%s", result)
+		}
+		if !strings.Contains(result, "Started investigating") {
+			t.Errorf("should contain first note text, got:\n%s", result)
+		}
+		if !strings.Contains(result, "Root cause found") {
+			t.Errorf("should contain second note text, got:\n%s", result)
+		}
+		if !strings.Contains(result, "2026-02-27T10:00:00Z") {
+			t.Errorf("should contain first note timestamp, got:\n%s", result)
+		}
+		if !strings.Contains(result, "2026-02-27T14:30:00Z") {
+			t.Errorf("should contain second note timestamp, got:\n%s", result)
+		}
+	})
+
+	t.Run("it shows empty notes in toon when no notes", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "No notes task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if !strings.Contains(result, "notes[0]{text,created}:") {
+			t.Errorf("should contain empty notes section 'notes[0]{text,created}:', got:\n%s", result)
 		}
 	})
 }

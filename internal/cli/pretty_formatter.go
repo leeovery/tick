@@ -130,6 +130,13 @@ func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
 		}
 	}
 
+	if len(detail.Notes) > 0 {
+		b.WriteString("\n\nNotes:")
+		for _, note := range detail.Notes {
+			fmt.Fprintf(&b, "\n  %s  %s", note.Created.Format("2006-01-02 15:04"), note.Text)
+		}
+	}
+
 	if t.Description != "" {
 		b.WriteString("\n\nDescription:")
 		lines := strings.Split(t.Description, "\n")

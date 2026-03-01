@@ -26,6 +26,7 @@ type showData struct {
 	children    []RelatedTask
 	tags        []string
 	refs        []string
+	notes       []task.Note
 }
 
 // RunShow executes the show command: queries a single task by ID from SQLite and
@@ -179,7 +180,32 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 			}
 			data.refs = append(data.refs, ref)
 		}
-		return refRows.Err()
+		if err := refRows.Err(); err != nil {
+			return err
+		}
+
+		// Query notes.
+		noteRows, err := db.Query(
+			`SELECT text, created FROM task_notes WHERE task_id = ? ORDER BY created ASC`,
+			id,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to query notes: %w", err)
+		}
+		defer noteRows.Close()
+
+		for noteRows.Next() {
+			var text, createdStr string
+			if err := noteRows.Scan(&text, &createdStr); err != nil {
+				return fmt.Errorf("failed to scan note row: %w", err)
+			}
+			created, err := time.Parse(task.TimestampFormat, createdStr)
+			if err != nil {
+				return fmt.Errorf("failed to parse note timestamp: %w", err)
+			}
+			data.notes = append(data.notes, task.Note{Text: text, Created: created})
+		}
+		return noteRows.Err()
 	})
 
 	return data, err
@@ -214,5 +240,6 @@ func showDataToTaskDetail(d showData) TaskDetail {
 		ParentTitle: d.parentTitle,
 		Tags:        d.tags,
 		Refs:        d.refs,
+		Notes:       d.notes,
 	}
 }

@@ -45,6 +45,12 @@ type toonStatsSummary struct {
 	Blocked    int `toon:"blocked"`
 }
 
+// toonNoteRow is a TOON-serializable row for the notes section in show output.
+type toonNoteRow struct {
+	Text    string `toon:"text"`
+	Created string `toon:"created"`
+}
+
 // toonPriorityRow is a TOON-serializable row for the by_priority section.
 type toonPriorityRow struct {
 	Priority int `toon:"priority"`
@@ -92,7 +98,10 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 		sections = append(sections, buildRefsSection(detail.Refs))
 	}
 
-	// Section 6: description (omitted when empty)
+	// Section 6: notes (always present, even with count 0)
+	sections = append(sections, buildNotesSection(detail.Notes))
+
+	// Section 7: description (omitted when empty)
 	if detail.Task.Description != "" {
 		sections = append(sections, buildDescriptionSection(detail.Task.Description))
 	}
@@ -201,6 +210,21 @@ func buildRefsSection(refs []string) string {
 		b.WriteString(ref)
 	}
 	return b.String()
+}
+
+// buildNotesSection builds the notes section as a TOON tabular section.
+func buildNotesSection(notes []task.Note) string {
+	if len(notes) == 0 {
+		return "notes[0]{text,created}:"
+	}
+	rows := make([]toonNoteRow, len(notes))
+	for i, n := range notes {
+		rows[i] = toonNoteRow{
+			Text:    n.Text,
+			Created: task.FormatTimestamp(n.Created),
+		}
+	}
+	return encodeToonSection("notes", rows)
 }
 
 // buildDescriptionSection builds the description section with indented lines.

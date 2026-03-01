@@ -92,7 +92,7 @@ type RelatedTask struct {
 }
 
 // TaskDetail holds all data needed to render the show command output,
-// including the task itself plus related context (blockers, children, parent title, tags, refs).
+// including the task itself plus related context (blockers, children, parent title, tags, refs, notes).
 type TaskDetail struct {
 	Task        task.Task
 	BlockedBy   []RelatedTask
@@ -100,6 +100,7 @@ type TaskDetail struct {
 	ParentTitle string
 	Tags        []string
 	Refs        []string
+	Notes       []task.Note
 }
 
 // Stats holds typed task statistics for rendering by formatters.

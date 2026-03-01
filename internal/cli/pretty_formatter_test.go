@@ -639,4 +639,105 @@ func TestPrettyFormatter(t *testing.T) {
 			t.Errorf("should not contain Refs section when empty, got:\n%s", result)
 		}
 	})
+
+	t.Run("it displays notes in pretty show output with timestamps", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Task with notes",
+				Status:   task.StatusInProgress,
+				Priority: 1,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+			Notes: []task.Note{
+				{Text: "Started investigating the auth flow", Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
+			},
+		}
+		result := f.FormatTaskDetail(detail)
+		if !strings.Contains(result, "Notes:") {
+			t.Errorf("should contain 'Notes:' section, got:\n%s", result)
+		}
+		if !strings.Contains(result, "  2026-02-27 10:00  Started investigating the auth flow") {
+			t.Errorf("should contain note with timestamp prefix, got:\n%s", result)
+		}
+	})
+
+	t.Run("it omits notes section in pretty when no notes", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "No notes task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if strings.Contains(result, "Notes:") {
+			t.Errorf("should not contain Notes section when empty, got:\n%s", result)
+		}
+	})
+
+	t.Run("it displays multiple notes chronologically in pretty", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Task with notes",
+				Status:   task.StatusInProgress,
+				Priority: 1,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+			Notes: []task.Note{
+				{Text: "Started investigating the auth flow", Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
+				{Text: "Root cause found -- token refresh race condition", Created: time.Date(2026, 2, 27, 14, 30, 0, 0, time.UTC)},
+			},
+		}
+		result := f.FormatTaskDetail(detail)
+		expected := "\n\nNotes:\n" +
+			"  2026-02-27 10:00  Started investigating the auth flow\n" +
+			"  2026-02-27 14:30  Root cause found -- token refresh race condition"
+		if !strings.Contains(result, expected) {
+			t.Errorf("should contain chronological notes section, got:\n%s", result)
+		}
+	})
+
+	t.Run("it displays note with long text without truncation", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
+		longText := "This is a very long note that contains detailed information about the investigation process and findings that should not be truncated in any way whatsoever because users need to see the full context of their notes regardless of length"
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Task with long note",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+			Notes: []task.Note{
+				{Text: longText, Created: now},
+			},
+		}
+		result := f.FormatTaskDetail(detail)
+		if !strings.Contains(result, longText) {
+			t.Errorf("should contain full long note text without truncation, got:\n%s", result)
+		}
+	})
 }
