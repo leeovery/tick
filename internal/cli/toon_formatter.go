@@ -192,22 +192,21 @@ func buildRelatedSection(name string, related []RelatedTask) string {
 
 // buildTagsSection builds the tags section as a TOON array of strings.
 func buildTagsSection(tags []string) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "tags[%d]:", len(tags))
-	for _, tag := range tags {
-		b.WriteString("\n  ")
-		b.WriteString(tag)
-	}
-	return b.String()
+	return buildStringListSection("tags", tags)
 }
 
 // buildRefsSection builds the refs section as a TOON array of strings.
 func buildRefsSection(refs []string) string {
+	return buildStringListSection("refs", refs)
+}
+
+// buildStringListSection builds a named TOON section from a list of strings.
+func buildStringListSection(name string, items []string) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "refs[%d]:", len(refs))
-	for _, ref := range refs {
+	fmt.Fprintf(&b, "%s[%d]:", name, len(items))
+	for _, item := range items {
 		b.WriteString("\n  ")
-		b.WriteString(ref)
+		b.WriteString(item)
 	}
 	return b.String()
 }
