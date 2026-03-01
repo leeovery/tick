@@ -14,7 +14,7 @@ author_gate_mode: auto
 finding_gate_mode: gated
 planning:
   phase: 1
-  task: 3
+  task: ~
 ---
 
 # Plan: Cache Schema Versioning
@@ -43,4 +43,4 @@ approved_at: 2026-03-01
 |----|------|------------|--------|--------|
 | cache-schema-versioning-1-1 | Add schema version constant and store in metadata during rebuild | none | authored | tick-477711 |
 | cache-schema-versioning-1-2 | Check schema version in ensureFresh and delete-rebuild on mismatch | missing schema_version row (pre-versioning cache.db), new empty cache extra rebuild cycle | authored | tick-389db4 |
-| cache-schema-versioning-1-3 | End-to-end query success after version-triggered rebuild | none | pending | |
+| cache-schema-versioning-1-3 | End-to-end query success after version-triggered rebuild | none | authored | tick-68d0c3 |
