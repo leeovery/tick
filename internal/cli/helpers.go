@@ -54,6 +54,47 @@ func parseCommaSeparatedIDs(s string) []string {
 	return ids
 }
 
+// validateTypeFlag normalizes the type value, checks it is non-empty, and validates
+// it against the allowed type set. Returns the normalized value or an error.
+func validateTypeFlag(value string) (string, error) {
+	normalized := task.NormalizeType(value)
+	if err := task.ValidateTypeNotEmpty(normalized); err != nil {
+		return "", err
+	}
+	if err := task.ValidateType(normalized); err != nil {
+		return "", err
+	}
+	return normalized, nil
+}
+
+// validateTagsFlag deduplicates tags, checks the result is non-empty (using emptyErr
+// as the error message), and validates all tag values. Returns the deduplicated slice
+// or an error.
+func validateTagsFlag(tags []string, emptyErr string) ([]string, error) {
+	deduped := task.DeduplicateTags(tags)
+	if len(deduped) == 0 {
+		return nil, fmt.Errorf("%s", emptyErr)
+	}
+	if err := task.ValidateTags(deduped); err != nil {
+		return nil, err
+	}
+	return deduped, nil
+}
+
+// validateRefsFlag deduplicates refs, checks the result is non-empty (using emptyErr
+// as the error message), and validates all ref values. Returns the deduplicated slice
+// or an error.
+func validateRefsFlag(refs []string, emptyErr string) ([]string, error) {
+	deduped := task.DeduplicateRefs(refs)
+	if len(deduped) == 0 {
+		return nil, fmt.Errorf("%s", emptyErr)
+	}
+	if err := task.ValidateRefs(deduped); err != nil {
+		return nil, err
+	}
+	return deduped, nil
+}
+
 // applyBlocks iterates tasks and for each task whose ID appears in blockIDs,
 // appends sourceID to its BlockedBy slice and sets its Updated timestamp.
 // Skips the append if sourceID is already present in BlockedBy.

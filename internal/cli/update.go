@@ -161,12 +161,9 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return fmt.Errorf("--type and --clear-type are mutually exclusive")
 	}
 	if opts.taskType != nil {
-		normalized := task.NormalizeType(*opts.taskType)
-		if err := task.ValidateTypeNotEmpty(normalized); err != nil {
-			return err
-		}
-		if err := task.ValidateType(normalized); err != nil {
-			return err
+		normalized, typeErr := validateTypeFlag(*opts.taskType)
+		if typeErr != nil {
+			return typeErr
 		}
 		opts.taskType = &normalized
 	}
@@ -176,12 +173,9 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return fmt.Errorf("--tags and --clear-tags are mutually exclusive")
 	}
 	if opts.tags != nil {
-		deduped := task.DeduplicateTags(*opts.tags)
-		if len(deduped) == 0 {
-			return fmt.Errorf("--tags cannot be empty; use --clear-tags to remove all tags")
-		}
-		if err := task.ValidateTags(deduped); err != nil {
-			return err
+		deduped, tagsErr := validateTagsFlag(*opts.tags, "--tags cannot be empty; use --clear-tags to remove all tags")
+		if tagsErr != nil {
+			return tagsErr
 		}
 		opts.tags = &deduped
 	}
@@ -191,12 +185,9 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return fmt.Errorf("--refs and --clear-refs are mutually exclusive")
 	}
 	if opts.refs != nil {
-		deduped := task.DeduplicateRefs(*opts.refs)
-		if len(deduped) == 0 {
-			return fmt.Errorf("--refs cannot be empty; use --clear-refs to remove all refs")
-		}
-		if err := task.ValidateRefs(deduped); err != nil {
-			return err
+		deduped, refsErr := validateRefsFlag(*opts.refs, "--refs cannot be empty; use --clear-refs to remove all refs")
+		if refsErr != nil {
+			return refsErr
 		}
 		opts.refs = &deduped
 	}

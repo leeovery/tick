@@ -17,7 +17,7 @@ project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro/SKILL.md
 current_phase: 5
-current_task: cli-enhancements-5-4
+current_task: cli-enhancements-5-5
 completed_phases:
   - 1
   - 2
@@ -51,6 +51,7 @@ completed_tasks:
   - cli-enhancements-5-1
   - cli-enhancements-5-2
   - cli-enhancements-5-3
+  - cli-enhancements-5-4
 started: 2026-02-28
 updated: 2026-02-28
 completed: ~

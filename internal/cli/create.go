@@ -128,33 +128,24 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 	// Validate type if provided.
 	if opts.hasType {
-		opts.taskType = task.NormalizeType(opts.taskType)
-		if err := task.ValidateTypeNotEmpty(opts.taskType); err != nil {
-			return err
-		}
-		if err := task.ValidateType(opts.taskType); err != nil {
+		opts.taskType, err = validateTypeFlag(opts.taskType)
+		if err != nil {
 			return err
 		}
 	}
 
 	// Validate tags if provided.
 	if opts.hasTags {
-		opts.tags = task.DeduplicateTags(opts.tags)
-		if len(opts.tags) == 0 {
-			return fmt.Errorf("--tags cannot be empty; omit the flag to leave tags unset")
-		}
-		if err := task.ValidateTags(opts.tags); err != nil {
+		opts.tags, err = validateTagsFlag(opts.tags, "--tags cannot be empty; omit the flag to leave tags unset")
+		if err != nil {
 			return err
 		}
 	}
 
 	// Validate refs if provided.
 	if opts.hasRefs {
-		opts.refs = task.DeduplicateRefs(opts.refs)
-		if len(opts.refs) == 0 {
-			return fmt.Errorf("--refs cannot be empty; omit the flag to leave refs unset")
-		}
-		if err := task.ValidateRefs(opts.refs); err != nil {
+		opts.refs, err = validateRefsFlag(opts.refs, "--refs cannot be empty; omit the flag to leave refs unset")
+		if err != nil {
 			return err
 		}
 	}
