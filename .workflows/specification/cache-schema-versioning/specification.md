@@ -50,6 +50,10 @@ Add a hard-coded schema version constant. Store it in the existing `metadata` ta
 - Cache with matching schema version is preserved (no unnecessary rebuild)
 - After version-triggered rebuild, queries succeed normally
 
+### Dependencies
+
+No prerequisites. This fix modifies existing cache lifecycle code (`internal/storage/cache.go`, `internal/storage/store.go`) with no dependencies on other systems or features. Implementation can begin immediately.
+
 ---
 
 ## Working Notes
