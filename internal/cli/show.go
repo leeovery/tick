@@ -105,87 +105,39 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 		}
 
 		// Query blocked_by dependencies with context.
-		depRows, err := db.Query(
+		data.blockedBy, err = queryRelatedTasks(db,
 			`SELECT t.id, t.title, t.status FROM dependencies d JOIN tasks t ON d.blocked_by = t.id WHERE d.task_id = ? ORDER BY t.id`,
 			id,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to query dependencies: %w", err)
 		}
-		defer depRows.Close()
-
-		for depRows.Next() {
-			var r RelatedTask
-			if err := depRows.Scan(&r.ID, &r.Title, &r.Status); err != nil {
-				return fmt.Errorf("failed to scan dependency row: %w", err)
-			}
-			data.blockedBy = append(data.blockedBy, r)
-		}
-		if err := depRows.Err(); err != nil {
-			return err
-		}
 
 		// Query children with context.
-		childRows, err := db.Query(
+		data.children, err = queryRelatedTasks(db,
 			`SELECT id, title, status FROM tasks WHERE parent = ? ORDER BY id`,
 			id,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to query children: %w", err)
 		}
-		defer childRows.Close()
-
-		for childRows.Next() {
-			var r RelatedTask
-			if err := childRows.Scan(&r.ID, &r.Title, &r.Status); err != nil {
-				return fmt.Errorf("failed to scan child row: %w", err)
-			}
-			data.children = append(data.children, r)
-		}
-		if err := childRows.Err(); err != nil {
-			return err
-		}
 
 		// Query tags.
-		tagRows, err := db.Query(
+		data.tags, err = queryStringColumn(db,
 			`SELECT tag FROM task_tags WHERE task_id = ? ORDER BY tag`,
 			id,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to query tags: %w", err)
 		}
-		defer tagRows.Close()
-
-		for tagRows.Next() {
-			var tag string
-			if err := tagRows.Scan(&tag); err != nil {
-				return fmt.Errorf("failed to scan tag row: %w", err)
-			}
-			data.tags = append(data.tags, tag)
-		}
-		if err := tagRows.Err(); err != nil {
-			return err
-		}
 
 		// Query refs.
-		refRows, err := db.Query(
+		data.refs, err = queryStringColumn(db,
 			`SELECT ref FROM task_refs WHERE task_id = ? ORDER BY ref`,
 			id,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to query refs: %w", err)
-		}
-		defer refRows.Close()
-
-		for refRows.Next() {
-			var ref string
-			if err := refRows.Scan(&ref); err != nil {
-				return fmt.Errorf("failed to scan ref row: %w", err)
-			}
-			data.refs = append(data.refs, ref)
-		}
-		if err := refRows.Err(); err != nil {
-			return err
 		}
 
 		// Query notes.
@@ -213,6 +165,44 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 	})
 
 	return data, err
+}
+
+// queryStringColumn executes query with id and scans a single string column per row.
+func queryStringColumn(db *sql.DB, query string, id string) ([]string, error) {
+	rows, err := db.Query(query, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []string
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, rows.Err()
+}
+
+// queryRelatedTasks executes query with id and scans (id, title, status) per row.
+func queryRelatedTasks(db *sql.DB, query string, id string) ([]RelatedTask, error) {
+	rows, err := db.Query(query, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []RelatedTask
+	for rows.Next() {
+		var r RelatedTask
+		if err := rows.Scan(&r.ID, &r.Title, &r.Status); err != nil {
+			return nil, err
+		}
+		result = append(result, r)
+	}
+	return result, rows.Err()
 }
 
 // showDataToTaskDetail converts a showData struct (from SQL query) to a TaskDetail
