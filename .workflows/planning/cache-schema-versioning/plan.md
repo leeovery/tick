@@ -18,3 +18,21 @@ planning:
 ---
 
 # Plan: Cache Schema Versioning
+
+### Phase 1: Schema Version Check and Rebuild
+status: draft
+ext_id:
+
+**Goal**: Add a schema version constant to the cache, store it in metadata during rebuild, and check it early in `ensureFresh()` — triggering a full delete-and-rebuild when the version is missing or mismatched. This is the complete fix for the broken upgrade path.
+
+**Why this order**: This is a single-phase bugfix. The bug has one root cause (no schema-freshness model) and the fix is contained to two files (`cache.go` and `store.go`). There is no incremental value in splitting — the version constant, the storage, and the check are tightly coupled and only meaningful together.
+
+**Acceptance**:
+- [ ] `const schemaVersion = 1` exists in `internal/storage/cache.go`
+- [ ] `Rebuild()` stores `schema_version` in the `metadata` table alongside `jsonl_hash`
+- [ ] `ensureFresh()` checks `schema_version` before calling `IsFresh()`, triggering close + delete + reopen + rebuild on mismatch
+- [ ] Test: cache with wrong schema version triggers delete and full rebuild
+- [ ] Test: cache with missing schema version (simulating pre-versioning `cache.db`) triggers delete and full rebuild
+- [ ] Test: cache with correct schema version is preserved without unnecessary rebuild
+- [ ] Test: after a version-triggered rebuild, subsequent queries succeed normally
+- [ ] All existing tests in `internal/storage/` continue to pass
