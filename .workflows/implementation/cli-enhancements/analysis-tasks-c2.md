@@ -6,7 +6,7 @@ total_proposed: 3
 # Analysis Tasks: cli-enhancements (Cycle 2)
 
 ## Task 1: Resolve partial IDs for list --parent
-status: pending
+status: approved
 severity: high
 sources: architecture
 
@@ -40,7 +40,7 @@ sources: architecture
 - Test that `list --parent` with a non-matching prefix returns a not-found error
 
 ## Task 2: Extract query-scan helpers in show.go
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -113,7 +113,7 @@ sources: duplication
 - Existing `show` tests pass without modification (no behavioral change)
 
 ## Task 3: ParseRefs should delegate to ValidateRefs
-status: pending
+status: approved
 severity: low
 sources: duplication
 

@@ -152,3 +152,16 @@ ext_id: tick-ebe119
 | cli-enhancements-5-3 | Extract shared buildStringListSection in toon_formatter.go | none | authored | tick-219286 |
 | cli-enhancements-5-4 | Extract shared validation helpers for type/tags/refs flags in CLI layer | none | authored | tick-4dcb23 |
 | cli-enhancements-5-5 | Consolidate ResolveID into a single Query call | none | authored | tick-8bd9fb |
+
+### Phase 6: Analysis (Cycle 2)
+status: approved
+ext_id: tick-c29eef
+
+**Goal**: Address findings from Analysis (Cycle 2).
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| cli-enhancements-6-1 | Resolve partial IDs for list --parent | none | authored | tick-34dd9f |
+| cli-enhancements-6-2 | Extract query-scan helpers in show.go | none | authored | tick-de5bcc |
+| cli-enhancements-6-3 | ParseRefs should delegate to ValidateRefs | none | authored | tick-2d2971 |
