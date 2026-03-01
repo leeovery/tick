@@ -979,6 +979,76 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
+	t.Run("it creates a task with --refs gh-123,JIRA-456", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Ref task", "--refs", "gh-123,JIRA-456")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if len(tasks[0].Refs) != 2 {
+			t.Fatalf("expected 2 refs, got %d: %v", len(tasks[0].Refs), tasks[0].Refs)
+		}
+		if tasks[0].Refs[0] != "gh-123" {
+			t.Errorf("refs[0] = %q, want %q", tasks[0].Refs[0], "gh-123")
+		}
+		if tasks[0].Refs[1] != "JIRA-456" {
+			t.Errorf("refs[1] = %q, want %q", tasks[0].Refs[1], "JIRA-456")
+		}
+	})
+
+	t.Run("it creates a task without --refs (optional)", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "No refs task")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if len(tasks[0].Refs) != 0 {
+			t.Errorf("refs = %v, want empty", tasks[0].Refs)
+		}
+	})
+
+	t.Run("it errors on create with empty --refs value", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Bad refs", "--refs", "")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--refs") {
+			t.Errorf("stderr should mention --refs, got %q", stderr)
+		}
+	})
+
+	t.Run("it deduplicates refs on create", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Dedup refs", "--refs", "gh-123,JIRA-456,gh-123")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks[0].Refs) != 2 {
+			t.Fatalf("expected 2 refs after dedup, got %d: %v", len(tasks[0].Refs), tasks[0].Refs)
+		}
+	})
+
+	t.Run("it rejects invalid ref (contains whitespace) on create", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Bad ref", "--refs", "gh 123")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "whitespace") {
+			t.Errorf("stderr should mention whitespace, got %q", stderr)
+		}
+	})
+
 	t.Run("it allows valid dependencies through create --blocked-by and --blocks", func(t *testing.T) {
 		now := time.Now().UTC().Truncate(time.Second)
 		taskA := task.Task{

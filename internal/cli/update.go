@@ -24,11 +24,13 @@ type updateOpts struct {
 	clearType        bool
 	tags             *[]string
 	clearTags        bool
+	refs             *[]string
+	clearRefs        bool
 }
 
 // hasChanges reports whether at least one update flag was provided.
 func (o updateOpts) hasChanges() bool {
-	return o.title != nil || o.description != nil || o.priority != nil || o.parent != nil || len(o.blocks) > 0 || o.clearDescription || o.taskType != nil || o.clearType || o.tags != nil || o.clearTags
+	return o.title != nil || o.description != nil || o.priority != nil || o.parent != nil || len(o.blocks) > 0 || o.clearDescription || o.taskType != nil || o.clearType || o.tags != nil || o.clearTags || o.refs != nil || o.clearRefs
 }
 
 // parseUpdateArgs parses the subcommand arguments for `tick update`.
@@ -91,6 +93,15 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 			opts.tags = &v
 		case arg == "--clear-tags":
 			opts.clearTags = true
+		case arg == "--refs":
+			i++
+			if i >= len(args) {
+				return opts, fmt.Errorf("--refs requires a value")
+			}
+			v := strings.Split(args[i], ",")
+			opts.refs = &v
+		case arg == "--clear-refs":
+			opts.clearRefs = true
 		case arg == "--blocks":
 			i++
 			if i >= len(args) {
@@ -123,7 +134,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	if !opts.hasChanges() {
-		return fmt.Errorf("at least one flag is required: --title, --description, --clear-description, --priority, --type, --clear-type, --tags, --clear-tags, --parent, --blocks")
+		return fmt.Errorf("at least one flag is required: --title, --description, --clear-description, --priority, --type, --clear-type, --tags, --clear-tags, --refs, --clear-refs, --parent, --blocks")
 	}
 
 	// Validate title if provided.
@@ -173,6 +184,21 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			return err
 		}
 		opts.tags = &deduped
+	}
+
+	// Validate refs flags.
+	if opts.refs != nil && opts.clearRefs {
+		return fmt.Errorf("--refs and --clear-refs are mutually exclusive")
+	}
+	if opts.refs != nil {
+		deduped := task.DeduplicateRefs(*opts.refs)
+		if len(deduped) == 0 {
+			return fmt.Errorf("--refs cannot be empty; use --clear-refs to remove all refs")
+		}
+		if err := task.ValidateRefs(deduped); err != nil {
+			return err
+		}
+		opts.refs = &deduped
 	}
 
 	// Validate priority if provided.
@@ -261,6 +287,11 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 				tasks[i].Tags = nil
 			} else if opts.tags != nil {
 				tasks[i].Tags = *opts.tags
+			}
+			if opts.clearRefs {
+				tasks[i].Refs = nil
+			} else if opts.refs != nil {
+				tasks[i].Refs = *opts.refs
 			}
 			if opts.parent != nil {
 				tasks[i].Parent = *opts.parent

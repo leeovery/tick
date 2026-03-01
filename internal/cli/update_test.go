@@ -875,6 +875,101 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
+	t.Run("it updates task refs with --refs new-ref", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Refs: []string{"old-ref"}, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--refs", "new-ref")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted[0].Refs) != 1 {
+			t.Fatalf("expected 1 ref, got %d: %v", len(persisted[0].Refs), persisted[0].Refs)
+		}
+		if persisted[0].Refs[0] != "new-ref" {
+			t.Errorf("refs[0] = %q, want %q", persisted[0].Refs[0], "new-ref")
+		}
+	})
+
+	t.Run("it clears task refs with --clear-refs", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Refs: []string{"gh-123", "JIRA-456"}, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--clear-refs")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted[0].Refs) != 0 {
+			t.Errorf("refs = %v, want empty", persisted[0].Refs)
+		}
+	})
+
+	t.Run("it errors on update with --refs and --clear-refs together", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--refs", "gh-123", "--clear-refs")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "mutually exclusive") {
+			t.Errorf("stderr should mention 'mutually exclusive', got %q", stderr)
+		}
+	})
+
+	t.Run("it errors on update with empty --refs value", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Refs: []string{"old-ref"}, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--refs", "")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--clear-refs") {
+			t.Errorf("stderr should mention --clear-refs, got %q", stderr)
+		}
+
+		// Refs should be unchanged
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted[0].Refs) != 1 || persisted[0].Refs[0] != "old-ref" {
+			t.Errorf("refs = %v, want [old-ref] (unchanged)", persisted[0].Refs)
+		}
+	})
+
+	t.Run("it succeeds with --clear-refs on task with no refs (idempotent)", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--clear-refs")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted[0].Refs) != 0 {
+			t.Errorf("refs = %v, want empty", persisted[0].Refs)
+		}
+	})
+
 	t.Run("it rejects --blocks that would create a cycle", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		// taskA is blocked by taskB. Updating taskB --blocks taskA would create:

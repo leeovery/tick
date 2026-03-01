@@ -22,6 +22,8 @@ type createOpts struct {
 	hasType     bool
 	tags        []string
 	hasTags     bool
+	refs        []string
+	hasRefs     bool
 }
 
 // parseCreateArgs parses the subcommand arguments for `tick create`.
@@ -81,6 +83,13 @@ func parseCreateArgs(args []string) (createOpts, error) {
 			}
 			opts.tags = strings.Split(args[i], ",")
 			opts.hasTags = true
+		case arg == "--refs":
+			i++
+			if i >= len(args) {
+				return opts, fmt.Errorf("--refs requires a value")
+			}
+			opts.refs = strings.Split(args[i], ",")
+			opts.hasRefs = true
 		case strings.HasPrefix(arg, "-"):
 			// Unknown flag — skip (global flags already extracted)
 		default:
@@ -135,6 +144,17 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			return fmt.Errorf("--tags cannot be empty; omit the flag to leave tags unset")
 		}
 		if err := task.ValidateTags(opts.tags); err != nil {
+			return err
+		}
+	}
+
+	// Validate refs if provided.
+	if opts.hasRefs {
+		opts.refs = task.DeduplicateRefs(opts.refs)
+		if len(opts.refs) == 0 {
+			return fmt.Errorf("--refs cannot be empty; omit the flag to leave refs unset")
+		}
+		if err := task.ValidateRefs(opts.refs); err != nil {
 			return err
 		}
 	}
@@ -198,6 +218,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			Priority:    opts.priority,
 			Type:        opts.taskType,
 			Tags:        opts.tags,
+			Refs:        opts.refs,
 			Description: task.TrimDescription(opts.description),
 			BlockedBy:   opts.blockedBy,
 			Parent:      opts.parent,
