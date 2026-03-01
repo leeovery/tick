@@ -14,7 +14,7 @@ linters:
     command: gofmt -l ./internal ./cmd
   - name: golangci-lint
     command: golangci-lint run ./...
-analysis_cycle: 0
+analysis_cycle: 1
 project_skills: ["golang-pro"]
 current_phase: 1
 current_task: ~
