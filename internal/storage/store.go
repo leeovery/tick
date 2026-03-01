@@ -284,28 +284,30 @@ func (s *Store) ResolveID(input string) (string, error) {
 		return "", errors.New("partial ID must be at least 3 hex characters")
 	}
 
-	// Exact full-ID match: 6 hex chars -> try exact match first.
-	if len(hex) == 6 {
-		fullID := "tick-" + hex
-		var found string
-		err := s.Query(func(db *sql.DB) error {
-			return db.QueryRow("SELECT id FROM tasks WHERE id = ?", fullID).Scan(&found)
-		})
-		if err == nil {
-			return found, nil
-		}
-		// If not found, fall through to prefix search.
-	}
-
-	// Prefix search.
-	var matches []string
-	prefix := "tick-" + hex
+	// Single query call: exact match first (6 hex chars), then prefix search fallback.
+	var resolved string
 	err := s.Query(func(db *sql.DB) error {
-		rows, err := db.Query("SELECT id FROM tasks WHERE id LIKE ? ORDER BY id", prefix+"%")
+		fullID := "tick-" + hex
+
+		// Exact full-ID match: 6 hex chars -> try exact match first.
+		if len(hex) == 6 {
+			var found string
+			scanErr := db.QueryRow("SELECT id FROM tasks WHERE id = ?", fullID).Scan(&found)
+			if scanErr == nil {
+				resolved = found
+				return nil
+			}
+			// If not found, fall through to prefix search.
+		}
+
+		// Prefix search.
+		rows, err := db.Query("SELECT id FROM tasks WHERE id LIKE ? ORDER BY id", fullID+"%")
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
+
+		var matches []string
 		for rows.Next() {
 			var id string
 			if err := rows.Scan(&id); err != nil {
@@ -313,20 +315,25 @@ func (s *Store) ResolveID(input string) (string, error) {
 			}
 			matches = append(matches, id)
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+
+		switch len(matches) {
+		case 0:
+			return fmt.Errorf("task '%s' not found", originalInput)
+		case 1:
+			resolved = matches[0]
+			return nil
+		default:
+			return fmt.Errorf("ambiguous ID '%s' matches: %s", originalInput, strings.Join(matches, ", "))
+		}
 	})
 	if err != nil {
-		return "", fmt.Errorf("resolving ID: %w", err)
+		return "", err
 	}
 
-	switch len(matches) {
-	case 0:
-		return "", fmt.Errorf("task '%s' not found", originalInput)
-	case 1:
-		return matches[0], nil
-	default:
-		return "", fmt.Errorf("ambiguous ID '%s' matches: %s", originalInput, strings.Join(matches, ", "))
-	}
+	return resolved, nil
 }
 
 // readAndEnsureFresh reads JSONL once, parses tasks, and ensures the SQLite cache is up-to-date.
