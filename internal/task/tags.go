@@ -36,19 +36,7 @@ func ValidateTag(tag string) error {
 
 // DeduplicateTags normalizes tags, filters empties, and returns unique tags in first-occurrence order.
 func DeduplicateTags(tags []string) []string {
-	seen := make(map[string]bool)
-	var result []string
-	for _, tag := range tags {
-		normalized := NormalizeTag(tag)
-		if normalized == "" {
-			continue
-		}
-		if !seen[normalized] {
-			seen[normalized] = true
-			result = append(result, normalized)
-		}
-	}
-	return result
+	return deduplicateStrings(tags, NormalizeTag)
 }
 
 // ValidateTags normalizes, filters empties, deduplicates, validates each tag, and checks count <= 10.

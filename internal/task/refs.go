@@ -36,19 +36,7 @@ func ValidateRef(ref string) error {
 // DeduplicateRefs trims and deduplicates refs, preserving first-occurrence order.
 // Empty refs after trimming are filtered out.
 func DeduplicateRefs(refs []string) []string {
-	seen := make(map[string]bool)
-	var result []string
-	for _, ref := range refs {
-		trimmed := strings.TrimSpace(ref)
-		if trimmed == "" {
-			continue
-		}
-		if !seen[trimmed] {
-			seen[trimmed] = true
-			result = append(result, trimmed)
-		}
-	}
-	return result
+	return deduplicateStrings(refs, strings.TrimSpace)
 }
 
 // ValidateRefs trims, deduplicates, validates each ref, and checks count <= 10.
