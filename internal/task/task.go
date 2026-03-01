@@ -49,6 +49,7 @@ type Task struct {
 	Tags        []string   `json:"tags,omitempty"`
 	Refs        []string   `json:"refs,omitempty"`
 	Description string     `json:"description,omitempty"`
+	Notes       []Note     `json:"notes,omitempty"`
 	BlockedBy   []string   `json:"blocked_by,omitempty"`
 	Parent      string     `json:"parent,omitempty"`
 	Created     time.Time  `json:"-"`
@@ -66,6 +67,7 @@ type taskJSON struct {
 	Tags        []string `json:"tags,omitempty"`
 	Refs        []string `json:"refs,omitempty"`
 	Description string   `json:"description,omitempty"`
+	Notes       []Note   `json:"notes,omitempty"`
 	BlockedBy   []string `json:"blocked_by,omitempty"`
 	Parent      string   `json:"parent,omitempty"`
 	Created     string   `json:"created"`
@@ -84,6 +86,7 @@ func (t Task) MarshalJSON() ([]byte, error) {
 		Tags:        t.Tags,
 		Refs:        t.Refs,
 		Description: t.Description,
+		Notes:       t.Notes,
 		BlockedBy:   t.BlockedBy,
 		Parent:      t.Parent,
 		Created:     FormatTimestamp(t.Created),
@@ -119,6 +122,7 @@ func (t *Task) UnmarshalJSON(data []byte) error {
 	t.Tags = jt.Tags
 	t.Refs = jt.Refs
 	t.Description = jt.Description
+	t.Notes = jt.Notes
 	t.BlockedBy = jt.BlockedBy
 	t.Parent = jt.Parent
 	t.Created = created
