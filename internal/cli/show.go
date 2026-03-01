@@ -16,6 +16,7 @@ type showData struct {
 	title       string
 	status      string
 	priority    int
+	taskType    string
 	description string
 	parentID    string
 	parentTitle string
@@ -68,11 +69,11 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 	var data showData
 
 	err := store.Query(func(db *sql.DB) error {
-		var descPtr, parentPtr, closedPtr *string
+		var descPtr, parentPtr, closedPtr, typePtr *string
 		err := db.QueryRow(
-			`SELECT id, title, status, priority, description, parent, created, updated, closed FROM tasks WHERE id = ?`,
+			`SELECT id, title, status, priority, type, description, parent, created, updated, closed FROM tasks WHERE id = ?`,
 			id,
-		).Scan(&data.id, &data.title, &data.status, &data.priority, &descPtr, &parentPtr, &data.created, &data.updated, &closedPtr)
+		).Scan(&data.id, &data.title, &data.status, &data.priority, &typePtr, &descPtr, &parentPtr, &data.created, &data.updated, &closedPtr)
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("task '%s' not found", id)
 		}
@@ -80,6 +81,9 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 			return fmt.Errorf("failed to query task: %w", err)
 		}
 
+		if typePtr != nil {
+			data.taskType = *typePtr
+		}
 		if descPtr != nil {
 			data.description = *descPtr
 		}
@@ -222,6 +226,7 @@ func showDataToTaskDetail(d showData) TaskDetail {
 		Title:       d.title,
 		Status:      task.Status(d.status),
 		Priority:    d.priority,
+		Type:        d.taskType,
 		Description: d.description,
 		Parent:      d.parentID,
 		Created:     created,

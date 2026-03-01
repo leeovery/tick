@@ -673,4 +673,71 @@ func TestShow(t *testing.T) {
 			t.Errorf("stdout should not contain 'Notes:' section, got %q", stdout)
 		}
 	})
+
+	t.Run("it displays type in show output when task has a type", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Bug task", Status: task.StatusOpen, Priority: 2,
+				Type: "bug", Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "Type:     bug\n") {
+			t.Errorf("stdout should contain 'Type:     bug', got %q", stdout)
+		}
+	})
+
+	t.Run("it displays dash for type in show output when task has no type", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "No type task", Status: task.StatusOpen, Priority: 2,
+				Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "Type:     -\n") {
+			t.Errorf("stdout should contain 'Type:     -', got %q", stdout)
+		}
+	})
+
+	t.Run("it displays type in post-mutation output after create with --type", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Feature task", "--type", "feature")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "Type:     feature\n") {
+			t.Errorf("stdout should contain 'Type:     feature', got %q", stdout)
+		}
+	})
+
+	t.Run("it displays type in post-mutation output after update", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Feature task", Status: task.StatusOpen, Priority: 2,
+				Type: "feature", Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--title", "Updated title")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "Type:     feature\n") {
+			t.Errorf("stdout should contain 'Type:     feature', got %q", stdout)
+		}
+	})
 }
