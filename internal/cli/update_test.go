@@ -726,6 +726,155 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
+	t.Run("it updates task tags with --tags api,frontend", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Tags: []string{"old-tag"}, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--tags", "api,frontend")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted[0].Tags) != 2 {
+			t.Fatalf("expected 2 tags, got %d: %v", len(persisted[0].Tags), persisted[0].Tags)
+		}
+		if persisted[0].Tags[0] != "api" {
+			t.Errorf("tags[0] = %q, want %q", persisted[0].Tags[0], "api")
+		}
+		if persisted[0].Tags[1] != "frontend" {
+			t.Errorf("tags[1] = %q, want %q", persisted[0].Tags[1], "frontend")
+		}
+	})
+
+	t.Run("it clears task tags with --clear-tags", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Tags: []string{"backend", "ui"}, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--clear-tags")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted[0].Tags) != 0 {
+			t.Errorf("tags = %v, want empty", persisted[0].Tags)
+		}
+	})
+
+	t.Run("it errors on update with --tags and --clear-tags together", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--tags", "api", "--clear-tags")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "mutually exclusive") {
+			t.Errorf("stderr should mention 'mutually exclusive', got %q", stderr)
+		}
+	})
+
+	t.Run("it errors on update with empty --tags value", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Tags: []string{"old"}, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--tags", "")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--clear-tags") {
+			t.Errorf("stderr should mention --clear-tags, got %q", stderr)
+		}
+
+		// Tags should be unchanged
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted[0].Tags) != 1 || persisted[0].Tags[0] != "old" {
+			t.Errorf("tags = %v, want [old] (unchanged)", persisted[0].Tags)
+		}
+	})
+
+	t.Run("it succeeds with --clear-tags on task with no tags (idempotent)", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--clear-tags")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted[0].Tags) != 0 {
+			t.Errorf("tags = %v, want empty", persisted[0].Tags)
+		}
+	})
+
+	t.Run("it persists tags to JSONL and shows in output", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		stdout, stderr, exitCode := runCreate(t, dir, "Tagged task", "--tags", "api,frontend")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		// Verify persisted
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks[0].Tags) != 2 {
+			t.Fatalf("expected 2 tags in JSONL, got %d", len(tasks[0].Tags))
+		}
+
+		// Verify output contains tags
+		if !strings.Contains(stdout, "api") {
+			t.Errorf("stdout should contain tag 'api', got %q", stdout)
+		}
+		if !strings.Contains(stdout, "frontend") {
+			t.Errorf("stdout should contain tag 'frontend', got %q", stdout)
+		}
+	})
+
+	t.Run("it updates hasChanges correctly for --tags and --clear-tags", func(t *testing.T) {
+		// Test that --tags alone triggers hasChanges
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		// --tags alone should be a valid update (no "at least one flag" error)
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--tags", "api")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted[0].Tags) != 1 || persisted[0].Tags[0] != "api" {
+			t.Errorf("tags = %v, want [api]", persisted[0].Tags)
+		}
+
+		// --clear-tags alone should also be a valid update
+		_, stderr, exitCode = runUpdate(t, dir, "tick-aaa111", "--clear-tags")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		persisted = readPersistedTasks(t, tickDir)
+		if len(persisted[0].Tags) != 0 {
+			t.Errorf("tags = %v, want empty after --clear-tags", persisted[0].Tags)
+		}
+	})
+
 	t.Run("it rejects --blocks that would create a cycle", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		// taskA is blocked by taskB. Updating taskB --blocks taskA would create:

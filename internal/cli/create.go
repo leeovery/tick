@@ -20,6 +20,8 @@ type createOpts struct {
 	parent      string
 	taskType    string
 	hasType     bool
+	tags        []string
+	hasTags     bool
 }
 
 // parseCreateArgs parses the subcommand arguments for `tick create`.
@@ -72,6 +74,13 @@ func parseCreateArgs(args []string) (createOpts, error) {
 			}
 			opts.taskType = args[i]
 			opts.hasType = true
+		case arg == "--tags":
+			i++
+			if i >= len(args) {
+				return opts, fmt.Errorf("--tags requires a value")
+			}
+			opts.tags = strings.Split(args[i], ",")
+			opts.hasTags = true
 		case strings.HasPrefix(arg, "-"):
 			// Unknown flag — skip (global flags already extracted)
 		default:
@@ -115,6 +124,17 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			return err
 		}
 		if err := task.ValidateType(opts.taskType); err != nil {
+			return err
+		}
+	}
+
+	// Validate tags if provided.
+	if opts.hasTags {
+		opts.tags = task.DeduplicateTags(opts.tags)
+		if len(opts.tags) == 0 {
+			return fmt.Errorf("--tags cannot be empty; omit the flag to leave tags unset")
+		}
+		if err := task.ValidateTags(opts.tags); err != nil {
 			return err
 		}
 	}
@@ -177,6 +197,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			Status:      task.StatusOpen,
 			Priority:    opts.priority,
 			Type:        opts.taskType,
+			Tags:        opts.tags,
 			Description: task.TrimDescription(opts.description),
 			BlockedBy:   opts.blockedBy,
 			Parent:      opts.parent,

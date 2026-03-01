@@ -879,6 +879,106 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
+	t.Run("it creates a task with --tags ui,backend", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Tagged task", "--tags", "ui,backend")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if len(tasks[0].Tags) != 2 {
+			t.Fatalf("expected 2 tags, got %d: %v", len(tasks[0].Tags), tasks[0].Tags)
+		}
+		if tasks[0].Tags[0] != "ui" {
+			t.Errorf("tags[0] = %q, want %q", tasks[0].Tags[0], "ui")
+		}
+		if tasks[0].Tags[1] != "backend" {
+			t.Errorf("tags[1] = %q, want %q", tasks[0].Tags[1], "backend")
+		}
+	})
+
+	t.Run("it creates a task without --tags (optional)", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "No tags task")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if len(tasks[0].Tags) != 0 {
+			t.Errorf("tags = %v, want empty", tasks[0].Tags)
+		}
+	})
+
+	t.Run("it errors on create with empty --tags value", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Bad tags", "--tags", "")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--tags") {
+			t.Errorf("stderr should mention --tags, got %q", stderr)
+		}
+	})
+
+	t.Run("it deduplicates tags on create", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Dedup task", "--tags", "ui,backend,ui")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks[0].Tags) != 2 {
+			t.Fatalf("expected 2 tags after dedup, got %d: %v", len(tasks[0].Tags), tasks[0].Tags)
+		}
+	})
+
+	t.Run("it normalizes tag input to lowercase on create", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Normalized tags", "--tags", "UI,BACKEND")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks[0].Tags) != 2 {
+			t.Fatalf("expected 2 tags, got %d", len(tasks[0].Tags))
+		}
+		if tasks[0].Tags[0] != "ui" {
+			t.Errorf("tags[0] = %q, want %q", tasks[0].Tags[0], "ui")
+		}
+		if tasks[0].Tags[1] != "backend" {
+			t.Errorf("tags[1] = %q, want %q", tasks[0].Tags[1], "backend")
+		}
+	})
+
+	t.Run("it rejects invalid kebab-case tag on create", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, "Bad tag", "--tags", "my tag")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "kebab-case") {
+			t.Errorf("stderr should mention kebab-case, got %q", stderr)
+		}
+	})
+
+	t.Run("it rejects more than 10 unique tags on create", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		tags := "t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11"
+		_, stderr, exitCode := runCreate(t, dir, "Too many tags", "--tags", tags)
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "too many tags") {
+			t.Errorf("stderr should mention 'too many tags', got %q", stderr)
+		}
+	})
+
 	t.Run("it allows valid dependencies through create --blocked-by and --blocks", func(t *testing.T) {
 		now := time.Now().UTC().Truncate(time.Second)
 		taskA := task.Task{
