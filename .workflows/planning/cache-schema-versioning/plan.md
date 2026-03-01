@@ -13,7 +13,7 @@ task_list_gate_mode: gated
 author_gate_mode: auto
 finding_gate_mode: gated
 planning:
-  phase: 1
+  phase: ~
   task: ~
 ---
 
