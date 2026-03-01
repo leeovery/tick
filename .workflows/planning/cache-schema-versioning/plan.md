@@ -12,6 +12,7 @@ external_dependencies: []
 task_list_gate_mode: gated
 author_gate_mode: auto
 finding_gate_mode: gated
+review_cycle: 1
 planning:
   phase: ~
   task: ~
