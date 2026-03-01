@@ -123,6 +123,13 @@ func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
 		}
 	}
 
+	if len(detail.Refs) > 0 {
+		b.WriteString("\n\nRefs:")
+		for _, ref := range detail.Refs {
+			fmt.Fprintf(&b, "\n  %s", ref)
+		}
+	}
+
 	if t.Description != "" {
 		b.WriteString("\n\nDescription:")
 		lines := strings.Split(t.Description, "\n")

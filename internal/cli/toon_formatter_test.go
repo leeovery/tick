@@ -522,6 +522,56 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 
+	t.Run("it displays refs in toon show output", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Task with refs",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			Refs:      []string{"gh-123", "JIRA-456"},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		// refs section should appear with count and values
+		if !strings.Contains(result, "refs[2]:") {
+			t.Errorf("should contain 'refs[2]:', got:\n%s", result)
+		}
+		if !strings.Contains(result, "  gh-123") {
+			t.Errorf("should contain indented 'gh-123', got:\n%s", result)
+		}
+		if !strings.Contains(result, "  JIRA-456") {
+			t.Errorf("should contain indented 'JIRA-456', got:\n%s", result)
+		}
+	})
+
+	t.Run("it omits refs section in toon format when task has no refs", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Simple task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if strings.Contains(result, "refs[") || strings.Contains(result, "refs:") {
+			t.Errorf("should not contain refs section when empty, got:\n%s", result)
+		}
+	})
+
 	t.Run("it includes both parent and closed in show schema when both present", func(t *testing.T) {
 		f := &ToonFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)

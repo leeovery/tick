@@ -537,4 +537,106 @@ func TestPrettyFormatter(t *testing.T) {
 			t.Errorf("result = %q, want %q", result, expected)
 		}
 	})
+
+	t.Run("it displays refs in pretty show output", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Task with refs",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			Refs:      []string{"gh-123", "JIRA-456"},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if !strings.Contains(result, "Refs:") {
+			t.Errorf("should contain 'Refs:' section, got:\n%s", result)
+		}
+		if !strings.Contains(result, "  gh-123") {
+			t.Errorf("should contain indented 'gh-123', got:\n%s", result)
+		}
+		if !strings.Contains(result, "  JIRA-456") {
+			t.Errorf("should contain indented 'JIRA-456', got:\n%s", result)
+		}
+		// Refs should appear after Tags (or after Type if no tags)
+		typeIdx := strings.Index(result, "Type:")
+		refsIdx := strings.Index(result, "Refs:")
+		if refsIdx < typeIdx {
+			t.Errorf("Refs should appear after Type: Type at %d, Refs at %d", typeIdx, refsIdx)
+		}
+	})
+
+	t.Run("it displays all 10 refs when task has maximum", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		refs := []string{
+			"gh-1", "gh-2", "gh-3", "gh-4", "gh-5",
+			"gh-6", "gh-7", "gh-8", "gh-9", "gh-10",
+		}
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Max refs task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			Refs:      refs,
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		for _, ref := range refs {
+			if !strings.Contains(result, "  "+ref) {
+				t.Errorf("should contain indented ref %q, got:\n%s", ref, result)
+			}
+		}
+	})
+
+	t.Run("it does not show refs in list output", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-a1b2", Title: "Task with refs", Status: task.StatusOpen, Priority: 2,
+				Refs: []string{"gh-123", "JIRA-456"}, Created: now, Updated: now},
+		}
+		result := f.FormatTaskList(tasks)
+		if strings.Contains(result, "gh-123") {
+			t.Errorf("list output should not contain refs, got:\n%s", result)
+		}
+		if strings.Contains(result, "JIRA-456") {
+			t.Errorf("list output should not contain refs, got:\n%s", result)
+		}
+		if strings.Contains(result, "Refs") {
+			t.Errorf("list output should not contain Refs header, got:\n%s", result)
+		}
+	})
+
+	t.Run("it omits refs section in pretty when no refs", func(t *testing.T) {
+		f := &PrettyFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "No refs task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		if strings.Contains(result, "Refs:") {
+			t.Errorf("should not contain Refs section when empty, got:\n%s", result)
+		}
+	})
 }

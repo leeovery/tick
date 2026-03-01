@@ -87,7 +87,12 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 		sections = append(sections, buildTagsSection(detail.Tags))
 	}
 
-	// Section 5: description (omitted when empty)
+	// Section 5: refs (omitted when empty)
+	if len(detail.Refs) > 0 {
+		sections = append(sections, buildRefsSection(detail.Refs))
+	}
+
+	// Section 6: description (omitted when empty)
 	if detail.Task.Description != "" {
 		sections = append(sections, buildDescriptionSection(detail.Task.Description))
 	}
@@ -183,6 +188,17 @@ func buildTagsSection(tags []string) string {
 	for _, tag := range tags {
 		b.WriteString("\n  ")
 		b.WriteString(tag)
+	}
+	return b.String()
+}
+
+// buildRefsSection builds the refs section as a TOON array of strings.
+func buildRefsSection(refs []string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "refs[%d]:", len(refs))
+	for _, ref := range refs {
+		b.WriteString("\n  ")
+		b.WriteString(ref)
 	}
 	return b.String()
 }

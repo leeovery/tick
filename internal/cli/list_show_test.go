@@ -585,4 +585,46 @@ func TestShow(t *testing.T) {
 			t.Errorf("blocker.Status = %q, want %q", blocker.Status, "done")
 		}
 	})
+
+	t.Run("it displays refs in show output when task has refs", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task with refs", Status: task.StatusOpen, Priority: 2,
+				Refs: []string{"gh-123", "JIRA-456"}, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "\nRefs:\n") {
+			t.Errorf("stdout should contain 'Refs:' section, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "  gh-123\n") {
+			t.Errorf("stdout should contain ref 'gh-123', got %q", stdout)
+		}
+		if !strings.Contains(stdout, "  JIRA-456\n") {
+			t.Errorf("stdout should contain ref 'JIRA-456', got %q", stdout)
+		}
+	})
+
+	t.Run("it omits refs section in show when task has no refs", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "No refs task", Status: task.StatusOpen, Priority: 2,
+				Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runShow(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if strings.Contains(stdout, "Refs:") {
+			t.Errorf("stdout should not contain 'Refs:' section, got %q", stdout)
+		}
+	})
 }

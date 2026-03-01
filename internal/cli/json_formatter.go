@@ -47,7 +47,7 @@ type jsonRelatedTask struct {
 
 // jsonTaskDetail represents the full task detail in JSON output.
 // parent and closed use omitempty to omit when zero/nil.
-// blocked_by, children, and tags are always present as arrays.
+// blocked_by, children, tags, and refs are always present as arrays.
 // description is always present (empty string, not null/omitted).
 type jsonTaskDetail struct {
 	ID          string            `json:"id"`
@@ -56,6 +56,7 @@ type jsonTaskDetail struct {
 	Priority    int               `json:"priority"`
 	Type        string            `json:"type"`
 	Tags        []string          `json:"tags"`
+	Refs        []string          `json:"refs"`
 	Description string            `json:"description"`
 	Parent      string            `json:"parent,omitempty"`
 	Created     string            `json:"created"`
@@ -79,6 +80,9 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 	tags := make([]string, 0, len(detail.Tags))
 	tags = append(tags, detail.Tags...)
 
+	refs := make([]string, 0, len(detail.Refs))
+	refs = append(refs, detail.Refs...)
+
 	obj := jsonTaskDetail{
 		ID:          t.ID,
 		Title:       t.Title,
@@ -86,6 +90,7 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 		Priority:    t.Priority,
 		Type:        t.Type,
 		Tags:        tags,
+		Refs:        refs,
 		Description: t.Description,
 		Parent:      t.Parent,
 		Created:     task.FormatTimestamp(t.Created),

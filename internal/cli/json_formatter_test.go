@@ -866,4 +866,73 @@ func TestJSONFormatter(t *testing.T) {
 			t.Errorf("expected 2-space indentation with %q, got:\n%s", expected, result)
 		}
 	})
+
+	t.Run("it displays refs in json show output", func(t *testing.T) {
+		f := &JSONFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Task with refs",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			Refs:      []string{"gh-123", "JIRA-456"},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		refs, ok := parsed["refs"].([]interface{})
+		if !ok {
+			t.Fatalf("refs should be array, got %T: %v", parsed["refs"], parsed["refs"])
+		}
+		if len(refs) != 2 {
+			t.Fatalf("refs length = %d, want 2", len(refs))
+		}
+		if refs[0] != "gh-123" {
+			t.Errorf("refs[0] = %v, want %q", refs[0], "gh-123")
+		}
+		if refs[1] != "JIRA-456" {
+			t.Errorf("refs[1] = %v, want %q", refs[1], "JIRA-456")
+		}
+	})
+
+	t.Run("it shows empty refs array in json when no refs", func(t *testing.T) {
+		f := &JSONFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "No refs",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		refs, ok := parsed["refs"].([]interface{})
+		if !ok {
+			t.Fatalf("refs should be array (not null), got %T: %v", parsed["refs"], parsed["refs"])
+		}
+		if len(refs) != 0 {
+			t.Errorf("refs should be empty, got %d items", len(refs))
+		}
+	})
 }
