@@ -4,7 +4,7 @@ status: in-progress
 type: feature
 work_type: bugfix
 date: 2026-03-01
-review_cycle: 0
+review_cycle: 1
 finding_gate_mode: gated
 sources:
   - name: cache-schema-versioning
