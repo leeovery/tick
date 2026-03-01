@@ -36,6 +36,12 @@ CREATE TABLE IF NOT EXISTS task_tags (
   PRIMARY KEY (task_id, tag)
 );
 
+CREATE TABLE IF NOT EXISTS task_refs (
+  task_id TEXT NOT NULL,
+  ref TEXT NOT NULL,
+  PRIMARY KEY (task_id, ref)
+);
+
 CREATE TABLE IF NOT EXISTS metadata (
   key TEXT PRIMARY KEY,
   value TEXT
@@ -88,6 +94,9 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 	defer func() { _ = tx.Rollback() }()
 
 	// Clear existing data.
+	if _, err := tx.Exec("DELETE FROM task_refs"); err != nil {
+		return fmt.Errorf("failed to clear task_refs: %w", err)
+	}
 	if _, err := tx.Exec("DELETE FROM task_tags"); err != nil {
 		return fmt.Errorf("failed to clear task_tags: %w", err)
 	}
@@ -116,6 +125,12 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 		return fmt.Errorf("failed to prepare tag insert: %w", err)
 	}
 	defer insertTag.Close()
+
+	insertRef, err := tx.Prepare(`INSERT INTO task_refs (task_id, ref) VALUES (?, ?)`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare ref insert: %w", err)
+	}
+	defer insertRef.Close()
 
 	for _, t := range tasks {
 		var closedStr *string
@@ -163,6 +178,12 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 		for _, tag := range t.Tags {
 			if _, err := insertTag.Exec(t.ID, tag); err != nil {
 				return fmt.Errorf("failed to insert tag %s -> %s: %w", t.ID, tag, err)
+			}
+		}
+
+		for _, ref := range t.Refs {
+			if _, err := insertRef.Exec(t.ID, ref); err != nil {
+				return fmt.Errorf("failed to insert ref %s -> %s: %w", t.ID, ref, err)
 			}
 		}
 	}

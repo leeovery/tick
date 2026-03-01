@@ -109,6 +109,31 @@ func TestCacheSchema(t *testing.T) {
 			t.Errorf("missing index %q", "idx_task_tags_tag")
 		}
 	})
+
+	t.Run("it creates task_refs table in schema", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		db := cache.DB()
+
+		// Verify task_refs table exists with correct columns
+		refCols := queryColumns(t, db, "task_refs")
+		expectedRefCols := map[string]bool{"task_id": true, "ref": true}
+		if len(refCols) != len(expectedRefCols) {
+			t.Errorf("task_refs table: expected %d columns, got %d: %v", len(expectedRefCols), len(refCols), refCols)
+		}
+		for col := range expectedRefCols {
+			if !refCols[col] {
+				t.Errorf("task_refs table missing column %q", col)
+			}
+		}
+	})
 }
 
 // queryColumns returns a set of column names for the given table.
@@ -552,6 +577,166 @@ func TestCacheRebuild(t *testing.T) {
 		}
 		if tag != "backend" {
 			t.Errorf("tag = %q, want %q", tag, "backend")
+		}
+	})
+
+	t.Run("it populates refs in task_refs during rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Task with refs",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Refs:     []string{"https://github.com/org/repo/issues/1", "docs/spec.md"},
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		db := cache.DB()
+		rows, err := db.Query("SELECT task_id, ref FROM task_refs WHERE task_id = ? ORDER BY ref", "tick-a1b2c3")
+		if err != nil {
+			t.Fatalf("querying task_refs: %v", err)
+		}
+		defer rows.Close()
+
+		type refRow struct {
+			taskID string
+			ref    string
+		}
+		var refs []refRow
+		for rows.Next() {
+			var r refRow
+			if err := rows.Scan(&r.taskID, &r.ref); err != nil {
+				t.Fatalf("scanning ref row: %v", err)
+			}
+			refs = append(refs, r)
+		}
+
+		if len(refs) != 2 {
+			t.Fatalf("expected 2 ref rows, got %d", len(refs))
+		}
+		expectedRefs := []string{"docs/spec.md", "https://github.com/org/repo/issues/1"}
+		for i, want := range expectedRefs {
+			if refs[i].ref != want {
+				t.Errorf("refs[%d].ref = %q, want %q", i, refs[i].ref, want)
+			}
+			if refs[i].taskID != "tick-a1b2c3" {
+				t.Errorf("refs[%d].task_id = %q, want %q", i, refs[i].taskID, "tick-a1b2c3")
+			}
+		}
+	})
+
+	t.Run("it inserts no rows for task with empty refs slice", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "No refs task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("raw")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		var count int
+		err = cache.DB().QueryRow("SELECT COUNT(*) FROM task_refs WHERE task_id = ?", "tick-a1b2c3").Scan(&count)
+		if err != nil {
+			t.Fatalf("querying task_refs count: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("expected 0 ref rows, got %d", count)
+		}
+	})
+
+	t.Run("it clears stale refs on rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+
+		// First rebuild with refs
+		tasksV1 := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Ref task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Refs:     []string{"https://old-url.com", "old-doc.md"},
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		if err := cache.Rebuild(tasksV1, []byte("v1")); err != nil {
+			t.Fatalf("first Rebuild returned error: %v", err)
+		}
+
+		// Second rebuild with different refs (old ones should be gone)
+		tasksV2 := []task.Task{
+			{
+				ID:       "tick-a1b2c3",
+				Title:    "Ref task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Refs:     []string{"https://new-url.com"},
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		if err := cache.Rebuild(tasksV2, []byte("v2")); err != nil {
+			t.Fatalf("second Rebuild returned error: %v", err)
+		}
+
+		var count int
+		err = cache.DB().QueryRow("SELECT COUNT(*) FROM task_refs").Scan(&count)
+		if err != nil {
+			t.Fatalf("querying task_refs count: %v", err)
+		}
+		if count != 1 {
+			t.Errorf("expected 1 ref row after rebuild, got %d", count)
+		}
+
+		var ref string
+		err = cache.DB().QueryRow("SELECT ref FROM task_refs WHERE task_id = ?", "tick-a1b2c3").Scan(&ref)
+		if err != nil {
+			t.Fatalf("querying ref: %v", err)
+		}
+		if ref != "https://new-url.com" {
+			t.Errorf("ref = %q, want %q", ref, "https://new-url.com")
 		}
 	})
 
