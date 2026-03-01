@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 
 	"github.com/leeovery/tick/internal/task"
 	_ "modernc.org/sqlite"
 )
+
+const schemaVersion = 1
 
 const schemaSQL = `
 CREATE TABLE IF NOT EXISTS tasks (
@@ -219,6 +222,14 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 		return fmt.Errorf("failed to store JSONL hash: %w", err)
 	}
 
+	// Store the schema version.
+	if _, err := tx.Exec(
+		`INSERT OR REPLACE INTO metadata (key, value) VALUES ('schema_version', ?)`,
+		fmt.Sprintf("%d", schemaVersion),
+	); err != nil {
+		return fmt.Errorf("failed to store schema version: %w", err)
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit rebuild transaction: %w", err)
 	}
@@ -240,6 +251,29 @@ func (c *Cache) IsFresh(rawJSONL []byte) (bool, error) {
 
 	currentHash := computeHash(rawJSONL)
 	return storedHash == currentHash, nil
+}
+
+// SchemaVersion reads the schema version from the metadata table.
+// Returns 0, nil when the row is missing (pre-versioning cache).
+func (c *Cache) SchemaVersion() (int, error) {
+	var value string
+	err := c.db.QueryRow("SELECT value FROM metadata WHERE key = 'schema_version'").Scan(&value)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("failed to read schema version from metadata: %w", err)
+	}
+	v, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse schema version %q: %w", value, err)
+	}
+	return v, nil
+}
+
+// CurrentSchemaVersion returns the compiled-in schema version constant.
+func CurrentSchemaVersion() int {
+	return schemaVersion
 }
 
 // computeHash returns the hex-encoded SHA256 hash of the given data.

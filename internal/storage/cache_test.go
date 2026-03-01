@@ -1116,6 +1116,154 @@ func TestCacheRebuild(t *testing.T) {
 	})
 }
 
+func TestSchemaVersion(t *testing.T) {
+	t.Run("it stores schema_version in metadata after rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		if err := cache.Rebuild(nil, []byte("")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		var value string
+		err = cache.DB().QueryRow("SELECT value FROM metadata WHERE key = 'schema_version'").Scan(&value)
+		if err != nil {
+			t.Fatalf("querying schema_version: %v", err)
+		}
+		if value != "1" {
+			t.Errorf("schema_version = %q, want %q", value, "1")
+		}
+	})
+
+	t.Run("it returns current schema version via SchemaVersion()", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		if err := cache.Rebuild(nil, []byte("")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		version, err := cache.SchemaVersion()
+		if err != nil {
+			t.Fatalf("SchemaVersion returned error: %v", err)
+		}
+		if version != 1 {
+			t.Errorf("SchemaVersion() = %d, want %d", version, 1)
+		}
+	})
+
+	t.Run("it returns 0 when schema_version row is missing", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		// No Rebuild() called — metadata table exists but has no schema_version row.
+		version, err := cache.SchemaVersion()
+		if err != nil {
+			t.Fatalf("SchemaVersion returned error: %v", err)
+		}
+		if version != 0 {
+			t.Errorf("SchemaVersion() = %d, want %d", version, 0)
+		}
+	})
+
+	t.Run("it stores schema_version in the same transaction as jsonl_hash", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+
+		// First, do a valid rebuild so metadata has known values.
+		validTasks := []task.Task{
+			{
+				ID:       "tick-valid1",
+				Title:    "Valid task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		if err := cache.Rebuild(validTasks, []byte("valid")); err != nil {
+			t.Fatalf("valid Rebuild returned error: %v", err)
+		}
+
+		// Attempt rebuild with duplicate task IDs to force transaction rollback.
+		duplicateTasks := []task.Task{
+			{
+				ID:       "tick-dup111",
+				Title:    "Dup 1",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+			{
+				ID:       "tick-dup111",
+				Title:    "Dup 2 same ID",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		err = cache.Rebuild(duplicateTasks, []byte("dup"))
+		if err == nil {
+			t.Fatal("expected error for duplicate task IDs, got nil")
+		}
+
+		// Verify schema_version was NOT updated (still from valid rebuild).
+		version, err := cache.SchemaVersion()
+		if err != nil {
+			t.Fatalf("SchemaVersion returned error: %v", err)
+		}
+		if version != 1 {
+			t.Errorf("SchemaVersion() = %d, want %d (original should be preserved)", version, 1)
+		}
+
+		// Verify jsonl_hash was also NOT updated (still from valid rebuild).
+		var storedHash string
+		err = cache.DB().QueryRow("SELECT value FROM metadata WHERE key = 'jsonl_hash'").Scan(&storedHash)
+		if err != nil {
+			t.Fatalf("querying jsonl_hash: %v", err)
+		}
+		expectedHash := computeTestHash([]byte("valid"))
+		if storedHash != expectedHash {
+			t.Errorf("jsonl_hash = %q, want %q (original should be preserved)", storedHash, expectedHash)
+		}
+	})
+
+	t.Run("it returns compiled-in version via CurrentSchemaVersion()", func(t *testing.T) {
+		version := CurrentSchemaVersion()
+		if version != 1 {
+			t.Errorf("CurrentSchemaVersion() = %d, want %d", version, 1)
+		}
+	})
+}
+
 func TestCacheFreshness(t *testing.T) {
 	t.Run("it detects fresh cache (hash matches) and skips rebuild", func(t *testing.T) {
 		dir := t.TempDir()
