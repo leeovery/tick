@@ -22,12 +22,8 @@ The primary pain point: parent containers sit as "open" and never get closed out
 
 - [x] Should starting a child auto-start its ancestors?
 - [x] Should cascade behavior be unconditional or configurable?
-- [ ] Should completing/cancelling a parent cascade downward to children?
-      - Done cascading: close all open children?
-      - Cancel cascading: cancel all children?
-- [ ] What happens on undo/reopen after a cascade?
-      - Reopen a child that triggered upward cascade
-      - Reopen a parent that cascaded downward
+- [x] Should completing/cancelling a parent cascade downward to children?
+- [x] What happens on undo/reopen after a cascade?
 - [ ] Edge cases with multiple children and partial completion
       - Some siblings done, some open — parent status?
       - All children done — auto-complete parent?
@@ -97,3 +93,71 @@ If users complain, add config then with real feedback.
 ---
 
 ## Should completing/cancelling a parent cascade downward to children?
+
+### Context
+
+The inverse of upward cascade: when a parent is explicitly completed or cancelled, what happens to its children?
+
+### Options Considered
+
+**Option A: No downward cascade** — children are independent, user manages them.
+
+**Option B: Cascade to all children** — parent done/cancelled means all children follow.
+
+**Option C: Cascade only to non-terminal children** — done/cancelled children are left alone, only open/in_progress children are affected.
+
+### Journey
+
+Completing a parent means the phase is done — leaving orphaned open children under a done parent is messy, inconsistent state. Same logic applies even more strongly to cancellation: cancelling a phase means the work within it is cancelled.
+
+Discussed whether done children should be affected. Walked through the scenario: parent in_progress, some children done, some open → cancel parent. The done children completed legitimately — that work happened. No reason to retroactively cancel it.
+
+Also noted that Tick's transition table blocks done → cancelled directly. You'd have to reopen first, then cancel. So the "done parent gets cancelled, what about done children" scenario requires two steps, which gives the user a natural decision point.
+
+### Decision
+
+**Yes, cascade downward, but only to non-terminal children.** When a parent is marked done or cancelled:
+- `open` and `in_progress` children copy the parent's terminal status
+- `done` and `cancelled` children are left untouched
+- Recursive — applies to grandchildren etc.
+
+---
+
+## What happens on undo/reopen after a cascade?
+
+### Context
+
+After a cascade has propagated, what happens when someone reopens a task that was part of that cascade? Three scenarios to consider.
+
+### Options Considered
+
+**Scenario 1: Upward cascade undo** — child started, parent auto-started. Child reopened. Should parent revert?
+
+**Scenario 2: Downward cascade undo** — parent cancelled, children cascaded to cancelled. Parent reopened. Should children reopen?
+
+**Scenario 3: Auto-done undo** — all children done, parent auto-closed. One child reopened. Should parent reopen?
+
+### Journey
+
+**Scenario 1:** No reverse cascade. Parent might have other in_progress children. The parent's state is its own now — reopening one child doesn't mean the parent isn't in progress.
+
+**Scenario 2:** No reverse cascade. Reopening is deliberate and surgical — "I want to reconsider this specific task." Automatically resurrecting cancelled children could bring back work the user actually wanted gone.
+
+**Scenario 3:** This one required more thought. The parent's done status was derived — conditional on all children being done. That premise is now broken. A done parent with an open child is inconsistent.
+
+Considered auto-cascading parent to `in_progress` on child reopen, but that would require special-case logic ("reopen to in_progress if done siblings exist"). Instead, simpler to just reopen the parent to `open` using the existing reopen transition. Then normal rules apply: when the user starts the child, upward cascade kicks in and parent goes to `in_progress`. When the child finishes, parent auto-closes. The system self-corrects through existing rules.
+
+The momentary "open parent with done children" state is transient and no different from manually creating a parent and adding done children to it. Not broken, just a brief intermediate state.
+
+### Decision
+
+Five clean rules covering all cascade behavior:
+1. **Child starts → open ancestors go to in_progress** (upward start)
+2. **All children terminal → parent goes to done** (upward completion)
+3. **Parent done/cancelled → non-terminal children copy parent's status** (downward cascade)
+4. **Child reopened under done parent → parent reopens** (undo auto-done)
+5. **No reverse cascade on reopen otherwise** (reopening a child doesn't revert a started parent; reopening a parent doesn't reopen cancelled children)
+
+---
+
+## Edge cases with multiple children and partial completion
