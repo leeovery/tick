@@ -21,8 +21,8 @@ Rule 7 blocks adding a child to a cancelled parent (returns error). Rule 6 trigg
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added clarification that ValidateAddChild is pure validation; caller handles Rule 6 reopen.
 
 ---
 

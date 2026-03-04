@@ -60,6 +60,8 @@ When a child is reopened under a `done` parent, the parent reopens to `open`. Th
 **Rule 6: New child added to done parent**
 Adding a non-terminal child to a `done` parent triggers parent reopen to `open`. Same principle as Rule 5. Applies to both task creation with a done parent and reparenting an existing task to a done parent.
 
+`ValidateAddChild()` handles only validation — it blocks adding a child to a cancelled parent (Rule 7) and returns nil otherwise. The Rule 6 reopen (done parent → open) is the caller's responsibility: after validation passes, the caller checks if the parent is `done` and calls `Transition()` to reopen it before adding the child. This keeps `ValidateAddChild` as pure validation.
+
 **Rule 9: Block reopen under cancelled parent**
 Cannot reopen a child under a `cancelled` parent. Error: "cannot reopen task under cancelled parent, reopen parent first."
 
