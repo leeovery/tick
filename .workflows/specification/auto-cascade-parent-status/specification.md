@@ -57,6 +57,8 @@ Dependency state on target children does not gate cascade transitions — a chil
 **Rule 5: Auto-done undo**
 When a child is reopened under a `done` parent, the parent reopens to `open`. The parent's `done` status was derived from all children being terminal — that premise is now broken.
 
+Rule 5 applies recursively up the ancestor chain via the cascade queue. If a parent reopens under a done grandparent, the grandparent also reopens. This is consistent: each ancestor's `done` status was derived from all children being terminal — that premise is broken at every level.
+
 **Rule 6: New child added to done parent**
 Adding a non-terminal child to a `done` parent triggers parent reopen to `open`. Same principle as Rule 5. Applies to both task creation with a done parent and reparenting an existing task to a done parent.
 

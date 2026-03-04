@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-04
 cycle: 3
 phase: Gap Analysis
@@ -27,5 +27,5 @@ The two "no reverse cascade" clarifications cover different cases (in_progress p
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added recursive upward reopen clarification to Rule 5.
