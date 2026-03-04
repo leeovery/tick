@@ -69,8 +69,8 @@ The spec defines the StateMachine API and its queue-based cascade processing but
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added Store Integration subsection to Architecture.
 
 ---
 

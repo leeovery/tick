@@ -188,6 +188,10 @@ func (sm *StateMachine) ApplyWithCascades(tasks []Task, target *Task, action str
 
 Existing logic from `transition.go` and `dependency.go` migrates into the StateMachine. `task.Transition()` becomes `sm.Transition()`, `task.ValidateDependency()` becomes `sm.ValidateAddDep()`. Old functions become thin wrappers or get deleted. Callers update accordingly.
 
+#### Store Integration
+
+All cascade changes are persisted atomically within a single `Store.Mutate` call. The caller invokes `ApplyWithCascades()`, receives the primary transition result plus all cascade changes, then writes the full updated task set to JSONL in one atomic operation (temp file + fsync + rename). This ensures no partial cascades on crash — either all changes persist or none do.
+
 ### Dependencies
 
 Prerequisites that must exist before implementation can begin:
