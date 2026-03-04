@@ -4,7 +4,7 @@ status: in-progress
 type: feature
 work_type: feature
 date: 2026-03-04
-review_cycle: 2
+review_cycle: 3
 finding_gate_mode: gated
 sources:
   - name: auto-cascade-parent-status
