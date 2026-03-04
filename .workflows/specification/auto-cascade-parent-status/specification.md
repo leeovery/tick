@@ -33,7 +33,7 @@ Eleven rules govern all transition, validation, and cascade behavior. Rules 1, 1
 #### Upward Cascades
 
 **Rule 1: Transition validation** (existing)
-Standard transition table — `open → in_progress`, `in_progress → done`, `in_progress → cancelled`, `done/cancelled → open` (reopen). Invalid transitions return an error.
+Standard transition table — `open → in_progress`, `open → done`, `open → cancelled`, `in_progress → done`, `in_progress → cancelled`, `done/cancelled → open` (reopen). Invalid transitions return an error.
 
 **Rule 2: Upward start cascade**
 When a child transitions to `in_progress`, walk the ancestor chain and set any `open` ancestors to `in_progress`. Recursive — applies to grandparents and beyond.

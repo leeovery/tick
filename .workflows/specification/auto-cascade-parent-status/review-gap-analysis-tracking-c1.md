@@ -21,8 +21,8 @@ Rule 1 lists `open → in_progress`, `in_progress → done`, `in_progress → ca
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Updated Rule 1 to include open→done and open→cancelled.
 
 ---
 
