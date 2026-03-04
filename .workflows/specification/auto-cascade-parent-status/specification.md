@@ -90,6 +90,51 @@ Stored in JSONL as part of the Task struct. The SQLite cache gains a `task_trans
 
 Growth is bounded — tasks don't transition many times, and JSONL already does full rewrites on every mutation.
 
+### CLI Display
+
+Both formats show the same information — the primary transition plus all cascaded changes and unchanged terminal children. Only presentation differs.
+
+#### Pretty Format
+
+Uses tree formatting with box-drawing characters.
+
+**Downward cascade (cancel):**
+```
+tick-parent1: in_progress → cancelled
+
+Cascaded:
+├─ tick-child1 "Login": in_progress → cancelled
+├─ tick-child2 "Signup": open → cancelled
+│  ├─ tick-grand1 "Form": open → cancelled
+│  └─ tick-grand2 "Validation": open → cancelled
+└─ tick-child3 "Logout": done (unchanged)
+```
+
+**Upward cascade (start):**
+```
+tick-child1: open → in_progress
+
+Cascaded:
+├─ tick-parent1 "Auth phase": open → in_progress
+└─ tick-grand1 "Sprint 3": open → in_progress
+```
+
+#### Toon Format
+
+Flat lines with `(auto)` and `(unchanged)` markers for machine parsing.
+
+**Downward cascade (cancel):**
+```
+tick-parent1: in_progress → cancelled
+tick-child1: in_progress → cancelled (auto)
+tick-child2: open → cancelled (auto)
+tick-grand1: open → cancelled (auto)
+tick-grand2: open → cancelled (auto)
+tick-child3: done (unchanged)
+```
+
+Both formats show unchanged terminal children so the user can see what was *not* affected by the cascade.
+
 ---
 
 ## Working Notes
