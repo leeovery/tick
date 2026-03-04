@@ -1,6 +1,6 @@
 ---
 topic: auto-cascade-parent-status
-status: in-progress
+status: concluded
 work_type: feature
 date: 2026-03-03
 ---
