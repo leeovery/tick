@@ -94,6 +94,20 @@ Stored in JSONL as part of the Task struct. The SQLite cache gains a `task_trans
 
 Growth is bounded — tasks don't transition many times, and JSONL already does full rewrites on every mutation.
 
+The `task_transitions` table schema:
+
+```sql
+CREATE TABLE task_transitions (
+    task_id TEXT NOT NULL,
+    from_status TEXT NOT NULL,
+    to_status TEXT NOT NULL,
+    at TEXT NOT NULL,
+    auto INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (task_id) REFERENCES tasks(id)
+);
+CREATE INDEX idx_task_transitions_task_id ON task_transitions(task_id);
+```
+
 ### CLI Display
 
 Both formats show the same information — the primary transition plus all cascaded changes and unchanged terminal children. Only presentation differs.

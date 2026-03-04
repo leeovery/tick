@@ -101,8 +101,8 @@ The spec says the SQLite cache gains a `task_transitions` junction table "same p
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added explicit SQL schema to Transition History.
 
 ---
 
