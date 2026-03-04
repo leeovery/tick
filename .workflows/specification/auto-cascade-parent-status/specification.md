@@ -50,6 +50,8 @@ Recursive — triggers re-evaluation up the ancestor chain.
 **Rule 4: Downward done/cancel cascade**
 When a parent is marked `done` or `cancelled`, non-terminal children (`open`, `in_progress`) copy the parent's terminal status. Children already `done` or `cancelled` are left untouched. Recursive — applies to grandchildren and beyond.
 
+Dependency state on target children does not gate cascade transitions — a child with unresolved dependencies is still cascaded. Consistent with the advisory dependency principle.
+
 #### Reopen Behavior
 
 **Rule 5: Auto-done undo**

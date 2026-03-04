@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-04
 cycle: 1
 phase: Input Review
@@ -37,5 +37,5 @@ The discussion's Hole 3 analysis explicitly addresses: "if task A is blocked-by 
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**: The general principle is present in Core Concept. This finding is about whether the specific cascade-dependency interaction warrants explicit mention in Rule 4 to avoid implementer doubt.
+**Resolution**: Approved
+**Notes**: Added dependency clarification directly to Rule 4.
