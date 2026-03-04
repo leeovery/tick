@@ -29,6 +29,7 @@ The primary pain point: parent containers sit as "open" and never get closed out
 - [x] Should we validate parent/dependency state on mutations?
 - [x] How should cascade and validation rules be architecturally organized?
 - [x] Go state machine pattern research
+- [x] Final hole check: reopen under cancelled parent, cascades vs dependencies
 
 ---
 
@@ -461,20 +462,60 @@ Key design properties:
 
 ---
 
+## Final hole check: reopen under cancelled parent, cascades vs dependencies
+
+### Context
+
+After all major decisions were made, did a systematic check for gaps. Three potential holes identified and examined.
+
+### Journey
+
+**Hole 1: Reopening a child under a cancelled parent.** Rule 4 covers "child reopened under done parent → parent reopens." But what about a cancelled parent? If a downward cascade cancelled the children, and the user reopens one child, the parent is still cancelled — active child under cancelled parent is inconsistent state. But cancelled is our "hard stop."
+
+Decision: **block it.** Cannot reopen a child under a cancelled parent — error: "cannot reopen task under cancelled parent, reopen parent first." Consistent with the cancelled-as-hard-stop principle: can't add children to cancelled parents, can't add deps to cancelled tasks, can't reopen children under them either. This becomes rule 11 in the consolidated list.
+
+**Hole 2: `tick done` on a parent with open children — surprise factor.** Concern was that silently closing 5 children might surprise the user. But we already decided that all transitions show cascade output (tree for pretty, flat tagged for toon). The CLI output *is* the confirmation — the user sees exactly what happened. No separate confirmation needed. No change.
+
+**Hole 3: Interaction between cascades and dependencies.** If task A is blocked-by task B, and a downward cascade tries to mark A as done — should that work? The current model: dependencies affect *queries* (ready/blocked), not *transitions*. You can `tick done` a blocked task today. Dependencies are advisory ("this should be done first") not enforcing ("this cannot be done until").
+
+With cascades, a downward `done` closes children regardless of dependency state. This is correct: if a parent is done, the children's work is done too. The blocking relationship was relevant when children were active work — they're not anymore. A blocker might be poorly graphed, or the blocked task found another way, or the blocker is also done and just hasn't been updated. Dependencies don't gate transitions today, and cascades shouldn't introduce that constraint.
+
+### Decision
+
+- **Block reopening a child under a cancelled parent** — "cannot reopen task under cancelled parent, reopen parent first" (new rule 11)
+- **No change for cascade output** — already covers the surprise factor via existing display decisions
+- **Dependencies remain advisory** — cascades follow the same principle as manual transitions: dependency status doesn't gate state changes
+
+Updated rule list (11 total):
+1. Transition validation (existing)
+2. Upward start cascade
+3. Upward completion cascade (done-vs-cancelled)
+4. Downward done/cancel cascade
+5. Auto-done undo (child reopened under done parent → parent reopens)
+6. New child added to done parent → parent reopens
+7. Block adding child to cancelled parent
+8. Block adding dependency to cancelled task
+9. Block reopening child under cancelled parent
+10. Cycle detection (existing)
+11. Child-blocked-by-parent rejection (existing)
+
+---
+
 ## Summary
 
 ### Key Insights
 
 1. Tick's existing parent-child model already treats parents as containers (ReadyNoOpenChildren, no dependency semantics). Auto-cascading is consistent with this philosophy, not a departure from it.
 2. Linear's approach (opt-in auto-close only, no upward start cascade) solves a narrower problem. Tick can be more opinionated as a personal CLI with a single user.
-3. Five cascade rules plus edge case refinements cover the full state space without special-case logic. The rules compose cleanly — each addresses a specific scenario without conflicting with others.
+3. Cascade rules plus edge case refinements cover the full state space without special-case logic. The rules compose cleanly — each addresses a specific scenario without conflicting with others.
 4. Reopen behavior is deliberately conservative (no reverse cascade) except when a derived state's premise is broken (auto-done undo, new child added).
 5. Transition history on each task (like notes) provides audit trail without new infrastructure. Same pattern as existing array fields.
 6. CLI output shows same content in both formats — pretty uses tree display, toon uses flat tagged lines.
-7. Cancelled tasks are a hard stop — cannot add children or dependencies. Done tasks are soft — adding a child triggers reopen. Consistent principle across mutations.
-8. A `StateMachine` struct consolidates 10 rules (2 existing + 8 new) into a single architectural unit. Clean API surface, discoverable rules, prevents further scattering.
-9. Queue-based cascade processing (borrowed from `stateless` library concept) avoids recursion, naturally terminates on DAGs, and provides deduplication. Pure `Cascades()` function enables easy testing.
-10. No external libraries needed — stdlib-only approach with table-driven transitions and queue-based cascades is idiomatic Go and sufficient for 10 rules.
+7. Cancelled tasks are a hard stop — cannot add children, dependencies, or reopen children under them. Done tasks are soft — adding a child triggers reopen. Consistent principle across all mutations.
+8. Dependencies remain advisory — they affect queries (ready/blocked) not transitions. Cascades follow this same principle.
+9. A `StateMachine` struct consolidates 11 rules (3 existing + 8 new) into a single architectural unit. Clean API surface, discoverable rules, prevents further scattering.
+10. Queue-based cascade processing (borrowed from `stateless` library concept) avoids recursion, naturally terminates on DAGs, and provides deduplication. Pure `Cascades()` function enables easy testing.
+11. No external libraries needed — stdlib-only approach with table-driven transitions and queue-based cascades is idiomatic Go and sufficient for the rule count.
 
 ### Current State
 
@@ -482,16 +523,31 @@ All questions resolved:
 - Upward start cascade: unconditional, recursive
 - Upward completion cascade: unconditional, recursive, with done-vs-cancelled distinction
 - Downward cascade: non-terminal children only, recursive
-- Reopen behavior: conservative, auto-done undo only
+- Reopen behavior: conservative, auto-done undo only, blocked under cancelled parents
 - No configuration system
 - Edge cases handled consistently
 - Transition history: array field on Task, like notes
 - CLI display: tree (pretty), flat tagged (toon), same content both formats
-- Cancelled-task mutation blocking: children and dependencies
+- Cancelled-task mutation blocking: children, dependencies, and child reopening
+- Dependencies: advisory only, don't gate transitions or cascades
 - Architecture: `StateMachine` struct, queue-based cascades, pure `Cascades()` for testability
 - Go patterns confirmed: struct-with-methods (Pattern B), no libraries
 
+### Consolidated Rule List
+
+1. **Transition validation** — open → in_progress, etc. (existing, migrate into StateMachine)
+2. **Upward start cascade** — child starts → open ancestors go to in_progress
+3. **Upward completion cascade** — all children terminal → parent done (or cancelled if all cancelled)
+4. **Downward cascade** — parent done/cancelled → non-terminal children copy status
+5. **Auto-done undo** — child reopened under done parent → parent reopens
+6. **New child to done parent** — parent reopens
+7. **Block child to cancelled parent** — error, reopen first
+8. **Block dep to cancelled task** — error, reopen first
+9. **Block reopen under cancelled parent** — error, reopen parent first
+10. **Cycle detection** — no circular dependencies (existing, migrate into StateMachine)
+11. **Child-blocked-by-parent rejection** — deadlock prevention (existing, migrate into StateMachine)
+
 ### Next Steps
 
-- [ ] Specification: formalize all rules, transition tracking, display, and StateMachine architecture
+- [ ] Specification: formalize all 11 rules, transition tracking, display, and StateMachine architecture
 - [ ] Implementation: build StateMachine, migrate existing rules, add cascade rules
