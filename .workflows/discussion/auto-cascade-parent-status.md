@@ -24,9 +24,8 @@ The primary pain point: parent containers sit as "open" and never get closed out
 - [x] Should cascade behavior be unconditional or configurable?
 - [x] Should completing/cancelling a parent cascade downward to children?
 - [x] What happens on undo/reopen after a cascade?
-- [ ] Edge cases with multiple children and partial completion
-      - Some siblings done, some open — parent status?
-      - All children done — auto-complete parent?
+- [x] Edge cases with multiple children and partial completion
+- [x] How should cascaded transitions be tracked and displayed?
 
 ---
 
@@ -161,3 +160,143 @@ Five clean rules covering all cascade behavior:
 ---
 
 ## Edge cases with multiple children and partial completion
+
+### Context
+
+How cascade rules interact with multiple children in different states.
+
+### Options Considered
+
+**Mixed terminal states (some done, some cancelled):** Should parent become `done` or `cancelled`?
+
+**All children cancelled:** Different from mixed case?
+
+**New child added to auto-closed parent:** Should parent reopen?
+
+**Child reparented away from in_progress parent:** Should parent revert?
+
+### Journey
+
+**Mixed terminal states:** If some children are done and some cancelled, all are terminal. Rule 2 fires. Parent should be `done` — the majority completed, and `done` is the positive terminal state. The parent's work was accomplished even if one subtask was abandoned.
+
+**All cancelled:** If every child is cancelled, no work in the phase actually completed. Parent should be `cancelled` — different from the mixed case.
+
+**New child added to done parent:** Adding a non-terminal child to a done parent breaks the "all children terminal" condition. Parent should reopen, same principle as the auto-done undo scenario (rule 4). The parent's done status was conditional.
+
+**Child reparented away:** If a child is moved to a different parent (or made parentless), do not reverse the original parent's cascade. Same principle as rule 5 — keep rules simple, the parent's state is its own now.
+
+### Decision
+
+- **Mixed terminal → parent `done`** (at least one child completed)
+- **All cancelled → parent `cancelled`** (no work completed)
+- **New child added to done parent → parent reopens** (consistent with rule 4)
+- **Child reparented away → no cascade** (consistent with rule 5)
+
+Refined rule 2: **All children terminal → parent goes to `done`, unless all children are `cancelled`, in which case parent goes to `cancelled`.**
+
+---
+
+## How should cascaded transitions be tracked and displayed?
+
+### Context
+
+Cascades silently change multiple tasks. The user gets no feedback that something else changed, and there's no persistent record. This is especially important for downward cascades where `tick cancel <parent>` might silently cancel many children. Also relevant for debugging mistakes — without history, it's hard to trace what happened.
+
+### Options Considered
+
+**Persistent tracking:**
+
+**Option A: No persistence** — just show cascade results in CLI output, no history.
+
+**Option B: Transition history field** — add a `transitions` array to each task in JSONL, like notes. Each entry: `{from, to, at, auto}`.
+
+**Option C: Separate log file** — dedicated audit log outside JSONL/SQLite.
+
+**Display:**
+
+**Option D: Flat output** — list all changed tasks, one line each.
+
+**Option E: Tree output** — show cascade hierarchy visually.
+
+### Journey
+
+**Persistent tracking:** Option C (separate log) adds significant complexity — new file, new format, separate from the JSONL source of truth. Option A is too little — if a cascade makes a mistake, there's no way to trace what happened and bring tasks back to the right state.
+
+Option B (transitions field) fits naturally. JSONL already handles arrays (tags, refs, notes). Each task carries its own history. The cache schema would need a `task_transitions` junction table like `task_notes`, but that's mechanical. Growth concern is minimal — tasks don't transition many times, and JSONL already does full rewrites on every mutation.
+
+**Display:** Reviewed existing output. Today both toon and pretty use the same `baseFormatter.FormatTransition()` which outputs: `tick-abc123: open → in_progress`. One line, no cascade awareness.
+
+For cascades, the key principle is: **both formats show the same information, just formatted differently.** Toon and pretty should never show different content — only different presentation.
+
+**Upward cascade** is always a linear chain (each task has one parent), so display is straightforward — list each ancestor that changed.
+
+**Downward cascade** is a tree (one parent, multiple children, each with their own children). Tree display makes sense for pretty. For toon, flat lines with an `(auto)` marker.
+
+Both formats should show unchanged terminal children too, so the user can see what was *not* affected.
+
+**Pretty format example (downward cancel):**
+```
+tick-parent1: in_progress → cancelled
+
+Cascaded:
+├─ tick-child1 "Login": in_progress → cancelled
+├─ tick-child2 "Signup": open → cancelled
+│  ├─ tick-grand1 "Form": open → cancelled
+│  └─ tick-grand2 "Validation": open → cancelled
+└─ tick-child3 "Logout": done (unchanged)
+```
+
+**Pretty format example (upward start):**
+```
+tick-child1: open → in_progress
+
+Cascaded:
+├─ tick-parent1 "Auth phase": open → in_progress
+└─ tick-grand1 "Sprint 3": open → in_progress
+```
+
+**Toon format example (downward cancel):**
+```
+tick-parent1: in_progress → cancelled
+tick-child1: in_progress → cancelled (auto)
+tick-child2: open → cancelled (auto)
+tick-grand1: open → cancelled (auto)
+tick-grand2: open → cancelled (auto)
+tick-child3: done (unchanged)
+```
+
+### Decision
+
+**Persistent tracking:** Add a `transitions` array field to the Task struct. Each entry records `{from, to, at, auto}`. Follows the same pattern as notes. Cache gets a `task_transitions` junction table.
+
+**CLI display:** Both formats show the same information — the primary transition plus all cascaded changes and unchanged terminal children. Pretty uses tree formatting with box-drawing characters. Toon uses flat lines with `(auto)` and `(unchanged)` markers for machine parsing.
+
+---
+
+## Summary
+
+### Key Insights
+
+1. Tick's existing parent-child model already treats parents as containers (ReadyNoOpenChildren, no dependency semantics). Auto-cascading is consistent with this philosophy, not a departure from it.
+2. Linear's approach (opt-in auto-close only, no upward start cascade) solves a narrower problem. Tick can be more opinionated as a personal CLI with a single user.
+3. Five cascade rules plus edge case refinements cover the full state space without special-case logic. The rules compose cleanly — each addresses a specific scenario without conflicting with others.
+4. Reopen behavior is deliberately conservative (no reverse cascade) except when a derived state's premise is broken (auto-done undo, new child added).
+5. Transition history on each task (like notes) provides audit trail without new infrastructure. Same pattern as existing array fields.
+6. CLI output shows same content in both formats — pretty uses tree display, toon uses flat tagged lines.
+
+### Current State
+
+All questions resolved:
+- Upward start cascade: unconditional, recursive
+- Upward completion cascade: unconditional, recursive, with done-vs-cancelled distinction
+- Downward cascade: non-terminal children only, recursive
+- Reopen behavior: conservative, auto-done undo only
+- No configuration system
+- Edge cases handled consistently
+- Transition history: array field on Task, like notes
+- CLI display: tree (pretty), flat tagged (toon), same content both formats
+
+### Next Steps
+
+- [ ] Specification: formalize the five cascade rules + edge cases + transition tracking + display
+- [ ] Implementation: modify Transition and/or Store.Mutate to apply cascades
