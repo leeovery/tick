@@ -28,6 +28,7 @@ The primary pain point: parent containers sit as "open" and never get closed out
 - [x] How should cascaded transitions be tracked and displayed?
 - [x] Should we validate parent/dependency state on mutations?
 - [x] How should cascade and validation rules be architecturally organized?
+- [x] Go state machine pattern research
 
 ---
 
@@ -368,6 +369,98 @@ User noted unfamiliarity with Go patterns for this kind of thing and suggested r
 
 ---
 
+## Go state machine pattern research
+
+### Context
+
+Before committing to the `StateMachine` internal design, researched how Go projects typically implement state machines with cascading side effects. Needed to understand whether this is a solved problem, whether libraries are worth using, and what the idiomatic Go patterns are.
+
+### Research Findings
+
+#### Libraries considered and rejected
+
+**qmuntal/stateless** (port of C# dotnet-state-machine/stateless): Most feature-rich Go option. Supports guard clauses, OnEntry/OnExit callbacks, hierarchical substates, and a "FiringQueued" mode for run-to-completion semantics. However, it models *single-entity* state machines — it has no concept of "when task X transitions, find its ancestors and transition them too." We'd still hand-roll the cascade layer on top.
+
+**looplab/fsm**: Simpler, event-centric. 667 importers. String-typed states and events with callbacks. Same limitation — single-entity only.
+
+**Both rejected** because:
+1. Tick is stdlib-only (no testify, minimal deps). Adding a library for ~10 rules breaks that principle.
+2. Libraries model single-entity state machines. Cascade logic operates on a *graph* of tasks. No library handles the multi-entity cascade problem.
+3. The transition table is 4 entries. Library overhead vastly exceeds what we need.
+4. Libraries use `interface{}`/`any` for states. We already have type-safe `Status` constants.
+
+#### Three common Go patterns
+
+**Pattern A: Table-driven map** — what Tick already has in `transition.go`. States as `iota` constants, transitions as map lookups, comma-ok for validation. Most idiomatic Go for simple transitions. Not enough structure once you add cascades and validation.
+
+**Pattern B: Struct with methods** — wrap the transition table and related logic in a struct. This is what our discussion converged on. The Go community recommends this when you have multiple related operations (transition + validate + cascade), shared context between rules, and a need for a clean API boundary. The struct can be stateless (zero fields, no constructor) — it's essentially a namespace with method dispatch. Common Go idiom.
+
+**Pattern C: Interface-based State pattern (GoF)** — each state is a type implementing a `State` interface. Transitions return the next state object. Overkill for task management — best suited when states have radically different behavior (e.g., TCP connection states). Our states all behave the same; only valid transitions differ.
+
+**Verdict: Pattern B confirmed as the right fit.**
+
+#### Key pattern borrowed: Queue-based cascade processing
+
+The most valuable finding from the research. `stateless` implements this as "FiringQueued" mode. Instead of recursive cascade calls (which risk stack overflow and are harder to reason about):
+
+1. Apply primary transition
+2. Compute cascades → add to queue
+3. Pop next cascade from queue, apply it
+4. Check if *that* cascade triggers more → add to queue
+5. Track processed tasks in a `seen` map to deduplicate
+6. Loop until queue is empty
+
+**Why this matters for Tick:**
+- No recursion, no stack overflow risk even on deep hierarchies
+- Natural place to deduplicate (skip tasks already processed)
+- Natural termination guarantee: cascades only move tasks toward terminal states or reopen under specific conditions. Parent-child is a DAG (acyclic). Queue always drains.
+- Easy to add a depth/iteration safety limit if paranoid
+- Matches the mental model: "apply change, collect side effects, repeat"
+
+**Compared to alternatives:**
+- Recursive approach: risk of infinite recursion if rules conflict, harder to debug, stack overflow on deep trees
+- Event bus / observer pattern: unnecessary indirection for 10 rules in a CLI tool
+
+#### Recommended API shape (confirmed by research)
+
+```go
+// internal/task/statemachine.go
+
+type StateMachine struct{}  // stateless, grouping only
+
+type CascadeChange struct {
+    Task      *Task
+    Action    string
+    OldStatus Status
+    NewStatus Status
+}
+
+// Core transition — absorbs existing transition.go
+func (sm *StateMachine) Transition(t *Task, action string) (TransitionResult, error)
+
+// Validation — absorbs dependency.go + new rules
+func (sm *StateMachine) ValidateAddChild(parent *Task) error
+func (sm *StateMachine) ValidateAddDep(tasks []Task, taskID, blockerID string) error
+
+// Cascade computation — pure, does NOT mutate
+func (sm *StateMachine) Cascades(tasks []Task, changed *Task, action string) []CascadeChange
+
+// Combined apply + cascade loop — the main entry point for callers
+func (sm *StateMachine) ApplyWithCascades(tasks []Task, target *Task, action string) (TransitionResult, []CascadeChange, error)
+```
+
+Key design properties:
+- **Stateless struct** — no fields, no constructor needed. Just method grouping. Standard Go idiom.
+- **`Cascades()` is pure** — computes what *should* change without mutating. Returns a list. `ApplyWithCascades()` does the actual mutation. Separation makes testing easy: assert on returned list without inspecting task mutations.
+- **`ApplyWithCascades()` uses queue loop** — processes cascade queue with `seen` map deduplication. The caller (`Store.Mutate()`) calls this once and gets back all changes atomically.
+- **Migration path is mechanical** — `task.Transition()` becomes `sm.Transition()`, `task.ValidateDependency()` becomes `sm.ValidateAddDep()`. Old functions become thin wrappers or get deleted. Callers update accordingly.
+
+### Decision
+
+**Confirmed: `StateMachine` struct with queue-based cascade processing.** No external libraries. Table-driven transitions (existing pattern) plus queue-based cascade loop (borrowed from `stateless` concept). Pure `Cascades()` function for testability. Migrate existing `transition.go` and `dependency.go` logic into the struct. The API shape above is the contract for specification.
+
+---
+
 ## Summary
 
 ### Key Insights
@@ -380,6 +473,8 @@ User noted unfamiliarity with Go patterns for this kind of thing and suggested r
 6. CLI output shows same content in both formats — pretty uses tree display, toon uses flat tagged lines.
 7. Cancelled tasks are a hard stop — cannot add children or dependencies. Done tasks are soft — adding a child triggers reopen. Consistent principle across mutations.
 8. A `StateMachine` struct consolidates 10 rules (2 existing + 8 new) into a single architectural unit. Clean API surface, discoverable rules, prevents further scattering.
+9. Queue-based cascade processing (borrowed from `stateless` library concept) avoids recursion, naturally terminates on DAGs, and provides deduplication. Pure `Cascades()` function enables easy testing.
+10. No external libraries needed — stdlib-only approach with table-driven transitions and queue-based cascades is idiomatic Go and sufficient for 10 rules.
 
 ### Current State
 
@@ -393,10 +488,10 @@ All questions resolved:
 - Transition history: array field on Task, like notes
 - CLI display: tree (pretty), flat tagged (toon), same content both formats
 - Cancelled-task mutation blocking: children and dependencies
-- Architecture: `StateMachine` struct consolidating all rules
+- Architecture: `StateMachine` struct, queue-based cascades, pure `Cascades()` for testability
+- Go patterns confirmed: struct-with-methods (Pattern B), no libraries
 
 ### Next Steps
 
-- [ ] Research Go state machine patterns before finalizing internal design
 - [ ] Specification: formalize all rules, transition tracking, display, and StateMachine architecture
 - [ ] Implementation: build StateMachine, migrate existing rules, add cascade rules
