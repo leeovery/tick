@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-04
 cycle: 2
 phase: Gap Analysis
@@ -69,5 +69,5 @@ The existing codebase uses "command" (transitionTable keys: "start", "done", "ca
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added action terminology clarification to API Surface.

@@ -221,6 +221,8 @@ func (sm *StateMachine) Cascades(tasks []Task, changed *Task, action string) []C
 func (sm *StateMachine) ApplyWithCascades(tasks []Task, target *Task, action string) (TransitionResult, []CascadeChange, error)
 ```
 
+The `action` parameter uses the same string values as the existing transition table commands: `"start"`, `"done"`, `"cancel"`, `"reopen"`. For cascades, the action reflects the logical transition being applied (e.g., a downward cancel cascade uses action `"cancel"` on each child). The term "action" is used instead of "command" to distinguish programmatic cascade transitions from direct user commands.
+
 #### Migration
 
 Existing logic from `transition.go` and `dependency.go` migrates into the StateMachine. `task.Transition()` becomes `sm.Transition()`, `task.ValidateDependency()` becomes `sm.ValidateAddDep()`. Old functions become thin wrappers or get deleted. Callers update accordingly.
