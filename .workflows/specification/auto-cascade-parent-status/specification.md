@@ -183,6 +183,14 @@ func (sm *StateMachine) ApplyWithCascades(tasks []Task, target *Task, action str
 
 Existing logic from `transition.go` and `dependency.go` migrates into the StateMachine. `task.Transition()` becomes `sm.Transition()`, `task.ValidateDependency()` becomes `sm.ValidateAddDep()`. Old functions become thin wrappers or get deleted. Callers update accordingly.
 
+### Dependencies
+
+Prerequisites that must exist before implementation can begin:
+
+**None.** This feature builds on existing infrastructure — the Task struct, JSONL storage, SQLite cache, transition table, dependency validation, and CLI formatters all exist. The StateMachine consolidates and extends existing code; it does not depend on any unbuilt systems.
+
+The existing `transition.go` and `dependency.go` logic is migrated into the new StateMachine — these are refactoring targets, not external dependencies.
+
 ---
 
 ## Working Notes
