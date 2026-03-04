@@ -156,6 +156,7 @@ A `StateMachine` struct in `internal/task/` consolidates all 11 rules — transi
   5. Track processed tasks in a `seen` map to deduplicate
   6. Loop until queue is empty
 - **Termination guarantee** — cascades only move tasks toward terminal states or reopen under specific conditions. Parent-child is a DAG (acyclic). Queue always drains.
+- **Mutation model** — `Transition()` mutates the target task in-place (Status, Updated, Closed fields), consistent with the existing implementation. `Cascades()` is pure — it reads task state but does not mutate; it returns `[]CascadeChange` describing what should change. `ApplyWithCascades()` orchestrates both: it calls `Transition()` on the target (mutating it), then runs the cascade queue, calling `Transition()` on each cascaded task (mutating them). The caller receives back all changes and persists them atomically.
 
 #### API Surface
 

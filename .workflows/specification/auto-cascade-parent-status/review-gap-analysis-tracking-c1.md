@@ -37,8 +37,8 @@ The existing `Transition()` function mutates the task in-place (Status, Updated,
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added mutation model bullet to Design Properties.
 
 ---
 
