@@ -53,8 +53,8 @@ The reparenting note says "no cascade reversal occurs on the original parent" wh
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added Rule 3 re-evaluation clarification to reparenting note.
 
 ---
 
