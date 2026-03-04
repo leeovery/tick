@@ -53,8 +53,8 @@ Rule 6 says "adding a non-terminal child to a done parent triggers parent reopen
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Updated Rule 6 to explicitly cover both creation and reparenting.
 
 ---
 

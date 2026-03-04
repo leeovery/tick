@@ -58,7 +58,7 @@ Dependency state on target children does not gate cascade transitions — a chil
 When a child is reopened under a `done` parent, the parent reopens to `open`. The parent's `done` status was derived from all children being terminal — that premise is now broken.
 
 **Rule 6: New child added to done parent**
-Adding a non-terminal child to a `done` parent triggers parent reopen to `open`. Same principle as Rule 5.
+Adding a non-terminal child to a `done` parent triggers parent reopen to `open`. Same principle as Rule 5. Applies to both task creation with a done parent and reparenting an existing task to a done parent.
 
 **Rule 9: Block reopen under cancelled parent**
 Cannot reopen a child under a `cancelled` parent. Error: "cannot reopen task under cancelled parent, reopen parent first."
