@@ -135,6 +135,54 @@ tick-child3: done (unchanged)
 
 Both formats show unchanged terminal children so the user can see what was *not* affected by the cascade.
 
+### Architecture: StateMachine
+
+A `StateMachine` struct in `internal/task/` consolidates all 11 rules — transition validation, cascade logic, and mutation validation — into a single architectural unit.
+
+#### Design Properties
+
+- **Stateless struct** — no fields, no constructor needed. Method grouping only (standard Go idiom).
+- **No external libraries** — stdlib-only, consistent with Tick's dependency philosophy.
+- **Pure cascade computation** — `Cascades()` computes what should change without mutating. Returns a list. Separation enables easy testing: assert on returned list without inspecting task mutations.
+- **Queue-based cascade processing** — instead of recursive calls, uses a work queue:
+  1. Apply primary transition
+  2. Compute cascades → add to queue
+  3. Pop next cascade from queue, apply it
+  4. Check if that cascade triggers more → add to queue
+  5. Track processed tasks in a `seen` map to deduplicate
+  6. Loop until queue is empty
+- **Termination guarantee** — cascades only move tasks toward terminal states or reopen under specific conditions. Parent-child is a DAG (acyclic). Queue always drains.
+
+#### API Surface
+
+```go
+type StateMachine struct{}
+
+type CascadeChange struct {
+    Task      *Task
+    Action    string
+    OldStatus Status
+    NewStatus Status
+}
+
+// Core transition — absorbs existing transition.go
+func (sm *StateMachine) Transition(t *Task, action string) (TransitionResult, error)
+
+// Validation — absorbs dependency.go + new rules
+func (sm *StateMachine) ValidateAddChild(parent *Task) error
+func (sm *StateMachine) ValidateAddDep(tasks []Task, taskID, blockerID string) error
+
+// Cascade computation — pure, does NOT mutate
+func (sm *StateMachine) Cascades(tasks []Task, changed *Task, action string) []CascadeChange
+
+// Combined apply + cascade loop — main entry point for callers
+func (sm *StateMachine) ApplyWithCascades(tasks []Task, target *Task, action string) (TransitionResult, []CascadeChange, error)
+```
+
+#### Migration
+
+Existing logic from `transition.go` and `dependency.go` migrates into the StateMachine. `task.Transition()` becomes `sm.Transition()`, `task.ValidateDependency()` becomes `sm.ValidateAddDep()`. Old functions become thin wrappers or get deleted. Callers update accordingly.
+
 ---
 
 ## Working Notes
