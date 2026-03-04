@@ -139,6 +139,23 @@ tick-child3: done (unchanged)
 
 Both formats show unchanged terminal children so the user can see what was *not* affected by the cascade.
 
+#### JSON Format
+
+Outputs the primary transition and all cascade changes as a structured object:
+
+```json
+{
+  "transition": {"id": "tick-parent1", "from": "in_progress", "to": "cancelled"},
+  "cascaded": [
+    {"id": "tick-child1", "title": "Login", "from": "in_progress", "to": "cancelled"},
+    {"id": "tick-child2", "title": "Signup", "from": "open", "to": "cancelled"}
+  ],
+  "unchanged": [
+    {"id": "tick-child3", "title": "Logout", "status": "done"}
+  ]
+}
+```
+
 ### Architecture: StateMachine
 
 A `StateMachine` struct in `internal/task/` consolidates all 11 rules — transition validation, cascade logic, and mutation validation — into a single architectural unit.

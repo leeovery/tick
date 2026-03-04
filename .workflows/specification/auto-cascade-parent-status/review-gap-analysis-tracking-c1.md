@@ -85,8 +85,8 @@ The CLI Display section covers Pretty and Toon formats but omits JSON format. Th
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added JSON format section to CLI Display.
 
 ---
 
