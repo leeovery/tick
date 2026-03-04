@@ -8,7 +8,7 @@ review_cycle: 0
 finding_gate_mode: gated
 sources:
   - name: auto-cascade-parent-status
-    status: pending
+    status: incorporated
 ---
 
 # Specification: Auto-Cascade Parent Status
