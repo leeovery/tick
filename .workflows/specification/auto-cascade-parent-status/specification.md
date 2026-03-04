@@ -77,6 +77,19 @@ No circular dependencies allowed. Migrated into StateMachine.
 **Rule 11: Child-blocked-by-parent rejection** (existing)
 A child cannot have its own parent as a dependency. Deadlock prevention. Migrated into StateMachine.
 
+### Transition History
+
+Each task gains a `transitions` array field, following the same pattern as `notes`. Each entry records:
+
+- `from` — previous status
+- `to` — new status
+- `at` — timestamp
+- `auto` — boolean, `true` if the transition was triggered by a cascade (not a direct user action)
+
+Stored in JSONL as part of the Task struct. The SQLite cache gains a `task_transitions` junction table (same pattern as `task_notes`). Cache schema version must be incremented.
+
+Growth is bounded — tasks don't transition many times, and JSONL already does full rewrites on every mutation.
+
 ---
 
 ## Working Notes
