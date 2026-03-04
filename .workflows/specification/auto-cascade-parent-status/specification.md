@@ -155,6 +155,10 @@ tick-child3: done (unchanged)
 
 Both formats show unchanged terminal children so the user can see what was *not* affected by the cascade.
 
+#### Formatter Interface
+
+A new `FormatCascadeTransition` method is added to the Formatter interface. It receives the primary transition result plus all cascade changes and unchanged terminal children, and renders the full cascade output. The existing `FormatTransition` method remains for non-cascade (single-task) transitions.
+
 #### JSON Format
 
 Outputs the primary transition and all cascade changes as a structured object:

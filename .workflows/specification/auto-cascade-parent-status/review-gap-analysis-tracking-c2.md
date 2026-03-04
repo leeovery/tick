@@ -37,8 +37,8 @@ The spec defines detailed cascade output for Pretty, Toon, and JSON formats, but
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added Formatter Interface subsection to CLI Display.
 
 ---
 
