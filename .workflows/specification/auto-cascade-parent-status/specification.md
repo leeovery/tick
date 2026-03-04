@@ -63,6 +63,8 @@ Cannot reopen a child under a `cancelled` parent. Error: "cannot reopen task und
 
 **Rule 5 note:** No reverse cascade on reopen otherwise — reopening a child does not revert a started parent; reopening a parent does not reopen cancelled children.
 
+**Reparenting note:** When a child is reparented away (moved to a different parent or made parentless), no cascade reversal occurs on the original parent. The parent's state is its own.
+
 #### Validation Rules
 
 **Rule 7: Block adding child to cancelled parent**

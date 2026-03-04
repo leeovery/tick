@@ -21,8 +21,8 @@ The discussion explicitly decided: "If a child is moved to a different parent (o
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added reparenting note to Reopen Behavior section.
 
 ---
 
