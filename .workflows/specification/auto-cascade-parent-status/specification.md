@@ -43,7 +43,7 @@ When all children of a parent reach a terminal state (`done` or `cancelled`), th
 - If at least one child is `done` → parent goes to `done`
 - If all children are `cancelled` → parent goes to `cancelled`
 
-Recursive — triggers re-evaluation up the ancestor chain.
+Trigger: when a task reaches a terminal state, evaluate only its direct parent. If the parent transitions, evaluate the parent's parent, and so on up the chain.
 
 #### Downward Cascades
 

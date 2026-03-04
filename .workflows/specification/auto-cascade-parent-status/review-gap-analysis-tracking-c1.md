@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-04
 cycle: 1
 phase: Gap Analysis
@@ -117,5 +117,5 @@ Rule 3 triggers when "all children of a parent reach a terminal state." The spec
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**: This is minor — most implementers would get this right, but the recursive language could be tightened.
+**Resolution**: Approved
+**Notes**: Replaced vague recursive note with explicit trigger chain description.
