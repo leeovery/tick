@@ -1,9 +1,9 @@
 ---
 topic: auto-cascade-parent-status
-status: in-progress
+status: concluded
 type: feature
 work_type: feature
-date: 2026-03-04
+date: 2026-03-05
 review_cycle: 4
 finding_gate_mode: gated
 sources:
