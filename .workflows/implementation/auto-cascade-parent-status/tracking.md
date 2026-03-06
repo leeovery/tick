@@ -19,7 +19,7 @@ project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro
 current_phase: 1
-current_task: acps-2-3
+current_task: acps-2-4
 current_phase: 2
 completed_phases:
   - 1
@@ -32,6 +32,7 @@ completed_tasks:
   - acps-1-6
   - acps-2-1
   - acps-2-2
+  - acps-2-3
 started: 2026-03-06
 updated: 2026-03-06
 completed: ~
