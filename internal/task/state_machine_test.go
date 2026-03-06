@@ -71,7 +71,7 @@ func TestStateMachine_Transition_ValidTransitions(t *testing.T) {
 			task := makeTask(tt.fromStatus, tt.closed)
 			before := time.Now().UTC().Truncate(time.Second)
 
-			result, err := sm.Transition(task, tt.command)
+			result, err := sm.Transition(task, tt.command, nil)
 			if err != nil {
 				t.Fatalf("Transition returned unexpected error: %v", err)
 			}
@@ -159,7 +159,7 @@ func TestStateMachine_Transition_InvalidTransitions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			task := makeTask(tt.fromStatus, tt.closed)
 
-			_, err := sm.Transition(task, tt.command)
+			_, err := sm.Transition(task, tt.command, nil)
 			if err == nil {
 				t.Fatalf("expected error for %s on %s task, got nil", tt.command, tt.fromStatus)
 			}
@@ -177,7 +177,7 @@ func TestStateMachine_Transition_UnknownCommand(t *testing.T) {
 		var sm StateMachine
 		task := makeTask(StatusOpen, nil)
 
-		_, err := sm.Transition(task, "foo")
+		_, err := sm.Transition(task, "foo", nil)
 		if err == nil {
 			t.Fatal("expected error for unknown command, got nil")
 		}
@@ -197,7 +197,7 @@ func TestStateMachine_Transition_NoModificationOnError(t *testing.T) {
 		originalUpdated := original.Updated
 		originalClosed := *original.Closed
 
-		_, err := sm.Transition(original, "start")
+		_, err := sm.Transition(original, "start", nil)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -221,7 +221,7 @@ func TestStateMachine_Transition_NoModificationOnError(t *testing.T) {
 		originalStatus := original.Status
 		originalUpdated := original.Updated
 
-		_, err := sm.Transition(original, "foo")
+		_, err := sm.Transition(original, "foo", nil)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -244,7 +244,7 @@ func TestStateMachine_Transition_ClosedTimestamp(t *testing.T) {
 		task := makeTask(StatusOpen, nil)
 		before := time.Now().UTC().Truncate(time.Second)
 
-		_, err := sm.Transition(task, "done")
+		_, err := sm.Transition(task, "done", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -264,7 +264,7 @@ func TestStateMachine_Transition_ClosedTimestamp(t *testing.T) {
 		task := makeTask(StatusOpen, nil)
 		before := time.Now().UTC().Truncate(time.Second)
 
-		_, err := sm.Transition(task, "cancel")
+		_, err := sm.Transition(task, "cancel", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -283,7 +283,7 @@ func TestStateMachine_Transition_ClosedTimestamp(t *testing.T) {
 		var sm StateMachine
 		task := makeTask(StatusDone, closedTime())
 
-		_, err := sm.Transition(task, "reopen")
+		_, err := sm.Transition(task, "reopen", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -315,7 +315,7 @@ func TestStateMachine_Transition_UpdatedTimestamp(t *testing.T) {
 
 				before := time.Now().UTC().Truncate(time.Second)
 
-				_, err := sm.Transition(task, cmd.command)
+				_, err := sm.Transition(task, cmd.command, nil)
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
@@ -523,6 +523,128 @@ func TestStateMachine_ValidateAddDep(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "cannot be blocked by its parent") {
 			t.Errorf("expected parent error, got: %v", err)
+		}
+	})
+}
+
+func TestStateMachine_Transition_ReopenCancelledParentGuard(t *testing.T) {
+	var sm StateMachine
+
+	t.Run("it blocks reopen under cancelled direct parent", func(t *testing.T) {
+		parent := Task{ID: "tick-parent", Status: StatusCancelled}
+		child := Task{ID: "tick-child", Status: StatusCancelled, Parent: "tick-parent", Closed: closedTime()}
+		tasks := []Task{parent, child}
+
+		_, err := sm.Transition(&child, "reopen", tasks)
+		if err == nil {
+			t.Fatal("expected error for reopen under cancelled parent, got nil")
+		}
+
+		expected := "cannot reopen task under cancelled parent, reopen parent first"
+		if err.Error() != expected {
+			t.Errorf("expected error %q, got %q", expected, err.Error())
+		}
+	})
+
+	t.Run("it allows reopen with no parent", func(t *testing.T) {
+		child := Task{ID: "tick-child", Status: StatusCancelled, Closed: closedTime()}
+		tasks := []Task{child}
+
+		_, err := sm.Transition(&child, "reopen", tasks)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if child.Status != StatusOpen {
+			t.Errorf("expected status open, got %q", child.Status)
+		}
+	})
+
+	t.Run("it allows reopen under open parent", func(t *testing.T) {
+		parent := Task{ID: "tick-parent", Status: StatusOpen}
+		child := Task{ID: "tick-child", Status: StatusDone, Parent: "tick-parent", Closed: closedTime()}
+		tasks := []Task{parent, child}
+
+		_, err := sm.Transition(&child, "reopen", tasks)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if child.Status != StatusOpen {
+			t.Errorf("expected status open, got %q", child.Status)
+		}
+	})
+
+	t.Run("it allows reopen under done parent", func(t *testing.T) {
+		parent := Task{ID: "tick-parent", Status: StatusDone, Closed: closedTime()}
+		child := Task{ID: "tick-child", Status: StatusDone, Parent: "tick-parent", Closed: closedTime()}
+		tasks := []Task{parent, child}
+
+		_, err := sm.Transition(&child, "reopen", tasks)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if child.Status != StatusOpen {
+			t.Errorf("expected status open, got %q", child.Status)
+		}
+	})
+
+	t.Run("it allows reopen under in_progress parent", func(t *testing.T) {
+		parent := Task{ID: "tick-parent", Status: StatusInProgress}
+		child := Task{ID: "tick-child", Status: StatusDone, Parent: "tick-parent", Closed: closedTime()}
+		tasks := []Task{parent, child}
+
+		_, err := sm.Transition(&child, "reopen", tasks)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if child.Status != StatusOpen {
+			t.Errorf("expected status open, got %q", child.Status)
+		}
+	})
+
+	t.Run("it allows reopen when grandparent is cancelled but direct parent is not", func(t *testing.T) {
+		grandparent := Task{ID: "tick-gp", Status: StatusCancelled, Closed: closedTime()}
+		parent := Task{ID: "tick-parent", Status: StatusDone, Parent: "tick-gp", Closed: closedTime()}
+		child := Task{ID: "tick-child", Status: StatusDone, Parent: "tick-parent", Closed: closedTime()}
+		tasks := []Task{grandparent, parent, child}
+
+		_, err := sm.Transition(&child, "reopen", tasks)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if child.Status != StatusOpen {
+			t.Errorf("expected status open, got %q", child.Status)
+		}
+	})
+
+	t.Run("it proceeds with reopen when parent ID references non-existent task", func(t *testing.T) {
+		child := Task{ID: "tick-child", Status: StatusCancelled, Parent: "tick-missing", Closed: closedTime()}
+		tasks := []Task{child}
+
+		_, err := sm.Transition(&child, "reopen", tasks)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if child.Status != StatusOpen {
+			t.Errorf("expected status open, got %q", child.Status)
+		}
+	})
+
+	t.Run("it passes nil tasks without error for non-reopen actions", func(t *testing.T) {
+		task := makeTask(StatusOpen, nil)
+
+		_, err := sm.Transition(task, "start", nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if task.Status != StatusInProgress {
+			t.Errorf("expected status in_progress, got %q", task.Status)
 		}
 	})
 }

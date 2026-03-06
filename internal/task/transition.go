@@ -19,7 +19,7 @@ type TransitionResult struct {
 // This is a convenience wrapper that delegates to StateMachine.Transition.
 func Transition(t *Task, command string) (TransitionResult, error) {
 	var sm StateMachine
-	return sm.Transition(t, command)
+	return sm.Transition(t, command, nil)
 }
 
 // statusIn checks whether s is contained in the given slice of statuses.
