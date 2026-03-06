@@ -130,33 +130,20 @@ func TestWorkflowIntegration(t *testing.T) {
 	assertContains(t, readyIDs, childD, "child D should be ready (B and C are done)")
 	assertNotContains(t, readyIDs, epicID, "epic should NOT be ready (child D still open)")
 
-	// Step 9: Complete child D - all children now closed, epic should become ready.
+	// Step 9: Complete child D - all children now closed.
+	// With auto-cascade (Rule 3), the epic auto-completes to done when all children are terminal.
 	_, stderr, exitCode = runTransition(t, dir, "done", childD)
 	if exitCode != 0 {
 		t.Fatalf("done child D failed: exit=%d stderr=%q", exitCode, stderr)
 	}
 
-	stdout, stderr, exitCode = runReady(t, dir, "--quiet")
-	if exitCode != 0 {
-		t.Fatalf("ready (after D done) failed: exit=%d stderr=%q", exitCode, stderr)
-	}
-	readyIDs = parseQuietIDs(stdout)
-
-	assertContains(t, readyIDs, epicID, "epic should be ready (all children done)")
-
-	// Step 10: Complete the epic.
-	_, stderr, exitCode = runTransition(t, dir, "done", epicID)
-	if exitCode != 0 {
-		t.Fatalf("done epic failed: exit=%d stderr=%q", exitCode, stderr)
-	}
-
-	// No tasks should be ready now.
+	// No tasks should be ready now — epic was auto-cascaded to done.
 	stdout, stderr, exitCode = runReady(t, dir)
 	if exitCode != 0 {
 		t.Fatalf("ready (final) failed: exit=%d stderr=%q", exitCode, stderr)
 	}
 	if stdout != "No tasks found.\n" {
-		t.Errorf("expected no ready tasks after all done, got %q", stdout)
+		t.Errorf("expected no ready tasks after all done (epic auto-cascaded), got %q", stdout)
 	}
 
 	// Step 11: Verify stats reflect the final state.
