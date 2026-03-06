@@ -443,6 +443,74 @@ func TestStateMachine_ValidateAddDep(t *testing.T) {
 		}
 	})
 
+	t.Run("it blocks adding dependency on cancelled task", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", Status: StatusOpen},
+			{ID: "tick-bbb", Status: StatusCancelled},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-aaa", "tick-bbb")
+		if err == nil {
+			t.Fatal("expected error for cancelled blocker, got nil")
+		}
+
+		expected := "cannot add dependency on cancelled task, reopen it first"
+		if err.Error() != expected {
+			t.Errorf("expected error %q, got %q", expected, err.Error())
+		}
+	})
+
+	t.Run("it allows adding dependency on open task", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", Status: StatusOpen},
+			{ID: "tick-bbb", Status: StatusOpen},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-aaa", "tick-bbb")
+		if err != nil {
+			t.Errorf("expected no error for open blocker, got: %v", err)
+		}
+	})
+
+	t.Run("it allows adding dependency on in_progress task", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", Status: StatusOpen},
+			{ID: "tick-bbb", Status: StatusInProgress},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-aaa", "tick-bbb")
+		if err != nil {
+			t.Errorf("expected no error for in_progress blocker, got: %v", err)
+		}
+	})
+
+	t.Run("it allows adding dependency on done task", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", Status: StatusOpen},
+			{ID: "tick-bbb", Status: StatusDone},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-aaa", "tick-bbb")
+		if err != nil {
+			t.Errorf("expected no error for done blocker, got: %v", err)
+		}
+	})
+
+	t.Run("it still detects cycles after cancelled check passes", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", Status: StatusOpen, BlockedBy: []string{"tick-bbb"}},
+			{ID: "tick-bbb", Status: StatusOpen},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-bbb", "tick-aaa")
+		if err == nil {
+			t.Fatal("expected cycle error, got nil")
+		}
+		if !strings.Contains(err.Error(), "creates cycle") {
+			t.Errorf("expected cycle error, got: %v", err)
+		}
+	})
+
 	t.Run("it detects child-blocked-by-parent with mixed-case IDs", func(t *testing.T) {
 		tasks := []Task{
 			{ID: "tick-parent"},

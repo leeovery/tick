@@ -83,6 +83,16 @@ func (sm StateMachine) ValidateAddDep(tasks []Task, taskID, blockerID string) er
 	taskID = NormalizeID(taskID)
 	blockerID = NormalizeID(blockerID)
 
+	// Rule 8: reject dependency on a cancelled blocker.
+	for i := range tasks {
+		if NormalizeID(tasks[i].ID) == blockerID {
+			if tasks[i].Status == StatusCancelled {
+				return fmt.Errorf("cannot add dependency on cancelled task, reopen it first")
+			}
+			break
+		}
+	}
+
 	if err := smValidateChildBlockedByParent(tasks, taskID, blockerID); err != nil {
 		return err
 	}
