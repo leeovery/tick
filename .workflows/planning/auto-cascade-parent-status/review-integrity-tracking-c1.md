@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-06
 cycle: 1
 phase: Plan Integrity Review
@@ -46,7 +46,7 @@ Do:
 - Step 6: Return primary result, results slice, nil
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Updated both Transition() calls in acps-2-7 to pass tasks parameter.
 
 ---

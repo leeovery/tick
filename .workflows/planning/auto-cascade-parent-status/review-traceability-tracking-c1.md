@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-05
 cycle: 1
 phase: Traceability Review
@@ -101,8 +101,8 @@ Edge Cases:
 Spec Reference: .workflows/specification/auto-cascade-parent-status/specification.md -- Rule 9
 ```
 
-**Resolution**: Pending
-**Notes**: The spec API surface is explicit about which methods StateMachine has. Adding ValidateReopen is not listed. Additionally, the spec says "cancelled parent" not "cancelled ancestor" for Rule 9. The ancestor-chain walk is not spec-grounded. The proposed fix integrates Rule 9 into Transition() and limits the check to the direct parent.
+**Resolution**: Fixed
+**Notes**: Rule 9 check integrated into Transition() with direct-parent-only check. Ancestor walk unnecessary because Rule 4 cascade-cancels children transitively.
 
 ---
 
@@ -172,8 +172,8 @@ Tests:
 - Existing dependency tests continue to pass
 ```
 
-**Resolution**: Pending
-**Notes**: This finding is dependent on Finding 1. If Finding 1 is accepted, this update follows. The ValidateReopen reference is removed and replaced with passing the tasks slice to Transition().
+**Resolution**: Fixed
+**Notes**: ValidateReopen references removed. CLI now passes tasks slice to Transition() for Rule 9 check.
 
 ---
 
@@ -207,5 +207,5 @@ Do:
 - Return modified tasks slice from Mutate
 ```
 
-**Resolution**: Pending
-**Notes**: The unchanged terminal children are mentioned in the spec display section and are part of CascadeResult, but the collection logic is missing from the Do steps. This is specifically about downward cascades where some children were already terminal.
+**Resolution**: Fixed
+**Notes**: Added explicit collection logic to acps-3-3 Do steps and acceptance criteria.

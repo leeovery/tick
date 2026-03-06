@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-06
 cycle: 3
 phase: Plan Integrity Review
@@ -64,8 +64,8 @@ Acceptance Criteria:
 - [ ] Existing update tests pass
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Do step and ACs corrected with inline decision logic and mixed-state criterion.
 
 ---
 
@@ -104,7 +104,7 @@ Tests:
 - "it handles reparent to done parent plus Rule 3 on original"
 ```
 
-**Resolution**: Pending
-**Notes**: Renamed existing cancelled test for clarity and added mixed-state test.
+**Resolution**: Fixed
+**Notes**: Do step and ACs corrected with inline decision logic and mixed-state criterion. Renamed existing cancelled test for clarity and added mixed-state test.
 
 ---

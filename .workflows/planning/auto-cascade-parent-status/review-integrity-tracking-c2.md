@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-06
 cycle: 2
 phase: Plan Integrity Review
@@ -49,8 +49,8 @@ Phase 2 acceptance includes "Reparenting away triggers Rule 3 re-evaluation on o
 - [ ] `ApplyWithCascades()` returns primary `TransitionResult` plus all `[]CascadeChange` entries
 ```
 
-**Resolution**: Pending
-**Notes**: The reparenting Rule 3 re-evaluation criterion belongs in Phase 3 acceptance (where acps-3-5 implements it). Removing from Phase 2 rather than moving to Phase 3 because Phase 3 acceptance already covers it via "Reparenting via update triggers Rule 6 (done parent reopen) and Rule 3 (original parent re-evaluation)".
+**Resolution**: Fixed
+**Notes**: Removed reparenting criterion from Phase 2 acceptance. Phase 3 already covers it.
 
 ---
 
@@ -86,7 +86,7 @@ Additionally, add to Tests:
 - "it allows reopen when grandparent is cancelled but direct parent is not"
 ```
 
-**Resolution**: Pending
-**Notes**: The current edge case description in the plan table could mislead an implementer into thinking grandparent status should be checked. The proposed wording clarifies the boundary.
+**Resolution**: Fixed
+**Notes**: Edge case clarified and test added for grandparent-not-blocking case.
 
 ---
