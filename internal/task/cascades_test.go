@@ -581,7 +581,7 @@ func TestStateMachine_Cascades(t *testing.T) {
 		}
 	})
 
-	t.Run("it does not cascade for reopen action", func(t *testing.T) {
+	t.Run("it does not cascade reopen when parent is in_progress", func(t *testing.T) {
 		parent := makeTestTask("tick-parent1", StatusInProgress, "")
 		child := makeTestTask("tick-child1", StatusOpen, "tick-parent1")
 		tasks := []Task{parent, child}
@@ -590,6 +590,205 @@ func TestStateMachine_Cascades(t *testing.T) {
 
 		if len(changes) != 0 {
 			t.Errorf("expected 0 cascade changes for reopen, got %d", len(changes))
+		}
+	})
+
+	// Upward reopen cascade tests (Rule 5)
+
+	t.Run("it cascades reopen to done parent", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusDone, "")
+		parent.Closed = closedTime()
+		child := makeTestTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		changes := sm.Cascades(tasks, &child, "reopen")
+
+		if len(changes) != 1 {
+			t.Fatalf("expected 1 cascade change, got %d", len(changes))
+		}
+		if changes[0].Task.ID != "tick-parent1" {
+			t.Errorf("expected cascade task tick-parent1, got %s", changes[0].Task.ID)
+		}
+		if changes[0].Action != "reopen" {
+			t.Errorf("expected action 'reopen', got %q", changes[0].Action)
+		}
+		if changes[0].OldStatus != StatusDone {
+			t.Errorf("expected old status done, got %q", changes[0].OldStatus)
+		}
+		if changes[0].NewStatus != StatusOpen {
+			t.Errorf("expected new status open, got %q", changes[0].NewStatus)
+		}
+	})
+
+	t.Run("it cascades reopen through multiple done ancestors", func(t *testing.T) {
+		grandparent := makeTestTask("tick-grandp1", StatusDone, "")
+		grandparent.Closed = closedTime()
+		parent := makeTestTask("tick-parent1", StatusDone, "tick-grandp1")
+		parent.Closed = closedTime()
+		child := makeTestTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{grandparent, parent, child}
+
+		changes := sm.Cascades(tasks, &child, "reopen")
+
+		if len(changes) != 2 {
+			t.Fatalf("expected 2 cascade changes, got %d", len(changes))
+		}
+		if changes[0].Task.ID != "tick-parent1" {
+			t.Errorf("expected first cascade tick-parent1, got %s", changes[0].Task.ID)
+		}
+		if changes[1].Task.ID != "tick-grandp1" {
+			t.Errorf("expected second cascade tick-grandp1, got %s", changes[1].Task.ID)
+		}
+		for i, c := range changes {
+			if c.Action != "reopen" {
+				t.Errorf("change[%d]: expected action 'reopen', got %q", i, c.Action)
+			}
+			if c.OldStatus != StatusDone {
+				t.Errorf("change[%d]: expected old status done, got %q", i, c.OldStatus)
+			}
+			if c.NewStatus != StatusOpen {
+				t.Errorf("change[%d]: expected new status open, got %q", i, c.NewStatus)
+			}
+		}
+	})
+
+	t.Run("it stops reopen cascade at non-done parent", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusOpen, "")
+		child := makeTestTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		changes := sm.Cascades(tasks, &child, "reopen")
+
+		if len(changes) != 0 {
+			t.Fatalf("expected 0 cascade changes, got %d", len(changes))
+		}
+	})
+
+	t.Run("it stops reopen cascade at open parent", func(t *testing.T) {
+		grandparent := makeTestTask("tick-grandp1", StatusDone, "")
+		grandparent.Closed = closedTime()
+		parent := makeTestTask("tick-parent1", StatusOpen, "tick-grandp1")
+		child := makeTestTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{grandparent, parent, child}
+
+		changes := sm.Cascades(tasks, &child, "reopen")
+
+		if len(changes) != 0 {
+			t.Fatalf("expected 0 cascade changes, got %d", len(changes))
+		}
+	})
+
+	t.Run("it stops reopen cascade at cancelled ancestor", func(t *testing.T) {
+		greatgrandparent := makeTestTask("tick-ggp1", StatusDone, "")
+		greatgrandparent.Closed = closedTime()
+		grandparent := makeTestTask("tick-grandp1", StatusCancelled, "tick-ggp1")
+		grandparent.Closed = closedTime()
+		parent := makeTestTask("tick-parent1", StatusDone, "tick-grandp1")
+		parent.Closed = closedTime()
+		child := makeTestTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{greatgrandparent, grandparent, parent, child}
+
+		changes := sm.Cascades(tasks, &child, "reopen")
+
+		// Should cascade to parent (done) but stop at grandparent (cancelled)
+		if len(changes) != 1 {
+			t.Fatalf("expected 1 cascade change, got %d", len(changes))
+		}
+		if changes[0].Task.ID != "tick-parent1" {
+			t.Errorf("expected cascade task tick-parent1, got %s", changes[0].Task.ID)
+		}
+	})
+
+	t.Run("it handles deeply nested done ancestors for reopen", func(t *testing.T) {
+		level0 := makeTestTask("tick-lv0", StatusDone, "")
+		level0.Closed = closedTime()
+		level1 := makeTestTask("tick-lv1", StatusDone, "tick-lv0")
+		level1.Closed = closedTime()
+		level2 := makeTestTask("tick-lv2", StatusDone, "tick-lv1")
+		level2.Closed = closedTime()
+		level3 := makeTestTask("tick-lv3", StatusDone, "tick-lv2")
+		level3.Closed = closedTime()
+		level4 := makeTestTask("tick-lv4", StatusDone, "tick-lv3")
+		level4.Closed = closedTime()
+		level5 := makeTestTask("tick-lv5", StatusOpen, "tick-lv4")
+		tasks := []Task{level0, level1, level2, level3, level4, level5}
+
+		changes := sm.Cascades(tasks, &level5, "reopen")
+
+		if len(changes) != 5 {
+			t.Fatalf("expected 5 cascade changes, got %d", len(changes))
+		}
+
+		expectedIDs := []string{"tick-lv4", "tick-lv3", "tick-lv2", "tick-lv1", "tick-lv0"}
+		for i, expected := range expectedIDs {
+			if changes[i].Task.ID != expected {
+				t.Errorf("change[%d]: expected %s, got %s", i, expected, changes[i].Task.ID)
+			}
+		}
+	})
+
+	t.Run("it returns empty reopen cascade for non-reopen actions", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusDone, "")
+		parent.Closed = closedTime()
+		child := makeTestTask("tick-child1", StatusInProgress, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		// start action should not trigger Rule 5 reopen cascade
+		// (it triggers Rule 2 instead, but parent is done so it stops)
+		changes := sm.Cascades(tasks, &child, "start")
+
+		for _, c := range changes {
+			if c.Action == "reopen" {
+				t.Errorf("did not expect reopen cascade from start action")
+			}
+		}
+	})
+
+	t.Run("it returns empty reopen cascade when child has no parent", func(t *testing.T) {
+		child := makeTestTask("tick-child1", StatusOpen, "")
+		tasks := []Task{child}
+
+		changes := sm.Cascades(tasks, &child, "reopen")
+
+		if len(changes) != 0 {
+			t.Fatalf("expected 0 cascade changes, got %d", len(changes))
+		}
+	})
+
+	t.Run("it does not mutate any task on reopen cascade", func(t *testing.T) {
+		grandparent := makeTestTask("tick-grandp1", StatusDone, "")
+		grandparent.Closed = closedTime()
+		parent := makeTestTask("tick-parent1", StatusDone, "tick-grandp1")
+		parent.Closed = closedTime()
+		child := makeTestTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{grandparent, parent, child}
+
+		grandparentStatus := grandparent.Status
+		parentStatus := parent.Status
+		childStatus := child.Status
+		grandparentUpdated := grandparent.Updated
+		parentUpdated := parent.Updated
+		childUpdated := child.Updated
+
+		_ = sm.Cascades(tasks, &child, "reopen")
+
+		if grandparent.Status != grandparentStatus {
+			t.Errorf("grandparent status mutated: %q -> %q", grandparentStatus, grandparent.Status)
+		}
+		if parent.Status != parentStatus {
+			t.Errorf("parent status mutated: %q -> %q", parentStatus, parent.Status)
+		}
+		if child.Status != childStatus {
+			t.Errorf("child status mutated: %q -> %q", childStatus, child.Status)
+		}
+		if !grandparent.Updated.Equal(grandparentUpdated) {
+			t.Error("grandparent Updated timestamp mutated")
+		}
+		if !parent.Updated.Equal(parentUpdated) {
+			t.Error("parent Updated timestamp mutated")
+		}
+		if !child.Updated.Equal(childUpdated) {
+			t.Error("child Updated timestamp mutated")
 		}
 	})
 

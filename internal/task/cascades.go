@@ -21,6 +21,10 @@ type CascadeChange struct {
 // has a parent and all siblings are terminal, the parent auto-completes: done if any child is
 // done, cancelled if all children are cancelled). Only cascades to non-terminal parents.
 //
+// For action "reopen" (Rule 5): walks up the parent chain and emits a CascadeChange for each
+// done ancestor, reopening it to open. Non-done ancestors (open, in_progress, cancelled) stop
+// the chain.
+//
 // For other actions, returns nil.
 func (sm StateMachine) Cascades(tasks []Task, changed *Task, action string) []CascadeChange {
 	switch action {
@@ -30,6 +34,8 @@ func (sm StateMachine) Cascades(tasks []Task, changed *Task, action string) []Ca
 		changes := sm.cascadeDownwardTerminal(tasks, changed, action)
 		changes = append(changes, sm.cascadeUpwardCompletion(tasks, changed)...)
 		return changes
+	case "reopen":
+		return sm.cascadeUpwardReopen(tasks, changed)
 	default:
 		return nil
 	}
@@ -160,6 +166,38 @@ func (sm StateMachine) cascadeUpwardCompletion(tasks []Task, changed *Task) []Ca
 		OldStatus: parent.Status,
 		NewStatus: newStatus,
 	}}
+}
+
+// cascadeUpwardReopen walks up the parent chain from changed, emitting CascadeChange entries
+// for done ancestors (Rule 5). Non-done ancestors (open, in_progress, cancelled) stop the walk.
+func (sm StateMachine) cascadeUpwardReopen(tasks []Task, changed *Task) []CascadeChange {
+	taskMap := buildTaskMap(tasks)
+
+	var changes []CascadeChange
+	current := changed
+
+	for current.Parent != "" {
+		parent, ok := taskMap[NormalizeID(current.Parent)]
+		if !ok {
+			break
+		}
+
+		if parent.Status == StatusDone {
+			changes = append(changes, CascadeChange{
+				Task:      parent,
+				Action:    "reopen",
+				OldStatus: StatusDone,
+				NewStatus: StatusOpen,
+			})
+		} else {
+			// open, in_progress, or cancelled — stop the chain
+			break
+		}
+
+		current = parent
+	}
+
+	return changes
 }
 
 // buildTaskMap creates a map from normalized task ID to pointer into the slice.
