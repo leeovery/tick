@@ -65,6 +65,16 @@ func (sm StateMachine) Transition(t *Task, action string) (TransitionResult, err
 	}, nil
 }
 
+// ValidateAddChild checks whether a child task can be added to the given parent.
+// It returns an error if the parent is cancelled (Rule 7); nil otherwise.
+// Note: the done-parent reopen (Rule 6) is the caller's responsibility.
+func (sm StateMachine) ValidateAddChild(parent *Task) error {
+	if parent.Status == StatusCancelled {
+		return fmt.Errorf("cannot add child to cancelled task, reopen it first")
+	}
+	return nil
+}
+
 // ValidateAddDep checks that adding blockerID as a blocker of taskID
 // does not create a circular dependency or a child-blocked-by-parent relationship.
 // It takes the full task list to build a dependency graph for cycle detection.

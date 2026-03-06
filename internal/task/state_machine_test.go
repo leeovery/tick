@@ -458,3 +458,48 @@ func TestStateMachine_ValidateAddDep(t *testing.T) {
 		}
 	})
 }
+
+func TestStateMachine_ValidateAddChild(t *testing.T) {
+	var sm StateMachine
+
+	t.Run("it blocks adding child to cancelled parent", func(t *testing.T) {
+		parent := makeTask(StatusCancelled, closedTime())
+
+		err := sm.ValidateAddChild(parent)
+		if err == nil {
+			t.Fatal("expected error for cancelled parent, got nil")
+		}
+
+		expected := "cannot add child to cancelled task, reopen it first"
+		if err.Error() != expected {
+			t.Errorf("expected error %q, got %q", expected, err.Error())
+		}
+	})
+
+	t.Run("it allows adding child to open parent", func(t *testing.T) {
+		parent := makeTask(StatusOpen, nil)
+
+		err := sm.ValidateAddChild(parent)
+		if err != nil {
+			t.Errorf("expected no error for open parent, got: %v", err)
+		}
+	})
+
+	t.Run("it allows adding child to in_progress parent", func(t *testing.T) {
+		parent := makeTask(StatusInProgress, nil)
+
+		err := sm.ValidateAddChild(parent)
+		if err != nil {
+			t.Errorf("expected no error for in_progress parent, got: %v", err)
+		}
+	})
+
+	t.Run("it allows adding child to done parent", func(t *testing.T) {
+		parent := makeTask(StatusDone, closedTime())
+
+		err := sm.ValidateAddChild(parent)
+		if err != nil {
+			t.Errorf("expected no error for done parent, got: %v", err)
+		}
+	})
+}
