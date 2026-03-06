@@ -178,6 +178,10 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	var createdTask task.Task
+	var parentReopened bool
+	var parentResult task.TransitionResult
+	var cascades []task.CascadeChange
+	var allTasks []task.Task
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Build an ID existence checker with normalized keys.
@@ -220,11 +224,21 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		var sm task.StateMachine
 
 		// Validate parent allows adding children (Rule 7: blocks cancelled parent).
+		// If parent is done, trigger reopen cascade (Rule 6).
 		if opts.parent != "" {
 			for i := range tasks {
 				if tasks[i].ID == opts.parent {
 					if err := sm.ValidateAddChild(&tasks[i]); err != nil {
 						return nil, err
+					}
+					if tasks[i].Status == task.StatusDone {
+						r, c, err := sm.ApplyWithCascades(tasks, &tasks[i], "reopen")
+						if err != nil {
+							return nil, err
+						}
+						parentReopened = true
+						parentResult = r
+						cascades = c
 					}
 					break
 				}
@@ -253,6 +267,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		}
 
 		createdTask = newTask
+		allTasks = tasks
 		return tasks, nil
 	})
 
@@ -260,7 +275,30 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 
-	return outputMutationResult(store, createdTask.ID, fc, fmtr, stdout)
+	// Output created task detail first.
+	if err := outputMutationResult(store, createdTask.ID, fc, fmtr, stdout); err != nil {
+		return err
+	}
+
+	// Output cascade info if parent was reopened (and not quiet mode).
+	if parentReopened && !fc.Quiet {
+		parentID := opts.parent
+		var parentTitle string
+		for _, tk := range allTasks {
+			if tk.ID == parentID {
+				parentTitle = tk.Title
+				break
+			}
+		}
+		if len(cascades) == 0 {
+			fmt.Fprintln(stdout, fmtr.FormatTransition(parentID, string(parentResult.OldStatus), string(parentResult.NewStatus)))
+		} else {
+			cr := buildCascadeResult(parentID, parentTitle, parentResult, cascades, allTasks)
+			fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
+		}
+	}
+
+	return nil
 }
 
 // validateRefs checks that all referenced IDs (blocked-by, blocks, parent) exist

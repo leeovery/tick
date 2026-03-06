@@ -1067,6 +1067,219 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
+	t.Run("it reopens done parent when adding child", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		closedAt := now
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Done parent", Status: task.StatusDone,
+			Priority: 2, Created: now, Updated: now, Closed: &closedAt,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parentTask})
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		// Should have 2 tasks: the parent + new child
+		if len(persisted) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(persisted))
+		}
+
+		// Parent should now be open (reopened)
+		var parent task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-ppp111" {
+				parent = tk
+				break
+			}
+		}
+		if parent.Status != task.StatusOpen {
+			t.Errorf("parent status = %q, want %q", parent.Status, task.StatusOpen)
+		}
+		if parent.Closed != nil {
+			t.Error("parent Closed should be nil after reopen")
+		}
+
+		// New child should be open
+		newTask := persisted[len(persisted)-1]
+		if newTask.Status != task.StatusOpen {
+			t.Errorf("new task status = %q, want %q", newTask.Status, task.StatusOpen)
+		}
+		if newTask.Parent != "tick-ppp111" {
+			t.Errorf("new task parent = %q, want %q", newTask.Parent, "tick-ppp111")
+		}
+
+		// Output should contain the new task ID
+		if !strings.Contains(stdout, newTask.ID) {
+			t.Errorf("stdout should contain new task ID %q, got %q", newTask.ID, stdout)
+		}
+	})
+
+	t.Run("it cascades reopen to done grandparent", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		closedAt := now
+		grandparent := task.Task{
+			ID: "tick-ggg111", Title: "Done grandparent", Status: task.StatusDone,
+			Priority: 2, Created: now, Updated: now, Closed: &closedAt,
+		}
+		parent := task.Task{
+			ID: "tick-ppp111", Title: "Done parent", Status: task.StatusDone,
+			Priority: 2, Parent: "tick-ggg111", Created: now, Updated: now, Closed: &closedAt,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{grandparent, parent})
+
+		_, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted) != 3 {
+			t.Fatalf("expected 3 tasks, got %d", len(persisted))
+		}
+
+		// Both parent and grandparent should be reopened
+		for _, tk := range persisted {
+			switch tk.ID {
+			case "tick-ppp111":
+				if tk.Status != task.StatusOpen {
+					t.Errorf("parent status = %q, want %q", tk.Status, task.StatusOpen)
+				}
+			case "tick-ggg111":
+				if tk.Status != task.StatusOpen {
+					t.Errorf("grandparent status = %q, want %q", tk.Status, task.StatusOpen)
+				}
+			}
+		}
+	})
+
+	t.Run("it does not cascade when parent is open", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Open parent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parentTask})
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		for _, tk := range persisted {
+			if tk.ID == "tick-ppp111" {
+				if tk.Status != task.StatusOpen {
+					t.Errorf("parent status = %q, want %q", tk.Status, task.StatusOpen)
+				}
+			}
+		}
+
+		// Should not contain cascade output (no "Cascaded:" or "(auto)")
+		if strings.Contains(stdout, "Cascaded:") {
+			t.Errorf("stdout should not contain cascade output for open parent, got %q", stdout)
+		}
+	})
+
+	t.Run("it does not cascade when parent is in_progress", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "In progress parent", Status: task.StatusInProgress,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parentTask})
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		for _, tk := range persisted {
+			if tk.ID == "tick-ppp111" {
+				if tk.Status != task.StatusInProgress {
+					t.Errorf("parent status = %q, want %q", tk.Status, task.StatusInProgress)
+				}
+			}
+		}
+
+		// Should not contain cascade output
+		if strings.Contains(stdout, "Cascaded:") {
+			t.Errorf("stdout should not contain cascade output for in_progress parent, got %q", stdout)
+		}
+	})
+
+	t.Run("it persists new task and reopened parent atomically", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		closedAt := now
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Done parent", Status: task.StatusDone,
+			Priority: 2, Created: now, Updated: now, Closed: &closedAt,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parentTask})
+
+		_, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		// Read persisted tasks — both changes should be there (atomic)
+		persisted := readPersistedTasks(t, tickDir)
+		if len(persisted) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(persisted))
+		}
+
+		var parent task.Task
+		var child task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-ppp111" {
+				parent = tk
+			} else {
+				child = tk
+			}
+		}
+
+		if parent.Status != task.StatusOpen {
+			t.Errorf("parent status = %q, want %q", parent.Status, task.StatusOpen)
+		}
+		if child.Status != task.StatusOpen {
+			t.Errorf("child status = %q, want %q", child.Status, task.StatusOpen)
+		}
+		if child.Parent != "tick-ppp111" {
+			t.Errorf("child parent = %q, want %q", child.Parent, "tick-ppp111")
+		}
+	})
+
+	t.Run("it displays cascade output after created task detail", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		closedAt := now
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Done parent", Status: task.StatusDone,
+			Priority: 2, Created: now, Updated: now, Closed: &closedAt,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parentTask})
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		// Output should contain task detail first (ID: line), then cascade info
+		idIdx := strings.Index(stdout, "ID:")
+		cascadeIdx := strings.Index(stdout, "done \u2192 open")
+		if idIdx == -1 {
+			t.Fatalf("stdout should contain 'ID:' for task detail, got %q", stdout)
+		}
+		if cascadeIdx == -1 {
+			t.Fatalf("stdout should contain cascade transition 'done \u2192 open', got %q", stdout)
+		}
+		if idIdx >= cascadeIdx {
+			t.Errorf("task detail (at %d) should appear before cascade output (at %d) in stdout:\n%s", idIdx, cascadeIdx, stdout)
+		}
+	})
+
 	t.Run("it allows valid dependencies through create --blocked-by and --blocks", func(t *testing.T) {
 		now := time.Now().UTC().Truncate(time.Second)
 		taskA := task.Task{
