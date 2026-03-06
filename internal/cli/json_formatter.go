@@ -256,8 +256,66 @@ func (f *JSONFormatter) FormatRemoval(result RemovalResult) string {
 	})
 }
 
-// FormatCascadeTransition returns an empty string (stub).
-func (f *JSONFormatter) FormatCascadeTransition(_ CascadeResult) string { return "" }
+// jsonCascadeTransition represents the primary transition in cascade JSON output.
+type jsonCascadeTransition struct {
+	ID   string `json:"id"`
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+// jsonCascadeEntry represents a cascaded status change in JSON output.
+type jsonCascadeEntry struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	From  string `json:"from"`
+	To    string `json:"to"`
+}
+
+// jsonUnchangedEntry represents an unchanged task in cascade JSON output.
+type jsonUnchangedEntry struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Status string `json:"status"`
+}
+
+// jsonCascadeResult represents the full cascade result in JSON output.
+type jsonCascadeResult struct {
+	Transition jsonCascadeTransition `json:"transition"`
+	Cascaded   []jsonCascadeEntry    `json:"cascaded"`
+	Unchanged  []jsonUnchangedEntry  `json:"unchanged"`
+}
+
+// FormatCascadeTransition renders a cascade transition as structured JSON.
+// cascaded and unchanged are always [] not null.
+func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) string {
+	if result.TaskID == "" {
+		return ""
+	}
+	cascaded := make([]jsonCascadeEntry, 0, len(result.Cascaded))
+	for _, c := range result.Cascaded {
+		cascaded = append(cascaded, jsonCascadeEntry{
+			ID:    c.ID,
+			Title: c.Title,
+			From:  c.OldStatus,
+			To:    c.NewStatus,
+		})
+	}
+
+	unchanged := make([]jsonUnchangedEntry, 0, len(result.Unchanged))
+	for _, u := range result.Unchanged {
+		unchanged = append(unchanged, jsonUnchangedEntry(u))
+	}
+
+	return marshalIndentJSON(jsonCascadeResult{
+		Transition: jsonCascadeTransition{
+			ID:   result.TaskID,
+			From: result.OldStatus,
+			To:   result.NewStatus,
+		},
+		Cascaded:  cascaded,
+		Unchanged: unchanged,
+	})
+}
 
 // marshalIndentJSON marshals v as 2-space indented JSON.
 // Returns "null" on marshal failure (should not happen with controlled types).

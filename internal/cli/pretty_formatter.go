@@ -186,6 +186,43 @@ func (f *PrettyFormatter) FormatMessage(msg string) string {
 	return msg
 }
 
+// FormatCascadeTransition renders a cascade transition with box-drawing tree characters.
+// Primary transition on first line, then "Cascaded:" header with tree entries.
+func (f *PrettyFormatter) FormatCascadeTransition(result CascadeResult) string {
+	if result.TaskID == "" {
+		return ""
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s: %s \u2192 %s", result.TaskID, result.OldStatus, result.NewStatus)
+
+	totalEntries := len(result.Cascaded) + len(result.Unchanged)
+	if totalEntries == 0 {
+		return b.String()
+	}
+
+	b.WriteString("\n\nCascaded:")
+
+	entryIdx := 0
+	for _, c := range result.Cascaded {
+		entryIdx++
+		prefix := "\u251c\u2500"
+		if entryIdx == totalEntries {
+			prefix = "\u2514\u2500"
+		}
+		fmt.Fprintf(&b, "\n%s %s %q: %s \u2192 %s", prefix, c.ID, c.Title, c.OldStatus, c.NewStatus)
+	}
+	for _, u := range result.Unchanged {
+		entryIdx++
+		prefix := "\u251c\u2500"
+		if entryIdx == totalEntries {
+			prefix = "\u2514\u2500"
+		}
+		fmt.Fprintf(&b, "\n%s %s %q: %s (unchanged)", prefix, u.ID, u.Title, u.Status)
+	}
+
+	return b.String()
+}
+
 // typeOrDash returns the type string or "-" if empty, for Pretty formatter display.
 func typeOrDash(typ string) string {
 	if typ == "" {

@@ -140,6 +140,23 @@ func (f *ToonFormatter) FormatMessage(msg string) string {
 	return msg
 }
 
+// FormatCascadeTransition renders a cascade transition in flat-line toon format.
+// Primary transition on first line, cascaded entries with (auto), unchanged with (unchanged).
+func (f *ToonFormatter) FormatCascadeTransition(result CascadeResult) string {
+	if result.TaskID == "" {
+		return ""
+	}
+	var lines []string
+	lines = append(lines, fmt.Sprintf("%s: %s \u2192 %s", result.TaskID, result.OldStatus, result.NewStatus))
+	for _, c := range result.Cascaded {
+		lines = append(lines, fmt.Sprintf("%s: %s \u2192 %s (auto)", c.ID, c.OldStatus, c.NewStatus))
+	}
+	for _, u := range result.Unchanged {
+		lines = append(lines, fmt.Sprintf("%s: %s (unchanged)", u.ID, u.Status))
+	}
+	return strings.Join(lines, "\n")
+}
+
 // buildTaskSection builds the task section with dynamic schema (omitting parent/closed when null).
 func buildTaskSection(t task.Task) string {
 	var fields []toon.Field
