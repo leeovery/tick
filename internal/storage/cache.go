@@ -11,7 +11,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 const schemaSQL = `
 CREATE TABLE IF NOT EXISTS tasks (
@@ -51,6 +51,14 @@ CREATE TABLE IF NOT EXISTS task_notes (
   created TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS task_transitions (
+  task_id TEXT NOT NULL,
+  from_status TEXT NOT NULL,
+  to_status TEXT NOT NULL,
+  at TEXT NOT NULL,
+  auto INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS metadata (
   key TEXT PRIMARY KEY,
   value TEXT
@@ -61,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
 CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent);
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag ON task_tags(tag);
 CREATE INDEX IF NOT EXISTS idx_task_notes_task_id ON task_notes(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_transitions_task_id ON task_transitions(task_id);
 `
 
 // Cache wraps a SQLite database used as a query cache for Tick tasks.
@@ -104,6 +113,9 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 	defer func() { _ = tx.Rollback() }()
 
 	// Clear existing data.
+	if _, err := tx.Exec("DELETE FROM task_transitions"); err != nil {
+		return fmt.Errorf("failed to clear task_transitions: %w", err)
+	}
 	if _, err := tx.Exec("DELETE FROM task_notes"); err != nil {
 		return fmt.Errorf("failed to clear task_notes: %w", err)
 	}
@@ -150,6 +162,12 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 		return fmt.Errorf("failed to prepare note insert: %w", err)
 	}
 	defer insertNote.Close()
+
+	insertTransition, err := tx.Prepare(`INSERT INTO task_transitions (task_id, from_status, to_status, at, auto) VALUES (?, ?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare transition insert: %w", err)
+	}
+	defer insertTransition.Close()
 
 	for _, t := range tasks {
 		var closedStr *string
@@ -209,6 +227,16 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 		for _, note := range t.Notes {
 			if _, err := insertNote.Exec(t.ID, note.Text, task.FormatTimestamp(note.Created)); err != nil {
 				return fmt.Errorf("failed to insert note for %s: %w", t.ID, err)
+			}
+		}
+
+		for _, tr := range t.Transitions {
+			autoInt := 0
+			if tr.Auto {
+				autoInt = 1
+			}
+			if _, err := insertTransition.Exec(t.ID, string(tr.From), string(tr.To), task.FormatTimestamp(tr.At), autoInt); err != nil {
+				return fmt.Errorf("failed to insert transition for %s: %w", t.ID, err)
 			}
 		}
 	}

@@ -1136,8 +1136,8 @@ func TestSchemaVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("querying schema_version: %v", err)
 		}
-		if value != "1" {
-			t.Errorf("schema_version = %q, want %q", value, "1")
+		if value != "2" {
+			t.Errorf("schema_version = %q, want %q", value, "2")
 		}
 	})
 
@@ -1159,8 +1159,8 @@ func TestSchemaVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("SchemaVersion returned error: %v", err)
 		}
-		if version != 1 {
-			t.Errorf("SchemaVersion() = %d, want %d", version, 1)
+		if version != 2 {
+			t.Errorf("SchemaVersion() = %d, want %d", version, 2)
 		}
 	})
 
@@ -1240,8 +1240,8 @@ func TestSchemaVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("SchemaVersion returned error: %v", err)
 		}
-		if version != 1 {
-			t.Errorf("SchemaVersion() = %d, want %d (original should be preserved)", version, 1)
+		if version != 2 {
+			t.Errorf("SchemaVersion() = %d, want %d (original should be preserved)", version, 2)
 		}
 
 		// Verify jsonl_hash was also NOT updated (still from valid rebuild).
@@ -1258,8 +1258,8 @@ func TestSchemaVersion(t *testing.T) {
 
 	t.Run("it returns compiled-in version via CurrentSchemaVersion()", func(t *testing.T) {
 		version := CurrentSchemaVersion()
-		if version != 1 {
-			t.Errorf("CurrentSchemaVersion() = %d, want %d", version, 1)
+		if version != 2 {
+			t.Errorf("CurrentSchemaVersion() = %d, want %d", version, 2)
 		}
 	})
 }
@@ -1508,6 +1508,252 @@ func TestCacheEdgeCases(t *testing.T) {
 		}
 		if id != "tick-valid1" {
 			t.Errorf("task id = %q, want %q (original should be preserved)", id, "tick-valid1")
+		}
+	})
+}
+
+func TestTaskTransitionsSchema(t *testing.T) {
+	t.Run("it creates task_transitions table in new cache", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		db := cache.DB()
+
+		// Verify task_transitions table exists with correct columns.
+		cols := queryColumns(t, db, "task_transitions")
+		expectedCols := map[string]bool{
+			"task_id":     true,
+			"from_status": true,
+			"to_status":   true,
+			"at":          true,
+			"auto":        true,
+		}
+		if len(cols) != len(expectedCols) {
+			t.Errorf("task_transitions table: expected %d columns, got %d: %v", len(expectedCols), len(cols), cols)
+		}
+		for col := range expectedCols {
+			if !cols[col] {
+				t.Errorf("task_transitions table missing column %q", col)
+			}
+		}
+
+		// Verify index on task_id column.
+		indexes := queryIndexes(t, db)
+		if !indexes["idx_task_transitions_task_id"] {
+			t.Errorf("missing index %q", "idx_task_transitions_task_id")
+		}
+	})
+
+	t.Run("it populates task_transitions on rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		transAt := time.Date(2026, 1, 19, 12, 0, 0, 0, time.UTC)
+
+		tasks := []task.Task{
+			{
+				ID:       "tick-aaaaaa",
+				Title:    "Task with transitions",
+				Status:   task.StatusInProgress,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+				Transitions: []task.TransitionRecord{
+					{
+						From: task.StatusOpen,
+						To:   task.StatusInProgress,
+						At:   transAt,
+						Auto: false,
+					},
+				},
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("test")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		db := cache.DB()
+		var taskID, fromStatus, toStatus, at string
+		var auto int
+		err = db.QueryRow("SELECT task_id, from_status, to_status, at, auto FROM task_transitions").
+			Scan(&taskID, &fromStatus, &toStatus, &at, &auto)
+		if err != nil {
+			t.Fatalf("querying task_transitions: %v", err)
+		}
+		if taskID != "tick-aaaaaa" {
+			t.Errorf("task_id = %q, want %q", taskID, "tick-aaaaaa")
+		}
+		if fromStatus != "open" {
+			t.Errorf("from_status = %q, want %q", fromStatus, "open")
+		}
+		if toStatus != "in_progress" {
+			t.Errorf("to_status = %q, want %q", toStatus, "in_progress")
+		}
+		if at != "2026-01-19T12:00:00Z" {
+			t.Errorf("at = %q, want %q", at, "2026-01-19T12:00:00Z")
+		}
+		if auto != 0 {
+			t.Errorf("auto = %d, want %d", auto, 0)
+		}
+	})
+
+	t.Run("it stores auto flag as integer", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		transAt := time.Date(2026, 1, 19, 14, 0, 0, 0, time.UTC)
+
+		tasks := []task.Task{
+			{
+				ID:       "tick-bbbbbb",
+				Title:    "Auto transition task",
+				Status:   task.StatusDone,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+				Transitions: []task.TransitionRecord{
+					{
+						From: task.StatusInProgress,
+						To:   task.StatusDone,
+						At:   transAt,
+						Auto: true,
+					},
+				},
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("auto-test")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		var auto int
+		err = cache.DB().QueryRow("SELECT auto FROM task_transitions WHERE task_id = 'tick-bbbbbb'").Scan(&auto)
+		if err != nil {
+			t.Fatalf("querying auto: %v", err)
+		}
+		if auto != 1 {
+			t.Errorf("auto = %d, want %d (true should be stored as 1)", auto, 1)
+		}
+	})
+
+	t.Run("it handles task with no transitions", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+
+		tasks := []task.Task{
+			{
+				ID:       "tick-cccccc",
+				Title:    "No transitions",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+
+		if err := cache.Rebuild(tasks, []byte("no-trans")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		var count int
+		err = cache.DB().QueryRow("SELECT COUNT(*) FROM task_transitions").Scan(&count)
+		if err != nil {
+			t.Fatalf("querying count: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("expected 0 transition rows, got %d", count)
+		}
+	})
+
+	t.Run("it clears task_transitions before rebuild", func(t *testing.T) {
+		dir := t.TempDir()
+		dbPath := filepath.Join(dir, "cache.db")
+
+		cache, err := OpenCache(dbPath)
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		transAt := time.Date(2026, 1, 19, 12, 0, 0, 0, time.UTC)
+
+		tasksV1 := []task.Task{
+			{
+				ID:       "tick-dddddd",
+				Title:    "V1 task",
+				Status:   task.StatusInProgress,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+				Transitions: []task.TransitionRecord{
+					{From: task.StatusOpen, To: task.StatusInProgress, At: transAt, Auto: false},
+				},
+			},
+		}
+		if err := cache.Rebuild(tasksV1, []byte("v1")); err != nil {
+			t.Fatalf("first Rebuild returned error: %v", err)
+		}
+
+		// Second rebuild with different task — old transitions should be gone.
+		tasksV2 := []task.Task{
+			{
+				ID:       "tick-eeeeee",
+				Title:    "V2 task",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+		if err := cache.Rebuild(tasksV2, []byte("v2")); err != nil {
+			t.Fatalf("second Rebuild returned error: %v", err)
+		}
+
+		var count int
+		err = cache.DB().QueryRow("SELECT COUNT(*) FROM task_transitions").Scan(&count)
+		if err != nil {
+			t.Fatalf("querying count: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("expected 0 transition rows after rebuild, got %d", count)
+		}
+	})
+
+	t.Run("it triggers rebuild on schema version mismatch", func(t *testing.T) {
+		// This test verifies the schema version constant changed to 2.
+		version := CurrentSchemaVersion()
+		if version != 2 {
+			t.Errorf("CurrentSchemaVersion() = %d, want %d", version, 2)
 		}
 	})
 }
