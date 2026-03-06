@@ -256,6 +256,9 @@ func (f *JSONFormatter) FormatRemoval(result RemovalResult) string {
 	})
 }
 
+// FormatCascadeTransition returns an empty string (stub).
+func (f *JSONFormatter) FormatCascadeTransition(_ CascadeResult) string { return "" }
+
 // marshalIndentJSON marshals v as 2-space indented JSON.
 // Returns "null" on marshal failure (should not happen with controlled types).
 func marshalIndentJSON(v interface{}) string {

@@ -127,6 +127,32 @@ type RemovalResult struct {
 	DepsUpdated []string
 }
 
+// CascadeEntry holds a single cascaded status change for display.
+type CascadeEntry struct {
+	ID        string
+	Title     string
+	OldStatus string
+	NewStatus string
+}
+
+// UnchangedEntry holds a terminal child that was not affected by a cascade.
+type UnchangedEntry struct {
+	ID     string
+	Title  string
+	Status string
+}
+
+// CascadeResult holds all data needed to render a cascade transition:
+// the primary transition, cascaded changes, and unchanged terminal children.
+type CascadeResult struct {
+	TaskID    string
+	TaskTitle string
+	OldStatus string
+	NewStatus string
+	Cascaded  []CascadeEntry
+	Unchanged []UnchangedEntry
+}
+
 // Formatter defines the interface for rendering CLI output in different formats.
 // Concrete implementations (Toon, Pretty, JSON) are provided by tasks 4-2 through 4-4.
 type Formatter interface {
@@ -144,6 +170,8 @@ type Formatter interface {
 	FormatMessage(msg string) string
 	// FormatRemoval renders the result of a task removal operation.
 	FormatRemoval(result RemovalResult) string
+	// FormatCascadeTransition renders a status transition with cascaded child changes.
+	FormatCascadeTransition(result CascadeResult) string
 }
 
 // baseFormatter provides shared implementations of FormatTransition, FormatDepChange,
@@ -163,6 +191,9 @@ func (b *baseFormatter) FormatDepChange(action string, taskID string, depID stri
 	}
 	return fmt.Sprintf("Dependency added: %s blocked by %s", taskID, depID)
 }
+
+// FormatCascadeTransition returns an empty string (stub for text-based formatters).
+func (b *baseFormatter) FormatCascadeTransition(_ CascadeResult) string { return "" }
 
 // FormatRemoval renders the result of a task removal as plain text.
 // One line per removed task as 'Removed {id} "{title}"', plus an optional
@@ -205,6 +236,9 @@ func (s *StubFormatter) FormatMessage(_ string) string { return "" }
 
 // FormatRemoval returns an empty string (stub).
 func (s *StubFormatter) FormatRemoval(_ RemovalResult) string { return "" }
+
+// FormatCascadeTransition returns an empty string (stub).
+func (s *StubFormatter) FormatCascadeTransition(_ CascadeResult) string { return "" }
 
 // NewFormatter creates a Formatter for the given Format.
 func NewFormatter(f Format) Formatter {

@@ -361,6 +361,113 @@ func TestFormatterInterfaceCompileCheck(t *testing.T) {
 	var _ Formatter = (*StubFormatter)(nil)
 }
 
+func TestCascadeTypes(t *testing.T) {
+	t.Run("it compiles with FormatCascadeTransition on all formatter types", func(t *testing.T) {
+		// Compile-time verification that all formatters implement FormatCascadeTransition
+		var _ Formatter = (*StubFormatter)(nil)
+		var _ Formatter = (*ToonFormatter)(nil)
+		var _ Formatter = (*PrettyFormatter)(nil)
+		var _ Formatter = (*JSONFormatter)(nil)
+
+		// Call FormatCascadeTransition on each to verify method exists
+		formatters := []Formatter{
+			&StubFormatter{},
+			&ToonFormatter{},
+			&PrettyFormatter{},
+			&JSONFormatter{},
+		}
+		result := CascadeResult{
+			TaskID:    "tick-abc123",
+			TaskTitle: "Parent task",
+			OldStatus: "open",
+			NewStatus: "in_progress",
+			Cascaded: []CascadeEntry{
+				{ID: "tick-def456", Title: "Child", OldStatus: "open", NewStatus: "in_progress"},
+			},
+			Unchanged: []UnchangedEntry{
+				{ID: "tick-789abc", Title: "Done child", Status: "done"},
+			},
+		}
+		for _, f := range formatters {
+			_ = f.FormatCascadeTransition(result)
+		}
+	})
+
+	t.Run("it returns empty string from stub implementation", func(t *testing.T) {
+		f := &StubFormatter{}
+		result := f.FormatCascadeTransition(CascadeResult{
+			TaskID:    "tick-abc123",
+			TaskTitle: "Test",
+			OldStatus: "open",
+			NewStatus: "done",
+			Cascaded: []CascadeEntry{
+				{ID: "tick-def456", Title: "Child", OldStatus: "open", NewStatus: "done"},
+			},
+		})
+		if result != "" {
+			t.Errorf("FormatCascadeTransition = %q, want empty string", result)
+		}
+	})
+
+	t.Run("it handles empty CascadeResult", func(t *testing.T) {
+		formatters := []Formatter{
+			&StubFormatter{},
+			&ToonFormatter{},
+			&PrettyFormatter{},
+			&JSONFormatter{},
+		}
+		empty := CascadeResult{}
+		for _, f := range formatters {
+			got := f.FormatCascadeTransition(empty)
+			if got != "" {
+				t.Errorf("FormatCascadeTransition on empty result = %q, want empty string", got)
+			}
+		}
+	})
+}
+
+func TestCascadeResultStruct(t *testing.T) {
+	t.Run("it holds all cascade data fields", func(t *testing.T) {
+		result := CascadeResult{
+			TaskID:    "tick-abc123",
+			TaskTitle: "Parent",
+			OldStatus: "open",
+			NewStatus: "in_progress",
+			Cascaded: []CascadeEntry{
+				{ID: "tick-111111", Title: "Child 1", OldStatus: "open", NewStatus: "in_progress"},
+				{ID: "tick-222222", Title: "Child 2", OldStatus: "open", NewStatus: "in_progress"},
+			},
+			Unchanged: []UnchangedEntry{
+				{ID: "tick-333333", Title: "Done child", Status: "done"},
+			},
+		}
+		if result.TaskID != "tick-abc123" {
+			t.Errorf("TaskID = %q, want %q", result.TaskID, "tick-abc123")
+		}
+		if result.TaskTitle != "Parent" {
+			t.Errorf("TaskTitle = %q, want %q", result.TaskTitle, "Parent")
+		}
+		if result.OldStatus != "open" {
+			t.Errorf("OldStatus = %q, want %q", result.OldStatus, "open")
+		}
+		if result.NewStatus != "in_progress" {
+			t.Errorf("NewStatus = %q, want %q", result.NewStatus, "in_progress")
+		}
+		if len(result.Cascaded) != 2 {
+			t.Errorf("Cascaded length = %d, want 2", len(result.Cascaded))
+		}
+		if result.Cascaded[0].ID != "tick-111111" {
+			t.Errorf("Cascaded[0].ID = %q, want %q", result.Cascaded[0].ID, "tick-111111")
+		}
+		if len(result.Unchanged) != 1 {
+			t.Errorf("Unchanged length = %d, want 1", len(result.Unchanged))
+		}
+		if result.Unchanged[0].Status != "done" {
+			t.Errorf("Unchanged[0].Status = %q, want %q", result.Unchanged[0].Status, "done")
+		}
+	})
+}
+
 func TestCLIDispatchRejectsConflictingFlags(t *testing.T) {
 	t.Run("it errors before dispatch when multiple format flags set", func(t *testing.T) {
 		dir := t.TempDir()
