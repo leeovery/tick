@@ -988,6 +988,253 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
+	t.Run("it reopens done parent when reparenting to it", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closedAt := now
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Done parent", Status: task.StatusDone, Priority: 2, Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-bbb222", Title: "Child", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-bbb222", "--parent", "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var parent task.Task
+		var child task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-aaa111" {
+				parent = tk
+			}
+			if tk.ID == "tick-bbb222" {
+				child = tk
+			}
+		}
+		if child.Parent != "tick-aaa111" {
+			t.Errorf("child parent = %q, want %q", child.Parent, "tick-aaa111")
+		}
+		if parent.Status != task.StatusOpen {
+			t.Errorf("parent status = %q, want open (should be reopened)", parent.Status)
+		}
+		// Output should show the parent's reopen transition
+		if !strings.Contains(stdout, "tick-aaa111") {
+			t.Errorf("stdout should contain parent ID, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "done") || !strings.Contains(stdout, "open") {
+			t.Errorf("stdout should contain transition from done to open, got %q", stdout)
+		}
+	})
+
+	t.Run("it triggers Rule 3 on original parent when reparenting away", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closedAt := now
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Original parent", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Child done", Status: task.StatusDone, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-ccc333", Title: "Child moving", Status: task.StatusOpen, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now},
+			{ID: "tick-ddd444", Title: "New parent", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		// Reparent ccc333 from aaa111 to ddd444. After this, aaa111 has only bbb222 (done) as child.
+		// All children terminal with at least one done -> original parent auto-completes to done.
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-ddd444")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var origParent task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-aaa111" {
+				origParent = tk
+			}
+		}
+		if origParent.Status != task.StatusDone {
+			t.Errorf("original parent status = %q, want done (Rule 3)", origParent.Status)
+		}
+		// Output should contain the parent's transition
+		if !strings.Contains(stdout, "tick-aaa111") {
+			t.Errorf("stdout should contain original parent ID for Rule 3 cascade, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "in_progress") || !strings.Contains(stdout, "done") {
+			t.Errorf("stdout should contain transition from in_progress to done, got %q", stdout)
+		}
+	})
+
+	t.Run("it triggers Rule 3 with cancelled result when all remaining children cancelled", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closedAt := now
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Original parent", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Cancelled child", Status: task.StatusCancelled, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-ccc333", Title: "Child moving", Status: task.StatusOpen, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now},
+			{ID: "tick-ddd444", Title: "New parent", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		// Reparent ccc333 away. Remaining child bbb222 is cancelled, none done -> parent auto-cancelled.
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-ddd444")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var origParent task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-aaa111" {
+				origParent = tk
+			}
+		}
+		if origParent.Status != task.StatusCancelled {
+			t.Errorf("original parent status = %q, want cancelled (Rule 3, all cancelled)", origParent.Status)
+		}
+		// Output should contain the parent's transition
+		if !strings.Contains(stdout, "tick-aaa111") {
+			t.Errorf("stdout should contain original parent ID for Rule 3 cascade, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "in_progress") || !strings.Contains(stdout, "cancelled") {
+			t.Errorf("stdout should contain transition from in_progress to cancelled, got %q", stdout)
+		}
+	})
+
+	t.Run("it triggers Rule 3 with done result when remaining children are mix of done and cancelled", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closedAt := now
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Original parent", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Done child", Status: task.StatusDone, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-ccc333", Title: "Cancelled child", Status: task.StatusCancelled, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-ddd444", Title: "Child moving", Status: task.StatusOpen, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now},
+			{ID: "tick-eee555", Title: "New parent", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		// Reparent ddd444 away. Remaining: bbb222 (done), ccc333 (cancelled) -> done wins.
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-ddd444", "--parent", "tick-eee555")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var origParent task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-aaa111" {
+				origParent = tk
+			}
+		}
+		if origParent.Status != task.StatusDone {
+			t.Errorf("original parent status = %q, want done (Rule 3, mix of done+cancelled)", origParent.Status)
+		}
+		// Output should contain the parent's transition
+		if !strings.Contains(stdout, "tick-aaa111") {
+			t.Errorf("stdout should contain original parent ID for Rule 3 cascade, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "in_progress") || !strings.Contains(stdout, "done") {
+			t.Errorf("stdout should contain transition from in_progress to done, got %q", stdout)
+		}
+	})
+
+	t.Run("it does not trigger Rule 3 when original parent still has non-terminal children", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Original parent", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Open child", Status: task.StatusOpen, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now},
+			{ID: "tick-ccc333", Title: "Child moving", Status: task.StatusOpen, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now},
+			{ID: "tick-ddd444", Title: "New parent", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		// Reparent ccc333 away. Remaining: bbb222 (open) -> not all terminal, no cascade.
+		_, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-ddd444")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var origParent task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-aaa111" {
+				origParent = tk
+			}
+		}
+		if origParent.Status != task.StatusInProgress {
+			t.Errorf("original parent status = %q, want in_progress (no Rule 3, non-terminal child remains)", origParent.Status)
+		}
+	})
+
+	t.Run("it handles clearing parent with Rule 3 evaluation", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closedAt := now
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Original parent", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Done child", Status: task.StatusDone, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-ccc333", Title: "Child clearing parent", Status: task.StatusOpen, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		// Clear parent on ccc333 (--parent ""). Remaining: bbb222 (done) -> auto-done.
+		_, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var origParent task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-aaa111" {
+				origParent = tk
+			}
+		}
+		if origParent.Status != task.StatusDone {
+			t.Errorf("original parent status = %q, want done (Rule 3 after clearing parent)", origParent.Status)
+		}
+	})
+
+	t.Run("it handles reparent to done parent plus Rule 3 on original", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closedAt := now
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Original parent", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Done child", Status: task.StatusDone, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-ccc333", Title: "Child moving", Status: task.StatusOpen, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now},
+			{ID: "tick-ddd444", Title: "Done new parent", Status: task.StatusDone, Priority: 2, Created: now, Updated: now, Closed: &closedAt},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		// Reparent ccc333 to done parent ddd444 -> ddd444 reopens (Rule 6).
+		// Original parent aaa111 left with only bbb222 (done) -> auto-done (Rule 3).
+		_, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-ddd444")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var origParent, newParent, child task.Task
+		for _, tk := range persisted {
+			switch tk.ID {
+			case "tick-aaa111":
+				origParent = tk
+			case "tick-ddd444":
+				newParent = tk
+			case "tick-ccc333":
+				child = tk
+			}
+		}
+		if child.Parent != "tick-ddd444" {
+			t.Errorf("child parent = %q, want tick-ddd444", child.Parent)
+		}
+		if newParent.Status != task.StatusOpen {
+			t.Errorf("new parent status = %q, want open (reopened via Rule 6)", newParent.Status)
+		}
+		if origParent.Status != task.StatusDone {
+			t.Errorf("original parent status = %q, want done (Rule 3)", origParent.Status)
+		}
+	})
+
 	t.Run("it rejects --blocks that would create a cycle", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		// taskA is blocked by taskB. Updating taskB --blocks taskA would create:

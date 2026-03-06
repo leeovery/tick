@@ -121,6 +121,85 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 	return opts, nil
 }
 
+// rule3Result holds the output of a Rule 3 evaluation for cascade display.
+type rule3Result struct {
+	parentID    string
+	parentTitle string
+	result      task.TransitionResult
+	cascades    []task.CascadeChange
+}
+
+// evaluateRule3 checks if the original parent's remaining children are all terminal
+// after a child was reparented away. If so, it triggers auto-completion via ApplyWithCascades:
+// done if at least one child is done, cancelled if all children are cancelled.
+// Returns nil if Rule 3 does not apply.
+func evaluateRule3(tasks []task.Task, origParentID string, sm *task.StateMachine) *rule3Result {
+	normalizedParentID := task.NormalizeID(origParentID)
+
+	// Find the original parent.
+	var parentIdx int
+	parentFound := false
+	for i := range tasks {
+		if task.NormalizeID(tasks[i].ID) == normalizedParentID {
+			parentIdx = i
+			parentFound = true
+			break
+		}
+	}
+	if !parentFound {
+		return nil
+	}
+
+	// Parent must be non-terminal for Rule 3 to apply.
+	if tasks[parentIdx].Status == task.StatusDone || tasks[parentIdx].Status == task.StatusCancelled {
+		return nil
+	}
+
+	// Gather remaining children of the original parent.
+	allTerminal := true
+	anyDone := false
+	hasChildren := false
+	for i := range tasks {
+		if task.NormalizeID(tasks[i].Parent) != normalizedParentID {
+			continue
+		}
+		hasChildren = true
+		if tasks[i].Status != task.StatusDone && tasks[i].Status != task.StatusCancelled {
+			allTerminal = false
+			break
+		}
+		if tasks[i].Status == task.StatusDone {
+			anyDone = true
+		}
+	}
+
+	if !hasChildren || !allTerminal {
+		return nil
+	}
+
+	// Determine action: done if any child done, cancel if all cancelled.
+	action := "cancel"
+	if anyDone {
+		action = "done"
+	}
+
+	oldStatus := tasks[parentIdx].Status
+	_, cascades, err := sm.ApplyWithCascades(tasks, &tasks[parentIdx], action)
+	if err != nil {
+		return nil
+	}
+
+	return &rule3Result{
+		parentID:    tasks[parentIdx].ID,
+		parentTitle: tasks[parentIdx].Title,
+		result: task.TransitionResult{
+			OldStatus: oldStatus,
+			NewStatus: tasks[parentIdx].Status,
+		},
+		cascades: cascades,
+	}
+}
+
 // RunUpdate executes the update command: validates inputs, applies changes via the storage engine,
 // and outputs the updated task details via the Formatter.
 func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
@@ -225,6 +304,17 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	var updatedID string
+	var allTasks []task.Task
+
+	// Rule 6: reopen of done parent when reparenting to it.
+	var r6Triggered bool
+	var r6ParentID string
+	var r6ParentTitle string
+	var r6Result task.TransitionResult
+	var r6Cascades []task.CascadeChange
+
+	// Rule 3: auto-completion of original parent when reparenting away.
+	var r3 *rule3Result
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Build ID set for reference validation with normalized keys.
@@ -235,7 +325,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 		var sm task.StateMachine
 
-		// Validate referenced IDs exist.
+		// Validate referenced IDs exist and handle Rule 6 (reopen done parent).
 		if opts.parent != nil && *opts.parent != "" {
 			if *opts.parent == opts.id {
 				return nil, fmt.Errorf("task %s cannot be its own parent", opts.id)
@@ -244,10 +334,22 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 				return nil, fmt.Errorf("task %q not found (referenced in --parent)", *opts.parent)
 			}
 			// Validate parent allows adding children (Rule 7: blocks cancelled parent).
+			// If parent is done, trigger reopen cascade (Rule 6).
 			for i := range tasks {
 				if task.NormalizeID(tasks[i].ID) == *opts.parent {
 					if err := sm.ValidateAddChild(&tasks[i]); err != nil {
 						return nil, err
+					}
+					if tasks[i].Status == task.StatusDone {
+						r, c, err := sm.ApplyWithCascades(tasks, &tasks[i], "reopen")
+						if err != nil {
+							return nil, err
+						}
+						r6Triggered = true
+						r6ParentID = tasks[i].ID
+						r6ParentTitle = tasks[i].Title
+						r6Result = r
+						r6Cascades = c
 					}
 					break
 				}
@@ -295,11 +397,21 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			} else if opts.refs != nil {
 				tasks[i].Refs = *opts.refs
 			}
+
+			// Capture original parent before updating.
+			originalParent := tasks[i].Parent
+
 			if opts.parent != nil {
 				tasks[i].Parent = *opts.parent
 			}
 			tasks[i].Updated = now
 			updatedID = tasks[i].ID
+
+			// Evaluate Rule 3 on original parent if parent changed and original was non-empty.
+			if opts.parent != nil && originalParent != *opts.parent && originalParent != "" {
+				r3 = evaluateRule3(tasks, originalParent, &sm)
+			}
+
 			break
 		}
 
@@ -319,11 +431,37 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			}
 		}
 
+		allTasks = tasks
 		return tasks, nil
 	})
 	if err != nil {
 		return err
 	}
 
-	return outputMutationResult(store, updatedID, fc, fmtr, stdout)
+	// Output updated task detail.
+	if err := outputMutationResult(store, updatedID, fc, fmtr, stdout); err != nil {
+		return err
+	}
+
+	// Output Rule 6 cascade info (reopen of done parent).
+	if r6Triggered && !fc.Quiet {
+		if len(r6Cascades) == 0 {
+			fmt.Fprintln(stdout, fmtr.FormatTransition(r6ParentID, string(r6Result.OldStatus), string(r6Result.NewStatus)))
+		} else {
+			cr := buildCascadeResult(r6ParentID, r6ParentTitle, r6Result, r6Cascades, allTasks)
+			fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
+		}
+	}
+
+	// Output Rule 3 cascade info (auto-completion of original parent).
+	if r3 != nil && !fc.Quiet {
+		if len(r3.cascades) == 0 {
+			fmt.Fprintln(stdout, fmtr.FormatTransition(r3.parentID, string(r3.result.OldStatus), string(r3.result.NewStatus)))
+		} else {
+			cr := buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, allTasks)
+			fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
+		}
+	}
+
+	return nil
 }
