@@ -3,7 +3,7 @@ topic: auto-cascade-parent-status
 plan: ../../planning/auto-cascade-parent-status/plan.md
 format: tick
 status: in-progress
-task_gate_mode: gated
+task_gate_mode: auto
 fix_gate_mode: gated
 analysis_gate_mode: gated
 fix_attempts: 0
@@ -19,10 +19,11 @@ project_skills:
   - name: golang-pro
     path: .claude/skills/golang-pro
 current_phase: 1
-current_task: acps-1-2
+current_task: acps-1-3
 completed_phases: []
 completed_tasks:
   - acps-1-1
+  - acps-1-2
 started: 2026-03-06
 updated: 2026-03-06
 completed: ~

@@ -1,6 +1,7 @@
 package task
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -328,6 +329,132 @@ func TestStateMachine_Transition_UpdatedTimestamp(t *testing.T) {
 					t.Error("expected updated timestamp to change from original value")
 				}
 			})
+		}
+	})
+}
+
+func TestStateMachine_ValidateAddDep(t *testing.T) {
+	var sm StateMachine
+
+	t.Run("it allows valid dependency between unrelated tasks", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa"},
+			{ID: "tick-bbb"},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-aaa", "tick-bbb")
+		if err != nil {
+			t.Errorf("expected no error for valid dependency, got: %v", err)
+		}
+	})
+
+	t.Run("it rejects direct self-reference", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa"},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-aaa", "tick-aaa")
+		if err == nil {
+			t.Fatal("expected error for self-reference, got nil")
+		}
+
+		expected := "cannot add dependency - creates cycle: tick-aaa → tick-aaa"
+		if err.Error() != expected {
+			t.Errorf("expected error %q, got %q", expected, err.Error())
+		}
+	})
+
+	t.Run("it rejects 2-node cycle with path", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: []string{"tick-bbb"}},
+			{ID: "tick-bbb"},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-bbb", "tick-aaa")
+		if err == nil {
+			t.Fatal("expected error for 2-node cycle, got nil")
+		}
+
+		expected := "cannot add dependency - creates cycle: tick-bbb → tick-aaa → tick-bbb"
+		if err.Error() != expected {
+			t.Errorf("expected error %q, got %q", expected, err.Error())
+		}
+	})
+
+	t.Run("it rejects 3+ node cycle with full path", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: []string{"tick-bbb"}},
+			{ID: "tick-bbb", BlockedBy: []string{"tick-ccc"}},
+			{ID: "tick-ccc"},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-ccc", "tick-aaa")
+		if err == nil {
+			t.Fatal("expected error for 3+ node cycle, got nil")
+		}
+
+		expected := "cannot add dependency - creates cycle: tick-ccc → tick-aaa → tick-bbb → tick-ccc"
+		if err.Error() != expected {
+			t.Errorf("expected error %q, got %q", expected, err.Error())
+		}
+	})
+
+	t.Run("it rejects child blocked by own parent", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-parent"},
+			{ID: "tick-child", Parent: "tick-parent"},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-child", "tick-parent")
+		if err == nil {
+			t.Fatal("expected error for child blocked by parent, got nil")
+		}
+
+		expected := "cannot add dependency - tick-child cannot be blocked by its parent tick-parent\n(would create unworkable task due to leaf-only ready rule)"
+		if err.Error() != expected {
+			t.Errorf("expected error %q, got %q", expected, err.Error())
+		}
+	})
+
+	t.Run("it allows parent blocked by own child", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-parent"},
+			{ID: "tick-child", Parent: "tick-parent"},
+		}
+
+		err := sm.ValidateAddDep(tasks, "tick-parent", "tick-child")
+		if err != nil {
+			t.Errorf("expected no error for parent blocked by child, got: %v", err)
+		}
+	})
+
+	t.Run("it detects cycle with mixed-case IDs", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-aaa", BlockedBy: []string{"tick-bbb"}},
+			{ID: "tick-bbb"},
+		}
+
+		err := sm.ValidateAddDep(tasks, "TICK-BBB", "TICK-AAA")
+		if err == nil {
+			t.Fatal("expected error for mixed-case cycle, got nil")
+		}
+		if !strings.Contains(err.Error(), "creates cycle") {
+			t.Errorf("expected cycle error, got: %v", err)
+		}
+	})
+
+	t.Run("it detects child-blocked-by-parent with mixed-case IDs", func(t *testing.T) {
+		tasks := []Task{
+			{ID: "tick-parent"},
+			{ID: "tick-child", Parent: "tick-parent"},
+		}
+
+		err := sm.ValidateAddDep(tasks, "TICK-CHILD", "TICK-PARENT")
+		if err == nil {
+			t.Fatal("expected error for mixed-case child-blocked-by-parent, got nil")
+		}
+		if !strings.Contains(err.Error(), "cannot be blocked by its parent") {
+			t.Errorf("expected parent error, got: %v", err)
 		}
 	})
 }
