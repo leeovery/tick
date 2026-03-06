@@ -41,38 +41,40 @@ const TimestampFormat = "2006-01-02T15:04:05Z"
 
 // Task represents a work item in Tick with all schema fields.
 type Task struct {
-	ID          string     `json:"id"`
-	Title       string     `json:"title"`
-	Status      Status     `json:"status"`
-	Priority    int        `json:"priority"`
-	Type        string     `json:"type,omitempty"`
-	Tags        []string   `json:"tags,omitempty"`
-	Refs        []string   `json:"refs,omitempty"`
-	Description string     `json:"description,omitempty"`
-	Notes       []Note     `json:"notes,omitempty"`
-	BlockedBy   []string   `json:"blocked_by,omitempty"`
-	Parent      string     `json:"parent,omitempty"`
-	Created     time.Time  `json:"-"`
-	Updated     time.Time  `json:"-"`
-	Closed      *time.Time `json:"-"`
+	ID          string             `json:"id"`
+	Title       string             `json:"title"`
+	Status      Status             `json:"status"`
+	Priority    int                `json:"priority"`
+	Type        string             `json:"type,omitempty"`
+	Tags        []string           `json:"tags,omitempty"`
+	Refs        []string           `json:"refs,omitempty"`
+	Description string             `json:"description,omitempty"`
+	Notes       []Note             `json:"notes,omitempty"`
+	Transitions []TransitionRecord `json:"transitions,omitempty"`
+	BlockedBy   []string           `json:"blocked_by,omitempty"`
+	Parent      string             `json:"parent,omitempty"`
+	Created     time.Time          `json:"-"`
+	Updated     time.Time          `json:"-"`
+	Closed      *time.Time         `json:"-"`
 }
 
 // taskJSON is the JSON serialization form with string timestamps and string status.
 type taskJSON struct {
-	ID          string   `json:"id"`
-	Title       string   `json:"title"`
-	Status      string   `json:"status"`
-	Priority    int      `json:"priority"`
-	Type        string   `json:"type,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
-	Refs        []string `json:"refs,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Notes       []Note   `json:"notes,omitempty"`
-	BlockedBy   []string `json:"blocked_by,omitempty"`
-	Parent      string   `json:"parent,omitempty"`
-	Created     string   `json:"created"`
-	Updated     string   `json:"updated"`
-	Closed      string   `json:"closed,omitempty"`
+	ID          string             `json:"id"`
+	Title       string             `json:"title"`
+	Status      string             `json:"status"`
+	Priority    int                `json:"priority"`
+	Type        string             `json:"type,omitempty"`
+	Tags        []string           `json:"tags,omitempty"`
+	Refs        []string           `json:"refs,omitempty"`
+	Description string             `json:"description,omitempty"`
+	Notes       []Note             `json:"notes,omitempty"`
+	Transitions []TransitionRecord `json:"transitions,omitempty"`
+	BlockedBy   []string           `json:"blocked_by,omitempty"`
+	Parent      string             `json:"parent,omitempty"`
+	Created     string             `json:"created"`
+	Updated     string             `json:"updated"`
+	Closed      string             `json:"closed,omitempty"`
 }
 
 // MarshalJSON serializes a Task with timestamps formatted as ISO 8601 strings.
@@ -87,6 +89,7 @@ func (t Task) MarshalJSON() ([]byte, error) {
 		Refs:        t.Refs,
 		Description: t.Description,
 		Notes:       t.Notes,
+		Transitions: t.Transitions,
 		BlockedBy:   t.BlockedBy,
 		Parent:      t.Parent,
 		Created:     FormatTimestamp(t.Created),
@@ -123,6 +126,7 @@ func (t *Task) UnmarshalJSON(data []byte) error {
 	t.Refs = jt.Refs
 	t.Description = jt.Description
 	t.Notes = jt.Notes
+	t.Transitions = jt.Transitions
 	t.BlockedBy = jt.BlockedBy
 	t.Parent = jt.Parent
 	t.Created = created
