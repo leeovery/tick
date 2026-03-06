@@ -458,6 +458,24 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
+	t.Run("it blocks creating a task with cancelled parent", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		closedAt := now
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Cancelled parent", Status: task.StatusCancelled,
+			Priority: 2, Created: now, Updated: now, Closed: &closedAt,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parentTask})
+
+		_, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "cannot add child to cancelled task") {
+			t.Errorf("stderr should contain cancelled parent message, got %q", stderr)
+		}
+	})
+
 	t.Run("it persists the task to tasks.jsonl via atomic write", func(t *testing.T) {
 		dir, tickDir := setupTickProject(t)
 		_, _, exitCode := runCreate(t, dir, "Persisted task")

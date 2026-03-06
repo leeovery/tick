@@ -252,6 +252,28 @@ func TestTransitionCommands(t *testing.T) {
 		}
 	})
 
+	t.Run("it blocks reopening task under cancelled parent", func(t *testing.T) {
+		closedAt := now
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Parent", Status: task.StatusCancelled,
+			Priority: 2, Created: now, Updated: now, Closed: &closedAt,
+		}
+		childTask := task.Task{
+			ID: "tick-ccc111", Title: "Child", Status: task.StatusCancelled,
+			Priority: 2, Parent: "tick-ppp111",
+			Created: now, Updated: now, Closed: &closedAt,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parentTask, childTask})
+
+		_, stderr, exitCode := runTransition(t, dir, "reopen", "tick-ccc111")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "cannot reopen task under cancelled parent") {
+			t.Errorf("stderr should contain cancelled parent message, got %q", stderr)
+		}
+	})
+
 	t.Run("it exits with code 1 on error", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
 

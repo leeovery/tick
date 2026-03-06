@@ -27,11 +27,12 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 	}
 
 	var result task.TransitionResult
+	var sm task.StateMachine
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		for i := range tasks {
 			if tasks[i].ID == id {
-				r, err := task.Transition(&tasks[i], command)
+				r, err := sm.Transition(&tasks[i], command, tasks)
 				if err != nil {
 					return nil, err
 				}

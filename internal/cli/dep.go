@@ -109,8 +109,9 @@ func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			}
 		}
 
-		// Validate dependency (self-ref, cycle, child-blocked-by-parent).
-		if err := task.ValidateDependency(tasks, taskID, blockedByID); err != nil {
+		// Validate dependency (self-ref, cycle, child-blocked-by-parent, cancelled blocker).
+		var sm task.StateMachine
+		if err := sm.ValidateAddDep(tasks, taskID, blockedByID); err != nil {
 			return nil, err
 		}
 

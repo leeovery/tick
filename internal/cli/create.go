@@ -217,6 +217,20 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			Updated:     now,
 		}
 
+		var sm task.StateMachine
+
+		// Validate parent allows adding children (Rule 7: blocks cancelled parent).
+		if opts.parent != "" {
+			for i := range tasks {
+				if tasks[i].ID == opts.parent {
+					if err := sm.ValidateAddChild(&tasks[i]); err != nil {
+						return nil, err
+					}
+					break
+				}
+			}
+		}
+
 		// For --blocks: add new task's ID to target tasks' blocked_by and refresh updated.
 		if len(opts.blocks) > 0 {
 			applyBlocks(tasks, id, opts.blocks, now)
@@ -224,14 +238,16 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 		tasks = append(tasks, newTask)
 
-		// Validate dependencies (cycle detection + child-blocked-by-parent) against full task list.
+		// Validate dependencies (cycle detection + child-blocked-by-parent + cancelled blocker) against full task list.
 		if len(opts.blockedBy) > 0 {
-			if err := task.ValidateDependencies(tasks, id, opts.blockedBy); err != nil {
-				return nil, err
+			for _, depID := range opts.blockedBy {
+				if err := sm.ValidateAddDep(tasks, id, depID); err != nil {
+					return nil, err
+				}
 			}
 		}
 		for _, blockID := range opts.blocks {
-			if err := task.ValidateDependency(tasks, blockID, id); err != nil {
+			if err := sm.ValidateAddDep(tasks, blockID, id); err != nil {
 				return nil, err
 			}
 		}

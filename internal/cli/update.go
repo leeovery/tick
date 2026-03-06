@@ -233,6 +233,8 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			idSet[task.NormalizeID(t.ID)] = true
 		}
 
+		var sm task.StateMachine
+
 		// Validate referenced IDs exist.
 		if opts.parent != nil && *opts.parent != "" {
 			if *opts.parent == opts.id {
@@ -240,6 +242,15 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			}
 			if !idSet[*opts.parent] {
 				return nil, fmt.Errorf("task %q not found (referenced in --parent)", *opts.parent)
+			}
+			// Validate parent allows adding children (Rule 7: blocks cancelled parent).
+			for i := range tasks {
+				if task.NormalizeID(tasks[i].ID) == *opts.parent {
+					if err := sm.ValidateAddChild(&tasks[i]); err != nil {
+						return nil, err
+					}
+					break
+				}
 			}
 		}
 		for _, blockID := range opts.blocks {
@@ -300,9 +311,9 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		if len(opts.blocks) > 0 {
 			applyBlocks(tasks, opts.id, opts.blocks, now)
 
-			// Validate dependencies (cycle detection + child-blocked-by-parent) against full task list.
+			// Validate dependencies (cycle detection + child-blocked-by-parent + cancelled blocker) against full task list.
 			for _, blockID := range opts.blocks {
-				if err := task.ValidateDependency(tasks, blockID, opts.id); err != nil {
+				if err := sm.ValidateAddDep(tasks, blockID, opts.id); err != nil {
 					return nil, err
 				}
 			}

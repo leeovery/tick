@@ -223,6 +223,27 @@ func TestDepAdd(t *testing.T) {
 		}
 	})
 
+	t.Run("it blocks adding dependency on cancelled task", func(t *testing.T) {
+		closedAt := now
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Task B", Status: task.StatusCancelled,
+			Priority: 2, Created: now, Updated: now, Closed: &closedAt,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, stderr, exitCode := runDep(t, dir, "add", "tick-aaa111", "tick-bbb222")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "cannot add dependency on cancelled task") {
+			t.Errorf("stderr should contain cancelled task message, got %q", stderr)
+		}
+	})
+
 	t.Run("it normalizes IDs to lowercase (add)", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,

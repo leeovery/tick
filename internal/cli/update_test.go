@@ -228,6 +228,24 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
+	t.Run("it blocks reparenting to cancelled parent", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closedAt := now
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Cancelled parent", Status: task.StatusCancelled, Priority: 2, Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-bbb222", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-bbb222", "--parent", "tick-aaa111")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "cannot add child to cancelled task") {
+			t.Errorf("stderr should contain cancelled parent message, got %q", stderr)
+		}
+	})
+
 	t.Run("it updates blocks with --blocks flag", func(t *testing.T) {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		tasks := []task.Task{
