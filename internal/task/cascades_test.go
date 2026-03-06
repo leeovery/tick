@@ -438,6 +438,172 @@ func TestStateMachine_Cascades(t *testing.T) {
 		}
 	})
 
+	// Upward completion cascade tests (Rule 3)
+
+	t.Run("it cascades parent to done when all children terminal with at least one done", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child1 := makeTestTask("tick-child1", StatusDone, "tick-parent1")
+		child1.Closed = closedTime()
+		child2 := makeTestTask("tick-child2", StatusCancelled, "tick-parent1")
+		child2.Closed = closedTime()
+		child3 := makeTestTask("tick-child3", StatusDone, "tick-parent1")
+		child3.Closed = closedTime()
+		tasks := []Task{parent, child1, child2, child3}
+
+		// child3 just transitioned to done; all siblings are terminal
+		changes := sm.Cascades(tasks, &child3, "done")
+
+		// Should include upward cascade for parent
+		var upward []CascadeChange
+		for _, c := range changes {
+			if c.Task.ID == "tick-parent1" {
+				upward = append(upward, c)
+			}
+		}
+		if len(upward) != 1 {
+			t.Fatalf("expected 1 upward cascade for parent, got %d", len(upward))
+		}
+		if upward[0].Action != "done" {
+			t.Errorf("expected action 'done', got %q", upward[0].Action)
+		}
+		if upward[0].OldStatus != StatusInProgress {
+			t.Errorf("expected old status in_progress, got %q", upward[0].OldStatus)
+		}
+		if upward[0].NewStatus != StatusDone {
+			t.Errorf("expected new status done, got %q", upward[0].NewStatus)
+		}
+	})
+
+	t.Run("it cascades parent to cancelled when all children cancelled", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child1 := makeTestTask("tick-child1", StatusCancelled, "tick-parent1")
+		child1.Closed = closedTime()
+		child2 := makeTestTask("tick-child2", StatusCancelled, "tick-parent1")
+		child2.Closed = closedTime()
+		tasks := []Task{parent, child1, child2}
+
+		changes := sm.Cascades(tasks, &child2, "cancel")
+
+		var upward []CascadeChange
+		for _, c := range changes {
+			if c.Task.ID == "tick-parent1" {
+				upward = append(upward, c)
+			}
+		}
+		if len(upward) != 1 {
+			t.Fatalf("expected 1 upward cascade for parent, got %d", len(upward))
+		}
+		if upward[0].Action != "cancel" {
+			t.Errorf("expected action 'cancel', got %q", upward[0].Action)
+		}
+		if upward[0].OldStatus != StatusInProgress {
+			t.Errorf("expected old status in_progress, got %q", upward[0].OldStatus)
+		}
+		if upward[0].NewStatus != StatusCancelled {
+			t.Errorf("expected new status cancelled, got %q", upward[0].NewStatus)
+		}
+	})
+
+	t.Run("it does not cascade when some children still non-terminal", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child1 := makeTestTask("tick-child1", StatusDone, "tick-parent1")
+		child1.Closed = closedTime()
+		child2 := makeTestTask("tick-child2", StatusOpen, "tick-parent1")
+		tasks := []Task{parent, child1, child2}
+
+		changes := sm.Cascades(tasks, &child1, "done")
+
+		// No upward cascade since child2 is still open
+		for _, c := range changes {
+			if c.Task.ID == "tick-parent1" {
+				t.Errorf("did not expect cascade for parent, got action %q", c.Action)
+			}
+		}
+	})
+
+	t.Run("it handles single child done", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child := makeTestTask("tick-child1", StatusDone, "tick-parent1")
+		child.Closed = closedTime()
+		tasks := []Task{parent, child}
+
+		changes := sm.Cascades(tasks, &child, "done")
+
+		var upward []CascadeChange
+		for _, c := range changes {
+			if c.Task.ID == "tick-parent1" {
+				upward = append(upward, c)
+			}
+		}
+		if len(upward) != 1 {
+			t.Fatalf("expected 1 upward cascade for parent, got %d", len(upward))
+		}
+		if upward[0].NewStatus != StatusDone {
+			t.Errorf("expected new status done, got %q", upward[0].NewStatus)
+		}
+	})
+
+	t.Run("it handles single child cancelled", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child := makeTestTask("tick-child1", StatusCancelled, "tick-parent1")
+		child.Closed = closedTime()
+		tasks := []Task{parent, child}
+
+		changes := sm.Cascades(tasks, &child, "cancel")
+
+		var upward []CascadeChange
+		for _, c := range changes {
+			if c.Task.ID == "tick-parent1" {
+				upward = append(upward, c)
+			}
+		}
+		if len(upward) != 1 {
+			t.Fatalf("expected 1 upward cascade for parent, got %d", len(upward))
+		}
+		if upward[0].NewStatus != StatusCancelled {
+			t.Errorf("expected new status cancelled, got %q", upward[0].NewStatus)
+		}
+	})
+
+	t.Run("it skips parent already in terminal state", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusDone, "")
+		parent.Closed = closedTime()
+		child := makeTestTask("tick-child1", StatusDone, "tick-parent1")
+		child.Closed = closedTime()
+		tasks := []Task{parent, child}
+
+		changes := sm.Cascades(tasks, &child, "done")
+
+		for _, c := range changes {
+			if c.Task.ID == "tick-parent1" {
+				t.Errorf("did not expect cascade for already-terminal parent")
+			}
+		}
+	})
+
+	t.Run("it does not cascade for reopen action", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child := makeTestTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		changes := sm.Cascades(tasks, &child, "reopen")
+
+		if len(changes) != 0 {
+			t.Errorf("expected 0 cascade changes for reopen, got %d", len(changes))
+		}
+	})
+
+	t.Run("it does not cascade upward for task with no parent", func(t *testing.T) {
+		task := makeTestTask("tick-task1", StatusDone, "")
+		tasks := []Task{task}
+
+		changes := sm.Cascades(tasks, &task, "done")
+
+		if len(changes) != 0 {
+			t.Errorf("expected 0 cascade changes, got %d", len(changes))
+		}
+	})
+
 	t.Run("it does not mutate any task on downward cascade", func(t *testing.T) {
 		parent := makeTestTask("tick-parent1", StatusDone, "")
 		child := makeTestTask("tick-child1", StatusOpen, "tick-parent1")

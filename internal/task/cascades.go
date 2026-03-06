@@ -16,9 +16,10 @@ type CascadeChange struct {
 // open ancestor, setting it to in_progress. Ancestors already in_progress are skipped but the
 // chain continues. Terminal ancestors (done/cancelled) stop the chain.
 //
-// For action "done" or "cancel" (Rule 4): walks downward through all non-terminal descendants
-// using BFS, emitting a CascadeChange for each. Children already done or cancelled are skipped.
-// Dependency state does not gate cascade (advisory dependency principle).
+// For action "done" or "cancel": first applies Rule 4 (downward cascade to non-terminal
+// descendants via BFS), then applies Rule 3 (upward completion cascade — if the changed task
+// has a parent and all siblings are terminal, the parent auto-completes: done if any child is
+// done, cancelled if all children are cancelled). Only cascades to non-terminal parents.
 //
 // For other actions, returns nil.
 func (sm StateMachine) Cascades(tasks []Task, changed *Task, action string) []CascadeChange {
@@ -26,7 +27,9 @@ func (sm StateMachine) Cascades(tasks []Task, changed *Task, action string) []Ca
 	case "start":
 		return sm.cascadeUpwardStart(tasks, changed)
 	case "done", "cancel":
-		return sm.cascadeDownwardTerminal(tasks, changed, action)
+		changes := sm.cascadeDownwardTerminal(tasks, changed, action)
+		changes = append(changes, sm.cascadeUpwardCompletion(tasks, changed)...)
+		return changes
 	default:
 		return nil
 	}
@@ -95,6 +98,68 @@ func (sm StateMachine) cascadeDownwardTerminal(tasks []Task, changed *Task, acti
 	}
 
 	return changes
+}
+
+// cascadeUpwardCompletion checks if the changed task's parent should auto-complete (Rule 3).
+// If the changed task has a parent and all children of that parent are terminal,
+// the parent transitions to done (if any child is done) or cancelled (if all cancelled).
+// Only cascades if the parent is non-terminal.
+func (sm StateMachine) cascadeUpwardCompletion(tasks []Task, changed *Task) []CascadeChange {
+	if changed.Parent == "" {
+		return nil
+	}
+
+	taskMap := buildTaskMap(tasks)
+	childrenMap := buildChildrenMap(tasks)
+
+	parentID := NormalizeID(changed.Parent)
+	parent, ok := taskMap[parentID]
+	if !ok {
+		return nil
+	}
+
+	// Only cascade if parent is non-terminal
+	if parent.Status == StatusDone || parent.Status == StatusCancelled {
+		return nil
+	}
+
+	children := childrenMap[parentID]
+	if len(children) == 0 {
+		return nil
+	}
+
+	allTerminal := true
+	anyDone := false
+	for _, child := range children {
+		if child.Status != StatusDone && child.Status != StatusCancelled {
+			allTerminal = false
+			break
+		}
+		if child.Status == StatusDone {
+			anyDone = true
+		}
+	}
+
+	if !allTerminal {
+		return nil
+	}
+
+	var newStatus Status
+	var action string
+	if anyDone {
+		newStatus = StatusDone
+		action = "done"
+	} else {
+		newStatus = StatusCancelled
+		action = "cancel"
+	}
+
+	return []CascadeChange{{
+		Task:      parent,
+		Action:    action,
+		OldStatus: parent.Status,
+		NewStatus: newStatus,
+	}}
 }
 
 // buildTaskMap creates a map from normalized task ID to pointer into the slice.
