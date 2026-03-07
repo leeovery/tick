@@ -115,49 +115,19 @@ func (sm StateMachine) cascadeUpwardCompletion(tasks []Task, changed *Task) []Ca
 		return nil
 	}
 
+	action, shouldComplete := EvaluateParentCompletion(tasks, changed.Parent)
+	if !shouldComplete {
+		return nil
+	}
+
 	taskMap := buildTaskMap(tasks)
-	childrenMap := buildChildrenMap(tasks)
-
-	parentID := NormalizeID(changed.Parent)
-	parent, ok := taskMap[parentID]
-	if !ok {
-		return nil
-	}
-
-	// Only cascade if parent is non-terminal
-	if parent.Status == StatusDone || parent.Status == StatusCancelled {
-		return nil
-	}
-
-	children := childrenMap[parentID]
-	if len(children) == 0 {
-		return nil
-	}
-
-	allTerminal := true
-	anyDone := false
-	for _, child := range children {
-		if child.Status != StatusDone && child.Status != StatusCancelled {
-			allTerminal = false
-			break
-		}
-		if child.Status == StatusDone {
-			anyDone = true
-		}
-	}
-
-	if !allTerminal {
-		return nil
-	}
+	parent := taskMap[NormalizeID(changed.Parent)]
 
 	var newStatus Status
-	var action string
-	if anyDone {
+	if action == "done" {
 		newStatus = StatusDone
-		action = "done"
 	} else {
 		newStatus = StatusCancelled
-		action = "cancel"
 	}
 
 	return []CascadeChange{{
@@ -198,6 +168,59 @@ func (sm StateMachine) cascadeUpwardReopen(tasks []Task, changed *Task) []Cascad
 	}
 
 	return changes
+}
+
+// EvaluateParentCompletion checks whether a parent task should auto-complete based on its
+// children's statuses (Rule 3). It returns the action ("done" or "cancel") and whether
+// completion should occur. Completion triggers when: the parent exists, is non-terminal,
+// has children, and all children are terminal. Action is "done" if any child is done,
+// "cancel" if all children are cancelled.
+func EvaluateParentCompletion(tasks []Task, parentID string) (action string, shouldComplete bool) {
+	normalizedParentID := NormalizeID(parentID)
+
+	// Find parent.
+	var parent *Task
+	for i := range tasks {
+		if NormalizeID(tasks[i].ID) == normalizedParentID {
+			parent = &tasks[i]
+			break
+		}
+	}
+	if parent == nil {
+		return "", false
+	}
+
+	// Parent must be non-terminal.
+	if parent.Status == StatusDone || parent.Status == StatusCancelled {
+		return "", false
+	}
+
+	// Gather children and check terminal status.
+	allTerminal := true
+	anyDone := false
+	hasChildren := false
+	for i := range tasks {
+		if NormalizeID(tasks[i].Parent) != normalizedParentID {
+			continue
+		}
+		hasChildren = true
+		if tasks[i].Status != StatusDone && tasks[i].Status != StatusCancelled {
+			allTerminal = false
+			break
+		}
+		if tasks[i].Status == StatusDone {
+			anyDone = true
+		}
+	}
+
+	if !hasChildren || !allTerminal {
+		return "", false
+	}
+
+	if anyDone {
+		return "done", true
+	}
+	return "cancel", true
 }
 
 // buildTaskMap creates a map from normalized task ID to pointer into the slice.

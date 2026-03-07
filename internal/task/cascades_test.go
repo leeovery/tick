@@ -847,3 +847,149 @@ func TestStateMachine_Cascades(t *testing.T) {
 		}
 	})
 }
+
+func TestEvaluateParentCompletion(t *testing.T) {
+	now := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	makeTestTask := func(id string, status Status, parent string) Task {
+		t := Task{
+			ID:       id,
+			Title:    "Task " + id,
+			Status:   status,
+			Priority: 2,
+			Parent:   parent,
+			Created:  now,
+			Updated:  now,
+		}
+		if status == StatusDone || status == StatusCancelled {
+			closed := now
+			t.Closed = &closed
+		}
+		return t
+	}
+
+	t.Run("it returns done when all children terminal with at least one done", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child1 := makeTestTask("tick-child1", StatusDone, "tick-parent1")
+		child2 := makeTestTask("tick-child2", StatusCancelled, "tick-parent1")
+		child3 := makeTestTask("tick-child3", StatusDone, "tick-parent1")
+		tasks := []Task{parent, child1, child2, child3}
+
+		action, shouldComplete := EvaluateParentCompletion(tasks, "tick-parent1")
+
+		if !shouldComplete {
+			t.Fatal("expected shouldComplete to be true")
+		}
+		if action != "done" {
+			t.Errorf("expected action 'done', got %q", action)
+		}
+	})
+
+	t.Run("it returns cancel when all children cancelled", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child1 := makeTestTask("tick-child1", StatusCancelled, "tick-parent1")
+		child2 := makeTestTask("tick-child2", StatusCancelled, "tick-parent1")
+		tasks := []Task{parent, child1, child2}
+
+		action, shouldComplete := EvaluateParentCompletion(tasks, "tick-parent1")
+
+		if !shouldComplete {
+			t.Fatal("expected shouldComplete to be true")
+		}
+		if action != "cancel" {
+			t.Errorf("expected action 'cancel', got %q", action)
+		}
+	})
+
+	t.Run("it returns false when some children non-terminal", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child1 := makeTestTask("tick-child1", StatusDone, "tick-parent1")
+		child2 := makeTestTask("tick-child2", StatusOpen, "tick-parent1")
+		tasks := []Task{parent, child1, child2}
+
+		_, shouldComplete := EvaluateParentCompletion(tasks, "tick-parent1")
+
+		if shouldComplete {
+			t.Fatal("expected shouldComplete to be false")
+		}
+	})
+
+	t.Run("it returns false when parent not found", func(t *testing.T) {
+		child := makeTestTask("tick-child1", StatusDone, "tick-missing")
+		tasks := []Task{child}
+
+		_, shouldComplete := EvaluateParentCompletion(tasks, "tick-missing")
+
+		if shouldComplete {
+			t.Fatal("expected shouldComplete to be false")
+		}
+	})
+
+	t.Run("it returns false when parent is already terminal", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusDone, "")
+		child := makeTestTask("tick-child1", StatusDone, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		_, shouldComplete := EvaluateParentCompletion(tasks, "tick-parent1")
+
+		if shouldComplete {
+			t.Fatal("expected shouldComplete to be false for terminal parent")
+		}
+	})
+
+	t.Run("it returns false when parent has no children", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		tasks := []Task{parent}
+
+		_, shouldComplete := EvaluateParentCompletion(tasks, "tick-parent1")
+
+		if shouldComplete {
+			t.Fatal("expected shouldComplete to be false for parent with no children")
+		}
+	})
+
+	t.Run("it handles single child done", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child := makeTestTask("tick-child1", StatusDone, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		action, shouldComplete := EvaluateParentCompletion(tasks, "tick-parent1")
+
+		if !shouldComplete {
+			t.Fatal("expected shouldComplete to be true")
+		}
+		if action != "done" {
+			t.Errorf("expected action 'done', got %q", action)
+		}
+	})
+
+	t.Run("it handles single child cancelled", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child := makeTestTask("tick-child1", StatusCancelled, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		action, shouldComplete := EvaluateParentCompletion(tasks, "tick-parent1")
+
+		if !shouldComplete {
+			t.Fatal("expected shouldComplete to be true")
+		}
+		if action != "cancel" {
+			t.Errorf("expected action 'cancel', got %q", action)
+		}
+	})
+
+	t.Run("it normalizes parent ID for case-insensitive matching", func(t *testing.T) {
+		parent := makeTestTask("tick-parent1", StatusInProgress, "")
+		child := makeTestTask("tick-child1", StatusDone, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		action, shouldComplete := EvaluateParentCompletion(tasks, "TICK-PARENT1")
+
+		if !shouldComplete {
+			t.Fatal("expected shouldComplete to be true")
+		}
+		if action != "done" {
+			t.Errorf("expected action 'done', got %q", action)
+		}
+	})
+}

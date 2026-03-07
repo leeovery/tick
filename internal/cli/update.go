@@ -134,53 +134,19 @@ type rule3Result struct {
 // done if at least one child is done, cancelled if all children are cancelled.
 // Returns nil if Rule 3 does not apply.
 func evaluateRule3(tasks []task.Task, origParentID string, sm *task.StateMachine) *rule3Result {
-	normalizedParentID := task.NormalizeID(origParentID)
+	action, shouldComplete := task.EvaluateParentCompletion(tasks, origParentID)
+	if !shouldComplete {
+		return nil
+	}
 
-	// Find the original parent.
+	// Find the parent to apply the transition.
+	normalizedParentID := task.NormalizeID(origParentID)
 	var parentIdx int
-	parentFound := false
 	for i := range tasks {
 		if task.NormalizeID(tasks[i].ID) == normalizedParentID {
 			parentIdx = i
-			parentFound = true
 			break
 		}
-	}
-	if !parentFound {
-		return nil
-	}
-
-	// Parent must be non-terminal for Rule 3 to apply.
-	if tasks[parentIdx].Status == task.StatusDone || tasks[parentIdx].Status == task.StatusCancelled {
-		return nil
-	}
-
-	// Gather remaining children of the original parent.
-	allTerminal := true
-	anyDone := false
-	hasChildren := false
-	for i := range tasks {
-		if task.NormalizeID(tasks[i].Parent) != normalizedParentID {
-			continue
-		}
-		hasChildren = true
-		if tasks[i].Status != task.StatusDone && tasks[i].Status != task.StatusCancelled {
-			allTerminal = false
-			break
-		}
-		if tasks[i].Status == task.StatusDone {
-			anyDone = true
-		}
-	}
-
-	if !hasChildren || !allTerminal {
-		return nil
-	}
-
-	// Determine action: done if any child done, cancel if all cancelled.
-	action := "cancel"
-	if anyDone {
-		action = "done"
 	}
 
 	oldStatus := tasks[parentIdx].Status
