@@ -2,7 +2,7 @@
 topic: auto-cascade-parent-status
 plan: ../../planning/auto-cascade-parent-status/plan.md
 format: tick
-status: in-progress
+status: completed
 task_gate_mode: auto
 fix_gate_mode: gated
 analysis_gate_mode: gated
@@ -52,7 +52,7 @@ completed_tasks:
   - acps-4-6
 started: 2026-03-06
 updated: 2026-03-07
-completed: ~
+completed: 2026-03-07
 ---
 
 # Implementation: Auto Cascade Parent Status
