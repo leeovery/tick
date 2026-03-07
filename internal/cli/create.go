@@ -226,22 +226,14 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		// Validate parent allows adding children (Rule 7: blocks cancelled parent).
 		// If parent is done, trigger reopen cascade (Rule 6).
 		if opts.parent != "" {
-			for i := range tasks {
-				if tasks[i].ID == opts.parent {
-					if err := sm.ValidateAddChild(&tasks[i]); err != nil {
-						return nil, err
-					}
-					if tasks[i].Status == task.StatusDone {
-						r, c, err := sm.ApplyWithCascades(tasks, &tasks[i], "reopen")
-						if err != nil {
-							return nil, err
-						}
-						parentReopened = true
-						parentResult = r
-						cascades = c
-					}
-					break
-				}
+			r, c, reopened, err := validateAndReopenParent(tasks, opts.parent, &sm)
+			if err != nil {
+				return nil, err
+			}
+			if reopened {
+				parentReopened = true
+				parentResult = r
+				cascades = c
 			}
 		}
 

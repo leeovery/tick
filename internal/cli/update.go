@@ -301,23 +301,22 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			}
 			// Validate parent allows adding children (Rule 7: blocks cancelled parent).
 			// If parent is done, trigger reopen cascade (Rule 6).
-			for i := range tasks {
-				if task.NormalizeID(tasks[i].ID) == *opts.parent {
-					if err := sm.ValidateAddChild(&tasks[i]); err != nil {
-						return nil, err
+			r, c, reopened, valErr := validateAndReopenParent(tasks, *opts.parent, &sm)
+			if valErr != nil {
+				return nil, valErr
+			}
+			if reopened {
+				r6Triggered = true
+				r6Result = r
+				r6Cascades = c
+				// Find parent title for cascade output.
+				normalizedParent := task.NormalizeID(*opts.parent)
+				for _, tk := range tasks {
+					if task.NormalizeID(tk.ID) == normalizedParent {
+						r6ParentID = tk.ID
+						r6ParentTitle = tk.Title
+						break
 					}
-					if tasks[i].Status == task.StatusDone {
-						r, c, err := sm.ApplyWithCascades(tasks, &tasks[i], "reopen")
-						if err != nil {
-							return nil, err
-						}
-						r6Triggered = true
-						r6ParentID = tasks[i].ID
-						r6ParentTitle = tasks[i].Title
-						r6Result = r
-						r6Cascades = c
-					}
-					break
 				}
 			}
 		}

@@ -108,6 +108,31 @@ func outputTransitionOrCascade(stdout io.Writer, fmtr Formatter, id, title strin
 	}
 }
 
+// validateAndReopenParent finds the parent task in tasks by parentID, validates that
+// a child can be added (Rule 7: blocks cancelled parent), and if the parent is done,
+// triggers a reopen cascade (Rule 6). Returns the transition result, cascade changes,
+// whether a reopen occurred, and any error.
+func validateAndReopenParent(tasks []task.Task, parentID string, sm *task.StateMachine) (task.TransitionResult, []task.CascadeChange, bool, error) {
+	normalizedParent := task.NormalizeID(parentID)
+	for i := range tasks {
+		if task.NormalizeID(tasks[i].ID) != normalizedParent {
+			continue
+		}
+		if err := sm.ValidateAddChild(&tasks[i]); err != nil {
+			return task.TransitionResult{}, nil, false, err
+		}
+		if tasks[i].Status == task.StatusDone {
+			r, c, err := sm.ApplyWithCascades(tasks, &tasks[i], "reopen")
+			if err != nil {
+				return task.TransitionResult{}, nil, false, err
+			}
+			return r, c, true, nil
+		}
+		return task.TransitionResult{}, nil, false, nil
+	}
+	return task.TransitionResult{}, nil, false, nil
+}
+
 // applyBlocks iterates tasks and for each task whose ID appears in blockIDs,
 // appends sourceID to its BlockedBy slice and sets its Updated timestamp.
 // Skips the append if sourceID is already present in BlockedBy.

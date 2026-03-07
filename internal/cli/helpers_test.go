@@ -388,6 +388,109 @@ func TestOutputTransitionOrCascade(t *testing.T) {
 	})
 }
 
+func TestValidateAndReopenParent(t *testing.T) {
+	now := time.Date(2026, 3, 7, 12, 0, 0, 0, time.UTC)
+
+	t.Run("it returns no-op when parent is open", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-parent1", Title: "Parent", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		var sm task.StateMachine
+
+		_, _, reopened, err := validateAndReopenParent(tasks, "tick-parent1", &sm)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if reopened {
+			t.Error("reopened should be false for open parent")
+		}
+	})
+
+	t.Run("it returns no-op when parent is in_progress", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-parent1", Title: "Parent", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+		}
+		var sm task.StateMachine
+
+		_, _, reopened, err := validateAndReopenParent(tasks, "tick-parent1", &sm)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if reopened {
+			t.Error("reopened should be false for in_progress parent")
+		}
+	})
+
+	t.Run("it returns error when parent is cancelled (Rule 7)", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-parent1", Title: "Parent", Status: task.StatusCancelled, Priority: 2, Created: now, Updated: now},
+		}
+		var sm task.StateMachine
+
+		_, _, _, err := validateAndReopenParent(tasks, "tick-parent1", &sm)
+		if err == nil {
+			t.Fatal("expected error for cancelled parent")
+		}
+		if !strings.Contains(err.Error(), "cancelled") {
+			t.Errorf("error = %q, want it to mention cancelled", err.Error())
+		}
+	})
+
+	t.Run("it reopens done parent (Rule 6)", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-parent1", Title: "Parent", Status: task.StatusDone, Priority: 2, Created: now, Updated: now},
+		}
+		var sm task.StateMachine
+
+		result, _, reopened, err := validateAndReopenParent(tasks, "tick-parent1", &sm)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !reopened {
+			t.Error("reopened should be true for done parent")
+		}
+		if result.OldStatus != task.StatusDone {
+			t.Errorf("result.OldStatus = %v, want done", result.OldStatus)
+		}
+		if result.NewStatus != task.StatusOpen {
+			t.Errorf("result.NewStatus = %v, want open", result.NewStatus)
+		}
+		if tasks[0].Status != task.StatusOpen {
+			t.Errorf("tasks[0].Status = %v, want open after reopen", tasks[0].Status)
+		}
+	})
+
+	t.Run("it finds parent by normalized ID", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-parent1", Title: "Parent", Status: task.StatusDone, Priority: 2, Created: now, Updated: now},
+		}
+		var sm task.StateMachine
+
+		_, _, reopened, err := validateAndReopenParent(tasks, "TICK-PARENT1", &sm)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !reopened {
+			t.Error("reopened should be true")
+		}
+	})
+
+	t.Run("it returns no-op when parent ID not found in tasks", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-parent1", Title: "Parent", Status: task.StatusDone, Priority: 2, Created: now, Updated: now},
+		}
+		var sm task.StateMachine
+
+		_, _, reopened, err := validateAndReopenParent(tasks, "tick-nonexist", &sm)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if reopened {
+			t.Error("reopened should be false when parent not found")
+		}
+	})
+}
+
 func TestOpenStore(t *testing.T) {
 	t.Run("it returns a valid store for a valid tick directory", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
