@@ -32,7 +32,7 @@ var transitions = map[string]transitionRule{
 //
 // On failure (unknown action or invalid transition), the task is not modified
 // and an error is returned.
-func (sm StateMachine) Transition(t *Task, action string, tasks []Task) (TransitionResult, error) {
+func (sm StateMachine) Transition(t *Task, action string) (TransitionResult, error) {
 	rule, ok := transitions[action]
 	if !ok {
 		return TransitionResult{}, fmt.Errorf("unknown command %q", action)
@@ -43,19 +43,6 @@ func (sm StateMachine) Transition(t *Task, action string, tasks []Task) (Transit
 			"cannot %s task %s — status is '%s'",
 			action, t.ID, t.Status,
 		)
-	}
-
-	// Rule 9: block reopen if direct parent is cancelled.
-	if action == "reopen" && t.Parent != "" {
-		parentNorm := NormalizeID(t.Parent)
-		for i := range tasks {
-			if NormalizeID(tasks[i].ID) == parentNorm {
-				if tasks[i].Status == StatusCancelled {
-					return TransitionResult{}, fmt.Errorf("cannot reopen task under cancelled parent, reopen parent first")
-				}
-				break
-			}
-		}
 	}
 
 	oldStatus := t.Status

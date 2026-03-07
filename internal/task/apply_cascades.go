@@ -1,5 +1,7 @@
 package task
 
+import "fmt"
+
 // ApplyWithCascades applies a primary transition to target, then processes all resulting
 // cascades via a queue until no further cascades are produced. Each cascaded task is
 // mutated in-place and receives a TransitionRecord with Auto: true. The primary task
@@ -14,8 +16,21 @@ package task
 // Returns the primary TransitionResult, the full list of applied CascadeChanges, and any error.
 // On error (invalid primary transition), no tasks are mutated.
 func (sm StateMachine) ApplyWithCascades(tasks []Task, target *Task, action string) (TransitionResult, []CascadeChange, error) {
+	// Rule 9: block reopen if direct parent is cancelled.
+	if action == "reopen" && target.Parent != "" {
+		parentNorm := NormalizeID(target.Parent)
+		for i := range tasks {
+			if NormalizeID(tasks[i].ID) == parentNorm {
+				if tasks[i].Status == StatusCancelled {
+					return TransitionResult{}, nil, fmt.Errorf("cannot reopen task under cancelled parent, reopen parent first")
+				}
+				break
+			}
+		}
+	}
+
 	// Step 1: Apply the primary transition.
-	result, err := sm.Transition(target, action, tasks)
+	result, err := sm.Transition(target, action)
 	if err != nil {
 		return TransitionResult{}, nil, err
 	}
@@ -56,7 +71,7 @@ func (sm StateMachine) ApplyWithCascades(tasks []Task, target *Task, action stri
 		seen[nid] = true
 
 		// Apply the cascaded transition.
-		cResult, cErr := sm.Transition(change.Task, change.Action, tasks)
+		cResult, cErr := sm.Transition(change.Task, change.Action)
 		if cErr != nil {
 			// Cascade transitions should always be valid given the rules, but skip if not.
 			continue

@@ -384,4 +384,144 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 			t.Errorf("cascaded To = %q, want in_progress", tasks[0].Transitions[0].To)
 		}
 	})
+
+	t.Run("it blocks reopen under cancelled direct parent", func(t *testing.T) {
+		parent := makeTask("tick-parent1", StatusCancelled, "")
+		parent.Closed = closedTime()
+		child := makeTask("tick-child1", StatusCancelled, "tick-parent1")
+		child.Closed = closedTime()
+		tasks := []Task{parent, child}
+
+		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "reopen")
+		if err == nil {
+			t.Fatal("expected error for reopen under cancelled parent, got nil")
+		}
+
+		expected := "cannot reopen task under cancelled parent, reopen parent first"
+		if err.Error() != expected {
+			t.Errorf("expected error %q, got %q", expected, err.Error())
+		}
+
+		// Task should not be mutated
+		if tasks[1].Status != StatusCancelled {
+			t.Errorf("task status mutated to %q on error, expected cancelled", tasks[1].Status)
+		}
+		if len(tasks[1].Transitions) != 0 {
+			t.Error("no transition history should be recorded on error")
+		}
+	})
+
+	t.Run("it allows reopen with no parent via ApplyWithCascades", func(t *testing.T) {
+		child := makeTask("tick-child1", StatusCancelled, "")
+		child.Closed = closedTime()
+		tasks := []Task{child}
+
+		_, _, err := sm.ApplyWithCascades(tasks, &tasks[0], "reopen")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if tasks[0].Status != StatusOpen {
+			t.Errorf("expected status open, got %q", tasks[0].Status)
+		}
+	})
+
+	t.Run("it allows reopen under open parent via ApplyWithCascades", func(t *testing.T) {
+		parent := makeTask("tick-parent1", StatusOpen, "")
+		child := makeTask("tick-child1", StatusDone, "tick-parent1")
+		child.Closed = closedTime()
+		tasks := []Task{parent, child}
+
+		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "reopen")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if tasks[1].Status != StatusOpen {
+			t.Errorf("expected status open, got %q", tasks[1].Status)
+		}
+	})
+
+	t.Run("it allows reopen under done parent via ApplyWithCascades", func(t *testing.T) {
+		parent := makeTask("tick-parent1", StatusDone, "")
+		parent.Closed = closedTime()
+		child := makeTask("tick-child1", StatusDone, "tick-parent1")
+		child.Closed = closedTime()
+		tasks := []Task{parent, child}
+
+		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "reopen")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if tasks[1].Status != StatusOpen {
+			t.Errorf("expected status open, got %q", tasks[1].Status)
+		}
+	})
+
+	t.Run("it allows reopen under in_progress parent via ApplyWithCascades", func(t *testing.T) {
+		parent := makeTask("tick-parent1", StatusInProgress, "")
+		child := makeTask("tick-child1", StatusDone, "tick-parent1")
+		child.Closed = closedTime()
+		tasks := []Task{parent, child}
+
+		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "reopen")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if tasks[1].Status != StatusOpen {
+			t.Errorf("expected status open, got %q", tasks[1].Status)
+		}
+	})
+
+	t.Run("it allows reopen when grandparent is cancelled but direct parent is not", func(t *testing.T) {
+		grandparent := makeTask("tick-gp1", StatusCancelled, "")
+		grandparent.Closed = closedTime()
+		parent := makeTask("tick-parent1", StatusDone, "tick-gp1")
+		parent.Closed = closedTime()
+		child := makeTask("tick-child1", StatusDone, "tick-parent1")
+		child.Closed = closedTime()
+		tasks := []Task{grandparent, parent, child}
+
+		_, _, err := sm.ApplyWithCascades(tasks, &tasks[2], "reopen")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if tasks[2].Status != StatusOpen {
+			t.Errorf("expected status open, got %q", tasks[2].Status)
+		}
+	})
+
+	t.Run("it proceeds with reopen when parent ID references non-existent task", func(t *testing.T) {
+		child := makeTask("tick-child1", StatusCancelled, "tick-missing")
+		child.Closed = closedTime()
+		tasks := []Task{child}
+
+		_, _, err := sm.ApplyWithCascades(tasks, &tasks[0], "reopen")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if tasks[0].Status != StatusOpen {
+			t.Errorf("expected status open, got %q", tasks[0].Status)
+		}
+	})
+
+	t.Run("it skips Rule 9 check for non-reopen actions", func(t *testing.T) {
+		parent := makeTask("tick-parent1", StatusCancelled, "")
+		parent.Closed = closedTime()
+		child := makeTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "start")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if tasks[1].Status != StatusInProgress {
+			t.Errorf("expected status in_progress, got %q", tasks[1].Status)
+		}
+	})
 }
