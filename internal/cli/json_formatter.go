@@ -303,7 +303,11 @@ func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) string {
 
 	unchanged := make([]jsonUnchangedEntry, 0, len(result.Unchanged))
 	for _, u := range result.Unchanged {
-		unchanged = append(unchanged, jsonUnchangedEntry(u))
+		unchanged = append(unchanged, jsonUnchangedEntry{
+			ID:     u.ID,
+			Title:  u.Title,
+			Status: u.Status,
+		})
 	}
 
 	return marshalIndentJSON(jsonCascadeResult{

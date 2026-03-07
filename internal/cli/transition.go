@@ -66,8 +66,9 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 }
 
 // buildCascadeResult constructs a CascadeResult from the primary transition, cascade
-// changes, and the full task list. It populates Unchanged with children of the primary
-// task that are in terminal states and were not part of the cascade changes.
+// changes, and the full task list. It populates ParentID on each cascade entry from the
+// task's Parent field, and collects unchanged terminal descendants recursively (all levels,
+// not just direct children).
 func buildCascadeResult(id, title string, result task.TransitionResult, cascades []task.CascadeChange, tasks []task.Task) CascadeResult {
 	cr := CascadeResult{
 		TaskID:    id,
@@ -76,22 +77,53 @@ func buildCascadeResult(id, title string, result task.TransitionResult, cascades
 		NewStatus: string(result.NewStatus),
 	}
 
+	// Detect upward cascade: if any cascaded task is the primary task's parent,
+	// the cascade went upward (child start triggers parent/grandparent start).
+	// Find the primary task's parent.
+	var primaryParent string
+	for i := range tasks {
+		if task.NormalizeID(tasks[i].ID) == task.NormalizeID(id) {
+			primaryParent = tasks[i].Parent
+			break
+		}
+	}
+	isUpward := false
+	for _, c := range cascades {
+		if task.NormalizeID(c.Task.ID) == task.NormalizeID(primaryParent) {
+			isUpward = true
+			break
+		}
+	}
+
 	// Build set of cascaded task IDs for quick lookup.
 	cascadedIDs := make(map[string]bool, len(cascades))
 	for _, c := range cascades {
 		cascadedIDs[task.NormalizeID(c.Task.ID)] = true
+		parentID := c.Task.Parent
+		if isUpward {
+			// Upward cascades render flat: all entries are roots relative to the primary task.
+			parentID = id
+		}
 		cr.Cascaded = append(cr.Cascaded, CascadeEntry{
 			ID:        c.Task.ID,
 			Title:     c.Task.Title,
+			ParentID:  parentID,
 			OldStatus: string(c.OldStatus),
 			NewStatus: string(c.NewStatus),
 		})
 	}
 
-	// Populate Unchanged: children of the primary task that are terminal and not cascaded.
-	normalizedID := task.NormalizeID(id)
+	// Build set of all involved task IDs (primary + cascaded) for descendant walking.
+	involvedIDs := make(map[string]bool, len(cascades)+1)
+	involvedIDs[task.NormalizeID(id)] = true
+	for nid := range cascadedIDs {
+		involvedIDs[nid] = true
+	}
+
+	// Populate Unchanged: descendants of involved tasks that are terminal and not cascaded.
 	for i := range tasks {
-		if task.NormalizeID(tasks[i].Parent) != normalizedID {
+		parentNID := task.NormalizeID(tasks[i].Parent)
+		if !involvedIDs[parentNID] {
 			continue
 		}
 		childNID := task.NormalizeID(tasks[i].ID)
@@ -100,9 +132,10 @@ func buildCascadeResult(id, title string, result task.TransitionResult, cascades
 		}
 		if tasks[i].Status == task.StatusDone || tasks[i].Status == task.StatusCancelled {
 			cr.Unchanged = append(cr.Unchanged, UnchangedEntry{
-				ID:     tasks[i].ID,
-				Title:  tasks[i].Title,
-				Status: string(tasks[i].Status),
+				ID:       tasks[i].ID,
+				Title:    tasks[i].Title,
+				ParentID: tasks[i].Parent,
+				Status:   string(tasks[i].Status),
 			})
 		}
 	}

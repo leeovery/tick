@@ -545,6 +545,80 @@ func TestTransitionCommands(t *testing.T) {
 		}
 	})
 
+	t.Run("it renders upward cascade entries flat not nested", func(t *testing.T) {
+		// 3-level hierarchy: grandparent > parent > child.
+		// Starting child should cascade parent and grandparent to in_progress.
+		grandparent := task.Task{
+			ID: "tick-ggg111", Title: "Grandparent", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		parent := task.Task{
+			ID: "tick-ppp111", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Parent: "tick-ggg111",
+			Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-ccc111", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Parent: "tick-ppp111",
+			Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{grandparent, parent, child})
+
+		stdout, _, exitCode := runTransition(t, dir, "start", "tick-ccc111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		// Both parent and grandparent should appear in output
+		if !strings.Contains(stdout, "tick-ppp111") {
+			t.Errorf("stdout should contain parent ID, got %q", stdout)
+		}
+		if !strings.Contains(stdout, "tick-ggg111") {
+			t.Errorf("stdout should contain grandparent ID, got %q", stdout)
+		}
+	})
+
+	t.Run("buildCascadeResult sets flat ParentIDs for 3-level upward cascade", func(t *testing.T) {
+		// 3-level hierarchy: grandparent > parent > child.
+		// Child is the primary task; parent and grandparent cascaded upward.
+		// All cascade entries should have ParentID = primary task ID (child),
+		// making them flat roots in the tree (no nesting).
+		grandparent := task.Task{
+			ID: "tick-ggg111", Title: "Grandparent", Status: task.StatusOpen,
+			Priority: 2, Parent: "", Created: now, Updated: now,
+		}
+		parent := task.Task{
+			ID: "tick-ppp111", Title: "Parent", Status: task.StatusOpen,
+			Priority: 2, Parent: "tick-ggg111", Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-ccc111", Title: "Child", Status: task.StatusOpen,
+			Priority: 2, Parent: "tick-ppp111", Created: now, Updated: now,
+		}
+
+		primaryResult := task.TransitionResult{
+			OldStatus: task.StatusOpen,
+			NewStatus: task.StatusInProgress,
+		}
+		cascades := []task.CascadeChange{
+			{Task: &parent, OldStatus: task.StatusOpen, NewStatus: task.StatusInProgress},
+			{Task: &grandparent, OldStatus: task.StatusOpen, NewStatus: task.StatusInProgress},
+		}
+		allTasks := []task.Task{grandparent, parent, child}
+
+		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks)
+
+		if len(cr.Cascaded) != 2 {
+			t.Fatalf("expected 2 cascaded entries, got %d", len(cr.Cascaded))
+		}
+		for _, entry := range cr.Cascaded {
+			if entry.ParentID != "tick-ccc111" {
+				t.Errorf("cascade entry %s: ParentID = %q, want %q (primary task ID for flat rendering)",
+					entry.ID, entry.ParentID, "tick-ccc111")
+			}
+		}
+	})
+
 	t.Run("it suppresses cascade output in quiet mode", func(t *testing.T) {
 		// Parent with open child: done on parent with --quiet should print nothing.
 		parentTask := task.Task{

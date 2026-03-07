@@ -131,15 +131,17 @@ type RemovalResult struct {
 type CascadeEntry struct {
 	ID        string
 	Title     string
+	ParentID  string
 	OldStatus string
 	NewStatus string
 }
 
 // UnchangedEntry holds a terminal child that was not affected by a cascade.
 type UnchangedEntry struct {
-	ID     string
-	Title  string
-	Status string
+	ID       string
+	Title    string
+	ParentID string
+	Status   string
 }
 
 // CascadeResult holds all data needed to render a cascade transition:

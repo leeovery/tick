@@ -186,8 +186,16 @@ func (f *PrettyFormatter) FormatMessage(msg string) string {
 	return msg
 }
 
+// cascadeNode represents a node in the cascade tree for pretty-format rendering.
+type cascadeNode struct {
+	id       string
+	text     string
+	children []*cascadeNode
+}
+
 // FormatCascadeTransition renders a cascade transition with box-drawing tree characters.
-// Primary transition on first line, then "Cascaded:" header with tree entries.
+// Entries are organized into a tree using ParentID. Entries whose ParentID equals the
+// primary task ID are top-level; entries whose ParentID matches another entry are nested.
 func (f *PrettyFormatter) FormatCascadeTransition(result CascadeResult) string {
 	if result.TaskID == "" {
 		return ""
@@ -200,27 +208,71 @@ func (f *PrettyFormatter) FormatCascadeTransition(result CascadeResult) string {
 		return b.String()
 	}
 
-	b.WriteString("\n\nCascaded:")
+	// Build a map of nodes keyed by ID for tree construction.
+	nodes := make(map[string]*cascadeNode)
+	// Ordered list of all node IDs to preserve insertion order.
+	var orderedIDs []string
 
-	entryIdx := 0
 	for _, c := range result.Cascaded {
-		entryIdx++
-		prefix := "\u251c\u2500"
-		if entryIdx == totalEntries {
-			prefix = "\u2514\u2500"
+		n := &cascadeNode{
+			id:   c.ID,
+			text: fmt.Sprintf("%s %q: %s \u2192 %s", c.ID, c.Title, c.OldStatus, c.NewStatus),
 		}
-		fmt.Fprintf(&b, "\n%s %s %q: %s \u2192 %s", prefix, c.ID, c.Title, c.OldStatus, c.NewStatus)
+		nodes[c.ID] = n
+		orderedIDs = append(orderedIDs, c.ID)
 	}
 	for _, u := range result.Unchanged {
-		entryIdx++
-		prefix := "\u251c\u2500"
-		if entryIdx == totalEntries {
-			prefix = "\u2514\u2500"
+		n := &cascadeNode{
+			id:   u.ID,
+			text: fmt.Sprintf("%s %q: %s (unchanged)", u.ID, u.Title, u.Status),
 		}
-		fmt.Fprintf(&b, "\n%s %s %q: %s (unchanged)", prefix, u.ID, u.Title, u.Status)
+		nodes[u.ID] = n
+		orderedIDs = append(orderedIDs, u.ID)
 	}
 
+	// Build tree: attach children to parents.
+	var roots []*cascadeNode
+	parentIDOf := make(map[string]string)
+	for _, c := range result.Cascaded {
+		parentIDOf[c.ID] = c.ParentID
+	}
+	for _, u := range result.Unchanged {
+		parentIDOf[u.ID] = u.ParentID
+	}
+
+	for _, id := range orderedIDs {
+		pid := parentIDOf[id]
+		if parent, ok := nodes[pid]; ok {
+			parent.children = append(parent.children, nodes[id])
+		} else {
+			roots = append(roots, nodes[id])
+		}
+	}
+
+	b.WriteString("\n\nCascaded:")
+	writeCascadeTree(&b, roots, "")
+
 	return b.String()
+}
+
+// writeCascadeTree recursively renders tree nodes with box-drawing characters.
+func writeCascadeTree(b *strings.Builder, nodes []*cascadeNode, prefix string) {
+	for i, n := range nodes {
+		isLast := i == len(nodes)-1
+		connector := "\u251c\u2500"
+		if isLast {
+			connector = "\u2514\u2500"
+		}
+		fmt.Fprintf(b, "\n%s%s %s", prefix, connector, n.text)
+
+		if len(n.children) > 0 {
+			childPrefix := prefix + "\u2502  "
+			if isLast {
+				childPrefix = prefix + "   "
+			}
+			writeCascadeTree(b, n.children, childPrefix)
+		}
+	}
 }
 
 // typeOrDash returns the type string or "-" if empty, for Pretty formatter display.
