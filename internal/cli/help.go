@@ -36,7 +36,8 @@ var commands = []commandInfo{
 		Summary: "Create a new task",
 		Usage:   "tick create <title> [flags]",
 		Description: "Creates a new task with the given title. A unique ID is generated\n" +
-			"automatically. Priority defaults to 2 (medium).",
+			"automatically. Priority defaults to 2 (medium).\n" +
+			"If the parent task is done, it is automatically reopened.",
 		Flags: []flagInfo{
 			{"--priority", "<0-4>", "Task priority (default: 2)", false},
 			{"--description", "<text>", "Task description", false},
@@ -76,7 +77,9 @@ var commands = []commandInfo{
 		Summary: "Update task fields",
 		Usage:   "tick update <task-id> [flags]",
 		Description: "Updates one or more fields on an existing task.\n" +
-			"At least one flag is required.",
+			"At least one flag is required.\n" +
+			"Reparenting: if the new parent is done, it is reopened. If the old\n" +
+			"parent's remaining children are all terminal, it auto-completes.",
 		Flags: []flagInfo{
 			{"--title", "<text>", "New title", false},
 			{"--description", "<text>", "New description", false},
@@ -93,28 +96,34 @@ var commands = []commandInfo{
 		},
 	},
 	{
-		Name:        "start",
-		Summary:     "Start a task (open → in_progress)",
-		Usage:       "tick start <task-id>",
-		Description: "Transitions a task from open to in_progress.",
+		Name:    "start",
+		Summary: "Start a task (open → in_progress)",
+		Usage:   "tick start <task-id>",
+		Description: "Transitions a task from open to in_progress.\n" +
+			"Cascades: automatically starts any open ancestors.",
 	},
 	{
-		Name:        "done",
-		Summary:     "Complete a task (in_progress → done)",
-		Usage:       "tick done <task-id>",
-		Description: "Transitions a task from in_progress to done.",
+		Name:    "done",
+		Summary: "Complete a task (in_progress → done)",
+		Usage:   "tick done <task-id>",
+		Description: "Transitions a task from in_progress to done.\n" +
+			"Cascades: marks all non-terminal descendants as done. If all siblings\n" +
+			"are now terminal, auto-completes the parent (and upward recursively).",
 	},
 	{
-		Name:        "cancel",
-		Summary:     "Cancel a task (any → cancelled)",
-		Usage:       "tick cancel <task-id>",
-		Description: "Cancels a task regardless of current status.",
+		Name:    "cancel",
+		Summary: "Cancel a task (any → cancelled)",
+		Usage:   "tick cancel <task-id>",
+		Description: "Cancels a task regardless of current status.\n" +
+			"Cascades: cancels all non-terminal descendants. If all siblings are\n" +
+			"now terminal, auto-completes the parent (done or cancel as appropriate).",
 	},
 	{
-		Name:        "reopen",
-		Summary:     "Reopen a task (done/cancelled → open)",
-		Usage:       "tick reopen <task-id>",
-		Description: "Transitions a done or cancelled task back to open.",
+		Name:    "reopen",
+		Summary: "Reopen a task (done/cancelled → open)",
+		Usage:   "tick reopen <task-id>",
+		Description: "Transitions a done or cancelled task back to open.\n" +
+			"Cascades: reopens any done ancestors. Blocked if parent is cancelled.",
 	},
 	{
 		Name:    "remove",
@@ -143,7 +152,8 @@ var commands = []commandInfo{
 		Summary: "Manage task dependencies",
 		Usage:   "tick dep <add|rm> <task-id> <blocked-by-id>",
 		Description: "Adds or removes a dependency between two tasks.\n" +
-			"Prevents self-references and dependency cycles.",
+			"Prevents self-references, dependency cycles, and adding a\n" +
+			"cancelled task as a dependency.",
 	},
 	{
 		Name:    "ready",
