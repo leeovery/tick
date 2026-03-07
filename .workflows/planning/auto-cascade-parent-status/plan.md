@@ -106,3 +106,19 @@ ext_id: tick-02a182
 | acps-3-3 | Wire ApplyWithCascades into RunTransition | no cascades (single-task uses FormatTransition), quiet mode suppresses output, task not found | authored | tick-a24919 |
 | acps-3-4 | Wire ValidateAddChild and done-parent reopen cascade into RunCreate | parent cancelled (error), parent open (no cascade), parent done (reopen cascade) | authored | tick-1dd3c8 |
 | acps-3-5 | Wire reparenting cascade logic into RunUpdate | reparent away triggers Rule 3 on original parent, reparent to done triggers Rule 6, clear parent | authored | tick-2bf0f6 |
+
+### Phase 4: Analysis (Cycle 1)
+status: approved
+ext_id: tick-35f54b
+
+**Goal**: Address findings from Analysis (Cycle 1).
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| acps-4-1 | Pretty format cascade tree rendering | none | authored | tick-0a4018 |
+| acps-4-2 | Move Rule 9 out of Transition into ApplyWithCascades | none | authored | tick-90d410 |
+| acps-4-3 | Extract Rule 3 completion evaluation into shared function | none | authored | tick-3a835e |
+| acps-4-4 | Extract cascade output helper function | none | authored | tick-20678b |
+| acps-4-5 | Extract parent validation and reopen helper | none | authored | tick-1baf3b |
+| acps-4-6 | Defensive copy of task data for cascade display output | none | authored | tick-f09744 |

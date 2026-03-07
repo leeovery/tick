@@ -6,7 +6,7 @@ total_proposed: 6
 # Analysis Tasks: Auto-Cascade Parent Status (Cycle 1)
 
 ## Task 1: Pretty format cascade tree rendering
-status: pending
+status: approved
 severity: high
 sources: standards, architecture
 
@@ -36,7 +36,7 @@ sources: standards, architecture
 - Test toon and JSON formats unchanged by the refactor
 
 ## Task 2: Move Rule 9 out of Transition into ApplyWithCascades
-status: pending
+status: approved
 severity: medium
 sources: standards, architecture
 
@@ -65,7 +65,7 @@ sources: standards, architecture
 - Test backward-compatible wrapper still works for simple transitions
 
 ## Task 3: Extract Rule 3 completion evaluation into shared function
-status: pending
+status: approved
 severity: medium
 sources: duplication, architecture
 
@@ -95,7 +95,7 @@ sources: duplication, architecture
 - Test reparenting still triggers Rule 3 on original parent
 
 ## Task 4: Extract cascade output helper function
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -121,7 +121,7 @@ sources: duplication
 - Test the helper with non-empty cascades (should call FormatCascadeTransition)
 
 ## Task 5: Extract parent validation and reopen helper
-status: pending
+status: approved
 severity: medium
 sources: duplication
 
@@ -148,7 +148,7 @@ sources: duplication
 - Existing tests for creating/reparenting to a cancelled parent (error) pass unchanged
 
 ## Task 6: Defensive copy of task data for cascade display output
-status: pending
+status: approved
 severity: medium
 sources: architecture
 
