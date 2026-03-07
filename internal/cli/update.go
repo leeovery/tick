@@ -411,22 +411,12 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 	// Output Rule 6 cascade info (reopen of done parent).
 	if r6Triggered && !fc.Quiet {
-		if len(r6Cascades) == 0 {
-			fmt.Fprintln(stdout, fmtr.FormatTransition(r6ParentID, string(r6Result.OldStatus), string(r6Result.NewStatus)))
-		} else {
-			cr := buildCascadeResult(r6ParentID, r6ParentTitle, r6Result, r6Cascades, allTasks)
-			fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
-		}
+		outputTransitionOrCascade(stdout, fmtr, r6ParentID, r6ParentTitle, r6Result, r6Cascades, allTasks)
 	}
 
 	// Output Rule 3 cascade info (auto-completion of original parent).
 	if r3 != nil && !fc.Quiet {
-		if len(r3.cascades) == 0 {
-			fmt.Fprintln(stdout, fmtr.FormatTransition(r3.parentID, string(r3.result.OldStatus), string(r3.result.NewStatus)))
-		} else {
-			cr := buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, allTasks)
-			fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
-		}
+		outputTransitionOrCascade(stdout, fmtr, r3.parentID, r3.parentTitle, r3.result, r3.cascades, allTasks)
 	}
 
 	return nil

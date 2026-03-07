@@ -54,12 +54,7 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 	}
 
 	if !fc.Quiet {
-		if len(cascades) == 0 {
-			fmt.Fprintln(stdout, fmtr.FormatTransition(id, string(result.OldStatus), string(result.NewStatus)))
-		} else {
-			cr := buildCascadeResult(id, targetTitle, result, cascades, allTasks)
-			fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
-		}
+		outputTransitionOrCascade(stdout, fmtr, id, targetTitle, result, cascades, allTasks)
 	}
 
 	return nil

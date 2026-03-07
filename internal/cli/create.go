@@ -290,12 +290,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 				break
 			}
 		}
-		if len(cascades) == 0 {
-			fmt.Fprintln(stdout, fmtr.FormatTransition(parentID, string(parentResult.OldStatus), string(parentResult.NewStatus)))
-		} else {
-			cr := buildCascadeResult(parentID, parentTitle, parentResult, cascades, allTasks)
-			fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
-		}
+		outputTransitionOrCascade(stdout, fmtr, parentID, parentTitle, parentResult, cascades, allTasks)
 	}
 
 	return nil

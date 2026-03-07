@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -285,6 +286,104 @@ func TestOutputMutationResult(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "not found") {
 			t.Errorf("error = %q, want to contain 'not found'", err.Error())
+		}
+	})
+}
+
+func TestOutputTransitionOrCascade(t *testing.T) {
+	now := time.Now()
+
+	t.Run("it uses FormatTransition when cascades is empty", func(t *testing.T) {
+		var buf strings.Builder
+		fmtr := &ToonFormatter{}
+		result := task.TransitionResult{OldStatus: task.StatusOpen, NewStatus: task.StatusInProgress}
+
+		outputTransitionOrCascade(&buf, fmtr, "tick-abc123", "My Task", result, nil, nil)
+
+		output := buf.String()
+		expected := "tick-abc123: open → in_progress\n"
+		if output != expected {
+			t.Errorf("output = %q, want %q", output, expected)
+		}
+	})
+
+	t.Run("it uses FormatCascadeTransition when cascades is non-empty", func(t *testing.T) {
+		var buf strings.Builder
+		fmtr := &ToonFormatter{}
+
+		parent := task.Task{ID: "tick-parent1", Title: "Parent", Status: task.StatusCancelled, Created: now, Updated: now}
+		child := task.Task{ID: "tick-child1", Title: "Child", Status: task.StatusCancelled, Parent: "tick-parent1", Created: now, Updated: now}
+		tasks := []task.Task{parent, child}
+
+		result := task.TransitionResult{OldStatus: task.StatusInProgress, NewStatus: task.StatusCancelled}
+		cascades := []task.CascadeChange{
+			{Task: &tasks[1], Action: "cancel", OldStatus: task.StatusOpen, NewStatus: task.StatusCancelled},
+		}
+
+		outputTransitionOrCascade(&buf, fmtr, "tick-parent1", "Parent", result, cascades, tasks)
+
+		output := buf.String()
+		if !strings.Contains(output, "tick-parent1: in_progress → cancelled") {
+			t.Errorf("output should contain primary transition, got %q", output)
+		}
+		if !strings.Contains(output, "tick-child1: open → cancelled (auto)") {
+			t.Errorf("output should contain cascaded child, got %q", output)
+		}
+	})
+
+	t.Run("it produces identical output to inline pattern for simple transition", func(t *testing.T) {
+		fmtr := &PrettyFormatter{}
+		result := task.TransitionResult{OldStatus: task.StatusOpen, NewStatus: task.StatusDone}
+
+		// Inline pattern (what the old code did)
+		var inlineBuf strings.Builder
+		fmt.Fprintln(&inlineBuf, fmtr.FormatTransition("tick-aaa111", string(result.OldStatus), string(result.NewStatus)))
+
+		// Helper function
+		var helperBuf strings.Builder
+		outputTransitionOrCascade(&helperBuf, fmtr, "tick-aaa111", "Task", result, nil, nil)
+
+		if helperBuf.String() != inlineBuf.String() {
+			t.Errorf("helper output = %q, inline output = %q", helperBuf.String(), inlineBuf.String())
+		}
+	})
+
+	t.Run("it produces identical output to inline pattern for cascade transition", func(t *testing.T) {
+		fmtr := &PrettyFormatter{}
+
+		parent := task.Task{ID: "tick-parent1", Title: "Parent", Status: task.StatusCancelled, Created: now, Updated: now}
+		child := task.Task{ID: "tick-child1", Title: "Child", Status: task.StatusCancelled, Parent: "tick-parent1", Created: now, Updated: now}
+		tasks := []task.Task{parent, child}
+
+		result := task.TransitionResult{OldStatus: task.StatusInProgress, NewStatus: task.StatusCancelled}
+		cascades := []task.CascadeChange{
+			{Task: &tasks[1], Action: "cancel", OldStatus: task.StatusOpen, NewStatus: task.StatusCancelled},
+		}
+
+		// Inline pattern
+		var inlineBuf strings.Builder
+		cr := buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks)
+		fmt.Fprintln(&inlineBuf, fmtr.FormatCascadeTransition(cr))
+
+		// Helper function
+		var helperBuf strings.Builder
+		outputTransitionOrCascade(&helperBuf, fmtr, "tick-parent1", "Parent", result, cascades, tasks)
+
+		if helperBuf.String() != inlineBuf.String() {
+			t.Errorf("helper output = %q, inline output = %q", helperBuf.String(), inlineBuf.String())
+		}
+	})
+
+	t.Run("it works with JSON formatter for simple transition", func(t *testing.T) {
+		var buf strings.Builder
+		fmtr := &JSONFormatter{}
+		result := task.TransitionResult{OldStatus: task.StatusOpen, NewStatus: task.StatusInProgress}
+
+		outputTransitionOrCascade(&buf, fmtr, "tick-abc123", "My Task", result, nil, nil)
+
+		output := buf.String()
+		if !strings.Contains(output, `"id": "tick-abc123"`) {
+			t.Errorf("output should contain JSON id field, got %q", output)
 		}
 	})
 }
