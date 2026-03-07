@@ -6,13 +6,19 @@
 
 Route based on the `source` variable set in earlier steps.
 
-#### If source is "bridge"
+#### If source is `bridge`
 
 Bridge mode: topic and work_type were provided by the caller.
 
-Check if research exists for this topic. Read `.workflows/research/{topic}.md` and look for a `> **Discussion-ready**:` marker.
+Check research status via manifest:
 
-**If research exists with a discussion-ready marker:**
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase research status
+```
+
+**If research status is `concluded`:**
+
+Read `.workflows/{work_unit}/research/*.md` for context to include in the handoff.
 
 > *Output the next fenced block as a code block:*
 
@@ -21,7 +27,7 @@ Starting discussion: {topic:(titlecase)}
 Work type: {work_type}
 
 Research context:
-{discussion-ready summary extracted from research file}
+{key findings and context from research files}
 
 Anything to add or adjust before we begin, or "go" to proceed:
 ```
@@ -50,7 +56,7 @@ What would you like to discuss? Provide some initial context:
 
 → Return to **[the skill](../SKILL.md)**.
 
-#### If source is "research"
+#### If source is `research`
 
 Load **[gather-context-research.md](gather-context-research.md)** and follow its instructions.
 
@@ -58,7 +64,7 @@ Load **[gather-context-research.md](gather-context-research.md)** and follow its
 
 → Return to **[the skill](../SKILL.md)**.
 
-#### If source is "fresh"
+#### If source is `fresh`
 
 Load **[gather-context-fresh.md](gather-context-fresh.md)** and follow its instructions.
 
@@ -66,7 +72,7 @@ Load **[gather-context-fresh.md](gather-context-fresh.md)** and follow its instr
 
 → Return to **[the skill](../SKILL.md)**.
 
-#### If source is "continue"
+#### If source is `continue`
 
 Load **[gather-context-continue.md](gather-context-continue.md)** and follow its instructions.
 

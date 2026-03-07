@@ -8,7 +8,7 @@ Shows when cache is valid (directly from routing) or after analysis completes. T
 
 ## A. Load Groupings
 
-Load groupings from `.workflows/.state/discussion-consolidation-analysis.md`. Parse the `### {Name}` headings and their discussion lists.
+Load groupings from `.workflows/{work_unit}/.state/discussion-consolidation-analysis.md`. Parse the `### {Name}` headings and their discussion lists.
 
 → Proceed to **B. Determine Discussion Status**.
 
@@ -66,7 +66,7 @@ Recommended breakdown for specifications with their source discussions.
 2. ...
 ```
 
-### If in-progress discussions exist
+#### If in-progress discussions exist
 
 > *Output the next fenced block as a code block:*
 
@@ -158,19 +158,19 @@ Every meta option (Unify, Re-analyze) MUST include its description lines.
 
 → Load **[confirm-and-handoff.md](confirm-and-handoff.md)** and follow its instructions.
 
-#### If user picks "Unify all"
+#### If user picks `Unify all`
 
-Update the cache: rewrite `.workflows/.state/discussion-consolidation-analysis.md` with a single "Unified" grouping containing all concluded discussions. Keep the same checksum, update the generated timestamp. Add note: `Custom groupings confirmed by user (unified).`
+Update the cache: rewrite `.workflows/{work_unit}/.state/discussion-consolidation-analysis.md` with a single "Unified" grouping containing all concluded discussions. Keep the same checksum, update the generated timestamp. Add note: `Custom groupings confirmed by user (unified).`
 
 Spec name: "Unified". Sources: all concluded discussions.
 
 → Load **[confirm-and-handoff.md](confirm-and-handoff.md)** and follow its instructions.
 
-#### If user picks "Re-analyze"
+#### If user picks `Re-analyze`
 
 Delete the cache:
 ```bash
-rm .workflows/.state/discussion-consolidation-analysis.md
+rm .workflows/{work_unit}/.state/discussion-consolidation-analysis.md
 ```
 
 → Load **[analysis-flow.md](analysis-flow.md)** and follow its instructions.

@@ -4,43 +4,41 @@
 
 ---
 
-Check if specification exists and is ready.
+Check if specification exists and is ready using the manifest CLI.
 
 ```bash
-ls .workflows/specification/
+node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase specification --topic {topic}
 ```
 
-Read `.workflows/specification/{topic}/specification.md` frontmatter.
-
-#### If specification doesn't exist
+#### If specification phase doesn't exist or has no status
 
 > *Output the next fenced block as a code block:*
 
 ```
 Specification Missing
 
-No specification found for "{topic:(titlecase)}".
+No specification found for "{work_unit:(titlecase)}".
 
 A concluded specification is required for planning.
-Run /start-specification {work_type} {topic} to create one.
+Run /start-specification {work_type} {work_unit} to create one.
 ```
 
 **STOP.** Do not proceed — terminal condition.
 
-#### If specification exists but status is "in-progress"
+#### If specification exists but status is `in-progress`
 
 > *Output the next fenced block as a code block:*
 
 ```
 Specification In Progress
 
-The specification for "{topic:(titlecase)}" is not yet concluded.
-Run /start-specification {work_type} {topic} to continue.
+The specification for "{work_unit:(titlecase)}" is not yet concluded.
+Run /start-specification {work_type} {work_unit} to continue.
 ```
 
 **STOP.** Do not proceed — terminal condition.
 
-#### If specification exists and status is "concluded"
+#### If specification exists and status is `concluded`
 
 Parse cross-cutting specs from `specifications.crosscutting` in the discovery output.
 

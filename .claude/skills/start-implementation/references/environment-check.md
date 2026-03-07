@@ -8,7 +8,7 @@
 
 Use the `environment` section from the discovery output:
 
-#### If setup_file_exists is true and requires_setup is false
+#### If `setup_file_exists` is true and `requires_setup` is false
 
 > *Output the next fenced block as a code block:*
 
@@ -18,17 +18,17 @@ Environment: No special setup required.
 
 → Return to **[the skill](../SKILL.md)**.
 
-#### If setup_file_exists is true and requires_setup is true
+#### If `setup_file_exists` is true and `requires_setup` is true
 
 > *Output the next fenced block as a code block:*
 
 ```
-Environment setup file found: .workflows/environment-setup.md
+Environment setup file found: .workflows/.state/environment-setup.md
 ```
 
 → Return to **[the skill](../SKILL.md)**.
 
-#### If setup_file_exists is false or requires_setup is unknown
+#### If `setup_file_exists` is false or `requires_setup` is null
 
 > *Output the next fenced block as a code block:*
 
@@ -39,7 +39,7 @@ Are there any environment setup instructions I should follow before implementati
 
 **STOP.** Wait for user response.
 
-- If the user provides instructions, save them to `.workflows/environment-setup.md`, commit and push
-- If the user says no/none, create `.workflows/environment-setup.md` with "No special setup required." and commit
+- If the user provides instructions, save them to `.workflows/.state/environment-setup.md`, commit and push
+- If the user says no/none, create `.workflows/.state/environment-setup.md` with "No special setup required." and commit
 
 → Return to **[the skill](../SKILL.md)**.

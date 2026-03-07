@@ -10,7 +10,7 @@
 Starting new investigation.
 
 What bug are you investigating? Please provide:
-- A short identifier/name for tracking (e.g., "login-timeout-bug")
+- A short name for tracking (e.g., "login-timeout-bug")
 - What's broken (expected vs actual behavior)
 - Any initial context (error messages, how it manifests)
 ```
@@ -19,14 +19,12 @@ What bug are you investigating? Please provide:
 
 ---
 
-If the user didn't provide a clear topic name, suggest one based on the bug description:
+If the user didn't provide a clear name, suggest one in kebab-case based on the bug description. Once confirmed, this becomes both `{work_unit}` and `{topic}` — for bugfix, they are always the same value.
 
 > *Output the next fenced block as a code block:*
 
 ```
-Suggested topic name: {suggested-topic:(kebabcase)}
-
-This will create: .workflows/investigation/{suggested-topic}/investigation.md
+Suggested bugfix name: {work_unit}
 ```
 
 > *Output the next fenced block as markdown (not a code block):*
@@ -42,28 +40,49 @@ Is this name okay?
 
 **STOP.** Wait for user response.
 
-Once the topic name is confirmed, check for naming conflicts in the discovery output.
+Once the name is confirmed, check for naming conflicts:
 
-If an investigation with the same name exists, inform the user:
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} work_type
+```
+
+If a work unit with the same name exists, read the `work_type` from the command output.
+
+**If the existing work unit is a bugfix:**
 
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
 · · · · · · · · · · · ·
-An investigation named "{topic}" already exists.
+A bugfix named "{work_unit}" already exists.
 
 - **`r`/`resume`** — Resume the existing investigation
 - **`n`/`new`** — Choose a different name
 · · · · · · · · · · · ·
 ```
 
+**If the existing work unit is a different type (feature or epic):**
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+· · · · · · · · · · · ·
+A {work_type} named "{work_unit}" already exists.
+Work unit names must be unique across all work types.
+
+- **`n`/`new`** — Choose a different name
+· · · · · · · · · · · ·
+```
+
 **STOP.** Wait for user response.
 
-#### If resuming
+#### If `resuming`
 
 Set source="continue".
 
-Check the investigation status. If concluded → suggest `/start-specification bugfix {topic}`. If in-progress:
+Check the investigation status via manifest CLI: `node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase investigation --topic {topic} status`
+
+If concluded → suggest `/start-specification bugfix {work_unit}`. If in-progress:
 
 → Return to **[the skill](../SKILL.md)** for **Step 6**.
 

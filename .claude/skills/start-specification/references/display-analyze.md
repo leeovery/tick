@@ -23,7 +23,7 @@ Concluded discussions:
 
 List all concluded discussions from discovery output.
 
-### If in-progress discussions exist
+#### If in-progress discussions exist
 
 > *Output the next fenced block as a code block:*
 
@@ -39,7 +39,7 @@ before they can be included in a specification.
 
 No `---` separator before these messages.
 
-#### If cache status is "none"
+#### If cache status is `none`
 
 > *Output the next fenced block as a code block:*
 
@@ -59,7 +59,7 @@ Proceed with analysis?
 · · · · · · · · · · · ·
 ```
 
-#### If cache status is "stale"
+#### If cache status is `stale`
 
 > *Output the next fenced block as a code block:*
 
@@ -87,7 +87,7 @@ Proceed with analysis?
 
 If cache is stale, delete it first:
 ```bash
-rm .workflows/.state/discussion-consolidation-analysis.md
+rm .workflows/{work_unit}/.state/discussion-consolidation-analysis.md
 ```
 
 → Load **[analysis-flow.md](analysis-flow.md)** and follow its instructions.

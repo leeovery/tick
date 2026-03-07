@@ -4,53 +4,63 @@
 
 ---
 
-When the root cause is identified and documented:
+The user has already reviewed findings and agreed on fix direction. This step confirms the investigation is complete and handles pipeline continuation.
 
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
 · · · · · · · · · · · ·
-Root cause identified. Ready to conclude?
+Investigation complete. Ready to conclude?
 
-- **`y`/`yes`** — Conclude investigation and proceed to specification
-- **`m`/`more`** — Continue investigating (more analysis needed)
+- **`y`/`yes`** — Conclude investigation
+- **Comment** — Add context before concluding
+- **`r`/`reopen`** — Reopen investigation (more analysis needed)
 · · · · · · · · · · · ·
 ```
 
 **STOP.** Wait for user response.
 
-#### If more
+#### If `reopen`
 
-Continue investigation. Ask what aspects need more analysis.
+Ask what aspects need more analysis.
 
 → Return to **[the skill](../SKILL.md)** for **Step 3**.
 
-#### If yes
+#### If `comment`
 
-1. Update frontmatter `status: concluded`
+Incorporate the user's context into the investigation file and commit. Re-present the same conclusion prompt.
+
+#### If `yes`
+
+1. Set investigation status to concluded via manifest CLI:
+   ```bash
+   node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit} --phase investigation --topic {topic} status concluded
+   ```
 2. Final commit
 3. Display conclusion:
 
 > *Output the next fenced block as a code block:*
 
 ```
-Investigation concluded: {topic}
+Investigation concluded: {work_unit}
 
 Root cause: {brief summary}
-Fix direction: {proposed approach}
+Fix direction: {chosen approach}
 
-The investigation is ready for specification. The specification will
-detail the exact fix approach, acceptance criteria, and testing plan.
+The investigation is concluded. Root cause and fix direction are documented.
 ```
 
-4. Check the investigation frontmatter for `work_type`
+4. Read work_type from manifest:
+   ```bash
+   node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} work_type
+   ```
 
 **If work_type is set** (bugfix):
 
 This investigation is part of a pipeline. Invoke the `/workflow-bridge` skill:
 
 ```
-Pipeline bridge for: {topic}
+Pipeline bridge for: {work_unit}
 Work type: bugfix
 Completed phase: investigation
 

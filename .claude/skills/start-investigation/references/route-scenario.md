@@ -6,7 +6,7 @@
 
 Use `state.scenario` from the discovery output to determine the path.
 
-#### If scenario is "has_investigations"
+#### If scenario is `has_investigations`
 
 > *Output the next fenced block as a code block:*
 
@@ -16,14 +16,14 @@ Investigations Overview
 @if(investigations.counts.in_progress > 0)
 In Progress:
 @foreach(inv in investigations.files where status is in-progress)
-  • {inv.topic}
+  • {inv.work_unit}
 @endforeach
 @endif
 
 @if(investigations.counts.concluded > 0)
 Concluded:
 @foreach(inv in investigations.files where status is concluded)
-  • {inv.topic}
+  • {inv.work_unit}
 @endforeach
 @endif
 ```
@@ -35,7 +35,7 @@ Concluded:
 What would you like to do?
 
 @if(in_progress investigations exist)
-{N}. Resume "{topic}" investigation
+{N}. Resume "{work_unit}" investigation
 @endforeach
 @endif
 {N}. Start new investigation
@@ -44,19 +44,19 @@ What would you like to do?
 
 **STOP.** Wait for user response.
 
-#### If resuming
+#### If `resuming`
 
 Set source="continue".
 
-→ Return to **[the skill](../SKILL.md)** for **Step 6** with that topic.
+→ Return to **[the skill](../SKILL.md)** for **Step 6** with that work unit.
 
-#### If new
+#### If `new`
 
 Set source="fresh".
 
 → Return to **[the skill](../SKILL.md)** for **Step 5**.
 
-#### If scenario is "fresh"
+#### If scenario is `fresh`
 
 Set source="fresh".
 

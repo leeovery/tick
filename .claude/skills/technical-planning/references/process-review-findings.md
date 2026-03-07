@@ -8,7 +8,7 @@ Process findings from a review agent interactively with the user. The agent writ
 
 **Review type**: `{review_type:[traceability|integrity]}` — set by the calling context (B or C in plan-review.md).
 
-#### If STATUS is `clean`
+#### If `STATUS` is `clean`
 
 > *Output the next fenced block as a code block:*
 
@@ -18,7 +18,7 @@ Process findings from a review agent interactively with the user. The agent writ
 
 → Return to **[plan-review.md](plan-review.md)** for the next phase.
 
-#### If STATUS is `findings`
+#### If `STATUS` is `findings`
 
 Read the tracking file at the path returned by the agent (`TRACKING_FILE`).
 
@@ -85,7 +85,10 @@ Show the finding with its full fix content, read directly from the tracking file
 
 ### Check Gate Mode
 
-Check `finding_gate_mode` in the Plan Index File frontmatter.
+Check `finding_gate_mode` via manifest CLI:
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase planning --topic {topic} finding_gate_mode
+```
 
 #### If `finding_gate_mode: auto`
 
@@ -121,7 +124,7 @@ Finding {N} of {total}: {Brief Title} — approved. Applied to plan.
 
 Incorporate feedback and re-present the proposed fix **in full**. Update the tracking file with the revised content. Then ask the same choice again. Repeat until approved or skipped.
 
-#### If approved
+#### If `approved`
 
 1. Apply the fix to the plan — use the **Proposed** content exactly as shown, using the output format adapter to determine how it's written. Do not modify content between approval and writing.
 2. Update the tracking file: set resolution to "Fixed", add any discussion notes.
@@ -138,13 +141,16 @@ Incorporate feedback and re-present the proposed fix **in full**. Update the tra
 
 1. Apply the fix (same as "If approved" above)
 2. Update the tracking file: set resolution to "Fixed"
-3. Update `finding_gate_mode: auto` in the Plan Index File frontmatter
+3. Update `finding_gate_mode` in the manifest:
+   ```bash
+   node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit} --phase planning --topic {topic} finding_gate_mode auto
+   ```
 4. Commit
 5. Process all remaining findings using the auto-mode flow above
 
 → After all processed, proceed to **C. After All Findings Processed**.
 
-#### If skipped
+#### If `skipped`
 
 1. Update the tracking file: set resolution to "Skipped", note the reason.
 2. Commit the tracking file — ensures progress survives context refresh.

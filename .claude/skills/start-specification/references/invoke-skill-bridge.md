@@ -14,9 +14,9 @@ Saving session state so Claude can pick up where it left off if the conversation
 
 ```bash
 .claude/hooks/workflows/write-session-state.sh \
-  "{topic}" \
+  "{work_unit}" \
   "skills/technical-specification/SKILL.md" \
-  ".workflows/specification/{topic}/specification.md"
+  ".workflows/{work_unit}/specification/{topic}/specification.md"
 ```
 
 This skill's purpose is now fulfilled.
@@ -29,46 +29,52 @@ Invoke the [technical-specification](../../technical-specification/SKILL.md) ski
 
 Construct the handoff based on the work type and verb.
 
-#### If work_type is feature
+#### If `work_type` is `feature`
 
 ```
-Specification session for: {topic}
+Specification session for: {work_unit}
 Work type: {work_type}
 
 Source material:
-- Discussion: .workflows/discussion/{topic}.md
+- Discussion: .workflows/{work_unit}/discussion/{topic}.md
 
-Topic name: {topic}
+Work unit: {work_unit}
 Action: {verb} specification
-
-The specification frontmatter should include:
-- topic: {topic}
-- status: in-progress
-- type: feature
-- work_type: {work_type}
-- date: {today}
 
 Invoke the technical-specification skill.
 ```
 
-#### If work_type is bugfix
+#### If `work_type` is `bugfix`
+
+```
+Specification session for: {work_unit}
+Work type: {work_type}
+
+Source material:
+- Investigation: .workflows/{work_unit}/investigation/{topic}.md
+
+Work unit: {work_unit}
+Action: {verb} specification
+
+Invoke the technical-specification skill.
+```
+
+#### If `work_type` is `epic`
+
+Read the spec's source discussions from the manifest: `get {work_unit} --phase specification --topic {topic} sources`. List each source discussion file.
 
 ```
 Specification session for: {topic}
 Work type: {work_type}
 
 Source material:
-- Investigation: .workflows/investigation/{topic}/investigation.md
+- .workflows/{work_unit}/discussion/{source-discussion-1}.md
+- .workflows/{work_unit}/discussion/{source-discussion-2}.md
+- ...
 
-Topic name: {topic}
+Work unit: {work_unit}
+Topic: {topic}
 Action: {verb} specification
-
-The specification frontmatter should include:
-- topic: {topic}
-- status: in-progress
-- type: feature
-- work_type: {work_type}
-- date: {today}
 
 Invoke the technical-specification skill.
 ```

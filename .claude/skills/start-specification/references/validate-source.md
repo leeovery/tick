@@ -6,15 +6,9 @@
 
 Check if source material exists and is ready.
 
-#### If work_type is feature
+#### If `work_type` is `feature`
 
-Check if discussion exists and is concluded:
-
-```bash
-ls .workflows/discussion/
-```
-
-Read `.workflows/discussion/{topic}.md` frontmatter.
+Check if discussion exists and is concluded. Read status via manifest CLI: `get {work_unit} --phase discussion --topic {topic} status`.
 
 **If discussion doesn't exist:**
 
@@ -23,10 +17,10 @@ Read `.workflows/discussion/{topic}.md` frontmatter.
 ```
 Source Material Missing
 
-No discussion found for "{topic:(titlecase)}".
+No discussion found for "{work_unit:(titlecase)}".
 
 A concluded discussion is required before specification.
-Run /start-discussion feature {topic} to start one.
+Run /start-discussion feature {work_unit} to start one.
 ```
 
 **STOP.** Do not proceed — terminal condition.
@@ -38,8 +32,8 @@ Run /start-discussion feature {topic} to start one.
 ```
 Discussion In Progress
 
-The discussion for "{topic:(titlecase)}" is not yet concluded.
-Run /start-discussion feature {topic} to continue.
+The discussion for "{work_unit:(titlecase)}" is not yet concluded.
+Run /start-discussion feature {work_unit} to continue.
 ```
 
 **STOP.** Do not proceed — terminal condition.
@@ -48,15 +42,9 @@ Run /start-discussion feature {topic} to continue.
 
 → Return to **[the skill](../SKILL.md)**.
 
-#### If work_type is bugfix
+#### If `work_type` is `bugfix`
 
-Check if investigation exists and is concluded:
-
-```bash
-ls .workflows/investigation/
-```
-
-Read `.workflows/investigation/{topic}/investigation.md` frontmatter.
+Check if investigation exists and is concluded. Read status via manifest CLI: `get {work_unit} --phase investigation --topic {topic} status`.
 
 **If investigation doesn't exist:**
 
@@ -65,10 +53,10 @@ Read `.workflows/investigation/{topic}/investigation.md` frontmatter.
 ```
 Source Material Missing
 
-No investigation found for "{topic:(titlecase)}".
+No investigation found for "{work_unit:(titlecase)}".
 
 A concluded investigation is required before specification.
-Run /start-investigation bugfix {topic} to start one.
+Run /start-investigation bugfix {work_unit} to start one.
 ```
 
 **STOP.** Do not proceed — terminal condition.
@@ -80,12 +68,50 @@ Run /start-investigation bugfix {topic} to start one.
 ```
 Investigation In Progress
 
-The investigation for "{topic:(titlecase)}" is not yet concluded.
-Run /start-investigation bugfix {topic} to continue.
+The investigation for "{work_unit:(titlecase)}" is not yet concluded.
+Run /start-investigation bugfix {work_unit} to continue.
 ```
 
 **STOP.** Do not proceed — terminal condition.
 
 **If investigation exists and status is "concluded":**
+
+→ Return to **[the skill](../SKILL.md)**.
+
+#### If `work_type` is `epic`
+
+Check if at least one concluded discussion exists for this work unit. Read discussion phase items via manifest CLI: `get {work_unit} --phase discussion`.
+
+**If no discussions exist:**
+
+> *Output the next fenced block as a code block:*
+
+```
+Source Material Missing
+
+No discussions found for "{work_unit:(titlecase)}".
+
+At least one concluded discussion is required before specification.
+Run /start-discussion epic {work_unit} to start one.
+```
+
+**STOP.** Do not proceed — terminal condition.
+
+**If no concluded discussions exist:**
+
+> *Output the next fenced block as a code block:*
+
+```
+No Concluded Discussions
+
+No concluded discussions found for "{work_unit:(titlecase)}".
+
+At least one concluded discussion is required before specification.
+Run /continue-epic to continue an in-progress discussion.
+```
+
+**STOP.** Do not proceed — terminal condition.
+
+**If at least one concluded discussion exists:**
 
 → Return to **[the skill](../SKILL.md)**.
