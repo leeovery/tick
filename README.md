@@ -214,6 +214,14 @@ tick reopen <task-id>               # done/cancelled → open
 
 `done` and `cancel` set a closed timestamp. `reopen` clears it.
 
+**Cascading:** Status changes automatically propagate through parent/child hierarchies:
+
+- **Start** cascades up — starting a child auto-starts open ancestors
+- **Done/Cancel** cascades down — completing or cancelling a parent cascades to non-terminal descendants
+- **Done/Cancel** cascades up — when all children are terminal, the parent auto-completes (done if any child is done, cancelled if all cancelled)
+- **Reopen** cascades up — reopening a child reopens done ancestors
+- Adding a child to a **done** parent auto-reopens it; adding to a **cancelled** parent is blocked
+
 ### `remove`
 
 Permanently delete one or more tasks. Removing a parent cascades to all descendants. Dependency references on surviving tasks are automatically cleaned up.
