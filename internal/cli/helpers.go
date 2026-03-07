@@ -96,15 +96,14 @@ func validateRefsFlag(refs []string, emptyErr string) ([]string, error) {
 }
 
 // outputTransitionOrCascade writes a transition or cascade-transition to stdout.
-// When cascades is empty it uses FormatTransition; otherwise it builds a CascadeResult
-// and uses FormatCascadeTransition. This eliminates the repeated if/else pattern
-// across transition.go, create.go, and update.go.
-func outputTransitionOrCascade(stdout io.Writer, fmtr Formatter, id, title string, result task.TransitionResult, cascades []task.CascadeChange, tasks []task.Task) {
-	if len(cascades) == 0 {
-		fmt.Fprintln(stdout, fmtr.FormatTransition(id, string(result.OldStatus), string(result.NewStatus)))
+// When cr is nil or has no cascaded entries it uses FormatTransition; otherwise it
+// uses FormatCascadeTransition with the pre-built CascadeResult. Callers must build
+// the CascadeResult inside the Mutate closure where the tasks slice is still valid.
+func outputTransitionOrCascade(stdout io.Writer, fmtr Formatter, id, oldStatus, newStatus string, cr *CascadeResult) {
+	if cr == nil || len(cr.Cascaded) == 0 {
+		fmt.Fprintln(stdout, fmtr.FormatTransition(id, oldStatus, newStatus))
 	} else {
-		cr := buildCascadeResult(id, title, result, cascades, tasks)
-		fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
+		fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(*cr))
 	}
 }
 

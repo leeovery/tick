@@ -28,22 +28,21 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 	}
 
 	var result task.TransitionResult
-	var cascades []task.CascadeChange
-	var targetTitle string
-	var allTasks []task.Task
+	var cascadeResult *CascadeResult
 	var sm task.StateMachine
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		for i := range tasks {
 			if tasks[i].ID == id {
-				r, c, err := sm.ApplyWithCascades(tasks, &tasks[i], command)
-				if err != nil {
-					return nil, err
+				r, c, mutErr := sm.ApplyWithCascades(tasks, &tasks[i], command)
+				if mutErr != nil {
+					return nil, mutErr
 				}
 				result = r
-				cascades = c
-				targetTitle = tasks[i].Title
-				allTasks = tasks
+				if len(c) > 0 {
+					cr := buildCascadeResult(id, tasks[i].Title, r, c, tasks)
+					cascadeResult = &cr
+				}
 				return tasks, nil
 			}
 		}
@@ -54,7 +53,7 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 	}
 
 	if !fc.Quiet {
-		outputTransitionOrCascade(stdout, fmtr, id, targetTitle, result, cascades, allTasks)
+		outputTransitionOrCascade(stdout, fmtr, id, string(result.OldStatus), string(result.NewStatus), cascadeResult)
 	}
 
 	return nil

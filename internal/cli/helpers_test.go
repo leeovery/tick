@@ -293,12 +293,11 @@ func TestOutputMutationResult(t *testing.T) {
 func TestOutputTransitionOrCascade(t *testing.T) {
 	now := time.Now()
 
-	t.Run("it uses FormatTransition when cascades is empty", func(t *testing.T) {
+	t.Run("it uses FormatTransition when cascade result is nil", func(t *testing.T) {
 		var buf strings.Builder
 		fmtr := &ToonFormatter{}
-		result := task.TransitionResult{OldStatus: task.StatusOpen, NewStatus: task.StatusInProgress}
 
-		outputTransitionOrCascade(&buf, fmtr, "tick-abc123", "My Task", result, nil, nil)
+		outputTransitionOrCascade(&buf, fmtr, "tick-abc123", "open", "in_progress", nil)
 
 		output := buf.String()
 		expected := "tick-abc123: open → in_progress\n"
@@ -307,7 +306,27 @@ func TestOutputTransitionOrCascade(t *testing.T) {
 		}
 	})
 
-	t.Run("it uses FormatCascadeTransition when cascades is non-empty", func(t *testing.T) {
+	t.Run("it uses FormatTransition when cascade result has no cascades", func(t *testing.T) {
+		var buf strings.Builder
+		fmtr := &ToonFormatter{}
+
+		cr := &CascadeResult{
+			TaskID:    "tick-abc123",
+			TaskTitle: "My Task",
+			OldStatus: "open",
+			NewStatus: "in_progress",
+		}
+
+		outputTransitionOrCascade(&buf, fmtr, "tick-abc123", "open", "in_progress", cr)
+
+		output := buf.String()
+		expected := "tick-abc123: open → in_progress\n"
+		if output != expected {
+			t.Errorf("output = %q, want %q", output, expected)
+		}
+	})
+
+	t.Run("it uses FormatCascadeTransition when cascade result has cascades", func(t *testing.T) {
 		var buf strings.Builder
 		fmtr := &ToonFormatter{}
 
@@ -320,7 +339,9 @@ func TestOutputTransitionOrCascade(t *testing.T) {
 			{Task: &tasks[1], Action: "cancel", OldStatus: task.StatusOpen, NewStatus: task.StatusCancelled},
 		}
 
-		outputTransitionOrCascade(&buf, fmtr, "tick-parent1", "Parent", result, cascades, tasks)
+		cr := buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks)
+
+		outputTransitionOrCascade(&buf, fmtr, "tick-parent1", string(result.OldStatus), string(result.NewStatus), &cr)
 
 		output := buf.String()
 		if !strings.Contains(output, "tick-parent1: in_progress → cancelled") {
@@ -333,15 +354,14 @@ func TestOutputTransitionOrCascade(t *testing.T) {
 
 	t.Run("it produces identical output to inline pattern for simple transition", func(t *testing.T) {
 		fmtr := &PrettyFormatter{}
-		result := task.TransitionResult{OldStatus: task.StatusOpen, NewStatus: task.StatusDone}
 
 		// Inline pattern (what the old code did)
 		var inlineBuf strings.Builder
-		fmt.Fprintln(&inlineBuf, fmtr.FormatTransition("tick-aaa111", string(result.OldStatus), string(result.NewStatus)))
+		fmt.Fprintln(&inlineBuf, fmtr.FormatTransition("tick-aaa111", "open", "done"))
 
 		// Helper function
 		var helperBuf strings.Builder
-		outputTransitionOrCascade(&helperBuf, fmtr, "tick-aaa111", "Task", result, nil, nil)
+		outputTransitionOrCascade(&helperBuf, fmtr, "tick-aaa111", "open", "done", nil)
 
 		if helperBuf.String() != inlineBuf.String() {
 			t.Errorf("helper output = %q, inline output = %q", helperBuf.String(), inlineBuf.String())
@@ -367,7 +387,7 @@ func TestOutputTransitionOrCascade(t *testing.T) {
 
 		// Helper function
 		var helperBuf strings.Builder
-		outputTransitionOrCascade(&helperBuf, fmtr, "tick-parent1", "Parent", result, cascades, tasks)
+		outputTransitionOrCascade(&helperBuf, fmtr, "tick-parent1", string(result.OldStatus), string(result.NewStatus), &cr)
 
 		if helperBuf.String() != inlineBuf.String() {
 			t.Errorf("helper output = %q, inline output = %q", helperBuf.String(), inlineBuf.String())
@@ -377,9 +397,8 @@ func TestOutputTransitionOrCascade(t *testing.T) {
 	t.Run("it works with JSON formatter for simple transition", func(t *testing.T) {
 		var buf strings.Builder
 		fmtr := &JSONFormatter{}
-		result := task.TransitionResult{OldStatus: task.StatusOpen, NewStatus: task.StatusInProgress}
 
-		outputTransitionOrCascade(&buf, fmtr, "tick-abc123", "My Task", result, nil, nil)
+		outputTransitionOrCascade(&buf, fmtr, "tick-abc123", "open", "in_progress", nil)
 
 		output := buf.String()
 		if !strings.Contains(output, `"id": "tick-abc123"`) {

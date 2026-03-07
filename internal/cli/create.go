@@ -180,8 +180,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	var createdTask task.Task
 	var parentReopened bool
 	var parentResult task.TransitionResult
-	var cascades []task.CascadeChange
-	var allTasks []task.Task
+	var parentCascadeResult *CascadeResult
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Build an ID existence checker with normalized keys.
@@ -233,7 +232,17 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			if reopened {
 				parentReopened = true
 				parentResult = r
-				cascades = c
+				// Find parent title and build cascade result while tasks slice is valid.
+				normalizedParent := task.NormalizeID(opts.parent)
+				var parentTitle string
+				for _, tk := range tasks {
+					if task.NormalizeID(tk.ID) == normalizedParent {
+						parentTitle = tk.Title
+						break
+					}
+				}
+				cr := buildCascadeResult(opts.parent, parentTitle, r, c, tasks)
+				parentCascadeResult = &cr
 			}
 		}
 
@@ -259,7 +268,6 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		}
 
 		createdTask = newTask
-		allTasks = tasks
 		return tasks, nil
 	})
 
@@ -274,15 +282,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 	// Output cascade info if parent was reopened (and not quiet mode).
 	if parentReopened && !fc.Quiet {
-		parentID := opts.parent
-		var parentTitle string
-		for _, tk := range allTasks {
-			if tk.ID == parentID {
-				parentTitle = tk.Title
-				break
-			}
-		}
-		outputTransitionOrCascade(stdout, fmtr, parentID, parentTitle, parentResult, cascades, allTasks)
+		outputTransitionOrCascade(stdout, fmtr, opts.parent, string(parentResult.OldStatus), string(parentResult.NewStatus), parentCascadeResult)
 	}
 
 	return nil

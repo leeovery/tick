@@ -270,17 +270,17 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	var updatedID string
-	var allTasks []task.Task
 
 	// Rule 6: reopen of done parent when reparenting to it.
 	var r6Triggered bool
 	var r6ParentID string
-	var r6ParentTitle string
 	var r6Result task.TransitionResult
-	var r6Cascades []task.CascadeChange
+	var r6CascadeResult *CascadeResult
 
 	// Rule 3: auto-completion of original parent when reparenting away.
-	var r3 *rule3Result
+	var r3Result task.TransitionResult
+	var r3ParentID string
+	var r3CascadeResult *CascadeResult
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Build ID set for reference validation with normalized keys.
@@ -308,16 +308,18 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			if reopened {
 				r6Triggered = true
 				r6Result = r
-				r6Cascades = c
-				// Find parent title for cascade output.
+				// Find parent title and build cascade result while tasks slice is valid.
 				normalizedParent := task.NormalizeID(*opts.parent)
+				var parentTitle string
 				for _, tk := range tasks {
 					if task.NormalizeID(tk.ID) == normalizedParent {
 						r6ParentID = tk.ID
-						r6ParentTitle = tk.Title
+						parentTitle = tk.Title
 						break
 					}
 				}
+				cr := buildCascadeResult(r6ParentID, parentTitle, r, c, tasks)
+				r6CascadeResult = &cr
 			}
 		}
 		for _, blockID := range opts.blocks {
@@ -374,7 +376,13 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 			// Evaluate Rule 3 on original parent if parent changed and original was non-empty.
 			if opts.parent != nil && originalParent != *opts.parent && originalParent != "" {
-				r3 = evaluateRule3(tasks, originalParent, &sm)
+				r3 := evaluateRule3(tasks, originalParent, &sm)
+				if r3 != nil {
+					r3ParentID = r3.parentID
+					r3Result = r3.result
+					cr := buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, tasks)
+					r3CascadeResult = &cr
+				}
 			}
 
 			break
@@ -396,7 +404,6 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			}
 		}
 
-		allTasks = tasks
 		return tasks, nil
 	})
 	if err != nil {
@@ -410,12 +417,12 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 	// Output Rule 6 cascade info (reopen of done parent).
 	if r6Triggered && !fc.Quiet {
-		outputTransitionOrCascade(stdout, fmtr, r6ParentID, r6ParentTitle, r6Result, r6Cascades, allTasks)
+		outputTransitionOrCascade(stdout, fmtr, r6ParentID, string(r6Result.OldStatus), string(r6Result.NewStatus), r6CascadeResult)
 	}
 
 	// Output Rule 3 cascade info (auto-completion of original parent).
-	if r3 != nil && !fc.Quiet {
-		outputTransitionOrCascade(stdout, fmtr, r3.parentID, r3.parentTitle, r3.result, r3.cascades, allTasks)
+	if r3CascadeResult != nil && !fc.Quiet {
+		outputTransitionOrCascade(stdout, fmtr, r3ParentID, string(r3Result.OldStatus), string(r3Result.NewStatus), r3CascadeResult)
 	}
 
 	return nil
