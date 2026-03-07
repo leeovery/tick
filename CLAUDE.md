@@ -45,12 +45,12 @@ release                   → release script with AI-generated notes via Claude 
 
 - **DI via struct fields:** App injects Stdout, Stderr, Getwd, IsTTY. Store uses functional options (`StoreOption`).
 - **Handler signature:** `Run<Command>(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error`
-- **Formatter interface:** `Formatter` with methods FormatTaskList, FormatTaskDetail, FormatTransition, FormatCascadeTransition, FormatDepChange, FormatStats, FormatMessage. Three implementations: ToonFormatter, PrettyFormatter, JSONFormatter.
+- **Formatter interface:** `Formatter` with methods FormatTaskList, FormatTaskDetail, FormatTransition, FormatCascadeTransition, FormatDepChange, FormatStats, FormatMessage, FormatRemoval. Three implementations: ToonFormatter, PrettyFormatter, JSONFormatter.
 - **Format auto-detection:** TTY → pretty, non-TTY → toon. Override with `--toon`, `--pretty`, `--json`.
 - **Error wrapping:** `fmt.Errorf("context: %w", err)` throughout.
 - **Task IDs:** `tick-` prefix + 6 hex chars (3 random bytes). Partial ID matching supported (unique prefix resolves to full ID).
 - **Task fields:** Title, Status, Priority, Description, Parent, Dependencies (blocked-by/blocks), Type (bug/feature/task/chore), Tags (kebab-case labels), Refs (external links), Notes (timestamped annotations), Transitions (history of status changes).
-- **Status transitions:** open → in_progress → done/cancelled, reopen back to open. Managed by `StateMachine` struct in `state_machine.go`.
+- **Status transitions:** open → in_progress → done/cancelled, cancel from any status, reopen (done/cancelled → open). Managed by `StateMachine` struct in `state_machine.go`.
 - **Cascade rules:** Status changes auto-propagate through parent/child hierarchies via `ApplyWithCascades`. Rule 2: start cascades up (open ancestors → in_progress). Rule 3: completion cascades up (all children terminal → parent auto-completes). Rule 4: done/cancel cascades down (non-terminal descendants follow). Rule 5: reopen cascades up (done ancestors → open). Rule 6: adding child to done parent reopens it. Rule 7: cannot add child to cancelled parent. Rule 8: cannot depend on cancelled task. Rule 9: cannot reopen under cancelled parent.
 - **Transition history:** `TransitionRecord` tracks from/to/at/auto on each task. Stored in JSONL and `task_transitions` SQLite table. Auto flag distinguishes manual vs cascade-triggered transitions.
 - **Ready/blocked queries:** `query_helpers.go` defines `ReadyNo*()` SQL helpers composed into `ReadyConditions()` and `BlockedConditions()` (De Morgan inverse). Ancestor blocking uses a recursive CTE walking the parent chain.

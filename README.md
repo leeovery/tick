@@ -416,6 +416,67 @@ tick-a1b2   in_progress   1     feature   Setup auth
 tick-c3d4   open          1     task      Login endpoint
 ```
 
+### Transition & Cascade Output
+
+When you run `start`, `done`, `cancel`, or `reopen`, the output confirms the transition. If the change cascades to related tasks, those are shown too.
+
+<table>
+<tr>
+<td>
+
+**Simple transition** (TOON / Pretty)
+```
+$ tick start tick-a1b2
+tick-a1b2: open → in_progress
+```
+
+</td>
+<td>
+
+**Simple transition** (JSON)
+```json
+{
+  "id": "tick-a1b2",
+  "from": "open",
+  "to": "in_progress"
+}
+```
+
+</td>
+</tr>
+</table>
+
+**Cascade** — completing a parent cascades to children:
+
+<table>
+<tr>
+<td>
+
+**TOON** (flat lines)
+```
+$ tick done tick-a1b2
+tick-a1b2: in_progress → done
+tick-c3d4: open → done (auto)
+tick-f3e4: done (unchanged)
+```
+
+</td>
+<td>
+
+**Pretty** (tree with box-drawing)
+```
+$ tick done tick-a1b2
+tick-a1b2: in_progress → done
+
+Cascaded:
+├─ tick-c3d4 "Subtask one": open → done
+└─ tick-f3e4 "Subtask two": done (unchanged)
+```
+
+</td>
+</tr>
+</table>
+
 ### JSON
 
 Standard 2-space indented JSON with snake_case keys.
