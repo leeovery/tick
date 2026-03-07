@@ -1,0 +1,41 @@
+{
+  "name": "cli-enhancements",
+  "work_type": "feature",
+  "status": "active",
+  "created": "2026-02-27",
+  "description": "cli-enhancements work unit",
+  "phases": {
+    "discussion": {
+      "status": "concluded"
+    },
+    "specification": {
+      "status": "concluded",
+      "type": "feature",
+      "review_cycle": 2,
+      "finding_gate_mode": "gated"
+    },
+    "planning": {
+      "status": "concluded",
+      "format": "tick",
+      "ext_id": "tick-db58ad",
+      "specification": "../../specification/cli-enhancements/specification.md",
+      "spec_commit": "8aae967aad70c57432f9d24dcd226594f295358a",
+      "finding_gate_mode": "auto",
+      "author_gate_mode": "auto"
+    },
+    "implementation": {
+      "status": "completed",
+      "format": "tick",
+      "task_gate_mode": "auto",
+      "fix_gate_mode": "auto",
+      "analysis_gate_mode": "gated",
+      "fix_attempts": 0,
+      "analysis_cycle": 3,
+      "current_phase": "6",
+      "current_task": "~"
+    },
+    "review": {
+      "status": "completed"
+    }
+  }
+}

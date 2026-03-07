@@ -1,0 +1,228 @@
+{
+  "name": "v1",
+  "work_type": "epic",
+  "status": "active",
+  "created": "2026-03-07",
+  "description": "v1 work unit",
+  "phases": {
+    "discussion": {
+      "items": {
+        "archive-strategy-implementation": {
+          "status": "concluded"
+        },
+        "blocked-ancestor-ready": {
+          "status": "concluded"
+        },
+        "cli-command-structure-ux": {
+          "status": "concluded"
+        },
+        "config-file-design": {
+          "status": "concluded"
+        },
+        "data-schema-design": {
+          "status": "concluded"
+        },
+        "doctor-command-validation": {
+          "status": "concluded"
+        },
+        "freshness-dual-write": {
+          "status": "concluded"
+        },
+        "hierarchy-dependency-model": {
+          "status": "concluded"
+        },
+        "id-format-implementation": {
+          "status": "concluded"
+        },
+        "installation-options": {
+          "status": "concluded"
+        },
+        "migration-subcommand": {
+          "status": "concluded"
+        },
+        "project-fundamentals": {
+          "status": "concluded"
+        },
+        "task-removal": {
+          "status": "concluded"
+        },
+        "task-scoping-by-plan": {
+          "status": "concluded"
+        },
+        "toon-output-format": {
+          "status": "concluded"
+        },
+        "tui": {
+          "status": "concluded"
+        }
+      }
+    },
+    "specification": {
+      "items": {
+        "blocked-ancestor-ready": {
+          "status": "concluded",
+          "type": "feature",
+          "review_cycle": 1,
+          "finding_gate_mode": "gated"
+        },
+        "doctor-validation": {
+          "status": "concluded",
+          "type": "feature"
+        },
+        "installation": {
+          "status": "concluded",
+          "type": "feature"
+        },
+        "migration": {
+          "status": "concluded",
+          "type": "feature"
+        },
+        "task-removal": {
+          "status": "concluded",
+          "type": "feature",
+          "review_cycle": 3,
+          "finding_gate_mode": "gated"
+        },
+        "tick-core": {
+          "status": "concluded",
+          "type": "feature"
+        }
+      }
+    },
+    "planning": {
+      "items": {
+        "blocked-ancestor-ready": {
+          "status": "concluded",
+          "format": "tick",
+          "ext_id": "tick-e679e0",
+          "specification": "../../specification/blocked-ancestor-ready/specification.md",
+          "spec_commit": "e5c5d2995477fa95787af0a959e7162d1bb39cc3",
+          "finding_gate_mode": "auto",
+          "author_gate_mode": "auto"
+        },
+        "doctor-validation": {
+          "status": "concluded",
+          "format": "local-markdown",
+          "specification": "../../specification/doctor-validation/specification.md",
+          "spec_commit": "29e62a8301438296c5b05db3e8f36c75ad5c20e1"
+        },
+        "installation": {
+          "status": "concluded",
+          "format": "local-markdown",
+          "specification": "../../specification/installation/specification.md",
+          "spec_commit": "d20af03c956b3e3c4608eb4d5945a67c5a3f6c90"
+        },
+        "migration": {
+          "status": "concluded",
+          "format": "local-markdown",
+          "specification": "../../specification/migration/specification.md",
+          "spec_commit": "d75ee0ec089a456e34c6b10585da4cf18922a0a5"
+        },
+        "task-removal": {
+          "status": "concluded",
+          "format": "tick",
+          "ext_id": "tick-132530",
+          "specification": "../../specification/task-removal/specification.md",
+          "spec_commit": "739e6f02a7f56e6c4d785b981f74bf75b08ef36a",
+          "finding_gate_mode": "gated",
+          "author_gate_mode": "gated"
+        },
+        "tick-core": {
+          "status": "concluded",
+          "format": "local-markdown",
+          "specification": "../../specification/tick-core/specification.md",
+          "spec_commit": "4a3a40d9415de8e1bb3a1ee376efd0bef2af0dd3"
+        }
+      }
+    },
+    "implementation": {
+      "items": {
+        "blocked-ancestor-ready": {
+          "status": "completed",
+          "format": "tick",
+          "task_gate_mode": "gated",
+          "fix_gate_mode": "gated",
+          "fix_attempts": 0,
+          "analysis_cycle": 2,
+          "current_phase": "2",
+          "current_task": "~"
+        },
+        "doctor-validation": {
+          "status": "completed",
+          "format": "local-markdown",
+          "task_gate_mode": "auto",
+          "fix_gate_mode": "gated",
+          "fix_attempts": 0,
+          "analysis_cycle": 4,
+          "current_phase": "6",
+          "current_task": "~"
+        },
+        "installation": {
+          "status": "completed",
+          "format": "local-markdown",
+          "task_gate_mode": "auto",
+          "fix_gate_mode": "auto",
+          "fix_attempts": 0,
+          "analysis_cycle": 4,
+          "current_phase": "5",
+          "current_task": "~"
+        },
+        "migration": {
+          "status": "completed",
+          "format": "local-markdown",
+          "task_gate_mode": "auto",
+          "fix_gate_mode": "gated",
+          "fix_attempts": 0,
+          "analysis_cycle": 3,
+          "current_phase": "4",
+          "current_task": "~"
+        },
+        "task-removal": {
+          "status": "completed",
+          "format": "tick",
+          "task_gate_mode": "auto",
+          "fix_gate_mode": "gated",
+          "fix_attempts": 0,
+          "analysis_cycle": 3,
+          "current_phase": "5",
+          "current_task": "~"
+        },
+        "tick-core": {
+          "status": "completed",
+          "format": "local-markdown",
+          "task_gate_mode": "auto",
+          "fix_gate_mode": "gated",
+          "fix_attempts": 0,
+          "analysis_cycle": 4,
+          "current_phase": "8",
+          "current_task": "~"
+        }
+      }
+    },
+    "review": {
+      "items": {
+        "blocked-ancestor-ready": {
+          "status": "completed"
+        },
+        "doctor-installation-migration": {
+          "status": "completed"
+        },
+        "doctor-validation": {
+          "status": "completed"
+        },
+        "installation": {
+          "status": "completed"
+        },
+        "migration": {
+          "status": "completed"
+        },
+        "tick-core": {
+          "status": "completed"
+        }
+      }
+    },
+    "research": {
+      "status": "concluded"
+    }
+  }
+}

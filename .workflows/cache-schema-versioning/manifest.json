@@ -1,0 +1,41 @@
+{
+  "name": "cache-schema-versioning",
+  "work_type": "bugfix",
+  "status": "active",
+  "created": "2026-03-07",
+  "description": "cache-schema-versioning work unit",
+  "phases": {
+    "investigation": {
+      "status": "concluded"
+    },
+    "specification": {
+      "status": "concluded",
+      "type": "feature",
+      "review_cycle": 2,
+      "finding_gate_mode": "gated"
+    },
+    "planning": {
+      "status": "concluded",
+      "format": "tick",
+      "ext_id": "tick-598752",
+      "specification": "../../specification/cache-schema-versioning/specification.md",
+      "spec_commit": "1874c3b2085398bee1254e9773aba96fdd925c24",
+      "finding_gate_mode": "gated",
+      "author_gate_mode": "auto"
+    },
+    "implementation": {
+      "status": "completed",
+      "format": "tick",
+      "task_gate_mode": "auto",
+      "fix_gate_mode": "gated",
+      "analysis_gate_mode": "gated",
+      "fix_attempts": 0,
+      "analysis_cycle": 1,
+      "current_phase": "1",
+      "current_task": "~"
+    },
+    "review": {
+      "status": "completed"
+    }
+  }
+}
