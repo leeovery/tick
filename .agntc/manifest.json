@@ -1,8 +1,8 @@
 {
   "leeovery/claude-technical-workflows": {
     "ref": null,
-    "commit": "eefb61bae8a7b3668f62f46151f700366d064297",
-    "installedAt": "2026-03-07T18:20:59.370Z",
+    "commit": "68ef7eee4b8179ba827ed928f359bac79ed924c1",
+    "installedAt": "2026-03-07T18:41:54.552Z",
     "agents": [
       "claude"
     ],
@@ -56,6 +56,7 @@
       ".claude/skills/migrate/scripts/migrations/015-plan-work-type.sh",
       ".claude/skills/migrate/scripts/migrations/016-work-unit-restructure.sh",
       ".claude/skills/migrate/scripts/migrations/017-external-deps-object.sh",
+      ".claude/skills/migrate/scripts/migrations/018-remove-stale-environment-setup.sh",
       ".claude/skills/start-bugfix/",
       ".claude/skills/start-bugfix/SKILL.md",
       ".claude/skills/start-bugfix/references/",
