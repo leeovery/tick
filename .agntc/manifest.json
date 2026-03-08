@@ -1,8 +1,8 @@
 {
   "leeovery/claude-technical-workflows": {
     "ref": null,
-    "commit": "6ff0a666b0fbe0ff187e5540f483b0e93b27616b",
-    "installedAt": "2026-03-08T21:35:15.640Z",
+    "commit": "7d58afc0234b65a1a95f39ff72f16fcc73e4983b",
+    "installedAt": "2026-03-08T21:49:09.383Z",
     "agents": [
       "claude"
     ],
