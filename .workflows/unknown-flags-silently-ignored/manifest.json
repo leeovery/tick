@@ -6,7 +6,7 @@
   "description": "CLI commands silently discard unrecognised flags instead of erroring; all commands should reject unknown flags with a clear error message",
   "phases": {
     "investigation": {
-      "status": "in-progress"
+      "status": "concluded"
     }
   }
 }
