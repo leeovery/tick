@@ -111,7 +111,43 @@ The comments ("global flags already extracted") are misleading — global parsin
 
 ## Fix Direction
 
-*To be determined after findings review*
+### Chosen Approach
+
+Each command exports its set of valid flags. The dispatcher validates args against that set before invoking the handler. Flag knowledge stays with the command (no duplication), validation logic is written once centrally.
+
+The flow becomes:
+1. `parseArgs()` strips global flags, identifies subcommand, collects `rest`
+2. **New:** Look up valid flags for the identified command, validate `rest` against them — error on any unknown flag
+3. Dispatch to command handler (which can now assume all flags are valid)
+
+The existing `strings.HasPrefix(arg, "-")` silent-skip logic in each command parser can be removed — unknown flags are caught before the handler is called.
+
+**Deciding factor:** Centralised validation avoids duplicating rejection logic across every command, while keeping flag definitions co-located with the commands that use them. This avoids both the duplication of inline validation and the dual-source-of-truth problem of a central registry.
+
+### Options Explored
+
+1. **Inline validation in each parser** — Replace the silent skip with `fmt.Errorf("unknown flag: %s", arg)` in every command's parsing loop. Simple per-file change but duplicates validation logic across all commands, and every new command must remember to add it.
+
+2. **Central flag registry** — A `map[string][]string` in `app.go`. Single validation point but creates a second place to maintain flag knowledge alongside the parsers.
+
+3. **Command-exported flags + central validation (chosen)** — Each command defines its accepted flags, dispatcher validates before dispatching. Flag knowledge lives with the command, validation written once.
+
+### Discussion
+
+User priority was avoiding duplication — both of validation logic (ruling out inline) and of flag knowledge (ruling out central registry). The insight was that validation can happen early in the flow, between subcommand identification and dispatch, since we already know which command we're calling. This naturally led to commands exporting their flags and the dispatcher enforcing them.
+
+### Testing Recommendations
+
+- Test that each command rejects an unknown flag with a clear error
+- Test that global flags (--verbose, --json, etc.) are not rejected by command-level validation
+- Test the specific `dep add --blocks` scenario from the bug report
+- Test short flags (-x) as well as long flags (--unknown)
+
+### Risk Assessment
+
+- **Fix complexity:** Medium — touches the dispatch layer and every command file, but each change is small
+- **Regression risk:** Low — adding validation is additive; existing valid flag usage is unaffected
+- **Recommended approach:** Regular release
 
 ---
 
