@@ -101,6 +101,10 @@ Error: unknown flag "{flag}" for "{command}". Run 'tick help {command}' for usag
 4. Short flags (`-x`) are rejected as well as long flags (`--unknown`)
 5. Unknown flags before the subcommand are rejected
 
+## Dependencies
+
+No dependencies. This bugfix modifies existing CLI flag parsing logic entirely within `internal/cli/`. No external systems, data, or infrastructure are required.
+
 ---
 
 ## Working Notes
