@@ -80,8 +80,8 @@ Since `dep add`, `dep rm`, `note add`, and `note remove` all accept no per-comma
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added Two-Level Commands subsection to Design.
 
 ---
 
