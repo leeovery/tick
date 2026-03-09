@@ -39,8 +39,8 @@ Requirement 3 enumerates "all commands" that must be covered but omits `ready` a
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added ready and blocked to Requirements item 3.
 
 ---
 

@@ -12,7 +12,7 @@ Unknown flags passed to any `tick` command are silently ignored. Arguments start
 
 1. All commands must reject unrecognised flags with a clear error message
 2. Known global flags (`--quiet`, `--verbose`, `--toon`, `--pretty`, `--json`, `--help`) must not be rejected by command-level validation
-3. The fix must cover all commands: `create`, `update`, `list`, `show`, `dep add/remove`, `remove`, `note add/remove`, `start`, `done`, `cancel`, `reopen`, `stats`, `doctor`, `init`, `rebuild`, `migrate`
+3. The fix must cover all commands: `create`, `update`, `list`, `show`, `dep add/remove`, `remove`, `note add/remove`, `start`, `done`, `cancel`, `reopen`, `stats`, `doctor`, `init`, `rebuild`, `migrate`, `ready`, `blocked`
 
 ## Design
 
