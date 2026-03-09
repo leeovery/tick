@@ -23,8 +23,8 @@ The flag inventory table lists flag names but does not annotate which are boolea
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added Flag Metadata subsection to Design.
 
 ---
 

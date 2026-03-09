@@ -32,6 +32,10 @@ Each command exports its set of valid flags. The dispatcher validates args again
 - **Central flag registry** (rejected): a `map[string][]string` in `app.go` creates a second place to maintain flag knowledge alongside the parsers
 - **Command-exported flags + central validation** (chosen): flag knowledge lives with the command, validation written once. No duplication of either flag definitions or validation logic
 
+### Flag Metadata
+
+Each command exports its flags with type information — whether each flag is boolean (standalone) or value-taking (consumes next argument). The validator uses this to correctly skip value positions when iterating args. For example, given `--priority 3 --unknown`, the validator must know `--priority` takes a value so `3` is skipped and `--unknown` is checked.
+
 ### Dispatch Paths
 
 `migrate` and `doctor` are dispatched before format resolution (a separate code path from the main dispatch switch). Validation must cover both dispatch paths to ensure all commands are protected.
