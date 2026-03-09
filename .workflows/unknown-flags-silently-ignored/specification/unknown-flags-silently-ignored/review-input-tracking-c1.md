@@ -26,8 +26,8 @@ The investigation lists "All commands" under blast radius but then enumerates a 
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added rebuild and migrate to Requirements item 3, Per-Command Flags table, and added Dispatch Paths subsection to Design.
 
 ---
 
