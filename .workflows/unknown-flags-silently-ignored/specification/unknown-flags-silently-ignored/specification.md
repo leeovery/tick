@@ -40,6 +40,10 @@ Each command exports its flags with type information — whether each flag is bo
 
 `migrate` and `doctor` are dispatched before format resolution (a separate code path from the main dispatch switch). Validation must cover both dispatch paths to ensure all commands are protected.
 
+### Pre-Subcommand Validation
+
+`parseArgs()` gains an error return value. When it encounters an unknown flag before the subcommand is identified, it returns an error immediately. This is the simplest change — the existing call site in `App.Run()` already handles errors from other sources in the same flow.
+
 ### Two-Level Commands
 
 For compound commands (`dep add/rm`, `note add/remove`), the dispatcher already identifies the top-level command (`dep`, `note`) and extracts the sub-subcommand. Flag validation happens after this extraction — the validator looks up flags for the fully-qualified command (e.g., `dep add`). The error message uses the fully-qualified command name. Flags appearing anywhere in the args for these commands are validated against the same set.

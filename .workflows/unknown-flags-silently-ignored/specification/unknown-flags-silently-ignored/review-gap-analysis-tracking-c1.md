@@ -101,8 +101,8 @@ This is a design detail that an implementer would need to decide. Since `parseAr
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added Pre-Subcommand Validation subsection to Design.
 
 ---
 
