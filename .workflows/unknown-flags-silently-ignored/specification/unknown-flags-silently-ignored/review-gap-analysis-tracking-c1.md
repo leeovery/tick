@@ -57,8 +57,8 @@ These are arguably edge cases since both are informational commands, but the spe
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added Excluded Commands subsection to Design.
 
 ---
 

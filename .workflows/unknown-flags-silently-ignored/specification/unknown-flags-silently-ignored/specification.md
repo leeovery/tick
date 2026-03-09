@@ -40,6 +40,10 @@ Each command exports its flags with type information — whether each flag is bo
 
 `migrate` and `doctor` are dispatched before format resolution (a separate code path from the main dispatch switch). Validation must cover both dispatch paths to ensure all commands are protected.
 
+### Excluded Commands
+
+`version` and `help` are excluded from flag validation. Both are informational commands that exit immediately. `help` accepts an optional command name and `--all` flag but these are handled inline and do not need central validation.
+
 ### Normalize Migrate Flag Parsing
 
 Remove `--from=value` (equals-sign) syntax support from `parseMigrateArgs`. Only `--from value` (space-separated) will be supported, consistent with all other commands. This eliminates a special case the central validator would otherwise need to handle.
