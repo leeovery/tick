@@ -93,6 +93,14 @@ Error: unknown flag "{flag}" for "{command}". Run 'tick help {command}' for usag
 
 **Unknown flags before subcommand:** `parseArgs()` currently silently skips unknown flags appearing before the subcommand is identified. These must also be rejected with: `Error: unknown flag "{flag}". Run 'tick help' for usage.`
 
+## Testing
+
+1. Each command rejects an unknown flag with the correct error message
+2. Global flags (`--verbose`, `--json`, etc.) are not rejected by command-level validation
+3. The specific `dep add --blocks` scenario from the bug report is covered
+4. Short flags (`-x`) are rejected as well as long flags (`--unknown`)
+5. Unknown flags before the subcommand are rejected
+
 ---
 
 ## Working Notes
