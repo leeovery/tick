@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-09
 cycle: 1
 phase: Input Review
@@ -44,5 +44,5 @@ This is relevant regardless of whether `migrate` goes through the central valida
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**: This may be a non-issue if `migrate` continues to be dispatched before the central validation point, but the spec should at minimum acknowledge the pattern exists so the implementer handles it correctly if `migrate` is brought under the central validator.
+**Resolution**: Adjusted
+**Notes**: User decided to remove --from=value syntax entirely rather than support it in the validator. Migrate will use space-separated --from value only, consistent with all other commands.

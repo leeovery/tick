@@ -36,6 +36,10 @@ Each command exports its set of valid flags. The dispatcher validates args again
 
 `migrate` and `doctor` are dispatched before format resolution (a separate code path from the main dispatch switch). Validation must cover both dispatch paths to ensure all commands are protected.
 
+### Normalize Migrate Flag Parsing
+
+Remove `--from=value` (equals-sign) syntax support from `parseMigrateArgs`. Only `--from value` (space-separated) will be supported, consistent with all other commands. This eliminates a special case the central validator would otherwise need to handle.
+
 ### Cleanup
 
 The existing `strings.HasPrefix(arg, "-")` silent-skip logic in each command's parser can be removed — unknown flags are caught before the handler is called.
