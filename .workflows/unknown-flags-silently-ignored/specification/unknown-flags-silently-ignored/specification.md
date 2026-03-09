@@ -52,6 +52,10 @@ For compound commands (`dep add/rm`, `note add/remove`), the dispatcher already 
 
 `version` and `help` are excluded from flag validation. Both are informational commands that exit immediately. `help` accepts an optional command name and `--all` flag but these are handled inline and do not need central validation.
 
+### Normalize Dep Subcommand
+
+Rename the `dep rm` sub-subcommand to `dep remove`, consistent with `note remove` and the top-level `remove` command. No shortened command names.
+
 ### Normalize Migrate Flag Parsing
 
 Remove `--from=value` (equals-sign) syntax support from `parseMigrateArgs`. Only `--from value` (space-separated) will be supported, consistent with all other commands. This eliminates a special case the central validator would otherwise need to handle.
@@ -91,7 +95,7 @@ Accepted by all commands, stripped before dispatch:
 | `ready` | same as `list` minus `--ready` |
 | `blocked` | same as `list` minus `--blocked` |
 | `dep add` | *(none)* |
-| `dep rm` | *(none)* |
+| `dep remove` | *(none)* |
 | `note add` | *(none)* |
 | `note remove` | *(none)* |
 | `remove` | `--force` / `-f` |

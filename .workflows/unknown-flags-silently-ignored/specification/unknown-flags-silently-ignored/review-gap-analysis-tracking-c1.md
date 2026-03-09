@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-09
 cycle: 1
 phase: Gap Analysis
@@ -117,5 +117,5 @@ Requirement 3 lists `dep add/remove` but the actual sub-subcommand in the codeba
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**: Minor inconsistency. The inventory table is correct; only the requirements list uses the wrong name.
+**Resolution**: Adjusted
+**Notes**: User decided to normalize dep rm to dep remove (no shortened commands). Updated inventory table and added Normalize Dep Subcommand subsection to Design.
