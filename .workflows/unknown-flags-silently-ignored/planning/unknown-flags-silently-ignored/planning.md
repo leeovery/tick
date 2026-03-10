@@ -1,8 +1,9 @@
 # Plan: Unknown Flags Silently Ignored
 
 ### Phase 1: Flag Validation and Normalizations
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-03-10
 
 **Goal**: All commands reject unknown flags with the specified error message. Flag metadata exported per command, validated centrally before dispatch. Prerequisite normalizations (dep rm to dep remove, --from= syntax removal) applied. Both dispatch paths (main switch and doctor/migrate) covered.
 
@@ -21,8 +22,9 @@ ext_id:
 - [ ] Value-taking flags (e.g., `--priority 3`) correctly skip the value argument during validation
 
 ### Phase 2: Parser Cleanup and Regression Verification
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-03-10
 
 **Goal**: Remove now-dead silent-skip logic from individual command parsers. Verify no regressions across the full command surface with dedicated regression tests.
 
