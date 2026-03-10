@@ -27,8 +27,8 @@
       "task_list_gate_mode": "gated",
       "author_gate_mode": "auto",
       "finding_gate_mode": "gated",
-      "phase": 1,
-      "task": 4,
+      "phase": 2,
+      "task": "~",
       "ext_id": "tick-18747f"
     }
   }
