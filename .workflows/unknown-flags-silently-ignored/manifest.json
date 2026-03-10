@@ -21,7 +21,7 @@
       }
     },
     "planning": {
-      "status": "in-progress",
+      "status": "concluded",
       "format": "tick",
       "spec_commit": "d7107686580e05d2a3be7a25bb52f69adaeb56cd",
       "task_list_gate_mode": "auto",
