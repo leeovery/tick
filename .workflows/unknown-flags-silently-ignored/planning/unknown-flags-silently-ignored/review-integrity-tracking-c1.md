@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-10
 cycle: 1
 phase: Plan Integrity Review
@@ -195,8 +195,8 @@ In tick-f52ed8 Acceptance Criteria:
 - dep add --blocks bug report test (from Phase 1) still passes after cleanup
 ```
 
-**Resolution**: Pending
-**Notes**: This is a minor concern. Having the test written twice wouldn't cause failures, just redundancy. The implementer could reasonably skip the duplicate, but explicit guidance is cleaner.
+**Resolution**: Fixed
+**Notes**: This is a minor concern. Already addressed during the Outcome/Tests update — tick-f52ed8's description now says "Verify TestBugReportScenario (written in Task 1-4) still passes" rather than recreating it.
 
 ---
 
@@ -224,5 +224,5 @@ In tick-8879b7 Do step 2:
    - Find all occurrences of `parseArgs(` in cli_test.go (currently 4 call sites at lines 345, 357, 370, 386). Update each from `flags, subcmd, _ := parseArgs(...)` or `flags, subcmd, subArgs := parseArgs(...)` to include the new error return: `flags, subcmd, _, err := parseArgs(...)` / `flags, subcmd, subArgs, err := parseArgs(...)`. Assert err is nil in each case.
 ```
 
-**Resolution**: Pending
-**Notes**: The current guidance would still lead to the correct outcome since the implementer would search for parseArgs call sites. This is a polish improvement for clarity.
+**Resolution**: Fixed
+**Notes**: Already addressed during the Outcome/Tests update — tick-8879b7's description now references file/line patterns instead of potentially wrong test function names.
