@@ -156,7 +156,7 @@ Add blocked_by dependency: tick-f52ed8 blocked by tick-f1dae6.
 
 This ensures the regression test suite runs after both (a) Phase 1's central validation is wired in (transitively via tick-f1dae6 -> tick-3abf54) and (b) the dead skip logic is removed (tick-f1dae6 directly).
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**: The dependency command would be: `tick dep add tick-f52ed8 tick-f1dae6`
 
 ---
