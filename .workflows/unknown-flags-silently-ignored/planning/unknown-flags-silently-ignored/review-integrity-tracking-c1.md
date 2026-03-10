@@ -129,7 +129,7 @@ Tests:
 - "it does not reject global flags on any command"
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**: The test lists for tick-adbf78 and tick-8879b7 are extracted from their existing Do sections. For tick-f1dae6, the "tests" are verification that existing tests still pass -- this is appropriate for a cleanup task. For the others, test names are derived from the acceptance criteria.
 
 ---
