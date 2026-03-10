@@ -43,3 +43,9 @@ approved_at: 2026-03-10
 - [ ] All existing tests pass with no regressions after parser cleanup
 - [ ] Short flags (`-x`) are rejected as well as long flags (`--unknown`) across all commands
 - [ ] Commands with no accepted flags (init, show, start, done, cancel, reopen, stats, doctor, rebuild, dep add, dep remove, note add, note remove) reject any flag passed to them
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| unknown-flags-silently-ignored-2-1 | Remove dead silent-skip logic from command parsers | parser with known flags alongside skip removal (create/update/remove), positional-only parsers (dep/note add) that use skip for extraction | pending | |
+| unknown-flags-silently-ignored-2-2 | Comprehensive unknown-flag regression tests across all commands | short flags (-x) vs long flags (--unknown), two-level commands (dep add/remove, note add/remove), commands with accepted flags still reject unknown ones | pending | |
