@@ -19,6 +19,16 @@
           "status": "incorporated"
         }
       }
+    },
+    "planning": {
+      "status": "in-progress",
+      "format": "tick",
+      "spec_commit": "d7107686580e05d2a3be7a25bb52f69adaeb56cd",
+      "task_list_gate_mode": "gated",
+      "author_gate_mode": "gated",
+      "finding_gate_mode": "gated",
+      "phase": 1,
+      "task": "~"
     }
   }
 }
