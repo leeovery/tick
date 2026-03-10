@@ -25,7 +25,7 @@ approved_at: 2026-03-10
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
 | unknown-flags-silently-ignored-1-1 | Normalize dep rm to dep remove and remove --from=value syntax | existing tests referencing dep rm, --from= with empty value | authored | tick-928bf7 |
-| unknown-flags-silently-ignored-1-2 | Reproduce bug and build flag metadata with central validator | value-taking flags consuming next arg, short aliases (-f), two-level command error format | pending | |
+| unknown-flags-silently-ignored-1-2 | Reproduce bug and build flag metadata with central validator | value-taking flags consuming next arg, short aliases (-f), two-level command error format | authored | tick-adbf78 |
 | unknown-flags-silently-ignored-1-3 | Wire validation into parseArgs and both dispatch paths | pre-subcommand unknown flag error format, help/version bypass, doctor/migrate dispatch path | pending | |
 | unknown-flags-silently-ignored-1-4 | Validate global flag pass-through and value-taking flag skipping | global flags interspersed with command args, --ready/--blocked on ready/blocked commands | pending | |
 
