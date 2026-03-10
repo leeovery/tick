@@ -22,8 +22,8 @@ The Two-Level Commands section (line 49) says `dep add/rm` but the Normalize Dep
 **Proposed Addition**:
 Change `dep add/rm` to `dep add/remove` in the Two-Level Commands section.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Updated dep add/rm to dep add/remove in Two-Level Commands section.
 
 ---
 
