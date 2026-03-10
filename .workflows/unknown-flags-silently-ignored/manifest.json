@@ -32,6 +32,19 @@
       "ext_id": "tick-18747f",
       "external_dependencies": {},
       "review_cycle": 2
+    },
+    "implementation": {
+      "status": "in-progress",
+      "format": "tick",
+      "task_gate_mode": "gated",
+      "fix_gate_mode": "gated",
+      "analysis_gate_mode": "gated",
+      "fix_attempts": 0,
+      "analysis_cycle": 0,
+      "linters": [],
+      "project_skills": [],
+      "current_phase": 1,
+      "current_task": "~"
     }
   }
 }
