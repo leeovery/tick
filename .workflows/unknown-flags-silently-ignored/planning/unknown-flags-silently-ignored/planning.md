@@ -31,7 +31,7 @@ approved_at: 2026-03-10
 
 ### Phase 2: Parser Cleanup and Regression Verification
 status: approved
-ext_id:
+ext_id: tick-c3e72b
 approved_at: 2026-03-10
 
 **Goal**: Remove now-dead silent-skip logic from individual command parsers. Verify no regressions across the full command surface with dedicated regression tests.
@@ -47,5 +47,5 @@ approved_at: 2026-03-10
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| unknown-flags-silently-ignored-2-1 | Remove dead silent-skip logic from command parsers | parser with known flags alongside skip removal (create/update/remove), positional-only parsers (dep/note add) that use skip for extraction | pending | |
-| unknown-flags-silently-ignored-2-2 | Comprehensive unknown-flag regression tests across all commands | short flags (-x) vs long flags (--unknown), two-level commands (dep add/remove, note add/remove), commands with accepted flags still reject unknown ones | pending | |
+| unknown-flags-silently-ignored-2-1 | Remove dead silent-skip logic from command parsers | parser with known flags alongside skip removal (create/update/remove), positional-only parsers (dep/note add) that use skip for extraction | authored | tick-f1dae6 |
+| unknown-flags-silently-ignored-2-2 | Comprehensive unknown-flag regression tests across all commands | short flags (-x) vs long flags (--unknown), two-level commands (dep add/remove, note add/remove), commands with accepted flags still reject unknown ones | authored | tick-f52ed8 |
