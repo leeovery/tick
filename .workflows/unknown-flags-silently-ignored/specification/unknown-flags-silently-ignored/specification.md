@@ -119,6 +119,8 @@ Error: unknown flag "{flag}" for "{command}". Run 'tick help {command}' for usag
 - `tick show --verbose tick-abc123` → *(no error — `--verbose` is a known global flag)*
 - `tick list --unknown` → `Error: unknown flag "--unknown" for "list". Run 'tick help list' for usage.`
 
+**Two-level commands**: For compound commands, the error uses the fully-qualified name (e.g., `"dep add"`) but the help reference uses the parent command name (e.g., `tick help dep`), since `tick help` only accepts top-level command names.
+
 **Exit code:** Non-zero (consistent with existing error handling)
 
 **Unknown flags before subcommand:** `parseArgs()` currently silently skips unknown flags appearing before the subcommand is identified. These must also be rejected with: `Error: unknown flag "{flag}". Run 'tick help' for usage.`

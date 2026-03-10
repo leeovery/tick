@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-10
 cycle: 2
 phase: Gap Analysis
@@ -49,5 +49,5 @@ The first `{command}` is `dep add` (fully-qualified) but the second is `dep` (pa
 **Proposed Addition**:
 Either adjust the template to use distinct placeholders (e.g., `{command}` and `{help-command}`), or add a note below the template explaining that for two-level commands the help reference uses the parent command name since `tick help` only accepts top-level command names.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added two-level commands note to Error Behavior section.
