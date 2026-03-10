@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-10
 cycle: 1
 phase: Traceability Review
@@ -98,5 +98,5 @@ Tests:
 - ready rejects --ready
 - blocked rejects --blocked
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**: Minor finding. The edge case is a reasonable defensive programming concern but cannot be traced to the specification. The implementer may naturally handle this anyway, but the plan should only contain spec-derived content. Removing three lines (one edge case, one acceptance criterion, one test) from the task.
