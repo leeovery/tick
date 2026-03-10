@@ -348,6 +348,33 @@ not valid json at all
 	})
 }
 
+func TestMigrateFromFlagSyntax(t *testing.T) {
+	t.Run("it accepts --from value (space-separated) on migrate", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Test task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+	})
+
+	t.Run("it rejects --from=value (equals-sign) on migrate", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Test task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from=beads")
+
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "--from") {
+			t.Errorf("stderr should mention --from flag, got %q", stderr)
+		}
+	})
+}
+
 func TestMigrateDryRun(t *testing.T) {
 	t.Run("--dry-run flag defaults to false", func(t *testing.T) {
 		dir, tickDir := setupTickProject(t)

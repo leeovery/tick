@@ -9,7 +9,7 @@ import (
 	"github.com/leeovery/tick/internal/task"
 )
 
-// handleDep implements the dep subcommand, routing to add/rm sub-subcommands.
+// handleDep implements the dep subcommand, routing to add/remove sub-subcommands.
 func (a *App) handleDep(fc FormatConfig, fmtr Formatter, subArgs []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
@@ -17,7 +17,7 @@ func (a *App) handleDep(fc FormatConfig, fmtr Formatter, subArgs []string) error
 	}
 
 	if len(subArgs) == 0 {
-		return fmt.Errorf("sub-command required. Usage: tick dep <add|rm> <task_id> <blocked_by_id>")
+		return fmt.Errorf("sub-command required. Usage: tick dep <add|remove> <task_id> <blocked_by_id>")
 	}
 
 	subCmd := subArgs[0]
@@ -26,10 +26,10 @@ func (a *App) handleDep(fc FormatConfig, fmtr Formatter, subArgs []string) error
 	switch subCmd {
 	case "add":
 		return RunDepAdd(dir, fc, fmtr, rest, a.Stdout)
-	case "rm":
-		return RunDepRm(dir, fc, fmtr, rest, a.Stdout)
+	case "remove":
+		return RunDepRemove(dir, fc, fmtr, rest, a.Stdout)
 	default:
-		return fmt.Errorf("unknown dep sub-command '%s'. Usage: tick dep <add|rm> <task_id> <blocked_by_id>", subCmd)
+		return fmt.Errorf("unknown dep sub-command '%s'. Usage: tick dep <add|remove> <task_id> <blocked_by_id>", subCmd)
 	}
 }
 
@@ -132,10 +132,10 @@ func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	return nil
 }
 
-// RunDepRm executes the dep rm command: resolves partial IDs, finds the task, removes the
+// RunDepRemove executes the dep remove command: resolves partial IDs, finds the task, removes the
 // dependency from blocked_by, persists via the storage engine, and outputs confirmation via the Formatter.
-func RunDepRm(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	taskID, blockedByID, err := parseDepArgs(args, "rm")
+func RunDepRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
+	taskID, blockedByID, err := parseDepArgs(args, "remove")
 	if err != nil {
 		return err
 	}

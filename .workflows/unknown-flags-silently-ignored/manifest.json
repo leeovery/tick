@@ -41,10 +41,28 @@
       "analysis_gate_mode": "gated",
       "fix_attempts": 0,
       "analysis_cycle": 0,
-      "linters": [],
-      "project_skills": [],
+      "linters": [
+        {
+          "name": "golangci-lint",
+          "command": "golangci-lint run ./..."
+        },
+        {
+          "name": "go vet",
+          "command": "go vet ./..."
+        },
+        {
+          "name": "gofmt",
+          "command": "gofmt -w ./internal ./cmd"
+        }
+      ],
+      "project_skills": [
+        ".claude/skills/golang-pro/SKILL.md"
+      ],
       "current_phase": 1,
-      "current_task": "~"
+      "current_task": "tick-928bf7",
+      "completed_tasks": [
+        "tick-928bf7"
+      ]
     }
   }
 }

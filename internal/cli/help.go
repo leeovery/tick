@@ -150,7 +150,7 @@ var commands = []commandInfo{
 	{
 		Name:    "dep",
 		Summary: "Manage task dependencies",
-		Usage:   "tick dep <add|rm> <task-id> <blocked-by-id>",
+		Usage:   "tick dep <add|remove> <task-id> <blocked-by-id>",
 		Description: "Adds or removes a dependency between two tasks.\n" +
 			"Prevents self-references, dependency cycles, and adding a\n" +
 			"cancelled task as a dependency.",

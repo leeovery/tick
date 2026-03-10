@@ -126,8 +126,18 @@ func TestHelp(t *testing.T) {
 		if !strings.Contains(stdout, "add") {
 			t.Error("stdout missing 'add'")
 		}
-		if !strings.Contains(stdout, "rm") {
-			t.Error("stdout missing 'rm'")
+		if !strings.Contains(stdout, "remove") {
+			t.Error("stdout missing 'remove'")
+		}
+	})
+
+	t.Run("it shows <add|remove> in dep help text", func(t *testing.T) {
+		stdout, _, code := runHelp(t, "help", "dep")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0", code)
+		}
+		if !strings.Contains(stdout, "<add|remove>") {
+			t.Errorf("stdout should contain '<add|remove>', got %q", stdout)
 		}
 	})
 

@@ -54,8 +54,6 @@ func parseMigrateArgs(args []string) (migrateFlags, error) {
 				return flags, fmt.Errorf("--from requires a value")
 			}
 			flags.from = args[i]
-		case strings.HasPrefix(args[i], "--from="):
-			flags.from = strings.TrimPrefix(args[i], "--from=")
 		case args[i] == "--dry-run":
 			flags.dryRun = true
 		case args[i] == "--pending-only":

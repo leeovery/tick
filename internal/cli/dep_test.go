@@ -358,7 +358,7 @@ func TestDepAdd(t *testing.T) {
 	})
 }
 
-func TestDepRm(t *testing.T) {
+func TestDepRemove(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 
 	t.Run("it removes an existing dependency", func(t *testing.T) {
@@ -373,7 +373,7 @@ func TestDepRm(t *testing.T) {
 		}
 		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
-		_, _, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-bbb222")
+		_, _, exitCode := runDep(t, dir, "remove", "tick-aaa111", "tick-bbb222")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
@@ -391,7 +391,7 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("it outputs confirmation on success (rm)", func(t *testing.T) {
+	t.Run("it outputs confirmation on success (remove)", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
 			Priority: 2, BlockedBy: []string{"tick-bbb222"},
@@ -403,7 +403,7 @@ func TestDepRm(t *testing.T) {
 		}
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
-		stdout, _, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-bbb222")
+		stdout, _, exitCode := runDep(t, dir, "remove", "tick-aaa111", "tick-bbb222")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
@@ -414,7 +414,7 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("it updates task's updated timestamp (rm)", func(t *testing.T) {
+	t.Run("it updates task's updated timestamp (remove)", func(t *testing.T) {
 		pastTime := now.Add(-1 * time.Hour)
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
@@ -428,7 +428,7 @@ func TestDepRm(t *testing.T) {
 		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
 		before := time.Now().UTC().Truncate(time.Second)
-		_, _, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-bbb222")
+		_, _, exitCode := runDep(t, dir, "remove", "tick-aaa111", "tick-bbb222")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
@@ -447,14 +447,14 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("it errors when task_id not found (rm)", func(t *testing.T) {
+	t.Run("it errors when task_id not found (remove)", func(t *testing.T) {
 		taskB := task.Task{
 			ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen,
 			Priority: 2, Created: now, Updated: now,
 		}
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskB})
 
-		_, stderr, exitCode := runDep(t, dir, "rm", "tick-nonexist", "tick-bbb222")
+		_, stderr, exitCode := runDep(t, dir, "remove", "tick-nonexist", "tick-bbb222")
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -463,7 +463,7 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("it errors when dependency not found in blocked_by (rm)", func(t *testing.T) {
+	t.Run("it errors when dependency not found in blocked_by (remove)", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
 			Priority: 2, Created: now, Updated: now,
@@ -474,7 +474,7 @@ func TestDepRm(t *testing.T) {
 		}
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
-		_, stderr, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-bbb222")
+		_, stderr, exitCode := runDep(t, dir, "remove", "tick-aaa111", "tick-bbb222")
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -483,7 +483,7 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("it normalizes IDs to lowercase (rm)", func(t *testing.T) {
+	t.Run("it normalizes IDs to lowercase (remove)", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
 			Priority: 2, BlockedBy: []string{"tick-bbb222"},
@@ -495,7 +495,7 @@ func TestDepRm(t *testing.T) {
 		}
 		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
-		stdout, _, exitCode := runDep(t, dir, "rm", "TICK-AAA111", "TICK-BBB222")
+		stdout, _, exitCode := runDep(t, dir, "remove", "TICK-AAA111", "TICK-BBB222")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
@@ -517,7 +517,7 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("it suppresses output with --quiet (rm)", func(t *testing.T) {
+	t.Run("it suppresses output with --quiet (remove)", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
 			Priority: 2, BlockedBy: []string{"tick-bbb222"},
@@ -529,7 +529,7 @@ func TestDepRm(t *testing.T) {
 		}
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
-		stdout, stderr, exitCode := runDep(t, dir, "rm", "--quiet", "tick-aaa111", "tick-bbb222")
+		stdout, stderr, exitCode := runDep(t, dir, "remove", "--quiet", "tick-aaa111", "tick-bbb222")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
@@ -541,10 +541,10 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("it errors when fewer than two IDs provided (rm)", func(t *testing.T) {
+	t.Run("it errors when fewer than two IDs provided (remove)", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
 
-		_, stderr, exitCode := runDep(t, dir, "rm", "tick-aaa111")
+		_, stderr, exitCode := runDep(t, dir, "remove", "tick-aaa111")
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -553,10 +553,10 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("it errors when no IDs provided (rm)", func(t *testing.T) {
+	t.Run("it errors when no IDs provided (remove)", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
 
-		_, stderr, exitCode := runDep(t, dir, "rm")
+		_, stderr, exitCode := runDep(t, dir, "remove")
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -565,7 +565,7 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("it persists via atomic write (rm)", func(t *testing.T) {
+	t.Run("it persists via atomic write (remove)", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
 			Priority: 2, BlockedBy: []string{"tick-bbb222"},
@@ -577,7 +577,7 @@ func TestDepRm(t *testing.T) {
 		}
 		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
-		_, _, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-bbb222")
+		_, _, exitCode := runDep(t, dir, "remove", "tick-aaa111", "tick-bbb222")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
@@ -599,7 +599,7 @@ func TestDepRm(t *testing.T) {
 		}
 	})
 
-	t.Run("rm errors when blocked_by_id is a stale reference", func(t *testing.T) {
+	t.Run("remove errors when blocked_by_id is a stale reference", func(t *testing.T) {
 		// Task has a stale ref in blocked_by that no longer exists as a task.
 		// ResolveID catches this before the mutation.
 		taskA := task.Task{
@@ -609,7 +609,7 @@ func TestDepRm(t *testing.T) {
 		}
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
 
-		_, stderr, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-delete")
+		_, stderr, exitCode := runDep(t, dir, "remove", "tick-aaa111", "tick-delete")
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -790,7 +790,7 @@ func TestDepAddPartialID(t *testing.T) {
 	})
 }
 
-func TestDepRmPartialID(t *testing.T) {
+func TestDepRemovePartialID(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 
 	t.Run("it removes a dependency using partial IDs for both args", func(t *testing.T) {
@@ -805,7 +805,7 @@ func TestDepRmPartialID(t *testing.T) {
 		}
 		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
-		_, _, exitCode := runDep(t, dir, "rm", "a3f", "b2c")
+		_, _, exitCode := runDep(t, dir, "remove", "a3f", "b2c")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
@@ -823,7 +823,7 @@ func TestDepRmPartialID(t *testing.T) {
 		}
 	})
 
-	t.Run("it errors with not-found prefix in dep rm", func(t *testing.T) {
+	t.Run("it errors with not-found prefix in dep remove", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
 			Priority: 2, BlockedBy: []string{"tick-b2c3d4"},
@@ -835,7 +835,7 @@ func TestDepRmPartialID(t *testing.T) {
 		}
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
-		_, stderr, exitCode := runDep(t, dir, "rm", "zzz", "b2c")
+		_, stderr, exitCode := runDep(t, dir, "remove", "zzz", "b2c")
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -844,7 +844,7 @@ func TestDepRmPartialID(t *testing.T) {
 		}
 	})
 
-	t.Run("it still works with full IDs in dep rm", func(t *testing.T) {
+	t.Run("it still works with full IDs in dep remove", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-a3f1b2", Title: "Task A", Status: task.StatusOpen,
 			Priority: 2, BlockedBy: []string{"tick-b2c3d4"},
@@ -856,7 +856,7 @@ func TestDepRmPartialID(t *testing.T) {
 		}
 		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
 
-		_, _, exitCode := runDep(t, dir, "rm", "tick-a3f1b2", "tick-b2c3d4")
+		_, _, exitCode := runDep(t, dir, "remove", "tick-a3f1b2", "tick-b2c3d4")
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
@@ -871,6 +871,30 @@ func TestDepRmPartialID(t *testing.T) {
 		}
 		if len(found.BlockedBy) != 0 {
 			t.Errorf("blocked_by = %v, want empty", found.BlockedBy)
+		}
+	})
+}
+
+func TestDepRmReturnsError(t *testing.T) {
+	t.Run("it returns unknown sub-command error for dep rm", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, BlockedBy: []string{"tick-bbb222"},
+			Created: now, Updated: now,
+		}
+		taskB := task.Task{
+			ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA, taskB})
+
+		_, stderr, exitCode := runDep(t, dir, "rm", "tick-aaa111", "tick-bbb222")
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(stderr, "unknown dep sub-command 'rm'") {
+			t.Errorf("stderr should contain unknown sub-command error, got %q", stderr)
 		}
 	})
 }
