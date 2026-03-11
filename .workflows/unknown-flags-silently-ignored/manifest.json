@@ -34,7 +34,7 @@
       "review_cycle": 2
     },
     "implementation": {
-      "status": "in-progress",
+      "status": "completed",
       "format": "tick",
       "task_gate_mode": "auto",
       "fix_gate_mode": "gated",
