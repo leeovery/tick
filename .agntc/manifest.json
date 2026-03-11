@@ -1,8 +1,8 @@
 {
   "leeovery/claude-technical-workflows": {
     "ref": null,
-    "commit": "7d58afc0234b65a1a95f39ff72f16fcc73e4983b",
-    "installedAt": "2026-03-08T21:49:09.383Z",
+    "commit": "75571a053e115acd38d151669615e29bafe28bc3",
+    "installedAt": "2026-03-11T14:28:19.024Z",
     "agents": [
       "claude"
     ],
@@ -56,6 +56,10 @@
       ".claude/skills/migrate/scripts/migrations/016-work-unit-restructure.sh",
       ".claude/skills/migrate/scripts/migrations/017-external-deps-object.sh",
       ".claude/skills/migrate/scripts/migrations/018-remove-stale-environment-setup.sh",
+      ".claude/skills/migrate/scripts/migrations/019-status-rename.sh",
+      ".claude/skills/migrate/scripts/migrations/020-normalise-terminal-status.sh",
+      ".claude/skills/migrate/scripts/migrations/021-research-filename-rename.sh",
+      ".claude/skills/migrate/scripts/migrations/022-remove-session-state.sh",
       ".claude/skills/start-bugfix/",
       ".claude/skills/start-bugfix/SKILL.md",
       ".claude/skills/start-bugfix/references/",
@@ -163,11 +167,15 @@
       ".claude/skills/technical-research/",
       ".claude/skills/technical-research/SKILL.md",
       ".claude/skills/technical-research/references/",
-      ".claude/skills/technical-research/references/convergence-awareness.md",
-      ".claude/skills/technical-research/references/interview.md",
+      ".claude/skills/technical-research/references/conclude-research.md",
+      ".claude/skills/technical-research/references/epic-session.md",
+      ".claude/skills/technical-research/references/feature-session.md",
+      ".claude/skills/technical-research/references/file-strategy.md",
       ".claude/skills/technical-research/references/research-guidelines.md",
-      ".claude/skills/technical-research/references/research-session.md",
+      ".claude/skills/technical-research/references/session-loop.md",
       ".claude/skills/technical-research/references/template.md",
+      ".claude/skills/technical-research/references/topic-completion.md",
+      ".claude/skills/technical-research/references/topic-splitting.md",
       ".claude/skills/technical-review/",
       ".claude/skills/technical-review/SKILL.md",
       ".claude/skills/technical-review/references/",
@@ -275,7 +283,7 @@
       ".claude/skills/workflow-specification-entry/references/display-single.md",
       ".claude/skills/workflow-specification-entry/references/display-specs-menu.md",
       ".claude/skills/workflow-specification-entry/references/handoffs/",
-      ".claude/skills/workflow-specification-entry/references/handoffs/continue-concluded.md",
+      ".claude/skills/workflow-specification-entry/references/handoffs/continue-completed.md",
       ".claude/skills/workflow-specification-entry/references/handoffs/continue.md",
       ".claude/skills/workflow-specification-entry/references/handoffs/create-with-incorporation.md",
       ".claude/skills/workflow-specification-entry/references/handoffs/create.md",
@@ -292,6 +300,8 @@
       ".claude/skills/workflow-start/references/",
       ".claude/skills/workflow-start/references/active-work.md",
       ".claude/skills/workflow-start/references/empty-state.md",
+      ".claude/skills/workflow-start/references/manage-work-unit.md",
+      ".claude/skills/workflow-start/references/view-completed.md",
       ".claude/skills/workflow-start/scripts/",
       ".claude/skills/workflow-start/scripts/discovery.js",
       ".claude/agents/implementation-analysis-architecture.md",
@@ -310,13 +320,7 @@
       ".claude/agents/review-findings-synthesizer.md",
       ".claude/agents/review-task-verifier.md",
       ".claude/agents/specification-review-gap-analysis.md",
-      ".claude/agents/specification-review-input.md",
-      ".claude/hooks/workflows/",
-      ".claude/hooks/workflows/compact-recovery.sh",
-      ".claude/hooks/workflows/session-cleanup.sh",
-      ".claude/hooks/workflows/session-env.sh",
-      ".claude/hooks/workflows/system-check.sh",
-      ".claude/hooks/workflows/write-session-state.sh"
+      ".claude/agents/specification-review-input.md"
     ],
     "cloneUrl": "https://github.com/leeovery/claude-technical-workflows.git"
   }

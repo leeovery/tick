@@ -22,21 +22,6 @@ The output becomes source material for a specification focused on the fix approa
 - **Bug context** (optional) - Initial symptoms, error messages, reproduction steps
 - **Work type** - Always "bugfix" for investigation
 
-**Before proceeding**, confirm the required input is clear. If anything is missing or unclear, **STOP** and resolve with the user.
-
-#### If no topic provided
-
-> *Output the next fenced block as a code block:*
-
-```
-What bug would you like to investigate? Provide:
-- A short identifier or name for tracking
-- What's broken (expected vs actual behavior)
-- Any error messages or symptoms observed
-```
-
-**STOP.** Wait for user response.
-
 ---
 
 ## Resuming After Context Refresh
@@ -79,15 +64,37 @@ The investigation file is your memory. Context compaction is lossy — what's no
 
 ## Step 0: Resume Detection
 
-Check if `.workflows/{work_unit}/investigation/{topic}.md` already exists.
+Check if the investigation file exists at `.workflows/{work_unit}/investigation/{topic}.md`.
 
-#### If the file exists
+#### If no file exists
 
-Read it. Announce what's been documented so far and what phase the investigation is in (symptoms, analysis, root cause, or findings review). Ask the user whether to continue or restart.
+→ Proceed to **Step 1**.
+
+#### If file exists
+
+Read the file.
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+Found existing investigation for **{topic:(titlecase)}**.
+
+· · · · · · · · · · · ·
+- **`c`/`continue`** — Pick up where you left off
+- **`r`/`restart`** — Delete the investigation file and start fresh
+· · · · · · · · · · · ·
+```
 
 **STOP.** Wait for user response.
 
-#### If the file does not exist
+#### If `continue`
+
+→ Proceed to **Step 2**.
+
+#### If `restart`
+
+1. Delete the investigation file
+2. Commit: `investigation({work_unit}): restart investigation`
 
 → Proceed to **Step 1**.
 

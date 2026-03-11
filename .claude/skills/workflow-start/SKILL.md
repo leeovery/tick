@@ -1,13 +1,7 @@
 ---
 name: workflow-start
 disable-model-invocation: true
-allowed-tools: Bash(node .claude/skills/workflow-start/scripts/discovery.js)
-hooks:
-  PreToolUse:
-    - hooks:
-        - type: command
-          command: "$CLAUDE_PROJECT_DIR/.claude/hooks/workflows/system-check.sh"
-          once: true
+allowed-tools: Bash(node .claude/skills/workflow-start/scripts/discovery.js), Bash(node .claude/skills/workflow-manifest/scripts/manifest.js)
 ---
 
 Unified workflow entry point. Discovers state, shows all active work, and routes to start or continue skills.
@@ -54,6 +48,10 @@ Parse the output to understand the current workflow state:
 
 **From `bugfixes` section:**
 - `work_units` — name, next_phase, phase_label
+
+**From `completed`/`cancelled` arrays:**
+- Non-active work units with name, work_type, status, last_phase
+- `completed_count`, `cancelled_count`
 
 **From `state` section:**
 - Counts for each work type, `has_any_work` flag

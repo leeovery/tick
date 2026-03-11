@@ -1,7 +1,7 @@
 ---
 name: workflow-research-entry
 user-invocable: false
-allowed-tools: Bash(node .claude/skills/workflow-manifest/scripts/manifest.js), Bash(.claude/hooks/workflows/write-session-state.sh)
+allowed-tools: Bash(node .claude/skills/workflow-manifest/scripts/manifest.js)
 ---
 
 Invoke the **technical-research** skill for this conversation.
@@ -46,19 +46,35 @@ Resolve topic: topic = `$2`, or if not provided and work_type is not `epic`, top
 
 Store work_unit for the handoff.
 
+Resolve filename:
+
+#### If work_type is `feature`
+
+`resolved_filename = {topic}.md`
+
+#### If work_type is `epic` and `topic` resolved
+
+`resolved_filename = {topic}.md`
+
+#### If work_type is `epic` and no `topic`
+
+Deferred — gather-context will resolve it.
+
+---
+
 #### If `topic` resolved
 
-Check research phase status via manifest CLI:
+Check if the research phase entry exists:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase research --topic {topic} status
+node .claude/skills/workflow-manifest/scripts/manifest.js exists {work_unit} --phase research --topic {topic}
 ```
 
-**If phase exists (in-progress or concluded):**
+**If exists (`true`):**
 
 → Proceed to **Step 2** (Validate Phase).
 
-**If phase not found (new entry):**
+**If not exists (`false`):**
 
 → Proceed to **Step 3** (Gather Context).
 
@@ -85,20 +101,5 @@ Load **[gather-context.md](references/gather-context.md)** and follow its instru
 ---
 
 ## Step 4: Invoke the Skill
-
-Before invoking the processing skill, save a session bookmark.
-
-> *Output the next fenced block as a code block:*
-
-```
-Saving session state so Claude can pick up where it left off if the conversation is compacted.
-```
-
-```bash
-.claude/hooks/workflows/write-session-state.sh \
-  "{topic}" \
-  "skills/technical-research/SKILL.md" \
-  ".workflows/{work_unit}/research/exploration.md"
-```
 
 Load **[invoke-skill.md](references/invoke-skill.md)** and follow its instructions as written.

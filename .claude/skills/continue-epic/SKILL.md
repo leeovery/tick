@@ -2,12 +2,6 @@
 name: continue-epic
 disable-model-invocation: true
 allowed-tools: Bash(node .claude/skills/continue-epic/scripts/discovery.js), Bash(node .claude/skills/workflow-manifest/scripts/manifest.js)
-hooks:
-  PreToolUse:
-    - hooks:
-        - type: command
-          command: "$CLAUDE_PROJECT_DIR/.claude/hooks/workflows/system-check.sh"
-          once: true
 ---
 
 Continue an in-progress epic. Shows full phase-by-phase state and routes to the appropriate phase skill.
@@ -54,15 +48,17 @@ Parse the discovery output to understand:
 - `detail` - full phase-by-phase breakdown containing:
   - `phases` - per-phase items with statuses and spec sources
   - `in_progress` - items currently in-progress (name + phase)
-  - `concluded` - items that are concluded/completed (name + phase)
+  - `completed` - items that are completed (name + phase)
   - `next_phase_ready` - items ready for the next phase (name + action + label)
-  - `unaccounted_discussions` - concluded discussions not sourced in any spec
+  - `unaccounted_discussions` - completed discussions not sourced in any spec
   - `reopened_discussions` - in-progress discussions that are sourced in a spec
   - `gating` - boolean flags for phase-forward gating
 
 **From top-level fields:**
 - `count` - number of active epics
 - `summary` - human-readable state summary
+- `completed` / `cancelled` - arrays of non-active epics with name, status, last_phase (list mode only)
+- `completed_count` / `cancelled_count` - counts for each
 
 **IMPORTANT**: Use ONLY this script for discovery. Do NOT run additional bash commands (ls, head, cat, etc.) to gather state.
 

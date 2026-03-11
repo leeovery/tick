@@ -32,10 +32,14 @@ $MANIFEST init-phase {work_unit} --phase discussion --topic {topic}
 $MANIFEST get {work_unit} [field]
 $MANIFEST set {work_unit} field value
 
+# Existence checks (always exit 0, outputs true/false):
+$MANIFEST exists {work_unit}
+$MANIFEST exists {work_unit} [field.path]
+$MANIFEST exists {work_unit} --phase <phase> [--topic <topic>] [field.path]
+
 # Management (unchanged):
 $MANIFEST init name --work-type type --description "..."
 $MANIFEST list [--status s] [--work-type t]
-$MANIFEST archive name
 ```
 
 **`--topic` is optional for get** — if omitted, returns the whole phase object. Discovery scripts use this to iterate items:
@@ -97,12 +101,12 @@ Write a value. Two modes:
 **Work-unit level** (no flags):
 ```bash
 node .claude/skills/workflow-manifest/scripts/manifest.js set <name> description "Updated description"
-node .claude/skills/workflow-manifest/scripts/manifest.js set <name> status archived
+node .claude/skills/workflow-manifest/scripts/manifest.js set <name> status completed
 ```
 
 **Phase level** (with flags):
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js set <name> --phase discussion --topic auth-flow status concluded
+node .claude/skills/workflow-manifest/scripts/manifest.js set <name> --phase discussion --topic auth-flow status completed
 node .claude/skills/workflow-manifest/scripts/manifest.js set <name> --phase planning --topic auth-flow task_list_gate_mode auto
 ```
 
@@ -112,7 +116,7 @@ Values are parsed as JSON first (for arrays, objects, numbers, booleans), fallin
 - **phase names**: `research`, `discussion`, `investigation`, `specification`, `planning`, `implementation`, `review`
 - **phase statuses**: per-phase valid values (see Validation section)
 - **gate modes**: `gated`, `auto`
-- **work unit status**: `active`, `archived`
+- **work unit status**: `in-progress`, `completed`, `cancelled`
 
 ### `list`
 
@@ -123,13 +127,13 @@ Enumerate work units by scanning `.workflows/` for `manifest.json` files. Skips 
 node .claude/skills/workflow-manifest/scripts/manifest.js list
 
 # Filter by status
-node .claude/skills/workflow-manifest/scripts/manifest.js list --status active
+node .claude/skills/workflow-manifest/scripts/manifest.js list --status in-progress
 
 # Filter by work type
 node .claude/skills/workflow-manifest/scripts/manifest.js list --work-type epic
 
 # Combined filters
-node .claude/skills/workflow-manifest/scripts/manifest.js list --status active --work-type feature
+node .claude/skills/workflow-manifest/scripts/manifest.js list --status in-progress --work-type feature
 ```
 
 Output: JSON array of manifest objects.
@@ -162,15 +166,23 @@ node .claude/skills/workflow-manifest/scripts/manifest.js push <name> --phase im
 node .claude/skills/workflow-manifest/scripts/manifest.js push <name> --phase implementation --topic <topic> completed_phases 1
 ```
 
-### `archive`
+### `exists`
 
-Move a work unit to `.workflows/.archive/<name>/` and set status to `archived`.
+Check whether a work unit, field, or phase entry exists. Always exits 0 — both `true` and `false` are valid results. Outputs `true` or `false` to stdout, nothing to stderr.
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js archive <name>
+# Does the work unit exist?
+node .claude/skills/workflow-manifest/scripts/manifest.js exists <name>
+
+# Does a field path exist?
+node .claude/skills/workflow-manifest/scripts/manifest.js exists <name> phases.discussion
+
+# Does a phase/topic entry exist?
+node .claude/skills/workflow-manifest/scripts/manifest.js exists <name> --phase discussion --topic auth-flow
+node .claude/skills/workflow-manifest/scripts/manifest.js exists <name> --phase discussion --topic auth-flow status
 ```
 
-Errors if work unit does not exist.
+If the work unit doesn't exist and a deeper path is requested, outputs `false` (no error). Actual usage errors (missing args, invalid phase name) still use `die()`.
 
 ## Validation
 
@@ -179,12 +191,12 @@ The CLI validates structural values to prevent invalid state:
 | Field                          | Valid Values                             |
 |--------------------------------|------------------------------------------|
 | `work_type`                    | `epic`, `feature`, `bugfix`              |
-| `status` (work unit)           | `active`, `archived`                     |
-| `phases.research.status`       | `in-progress`, `concluded`               |
-| `phases.discussion.status`     | `in-progress`, `concluded`               |
-| `phases.investigation.status`  | `in-progress`, `concluded`               |
-| `phases.specification.status`  | `in-progress`, `concluded`, `superseded` |
-| `phases.planning.status`       | `in-progress`, `concluded`               |
+| `status` (work unit)           | `in-progress`, `completed`, `cancelled`  |
+| `phases.research.status`       | `in-progress`, `completed`               |
+| `phases.discussion.status`     | `in-progress`, `completed`               |
+| `phases.investigation.status`  | `in-progress`, `completed`               |
+| `phases.specification.status`  | `in-progress`, `completed`, `superseded` |
+| `phases.planning.status`       | `in-progress`, `completed`               |
 | `phases.implementation.status` | `in-progress`, `completed`               |
 | `phases.review.status`         | `in-progress`, `completed`               |
 | Gate modes (`*_gate_mode`)     | `gated`, `auto`                          |
@@ -193,7 +205,7 @@ Item-level statuses within epic phases follow the same phase-level rules.
 
 ## Output Conventions
 
-- **Scalar values**: raw to stdout, no quotes (e.g., `active`, `concluded`)
+- **Scalar values**: raw to stdout, no quotes (e.g., `in-progress`, `completed`)
 - **Subtrees and lists**: formatted JSON to stdout
 - **Errors**: message to stderr, non-zero exit code
 

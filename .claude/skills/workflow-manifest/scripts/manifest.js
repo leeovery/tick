@@ -22,18 +22,18 @@ const VALID_PHASES = [
 const TOPICLESS_PHASES = [];
 
 const VALID_PHASE_STATUSES = {
-  research:       ['in-progress', 'concluded'],
-  discussion:     ['in-progress', 'concluded'],
-  investigation:  ['in-progress', 'concluded'],
-  specification:  ['in-progress', 'concluded', 'superseded'],
-  planning:       ['in-progress', 'concluded'],
+  research:       ['in-progress', 'completed'],
+  discussion:     ['in-progress', 'completed'],
+  investigation:  ['in-progress', 'completed'],
+  specification:  ['in-progress', 'completed', 'superseded'],
+  planning:       ['in-progress', 'completed'],
   implementation: ['in-progress', 'completed'],
   review:         ['in-progress', 'completed'],
 };
 
 const VALID_GATE_MODES = ['gated', 'auto'];
 
-const VALID_WORK_UNIT_STATUSES = ['active', 'archived'];
+const VALID_WORK_UNIT_STATUSES = ['in-progress', 'completed', 'cancelled'];
 
 const LOCK_STALE_MS = 30000;
 const LOCK_RETRY_MS = 50;
@@ -177,6 +177,35 @@ function resolvePhaseSegments(workType, phase, topic, fieldSegments) {
 
   // Feature/bugfix: phases.<phase>[.field.path] (flat — topic is implicit)
   return [...base, ...fieldSegments];
+}
+
+/**
+ * Resolve wildcard topic — collect field values from all topics in a phase.
+ * For epic: iterates all items. For feature/bugfix: returns the single flat value.
+ *
+ * @param {object} manifest - The full manifest object
+ * @param {string} phase - The phase name
+ * @param {string[]} fieldSegments - Field path within each topic
+ * @returns {Array<{topic: string, value: *}>} Collected values
+ */
+function resolveWildcardTopic(manifest, phase, fieldSegments) {
+  const phaseData = getByPath(manifest, ['phases', phase]);
+  if (!phaseData) return [];
+
+  if (manifest.work_type === 'epic') {
+    const items = phaseData.items;
+    if (!items || typeof items !== 'object') return [];
+
+    return Object.keys(items).map(topic => ({
+      topic,
+      value: fieldSegments.length ? getByPath(items[topic], fieldSegments) : items[topic],
+    })).filter(entry => entry.value !== undefined);
+  }
+
+  // Feature/bugfix: single implicit topic
+  const value = fieldSegments.length ? getByPath(phaseData, fieldSegments) : phaseData;
+  if (value === undefined) return [];
+  return [{ topic: manifest.name, value }];
 }
 
 // ---------------------------------------------------------------------------
@@ -334,7 +363,7 @@ function cmdInit(args) {
   const manifest = {
     name,
     work_type: workType,
-    status: 'active',
+    status: 'in-progress',
     created: new Date().toISOString().slice(0, 10),
     description,
     phases: {},
@@ -372,6 +401,17 @@ function cmdGet(args) {
   validatePhase(phase);
 
   const fieldSegments = positional.length > 1 ? positional[1].split('.') : [];
+
+  // Wildcard topic: collect values from all topics
+  if (topic === '*') {
+    const results = resolveWildcardTopic(manifest, phase, fieldSegments);
+    if (results.length === 0) {
+      die(`No items found in phase "${phase}" of "${name}"`);
+    }
+    process.stdout.write(JSON.stringify(results, null, 2) + '\n');
+    return;
+  }
+
   const segments = resolvePhaseSegments(manifest.work_type, phase, topic, fieldSegments);
 
   const value = getByPath(manifest, segments);
@@ -598,35 +638,50 @@ function cmdPush(args) {
   });
 }
 
-function cmdArchive(args) {
-  if (args.length !== 1) die('Usage: archive <name>');
+function cmdExists(args) {
+  const { phase, topic, positional } = parseFlags(args);
 
-  const name = args[0];
-  const dir = manifestDir(name);
+  if (positional.length < 1) die('Usage: exists <name> [--phase <phase>] [--topic <topic>] [field.path]');
 
-  if (!fs.existsSync(dir)) {
-    die(`Work unit "${name}" not found`);
+  const name = positional[0];
+  const mp = manifestPath(name);
+
+  // Work-unit level, no field path — just check if manifest file exists
+  if (!phase && positional.length === 1) {
+    process.stdout.write(fs.existsSync(mp) ? 'true\n' : 'false\n');
+    return;
   }
 
-  const archiveBase = path.join(WORKFLOWS_DIR, '.archive');
-  const archiveDest = path.join(archiveBase, name);
-
-  if (fs.existsSync(archiveDest)) {
-    die(`Archive destination already exists for "${name}"`);
+  // If manifest doesn't exist, any deeper path is false
+  if (!fs.existsSync(mp)) {
+    process.stdout.write('false\n');
+    return;
   }
 
-  withLock(name, () => {
-    // Update status before moving
-    const manifest = readManifest(name);
-    manifest.status = 'archived';
-    writeManifestAtomic(name, manifest);
+  const manifest = JSON.parse(fs.readFileSync(mp, 'utf8'));
 
-    // Move to archive
-    fs.mkdirSync(archiveBase, { recursive: true });
-    fs.renameSync(dir, archiveDest);
-  });
+  if (!phase) {
+    // Work-unit level with field path
+    const segments = positional[1].split('.');
+    const value = getByPath(manifest, segments);
+    process.stdout.write(value !== undefined ? 'true\n' : 'false\n');
+    return;
+  }
 
-  process.stdout.write(`Archived work unit "${name}"\n`);
+  // Phase-level
+  validatePhase(phase);
+  const fieldSegments = positional.length > 1 ? positional[1].split('.') : [];
+
+  // Wildcard topic: check if any topic has the specified field
+  if (topic === '*') {
+    const results = resolveWildcardTopic(manifest, phase, fieldSegments);
+    process.stdout.write(results.length > 0 ? 'true\n' : 'false\n');
+    return;
+  }
+
+  const segments = resolvePhaseSegments(manifest.work_type, phase, topic, fieldSegments);
+  const value = getByPath(manifest, segments);
+  process.stdout.write(value !== undefined ? 'true\n' : 'false\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -636,7 +691,7 @@ function cmdArchive(args) {
 const [command, ...args] = process.argv.slice(2);
 
 if (!command) {
-  die('Usage: manifest.js <command> [args]\nCommands: init, get, set, list, init-phase, push, archive');
+  die('Usage: manifest.js <command> [args]\nCommands: init, get, set, list, init-phase, push, exists');
 }
 
 switch (command) {
@@ -646,6 +701,6 @@ switch (command) {
   case 'list':     cmdList(args); break;
   case 'init-phase': cmdInitPhase(args); break;
   case 'push':     cmdPush(args); break;
-  case 'archive':  cmdArchive(args); break;
+  case 'exists':   cmdExists(args); break;
   default:         die(`Unknown command "${command}"`);
 }

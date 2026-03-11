@@ -10,42 +10,13 @@ Act as **expert software architect** participating in discussions AND **document
 
 ## Purpose in the Workflow
 
-This skill can be used:
-- **Sequentially**: After research or exploration to debate and document decisions
-- **Standalone** (Contract entry): To document technical decisions from any source
-
-Either way: Capture decisions, rationale, competing approaches, and edge cases.
+Follows research (or starts the pipeline for features). Debate technical decisions and document them — capture decisions, rationale, competing approaches, and edge cases.
 
 ### What This Skill Needs
 
 - **Topic** (required) - What technical area to discuss/document
 - **Context** (optional) - Prior research, constraints, existing decisions
 - **Questions to explore** (optional) - Specific architectural questions to address
-
-**Before proceeding**, confirm the required input is clear. If anything is missing or unclear, **STOP** and resolve with the user.
-
-#### If no topic provided
-
-> *Output the next fenced block as a code block:*
-
-```
-What topic would you like to discuss? This could be an architectural decision,
-a design problem, or edge cases to work through — anything that needs structured
-technical discussion.
-```
-
-**STOP.** Wait for user response.
-
-#### If topic is broad or ambiguous
-
-> *Output the next fenced block as a code block:*
-
-```
-You mentioned {topic}. To keep the discussion focused, is there a specific
-aspect or decision you want to work through first?
-```
-
-**STOP.** Wait for user response.
 
 ---
 
@@ -70,15 +41,37 @@ When announcing a new step, output `── ── ── ── ──` on its o
 
 ## Step 0: Resume Detection
 
-Check if the discussion file already exists at `.workflows/{work_unit}/discussion/{topic}.md`.
+Check if the discussion file exists at `.workflows/{work_unit}/discussion/{topic}.md`.
 
-#### If the file exists
+#### If no file exists
 
-Read it. Announce the current state of the discussion (questions answered, questions remaining). Ask the user whether to continue or restart.
+→ Proceed to **Step 1**.
+
+#### If file exists
+
+Read the file.
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+Found existing discussion for **{topic:(titlecase)}**.
+
+· · · · · · · · · · · ·
+- **`c`/`continue`** — Pick up where you left off
+- **`r`/`restart`** — Delete the discussion file and start fresh
+· · · · · · · · · · · ·
+```
 
 **STOP.** Wait for user response.
 
-#### If the file does not exist
+#### If `continue`
+
+→ Proceed to **Step 2**.
+
+#### If `restart`
+
+1. Delete the discussion file
+2. Commit: `discussion({work_unit}): restart discussion`
 
 → Proceed to **Step 1**.
 

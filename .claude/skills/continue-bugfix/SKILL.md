@@ -2,12 +2,6 @@
 name: continue-bugfix
 disable-model-invocation: true
 allowed-tools: Bash(node .claude/skills/continue-bugfix/scripts/discovery.js), Bash(node .claude/skills/workflow-manifest/scripts/manifest.js)
-hooks:
-  PreToolUse:
-    - hooks:
-        - type: command
-          command: "$CLAUDE_PROJECT_DIR/.claude/hooks/workflows/system-check.sh"
-          once: true
 ---
 
 Continue an in-progress bugfix. Determines current phase and routes to the appropriate phase skill.
@@ -52,11 +46,13 @@ Parse the discovery output to understand:
 - `name` - the work unit name
 - `next_phase` - the phase to route to
 - `phase_label` - human-readable phase status
-- `concluded_phases` - list of concluded/completed phases (for backwards navigation)
+- `completed_phases` - list of completed phases (for backwards navigation)
 
 **From top-level fields:**
 - `count` - number of active bugfixes
 - `summary` - human-readable state summary
+- `completed` / `cancelled` - arrays of non-active bugfixes with name, status, last_phase
+- `completed_count` / `cancelled_count` - counts for each
 
 **IMPORTANT**: Use ONLY this script for discovery. Do NOT run additional bash commands (ls, head, cat, etc.) to gather state.
 
@@ -130,6 +126,6 @@ Using the selected bugfix's `next_phase`, invoke the appropriate phase skill:
 
 Skills receive positional arguments: `$0` = work_type (`bugfix`), `$1` = work_unit. Topic is inferred from work_unit.
 
-If the user chose to revisit a concluded phase in Step 5, use that phase instead of `next_phase`.
+If the user chose to revisit a completed phase in Step 5, use that phase instead of `next_phase`.
 
 Invoke the skill. This is terminal — do not return to the backbone.

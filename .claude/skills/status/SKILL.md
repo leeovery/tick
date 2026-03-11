@@ -2,12 +2,6 @@
 name: status
 disable-model-invocation: true
 allowed-tools: Bash(node .claude/skills/status/scripts/discovery.js), Bash(node .claude/skills/workflow-manifest/scripts/manifest.js)
-hooks:
-  PreToolUse:
-    - hooks:
-        - type: command
-          command: "$CLAUDE_PROJECT_DIR/.claude/hooks/workflows/system-check.sh"
-          once: true
 ---
 
 Show the current state of the workflow for this project.
@@ -52,9 +46,9 @@ Workflow Status
   Work units: {total} active ({epic} epic, {feature} feature, {bugfix} bugfix)
 
   Research:       {count} with research
-  Discussion:     {count} ({concluded} concluded, {in_progress} in-progress)
+  Discussion:     {count} ({completed} completed, {in_progress} in-progress)
   Specification:  {active} active ({feature_spec} feature, {crosscutting} cross-cutting)
-  Planning:       {count} ({concluded} concluded, {in_progress} in-progress)
+  Planning:       {count} ({completed} completed, {in_progress} in-progress)
   Implementation: {count} ({completed} completed, {in_progress} in-progress)
 ```
 
@@ -149,7 +143,7 @@ Key:
 
   Status:
     in-progress — work is ongoing
-    concluded   — complete, ready for next step
+    completed   — done, ready for next step
     superseded  — replaced by another specification
 
   Spec type:
@@ -169,10 +163,10 @@ Omit categories with no entries.
 
 Based on gaps in the workflow, briefly suggest 2-3 most relevant actions:
 
-- Concluded discussions not in any spec → use `/continue-feature` or `/continue-epic` to proceed
+- Completed discussions not in any spec → use `/continue-feature` or `/continue-epic` to proceed
 - In-progress specs → use `/continue-feature` or `/continue-epic` to continue
-- Concluded feature specs without plans → use `/continue-feature` or `/continue-epic` to start planning
-- Concluded plans not yet implemented → use `/continue-feature` or `/continue-epic` to start implementation
+- Completed feature specs without plans → use `/continue-feature` or `/continue-epic` to start planning
+- Completed plans not yet implemented → use `/continue-feature` or `/continue-epic` to start implementation
 - Completed implementations → use `/continue-feature` or `/continue-epic` to start review
 
 If plans exist, mention `/view-plan` for detailed plan viewing.
