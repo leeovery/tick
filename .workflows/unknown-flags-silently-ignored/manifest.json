@@ -1,7 +1,7 @@
 {
   "name": "unknown-flags-silently-ignored",
   "work_type": "bugfix",
-  "status": "in-progress",
+  "status": "completed",
   "created": "2026-03-07",
   "description": "CLI commands silently discard unrecognised flags instead of erroring; all commands should reject unknown flags with a clear error message",
   "phases": {
@@ -81,7 +81,7 @@
       "updated": "2026-03-11"
     },
     "review": {
-      "status": "in-progress"
+      "status": "completed"
     }
   }
 }
