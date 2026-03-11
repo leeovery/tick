@@ -6,7 +6,7 @@ total_proposed: 3
 # Analysis Tasks: unknown-flags-silently-ignored (Cycle 1)
 
 ## Task 1: Consolidate overlapping flag validation test coverage
-status: pending
+status: approved
 severity: high
 sources: duplication
 
@@ -42,7 +42,7 @@ sources: duplication
 - Grep for "help command" across test files -- flag exclusion test appears in exactly one file (note: TestHelpCommand testing helpCommand() is a separate unit test and is fine)
 
 ## Task 2: Derive ready/blocked flag sets programmatically from list
-status: pending
+status: approved
 severity: medium
 sources: duplication, architecture
 
@@ -73,7 +73,7 @@ sources: duplication, architecture
 - Run `go test ./internal/cli/ -count=1` -- all pass
 
 ## Task 3: Add drift-detection test between commandFlags and help registry
-status: pending
+status: approved
 severity: medium
 sources: architecture
 
