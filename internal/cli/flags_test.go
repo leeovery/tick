@@ -21,17 +21,6 @@ func TestValidateFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("it returns error for unknown flag", func(t *testing.T) {
-		err := ValidateFlags("list", []string{"--unknown"}, commandFlags)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		want := `unknown flag "--unknown" for "list". Run 'tick help list' for usage.`
-		if err.Error() != want {
-			t.Errorf("error = %q, want %q", err.Error(), want)
-		}
-	})
-
 	t.Run("it returns error for unknown flag on dep add (bug repro)", func(t *testing.T) {
 		err := ValidateFlags("dep add", []string{"tick-aaa", "--blocks", "tick-bbb"}, commandFlags)
 		if err == nil {
@@ -43,94 +32,12 @@ func TestValidateFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("it skips value after value-taking flag", func(t *testing.T) {
-		// --priority takes a value; 3 should be skipped; --status also takes a value
-		err := ValidateFlags("list", []string{"--priority", "3", "--status", "open"}, commandFlags)
-		if err != nil {
-			t.Errorf("expected nil, got %v", err)
-		}
-	})
-
-	t.Run("it does not skip value after boolean flag", func(t *testing.T) {
-		// --ready is boolean; --unknown should not be skipped as a value of --ready
-		err := ValidateFlags("list", []string{"--ready", "--unknown"}, commandFlags)
-		if err == nil {
-			t.Fatal("expected error for --unknown after boolean --ready, got nil")
-		}
-		if !strings.Contains(err.Error(), "--unknown") {
-			t.Errorf("error should mention --unknown, got %q", err.Error())
-		}
-	})
-
-	t.Run("it rejects short unknown flags", func(t *testing.T) {
-		err := ValidateFlags("list", []string{"-x"}, commandFlags)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		want := `unknown flag "-x" for "list". Run 'tick help list' for usage.`
-		if err.Error() != want {
-			t.Errorf("error = %q, want %q", err.Error(), want)
-		}
-	})
-
 	t.Run("it accepts -f on remove", func(t *testing.T) {
 		err := ValidateFlags("remove", []string{"-f", "tick-abc123"}, commandFlags)
 		if err != nil {
 			t.Errorf("expected nil for -f on remove, got %v", err)
 		}
 	})
-
-	t.Run("it uses parent command in help hint for two-level commands", func(t *testing.T) {
-		twoLevel := []struct {
-			command    string
-			helpParent string
-		}{
-			{"dep add", "dep"},
-			{"dep remove", "dep"},
-			{"note add", "note"},
-			{"note remove", "note"},
-		}
-		for _, tc := range twoLevel {
-			err := ValidateFlags(tc.command, []string{"--bogus"}, commandFlags)
-			if err == nil {
-				t.Errorf("%s: expected error, got nil", tc.command)
-				continue
-			}
-			wantHelpRef := "Run 'tick help " + tc.helpParent + "' for usage."
-			if !strings.Contains(err.Error(), wantHelpRef) {
-				t.Errorf("%s: error = %q, want to contain %q", tc.command, err.Error(), wantHelpRef)
-			}
-			wantCmdRef := `for "` + tc.command + `"`
-			if !strings.Contains(err.Error(), wantCmdRef) {
-				t.Errorf("%s: error = %q, want to contain %q", tc.command, err.Error(), wantCmdRef)
-			}
-		}
-	})
-
-	t.Run("it handles global flags interspersed with command args", func(t *testing.T) {
-		err := ValidateFlags("create", []string{"--verbose", "My Task", "--priority", "2", "--json"}, commandFlags)
-		if err != nil {
-			t.Errorf("expected nil, got %v", err)
-		}
-	})
-}
-
-func TestCommandFlagsCoversAllCommands(t *testing.T) {
-	expected := []string{
-		"init", "create", "update", "list", "show",
-		"start", "done", "cancel", "reopen",
-		"ready", "blocked",
-		"dep add", "dep remove", "note add", "note remove",
-		"remove", "stats", "doctor", "rebuild", "migrate",
-	}
-	for _, cmd := range expected {
-		if _, ok := commandFlags[cmd]; !ok {
-			t.Errorf("commandFlags missing entry for %q", cmd)
-		}
-	}
-	if len(commandFlags) != len(expected) {
-		t.Errorf("commandFlags has %d entries, want %d", len(commandFlags), len(expected))
-	}
 }
 
 func TestHelpCommand(t *testing.T) {

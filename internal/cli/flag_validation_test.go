@@ -307,22 +307,6 @@ func TestValueTakingFlagSkipping(t *testing.T) {
 	})
 }
 
-func TestRemoveAcceptsShortFlag(t *testing.T) {
-	t.Run("remove accepts -f short flag", func(t *testing.T) {
-		err := ValidateFlags("remove", []string{"-f", "tick-abc123"}, commandFlags)
-		if err != nil {
-			t.Errorf("expected nil for -f on remove, got %v", err)
-		}
-	})
-
-	t.Run("remove accepts --force long flag", func(t *testing.T) {
-		err := ValidateFlags("remove", []string{"--force", "tick-abc123"}, commandFlags)
-		if err != nil {
-			t.Errorf("expected nil for --force on remove, got %v", err)
-		}
-	})
-}
-
 func TestCommandFlagsMatchHelp(t *testing.T) {
 	for cmdName, cmdFlags := range commandFlags {
 		// Skip two-level commands (e.g. "dep add") — help groups them under parent.
