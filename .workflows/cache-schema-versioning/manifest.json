@@ -1,21 +1,21 @@
 {
   "name": "cache-schema-versioning",
   "work_type": "bugfix",
-  "status": "active",
+  "status": "completed",
   "created": "2026-03-07",
   "description": "cache-schema-versioning work unit",
   "phases": {
     "investigation": {
-      "status": "concluded"
+      "status": "completed"
     },
     "specification": {
-      "status": "concluded",
+      "status": "completed",
       "type": "feature",
       "review_cycle": 2,
       "finding_gate_mode": "gated"
     },
     "planning": {
-      "status": "concluded",
+      "status": "completed",
       "format": "tick",
       "ext_id": "tick-598752",
       "specification": "../../specification/cache-schema-versioning/specification.md",

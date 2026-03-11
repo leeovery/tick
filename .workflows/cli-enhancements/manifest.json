@@ -1,21 +1,21 @@
 {
   "name": "cli-enhancements",
   "work_type": "feature",
-  "status": "active",
+  "status": "completed",
   "created": "2026-02-27",
   "description": "cli-enhancements work unit",
   "phases": {
     "discussion": {
-      "status": "concluded"
+      "status": "completed"
     },
     "specification": {
-      "status": "concluded",
+      "status": "completed",
       "type": "feature",
       "review_cycle": 2,
       "finding_gate_mode": "gated"
     },
     "planning": {
-      "status": "concluded",
+      "status": "completed",
       "format": "tick",
       "ext_id": "tick-db58ad",
       "specification": "../../specification/cli-enhancements/specification.md",

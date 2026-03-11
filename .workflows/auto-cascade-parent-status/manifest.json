@@ -1,21 +1,21 @@
 {
   "name": "auto-cascade-parent-status",
   "work_type": "feature",
-  "status": "active",
+  "status": "completed",
   "created": "2026-03-03",
   "description": "auto-cascade-parent-status work unit",
   "phases": {
     "discussion": {
-      "status": "concluded"
+      "status": "completed"
     },
     "specification": {
-      "status": "concluded",
+      "status": "completed",
       "type": "feature",
       "review_cycle": 4,
       "finding_gate_mode": "gated"
     },
     "planning": {
-      "status": "concluded",
+      "status": "completed",
       "format": "tick",
       "ext_id": "tick-b43d8e",
       "specification": "../../specification/auto-cascade-parent-status/specification.md",
