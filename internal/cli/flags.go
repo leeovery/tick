@@ -66,29 +66,11 @@ var commandFlags = CommandFlags{
 		"--tag":      {TakesValue: true},
 		"--count":    {TakesValue: true},
 	},
-	"show":   {},
-	"start":  {},
-	"done":   {},
-	"cancel": {},
-	"reopen": {},
-	"ready": {
-		"--blocked":  {TakesValue: false},
-		"--status":   {TakesValue: true},
-		"--priority": {TakesValue: true},
-		"--parent":   {TakesValue: true},
-		"--type":     {TakesValue: true},
-		"--tag":      {TakesValue: true},
-		"--count":    {TakesValue: true},
-	},
-	"blocked": {
-		"--ready":    {TakesValue: false},
-		"--status":   {TakesValue: true},
-		"--priority": {TakesValue: true},
-		"--parent":   {TakesValue: true},
-		"--type":     {TakesValue: true},
-		"--tag":      {TakesValue: true},
-		"--count":    {TakesValue: true},
-	},
+	"show":        {},
+	"start":       {},
+	"done":        {},
+	"cancel":      {},
+	"reopen":      {},
 	"dep add":     {},
 	"dep remove":  {},
 	"note add":    {},
@@ -105,6 +87,21 @@ var commandFlags = CommandFlags{
 		"--dry-run":      {TakesValue: false},
 		"--pending-only": {TakesValue: false},
 	},
+}
+
+func init() {
+	commandFlags["ready"] = copyFlagsExcept(commandFlags["list"], "--ready")
+	commandFlags["blocked"] = copyFlagsExcept(commandFlags["list"], "--blocked")
+}
+
+// copyFlagsExcept returns a shallow copy of source with the excluded key removed.
+func copyFlagsExcept(source map[string]FlagDef, exclude string) map[string]FlagDef {
+	result := make(map[string]FlagDef, len(source))
+	for k, v := range source {
+		result[k] = v
+	}
+	delete(result, exclude)
+	return result
 }
 
 // ValidateFlags checks that all flag-like arguments in args are valid for the given command.
