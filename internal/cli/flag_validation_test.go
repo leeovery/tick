@@ -1,12 +1,8 @@
 package cli
 
 import (
-	"bytes"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/leeovery/tick/internal/task"
 )
 
 func TestFlagValidationAllCommands(t *testing.T) {
@@ -308,32 +304,6 @@ func TestValueTakingFlagSkipping(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "--unknown") {
 			t.Errorf("error should mention --unknown, got %q", err.Error())
-		}
-	})
-}
-
-func TestFlagValidationEndToEnd(t *testing.T) {
-	t.Run("it rejects dep add --blocks (original bug report)", func(t *testing.T) {
-		now := time.Now().UTC().Truncate(time.Second)
-		tasks := []task.Task{
-			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
-			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
-		}
-		dir, _ := setupTickProjectWithTasks(t, tasks)
-
-		var stdout, stderr bytes.Buffer
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "dep", "add", "tick-aaa111", "--blocks", "tick-bbb222"})
-		if exitCode != 1 {
-			t.Errorf("exit code = %d, want 1", exitCode)
-		}
-		want := `Error: unknown flag "--blocks" for "dep add". Run 'tick help dep' for usage.`
-		if !strings.Contains(stderr.String(), want) {
-			t.Errorf("stderr = %q, want to contain %q", stderr.String(), want)
 		}
 	})
 }

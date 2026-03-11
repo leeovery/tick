@@ -43,16 +43,6 @@ func TestValidateFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("it skips global flags without error", func(t *testing.T) {
-		globals := []string{"--quiet", "-q", "--verbose", "-v", "--toon", "--pretty", "--json", "--help", "-h"}
-		for _, g := range globals {
-			err := ValidateFlags("show", []string{g, "tick-abc123"}, commandFlags)
-			if err != nil {
-				t.Errorf("global flag %s should be accepted, got error: %v", g, err)
-			}
-		}
-	})
-
 	t.Run("it skips value after value-taking flag", func(t *testing.T) {
 		// --priority takes a value; 3 should be skipped; --status also takes a value
 		err := ValidateFlags("list", []string{"--priority", "3", "--status", "open"}, commandFlags)
@@ -117,20 +107,6 @@ func TestValidateFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("it returns error for flag on command with no flags", func(t *testing.T) {
-		noFlagCmds := []string{"init", "show", "start", "done", "cancel", "reopen", "dep add", "dep remove", "note add", "note remove", "stats", "doctor", "rebuild"}
-		for _, cmd := range noFlagCmds {
-			err := ValidateFlags(cmd, []string{"--anything"}, commandFlags)
-			if err == nil {
-				t.Errorf("%s: expected error for --anything, got nil", cmd)
-				continue
-			}
-			if !strings.Contains(err.Error(), "--anything") {
-				t.Errorf("%s: error = %q, want to contain '--anything'", cmd, err.Error())
-			}
-		}
-	})
-
 	t.Run("it handles global flags interspersed with command args", func(t *testing.T) {
 		err := ValidateFlags("create", []string{"--verbose", "My Task", "--priority", "2", "--json"}, commandFlags)
 		if err != nil {
@@ -174,24 +150,6 @@ func TestHelpCommand(t *testing.T) {
 }
 
 func TestFlagValidationWiring(t *testing.T) {
-	t.Run("it rejects unknown flag on dep add via full dispatch", func(t *testing.T) {
-		dir, _ := setupTickProject(t)
-		var stdout, stderr bytes.Buffer
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "dep", "add", "tick-aaa", "--blocks", "tick-bbb"})
-		if exitCode != 1 {
-			t.Errorf("exit code = %d, want 1", exitCode)
-		}
-		want := `unknown flag "--blocks" for "dep add". Run 'tick help dep' for usage.`
-		if !strings.Contains(stderr.String(), want) {
-			t.Errorf("stderr = %q, want to contain %q", stderr.String(), want)
-		}
-	})
-
 	t.Run("it rejects unknown flag before subcommand", func(t *testing.T) {
 		dir := t.TempDir()
 		var stdout, stderr bytes.Buffer
@@ -207,129 +165,6 @@ func TestFlagValidationWiring(t *testing.T) {
 		want := `unknown flag "--bogus". Run 'tick help' for usage.`
 		if !strings.Contains(stderr.String(), want) {
 			t.Errorf("stderr = %q, want to contain %q", stderr.String(), want)
-		}
-	})
-
-	t.Run("it does not validate flags for version command", func(t *testing.T) {
-		dir := t.TempDir()
-		var stdout, stderr bytes.Buffer
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "version"})
-		if exitCode != 0 {
-			t.Errorf("exit code = %d, want 0", exitCode)
-		}
-		if stderr.String() != "" {
-			t.Errorf("stderr should be empty, got %q", stderr.String())
-		}
-	})
-
-	t.Run("it does not validate flags for help command", func(t *testing.T) {
-		dir := t.TempDir()
-		var stdout, stderr bytes.Buffer
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "help"})
-		if exitCode != 0 {
-			t.Errorf("exit code = %d, want 0", exitCode)
-		}
-		if stderr.String() != "" {
-			t.Errorf("stderr should be empty, got %q", stderr.String())
-		}
-	})
-
-	t.Run("it rejects unknown flag on doctor", func(t *testing.T) {
-		dir, _ := setupTickProject(t)
-		var stdout, stderr bytes.Buffer
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "doctor", "--bogus"})
-		if exitCode != 1 {
-			t.Errorf("exit code = %d, want 1", exitCode)
-		}
-		want := `unknown flag "--bogus" for "doctor". Run 'tick help doctor' for usage.`
-		if !strings.Contains(stderr.String(), want) {
-			t.Errorf("stderr = %q, want to contain %q", stderr.String(), want)
-		}
-	})
-
-	t.Run("it rejects unknown flag on migrate", func(t *testing.T) {
-		dir, _ := setupTickProject(t)
-		var stdout, stderr bytes.Buffer
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "migrate", "--bogus", "--from", "beads"})
-		if exitCode != 1 {
-			t.Errorf("exit code = %d, want 1", exitCode)
-		}
-		want := `unknown flag "--bogus" for "migrate". Run 'tick help migrate' for usage.`
-		if !strings.Contains(stderr.String(), want) {
-			t.Errorf("stderr = %q, want to contain %q", stderr.String(), want)
-		}
-	})
-
-	t.Run("it rejects unknown flag on list", func(t *testing.T) {
-		dir, _ := setupTickProject(t)
-		var stdout, stderr bytes.Buffer
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "list", "--unknown"})
-		if exitCode != 1 {
-			t.Errorf("exit code = %d, want 1", exitCode)
-		}
-		want := `unknown flag "--unknown" for "list". Run 'tick help list' for usage.`
-		if !strings.Contains(stderr.String(), want) {
-			t.Errorf("stderr = %q, want to contain %q", stderr.String(), want)
-		}
-	})
-
-	t.Run("it rejects unknown flag on create", func(t *testing.T) {
-		dir, _ := setupTickProject(t)
-		var stdout, stderr bytes.Buffer
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "create", "My Task", "--bogus"})
-		if exitCode != 1 {
-			t.Errorf("exit code = %d, want 1", exitCode)
-		}
-		want := `unknown flag "--bogus" for "create". Run 'tick help create' for usage.`
-		if !strings.Contains(stderr.String(), want) {
-			t.Errorf("stderr = %q, want to contain %q", stderr.String(), want)
-		}
-	})
-
-	t.Run("it accepts known flags on create through dispatch", func(t *testing.T) {
-		dir, _ := setupTickProject(t)
-		var stdout, stderr bytes.Buffer
-		app := &App{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "--pretty", "create", "My Task", "--priority", "3"})
-		if exitCode != 0 {
-			t.Errorf("exit code = %d, want 0; stderr = %q", exitCode, stderr.String())
-		}
-		if stderr.String() != "" {
-			t.Errorf("stderr should be empty, got %q", stderr.String())
 		}
 	})
 }

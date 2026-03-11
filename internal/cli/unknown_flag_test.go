@@ -227,6 +227,44 @@ func TestCommandsWithFlagsAcceptKnownFlags(t *testing.T) {
 	})
 }
 
+// TestFlagValidationExcludedCommands verifies that version and help commands
+// bypass flag validation entirely — they don't reject unknown flags.
+func TestFlagValidationExcludedCommands(t *testing.T) {
+	t.Run("it does not validate flags for version command", func(t *testing.T) {
+		dir := t.TempDir()
+		var stdout, stderr bytes.Buffer
+		app := &App{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		exitCode := app.Run([]string{"tick", "version"})
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0", exitCode)
+		}
+		if stderr.String() != "" {
+			t.Errorf("stderr should be empty, got %q", stderr.String())
+		}
+	})
+
+	t.Run("it does not validate flags for help command", func(t *testing.T) {
+		dir := t.TempDir()
+		var stdout, stderr bytes.Buffer
+		app := &App{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		exitCode := app.Run([]string{"tick", "help"})
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0", exitCode)
+		}
+		if stderr.String() != "" {
+			t.Errorf("stderr should be empty, got %q", stderr.String())
+		}
+	})
+}
+
 // TestGlobalFlagsNotRejected verifies global flags like --verbose, --json, --quiet
 // pass through without triggering unknown flag rejection on various commands.
 func TestGlobalFlagsNotRejected(t *testing.T) {
