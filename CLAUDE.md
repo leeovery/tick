@@ -56,6 +56,7 @@ release                   → release script with AI-generated notes via Claude 
 - **Ready/blocked queries:** `query_helpers.go` defines `ReadyNo*()` SQL helpers composed into `ReadyConditions()` and `BlockedConditions()` (De Morgan inverse). Ancestor blocking uses a recursive CTE walking the parent chain.
 - **Tag filtering:** AND (comma-separated in one `--tag`) / OR (multiple `--tag` flags) composition via SQL subqueries.
 - **Cache schema versioning:** `schemaVersion` constant in `cache.go` (currently v2); `ensureFresh()` checks version before freshness hash — mismatch triggers delete+recreate+rebuild.
+- **Flag validation:** `ValidateFlags()` in `flags.go` rejects unknown flags before store access. Central `commandFlags` registry maps each command to its valid flags. `ready`/`blocked` flag sets derived from `list` via `copyFlagsExcept()` to prevent drift. Drift-detection test ensures `commandFlags` stays in sync with the help registry.
 - **Tests:** stdlib `testing` only (no testify), `t.Run()` subtests, `t.TempDir()` for isolation, `t.Helper()` on helpers.
 
 ## Task Management (Dogfooding)

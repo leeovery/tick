@@ -221,6 +221,7 @@ tick reopen <task-id>               # done/cancelled → open
 - **Done/Cancel** cascades up — when all children are terminal, the parent auto-completes (done if any child is done, cancelled if all cancelled)
 - **Reopen** cascades up — reopening a child reopens done ancestors
 - Adding a child to a **done** parent auto-reopens it; adding to a **cancelled** parent is blocked
+- **Reparenting** — moving a child away from a parent triggers completion re-evaluation: if all remaining children are terminal, the old parent auto-completes
 
 ### `remove`
 
@@ -257,16 +258,16 @@ tick note remove tick-a1b2 1          # remove note at index 1 (1-based)
 
 ### `dep`
 
-Manage task dependencies. Tick validates all dependency changes and prevents cycles, self-references, and children blocked by their own parent.
+Manage task dependencies. Tick validates all dependency changes and prevents cycles, self-references, children blocked by their own parent, and dependencies on cancelled tasks.
 
 ```bash
-tick dep add <task-id> <blocked-by-id>
-tick dep rm  <task-id> <blocked-by-id>
+tick dep add    <task-id> <blocked-by-id>
+tick dep remove <task-id> <blocked-by-id>
 ```
 
 ```bash
-tick dep add tick-a1b2 tick-c3d4    # tick-a1b2 is now blocked by tick-c3d4
-tick dep rm  tick-a1b2 tick-c3d4    # remove that dependency
+tick dep add    tick-a1b2 tick-c3d4    # tick-a1b2 is now blocked by tick-c3d4
+tick dep remove tick-a1b2 tick-c3d4    # remove that dependency
 ```
 
 ### `stats`
@@ -526,6 +527,13 @@ Add to `.gitignore`:
 --toon            Force TOON format
 --pretty          Force pretty format
 --json            Force JSON format
+```
+
+Global flags are accepted on every command. Unknown or misspelled flags are rejected with a helpful error:
+
+```
+$ tick list --stauts open
+unknown flag "--stauts" for "list". Run 'tick help list' for usage.
 ```
 
 ## License
