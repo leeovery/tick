@@ -76,6 +76,9 @@
         2,
         3
       ]
+    },
+    "review": {
+      "status": "in-progress"
     }
   }
 }

@@ -8,7 +8,7 @@ gate_mode: gated
 # Review Tasks: Unknown Flags Silently Ignored (Cycle 1)
 
 ## Task 1: Consolidate overlapping flag validation test coverage
-status: pending
+status: approved
 severity: high
 sources: qa-task-7, qa-task-2, qa-task-3, qa-task-4, qa-task-6
 

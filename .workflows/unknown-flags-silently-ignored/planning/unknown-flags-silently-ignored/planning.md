@@ -62,3 +62,14 @@ ext_id: tick-3d9a7e
 | unknown-flags-silently-ignored-3-1 | Consolidate overlapping flag validation test coverage | none | authored | tick-2ec1bc |
 | unknown-flags-silently-ignored-3-2 | Derive ready/blocked flag sets programmatically from list | none | authored | tick-40d7f9 |
 | unknown-flags-silently-ignored-3-3 | Add drift-detection test between commandFlags and help registry | none | authored | tick-c1a175 |
+
+### Phase 4: Review Remediation (Cycle 1)
+status: approved
+ext_id: tick-c5a1ff
+
+**Goal**: Address findings from Review Remediation (Cycle 1).
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| unknown-flags-silently-ignored-4-1 | Consolidate overlapping flag validation test coverage | none | authored | tick-b15fda |
