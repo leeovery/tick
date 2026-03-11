@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"sort"
 	"strings"
 	"testing"
 )
@@ -64,7 +65,6 @@ func TestFlagValidationAllCommands(t *testing.T) {
 		{
 			command: "ready",
 			validArgs: []string{
-				"--blocked",
 				"--status", "open",
 				"--priority", "1",
 				"--parent", "tick-aaa111",
@@ -72,12 +72,11 @@ func TestFlagValidationAllCommands(t *testing.T) {
 				"--tag", "frontend",
 				"--count", "10",
 			},
-			flagCount: 7,
+			flagCount: 6,
 		},
 		{
 			command: "blocked",
 			validArgs: []string{
-				"--ready",
 				"--status", "open",
 				"--priority", "1",
 				"--parent", "tick-aaa111",
@@ -85,7 +84,7 @@ func TestFlagValidationAllCommands(t *testing.T) {
 				"--tag", "frontend",
 				"--count", "10",
 			},
-			flagCount: 7,
+			flagCount: 6,
 		},
 		{
 			command: "remove",
@@ -322,4 +321,71 @@ func TestRemoveAcceptsShortFlag(t *testing.T) {
 			t.Errorf("expected nil for --force on remove, got %v", err)
 		}
 	})
+}
+
+func TestCommandFlagsMatchHelp(t *testing.T) {
+	for cmdName, cmdFlags := range commandFlags {
+		// Skip two-level commands (e.g. "dep add") — help groups them under parent.
+		if strings.Contains(cmdName, " ") {
+			continue
+		}
+
+		info := findCommand(cmdName)
+		if info == nil {
+			// Some commandFlags entries (like "ready", "blocked") are aliases
+			// derived from "list" and may not have their own help entry — skip
+			// if findCommand returns nil only when the help registry legitimately
+			// omits them. But ready/blocked DO have help entries, so flag this.
+			t.Errorf("commandFlags has %q but findCommand returned nil", cmdName)
+			continue
+		}
+
+		// Extract long flag names from commandFlags (skip short flags like "-f").
+		flagsFromRegistry := make(map[string]bool)
+		for flag := range cmdFlags {
+			if strings.HasPrefix(flag, "--") {
+				flagsFromRegistry[flag] = true
+			}
+		}
+
+		// Extract long flag names from help's flagInfo entries.
+		// Name field may be "--force, -f" — split on ", " and keep long forms.
+		flagsFromHelp := make(map[string]bool)
+		for _, fi := range info.Flags {
+			parts := strings.Split(fi.Name, ", ")
+			for _, p := range parts {
+				if strings.HasPrefix(p, "--") {
+					flagsFromHelp[p] = true
+				}
+			}
+		}
+
+		// Check: every long flag in commandFlags appears in help.
+		t.Run("it has all commandFlags long flags in help for "+cmdName, func(t *testing.T) {
+			var missing []string
+			for flag := range flagsFromRegistry {
+				if !flagsFromHelp[flag] {
+					missing = append(missing, flag)
+				}
+			}
+			if len(missing) > 0 {
+				sort.Strings(missing)
+				t.Errorf("flags in commandFlags[%q] but missing from help: %v", cmdName, missing)
+			}
+		})
+
+		// Check reverse: every long flag in help appears in commandFlags.
+		t.Run("it has all help flags in commandFlags for "+cmdName, func(t *testing.T) {
+			var missing []string
+			for flag := range flagsFromHelp {
+				if !flagsFromRegistry[flag] {
+					missing = append(missing, flag)
+				}
+			}
+			if len(missing) > 0 {
+				sort.Strings(missing)
+				t.Errorf("flags in help for %q but missing from commandFlags: %v", cmdName, missing)
+			}
+		})
+	}
 }

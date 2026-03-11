@@ -90,17 +90,19 @@ var commandFlags = CommandFlags{
 }
 
 func init() {
-	commandFlags["ready"] = copyFlagsExcept(commandFlags["list"], "--ready")
-	commandFlags["blocked"] = copyFlagsExcept(commandFlags["list"], "--blocked")
+	commandFlags["ready"] = copyFlagsExcept(commandFlags["list"], "--ready", "--blocked")
+	commandFlags["blocked"] = copyFlagsExcept(commandFlags["list"], "--blocked", "--ready")
 }
 
-// copyFlagsExcept returns a shallow copy of source with the excluded key removed.
-func copyFlagsExcept(source map[string]FlagDef, exclude string) map[string]FlagDef {
+// copyFlagsExcept returns a shallow copy of source with the excluded keys removed.
+func copyFlagsExcept(source map[string]FlagDef, exclude ...string) map[string]FlagDef {
 	result := make(map[string]FlagDef, len(source))
 	for k, v := range source {
 		result[k] = v
 	}
-	delete(result, exclude)
+	for _, e := range exclude {
+		delete(result, e)
+	}
 	return result
 }
 
