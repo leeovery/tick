@@ -122,6 +122,11 @@ func ValidateFlags(command string, args []string, flags CommandFlags) error {
 			continue
 		}
 
+		// Numeric values like "-1" are not flags.
+		if len(arg) > 1 && arg[1] >= '0' && arg[1] <= '9' {
+			continue
+		}
+
 		// Global flags are always accepted.
 		if globalFlagSet[arg] {
 			continue

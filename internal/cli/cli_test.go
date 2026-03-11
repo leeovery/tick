@@ -342,7 +342,10 @@ func TestParseArgs(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				flags, subcmd, _ := parseArgs(tt.args)
+				flags, subcmd, _, err := parseArgs(tt.args)
+				if err != nil {
+					t.Fatalf("parseArgs returned unexpected error: %v", err)
+				}
 				tt.check(t, flags)
 				if subcmd != "init" {
 					t.Errorf("subcmd = %q, want %q", subcmd, "init")
@@ -354,7 +357,10 @@ func TestParseArgs(t *testing.T) {
 
 func TestParseArgsGlobalFlagsAfterSubcommand(t *testing.T) {
 	t.Run("it extracts global flags after the subcommand", func(t *testing.T) {
-		flags, subcmd, subArgs := parseArgs([]string{"init", "--quiet"})
+		flags, subcmd, subArgs, err := parseArgs([]string{"init", "--quiet"})
+		if err != nil {
+			t.Fatalf("parseArgs returned unexpected error: %v", err)
+		}
 		if subcmd != "init" {
 			t.Errorf("subcmd = %q, want %q", subcmd, "init")
 		}
@@ -367,7 +373,10 @@ func TestParseArgsGlobalFlagsAfterSubcommand(t *testing.T) {
 	})
 
 	t.Run("it extracts global flags from both before and after the subcommand", func(t *testing.T) {
-		flags, subcmd, subArgs := parseArgs([]string{"--verbose", "init", "--quiet"})
+		flags, subcmd, subArgs, err := parseArgs([]string{"--verbose", "init", "--quiet"})
+		if err != nil {
+			t.Fatalf("parseArgs returned unexpected error: %v", err)
+		}
 		if subcmd != "init" {
 			t.Errorf("subcmd = %q, want %q", subcmd, "init")
 		}
@@ -383,7 +392,10 @@ func TestParseArgsGlobalFlagsAfterSubcommand(t *testing.T) {
 	})
 
 	t.Run("it keeps non-global args in subArgs", func(t *testing.T) {
-		flags, subcmd, subArgs := parseArgs([]string{"init", "--quiet", "somefile"})
+		flags, subcmd, subArgs, err := parseArgs([]string{"init", "--quiet", "somefile"})
+		if err != nil {
+			t.Fatalf("parseArgs returned unexpected error: %v", err)
+		}
 		if subcmd != "init" {
 			t.Errorf("subcmd = %q, want %q", subcmd, "init")
 		}

@@ -27,7 +27,11 @@ type App struct {
 // Run parses args, dispatches subcommands, and returns an exit code (0 = success, 1 = error).
 func (a *App) Run(args []string) int {
 	// Parse global flags and extract subcommand.
-	flags, subcmd, subArgs := parseArgs(args[1:])
+	flags, subcmd, subArgs, parseErr := parseArgs(args[1:])
+	if parseErr != nil {
+		fmt.Fprintf(a.Stderr, "Error: %s\n", parseErr)
+		return 1
+	}
 
 	if subcmd == "" {
 		printTopLevelHelp(a.Stdout)
@@ -50,9 +54,17 @@ func (a *App) Run(args []string) int {
 
 	// Doctor and migrate bypass format/formatter machinery — always human-readable text.
 	if subcmd == "doctor" {
+		if err := ValidateFlags("doctor", subArgs, commandFlags); err != nil {
+			fmt.Fprintf(a.Stderr, "Error: %s\n", err)
+			return 1
+		}
 		return a.handleDoctor()
 	}
 	if subcmd == "migrate" {
+		if err := ValidateFlags("migrate", subArgs, commandFlags); err != nil {
+			fmt.Fprintf(a.Stderr, "Error: %s\n", err)
+			return 1
+		}
 		return a.handleMigrate(subArgs)
 	}
 
@@ -82,6 +94,13 @@ func (a *App) Run(args []string) int {
 			formatName = "json"
 		}
 		fc.Logger.Log("format resolved: " + formatName)
+	}
+
+	// Determine fully-qualified command name and validate flags before dispatch.
+	qualifiedCmd, restArgs := qualifyCommand(subcmd, subArgs)
+	if err := ValidateFlags(qualifiedCmd, restArgs, commandFlags); err != nil {
+		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
+		return 1
 	}
 
 	switch subcmd {
@@ -313,8 +332,9 @@ type globalFlags struct {
 // Global flags are extracted from all positions (before and after the subcommand),
 // following the pattern of tools like git where "git commit --verbose" works the
 // same as "git --verbose commit". Returns the parsed global flags, the subcommand
-// name, and remaining subcommand-specific args (non-global arguments only).
-func parseArgs(args []string) (globalFlags, string, []string) {
+// name, remaining subcommand-specific args (non-global arguments only), and an
+// error if an unknown flag appears before the subcommand.
+func parseArgs(args []string) (globalFlags, string, []string, error) {
 	var flags globalFlags
 	var subcmd string
 	var rest []string
@@ -326,8 +346,7 @@ func parseArgs(args []string) (globalFlags, string, []string) {
 		}
 		if !foundCmd {
 			if strings.HasPrefix(arg, "-") {
-				// Unknown flag before subcommand — skip
-				continue
+				return flags, "", nil, fmt.Errorf("unknown flag %q. Run 'tick help' for usage.", arg)
 			}
 			subcmd = arg
 			foundCmd = true
@@ -335,7 +354,29 @@ func parseArgs(args []string) (globalFlags, string, []string) {
 			rest = append(rest, arg)
 		}
 	}
-	return flags, subcmd, rest
+	return flags, subcmd, rest, nil
+}
+
+// qualifyCommand determines the fully-qualified command name for validation.
+// For two-level commands (dep, note), it peeks at the first positional arg in
+// subArgs to form "dep add", "dep remove", etc. and returns the remaining args
+// after the sub-subcommand. If the sub-subcommand is not a known sub-subcommand,
+// it returns the top-level command and full subArgs (the handler will produce
+// its own error for unknown sub-subcommands).
+func qualifyCommand(subcmd string, subArgs []string) (string, []string) {
+	if subcmd != "dep" && subcmd != "note" {
+		return subcmd, subArgs
+	}
+	if len(subArgs) == 0 {
+		return subcmd, subArgs
+	}
+	sub := subArgs[0]
+	switch sub {
+	case "add", "remove":
+		return subcmd + " " + sub, subArgs[1:]
+	default:
+		return subcmd, subArgs
+	}
 }
 
 // applyGlobalFlag checks if arg is a known global flag and applies it to flags.
