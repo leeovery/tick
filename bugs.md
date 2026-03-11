@@ -1,20 +1,5 @@
 # Bugs
 
-## BUG-1: Unknown flags silently ignored across all commands
-
-**Severity:** Low
-**Affects:** All commands (not specific to any single command)
-
-**Description:** CLI commands silently discard unrecognised flags instead of erroring. Any argument starting with `-` that isn't a known flag is stripped without warning, which can lead to confusing behavior when a user mistakenly passes a flag that doesn't apply to the command they're running.
-
-**Example:** `tick dep add tick-aaa --blocks tick-bbb` silently ignores `--blocks` (which is only valid on `create`/`update`) and treats it as `tick dep add tick-aaa tick-bbb`, producing a result the user didn't intend — with no indication anything was wrong.
-
-**Expected behavior:** All commands should reject unrecognised flags with a clear error, e.g. `Error: unknown flag --blocks. Run 'tick help dep' for usage.`
-
-**Scope:** This is a general CLI parsing concern. Flag parsing across all commands should be audited to ensure unknown flags produce errors rather than being silently discarded.
-
----
-
 ## BUG-2: Rule 6 parent reopen records `auto=false` in transition history
 
 **Severity:** Medium
@@ -41,3 +26,28 @@ The user ran `create`, not `reopen`. The Story reopen was entirely system-initia
 **Root cause:** `ApplyWithCascades` unconditionally sets `Auto: false` on the primary target (line 43 of `apply_cascades.go`). This is correct when called from `RunTransition` (user explicitly ran a transition command), but incorrect when called from `validateAndReopenParent` where the primary target is also a system-initiated cascade.
 
 **Possible fix:** Either add an `auto` parameter to `ApplyWithCascades` so the caller can specify whether the primary transition is manual or automatic, or have `validateAndReopenParent` patch the transition record after the call.
+
+---
+
+## BUG-3: Cascade output shows unchanged tasks
+
+**Severity:** Low
+**Affects:** `internal/cli/transition.go:buildCascadeResult`, all formatters (toon, pretty, JSON)
+
+**Description:** When a status transition triggers cascades, the output includes lines for sibling/descendant tasks that were already terminal and didn't change. These "(unchanged)" lines are noise — if nothing changed, there's nothing to report.
+
+**Example:**
+
+```
+$ tick done tick-b15fda
+tick-b15fda: in_progress → done
+tick-c5a1ff: in_progress → done (auto)
+tick-18747f: in_progress → done (auto)
+tick-fd039e: done (unchanged)     ← noise
+tick-c3e72b: done (unchanged)     ← noise
+tick-3d9a7e: done (unchanged)     ← noise
+```
+
+**Expected behavior:** Only the primary transition and actual cascaded changes should be displayed. Tasks that didn't change should be omitted.
+
+**Root cause:** `buildCascadeResult` in `transition.go` (lines 117-135) actively collects terminal descendants of involved tasks that weren't cascaded and populates them into `CascadeResult.Unchanged`. All three formatters then render these entries.
