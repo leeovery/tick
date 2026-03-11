@@ -38,13 +38,7 @@ func (a *App) handleNote(fc FormatConfig, fmtr Formatter, subArgs []string) erro
 // resolves partial ID, appends a Note to the task, and outputs the result.
 func RunNoteAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	// Parse positional args: first non-flag is ID, remaining non-flags are joined as text.
-	var positional []string
-	for _, arg := range args {
-		if strings.HasPrefix(arg, "-") {
-			continue
-		}
-		positional = append(positional, arg)
-	}
+	positional := append([]string{}, args...)
 
 	if len(positional) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick note add <task_id> <text>")

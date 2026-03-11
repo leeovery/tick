@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/leeovery/tick/internal/task"
@@ -36,13 +35,7 @@ func (a *App) handleDep(fc FormatConfig, fmtr Formatter, subArgs []string) error
 // parseDepArgs extracts two positional IDs from the args, normalizing to lowercase.
 // Returns taskID, blockedByID, and error.
 func parseDepArgs(args []string, subCmd string) (string, string, error) {
-	var positional []string
-	for _, arg := range args {
-		if strings.HasPrefix(arg, "-") {
-			continue
-		}
-		positional = append(positional, arg)
-	}
+	positional := append([]string{}, args...)
 
 	if len(positional) < 2 {
 		return "", "", fmt.Errorf("two IDs required. Usage: tick dep %s <task_id> <blocked_by_id>", subCmd)

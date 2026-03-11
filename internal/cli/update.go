@@ -108,8 +108,6 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 				return opts, fmt.Errorf("--blocks requires a value")
 			}
 			opts.blocks = parseCommaSeparatedIDs(args[i])
-		case strings.HasPrefix(arg, "-"):
-			// Unknown flag — skip (global flags already extracted)
 		default:
 			// Positional argument: task ID (first one wins)
 			if opts.id == "" {

@@ -90,8 +90,6 @@ func parseCreateArgs(args []string) (createOpts, error) {
 			}
 			opts.refs = strings.Split(args[i], ",")
 			opts.hasRefs = true
-		case strings.HasPrefix(arg, "-"):
-			// Unknown flag — skip (global flags already extracted)
 		default:
 			// Positional argument: title (first one wins)
 			if opts.title == "" {

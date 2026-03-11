@@ -1832,8 +1832,8 @@ func TestParseRemoveArgs(t *testing.T) {
 		}
 	})
 
-	t.Run("skips unknown flags mixed with IDs", func(t *testing.T) {
-		ids, force := parseRemoveArgs([]string{"--verbose", "tick-aaa111", "-x", "tick-bbb222"})
+	t.Run("treats all non-force args as positional IDs", func(t *testing.T) {
+		ids, force := parseRemoveArgs([]string{"tick-aaa111", "tick-bbb222"})
 		if force {
 			t.Errorf("force = true, want false")
 		}
@@ -1848,8 +1848,8 @@ func TestParseRemoveArgs(t *testing.T) {
 		}
 	})
 
-	t.Run("returns empty slice when only flags or no args provided", func(t *testing.T) {
-		ids, _ := parseRemoveArgs([]string{"--force", "-x"})
+	t.Run("returns empty slice when only --force or no args provided", func(t *testing.T) {
+		ids, _ := parseRemoveArgs([]string{"--force"})
 		if len(ids) != 0 {
 			t.Errorf("len(ids) = %d, want 0", len(ids))
 		}

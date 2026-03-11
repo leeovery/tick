@@ -26,8 +26,6 @@ func parseRemoveArgs(args []string) ([]string, bool) {
 		switch {
 		case arg == "--force" || arg == "-f":
 			force = true
-		case strings.HasPrefix(arg, "-"):
-			// Skip unknown flags.
 		default:
 			lower := strings.ToLower(arg)
 			if !seen[lower] {
