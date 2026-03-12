@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-12
 cycle: 1
 phase: Plan Integrity Review
@@ -44,6 +44,9 @@ The Phase 1 acceptance criteria state "Existing 13 ApplyWithCascades subtests pa
 
 **Details**:
 Task 1-1's description references "13" existing subtests in the Solution, Outcome, Do (step 3 and step 5), Acceptance Criteria, and Tests sections. The actual count is 18. This creates false verification checkpoints that would confuse an implementer. All occurrences must be corrected, and the derived total in Do step 5 updated from "15 tests (13 migrated + 2 new)" to "20 tests (18 migrated + 2 new)".
+
+**Resolution**: Fixed
+**Notes**: Updated all occurrences of "13" to "18" and "15 tests (13 migrated + 2 new)" to "20 tests (18 migrated + 2 new)" in tick task tick-0930d3 description.
 
 **Current**:
 ```
@@ -117,7 +120,7 @@ Task 1-1's description references "13" existing subtests in the Solution, Outcom
 - All 18 existing subtests run under ApplyUserTransition with identical assertions
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**: Every occurrence of "13" changed to "18", and "15 tests (13 migrated + 2 new)" changed to "20 tests (18 migrated + 2 new)".
 
 ---
