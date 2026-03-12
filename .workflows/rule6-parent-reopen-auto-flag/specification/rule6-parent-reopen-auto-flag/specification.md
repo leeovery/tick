@@ -20,6 +20,8 @@ Add an `auto bool` parameter to `ApplyWithCascades` and make it unexported (`app
 
 The cascade engine logic is unchanged — same state machine, same cascade queue, same cascade recording. The only difference is the `Auto` field on the primary target's `TransitionRecord`.
 
+Update the doc comment on `applyWithCascades` to reflect the parameterized `auto` behavior. Add doc comments to `ApplyUserTransition` and `ApplySystemTransition` documenting their intent.
+
 ### Call Site Updates
 
 | Caller | File | Change |

@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-12
 cycle: 1
 phase: Input Review
@@ -37,5 +37,5 @@ The investigation explicitly notes that `ApplyWithCascades` has a doc comment st
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added doc comment update requirement to Fix section.
