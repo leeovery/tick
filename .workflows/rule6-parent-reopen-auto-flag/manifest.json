@@ -1,0 +1,12 @@
+{
+  "name": "rule6-parent-reopen-auto-flag",
+  "work_type": "bugfix",
+  "status": "in-progress",
+  "created": "2026-03-12",
+  "description": "Rule 6 parent reopen records auto=false in transition history when it should be auto=true since the reopen is system-initiated not manual",
+  "phases": {
+    "investigation": {
+      "status": "in-progress"
+    }
+  }
+}
