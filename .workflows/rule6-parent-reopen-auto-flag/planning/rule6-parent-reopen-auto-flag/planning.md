@@ -1,8 +1,9 @@
 # Plan: Rule6 Parent Reopen Auto Flag
 
 ### Phase 1: Fix auto flag on system-initiated transitions
-status: draft
+status: approved
 ext_id:
+approved_at: 2026-03-12
 
 **Goal**: Parameterize the auto flag in ApplyWithCascades so system-initiated transitions (Rule 6 parent reopen, Rule 3 reparent auto-completion) correctly record auto=true on the primary target's TransitionRecord.
 
