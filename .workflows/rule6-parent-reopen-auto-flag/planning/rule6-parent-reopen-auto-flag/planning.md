@@ -2,7 +2,7 @@
 
 ### Phase 1: Fix auto flag on system-initiated transitions
 status: approved
-ext_id:
+ext_id: tick-359ce4
 approved_at: 2026-03-12
 
 **Goal**: Parameterize the auto flag in ApplyWithCascades so system-initiated transitions (Rule 6 parent reopen, Rule 3 reparent auto-completion) correctly record auto=true on the primary target's TransitionRecord.
@@ -22,6 +22,6 @@ approved_at: 2026-03-12
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| rule6-parent-reopen-auto-flag-1-1 | Refactor ApplyWithCascades into user/system wrappers with failing test | none | pending | |
+| rule6-parent-reopen-auto-flag-1-1 | Refactor ApplyWithCascades into user/system wrappers with failing test | none | authored | tick-0930d3 |
 | rule6-parent-reopen-auto-flag-1-2 | Update call sites and rename evaluateRule3 | none | pending | |
 | rule6-parent-reopen-auto-flag-1-3 | Integration tests for auto flag in JSONL | reparent triggers Rule 3 cascading through multiple levels | pending | |
