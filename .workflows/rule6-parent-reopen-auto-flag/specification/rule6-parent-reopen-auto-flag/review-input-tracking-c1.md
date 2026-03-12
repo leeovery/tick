@@ -21,8 +21,8 @@ The specification defines the wrapper signatures as `ApplyUserTransition(tasks [
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Updated spec signatures from []*Task to []Task to match codebase convention.
 
 ---
 

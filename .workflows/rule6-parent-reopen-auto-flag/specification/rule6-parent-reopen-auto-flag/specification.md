@@ -15,8 +15,8 @@ Cascade transitions (children of the primary target) are already correctly recor
 
 Add an `auto bool` parameter to `ApplyWithCascades` and make it unexported (`applyWithCascades`). Expose two semantic wrappers:
 
-- **`ApplyUserTransition(tasks []*Task, target *Task, action string)`** — wraps with `auto=false`. For user-initiated commands.
-- **`ApplySystemTransition(tasks []*Task, target *Task, action string)`** — wraps with `auto=true`. For system-initiated side effects.
+- **`ApplyUserTransition(tasks []Task, target *Task, action string)`** — wraps with `auto=false`. For user-initiated commands.
+- **`ApplySystemTransition(tasks []Task, target *Task, action string)`** — wraps with `auto=true`. For system-initiated side effects.
 
 The cascade engine logic is unchanged — same state machine, same cascade queue, same cascade recording. The only difference is the `Auto` field on the primary target's `TransitionRecord`.
 
