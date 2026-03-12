@@ -24,4 +24,4 @@ approved_at: 2026-03-12
 |----|------|------------|--------|--------|
 | rule6-parent-reopen-auto-flag-1-1 | Refactor ApplyWithCascades into user/system wrappers with failing test | none | authored | tick-0930d3 |
 | rule6-parent-reopen-auto-flag-1-2 | Update call sites and rename evaluateRule3 | none | authored | tick-be26d8 |
-| rule6-parent-reopen-auto-flag-1-3 | Integration tests for auto flag in JSONL | reparent triggers Rule 3 cascading through multiple levels | pending | |
+| rule6-parent-reopen-auto-flag-1-3 | Integration tests for auto flag in JSONL | reparent triggers Rule 3 cascading through multiple levels | authored | tick-d6e894 |
