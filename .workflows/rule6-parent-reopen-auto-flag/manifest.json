@@ -6,7 +6,7 @@
   "description": "Rule 6 parent reopen records auto=false in transition history when it should be auto=true since the reopen is system-initiated not manual",
   "phases": {
     "investigation": {
-      "status": "in-progress"
+      "status": "completed"
     }
   }
 }
