@@ -37,3 +37,7 @@ The cascade engine logic is unchanged — same state machine, same cascade queue
 - Add unit test: `ApplyUserTransition` records `auto=false` on primary target
 - Add integration test: `create --parent <done-parent>` produces `auto=true` on parent reopen (Rule 6)
 - Add integration test: `update --parent` reparent triggers auto-completion with `auto=true` (Rule 3)
+
+### Dependencies
+
+None. All affected code (`ApplyWithCascades`, `validateAndReopenParent`, `evaluateRule3`, `RunTransition`) already exists in the codebase. No external systems or prerequisites required.
