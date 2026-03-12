@@ -29,7 +29,8 @@
       "finding_gate_mode": "gated",
       "phase": 2,
       "task": "~",
-      "ext_id": "tick-6d5cb7"
+      "ext_id": "tick-6d5cb7",
+      "external_dependencies": {}
     }
   }
 }
