@@ -18,3 +18,10 @@ approved_at: 2026-03-12
 - [ ] Integration test confirms `create --parent <done-parent>` produces `auto=true` on parent reopen transition in JSONL
 - [ ] Integration test confirms `update --parent` reparent triggers auto-completion with `auto=true` in JSONL
 - [ ] `go test ./...` passes with no regressions
+
+#### Tasks
+| ID | Name | Edge Cases | Status | Ext ID |
+|----|------|------------|--------|--------|
+| rule6-parent-reopen-auto-flag-1-1 | Refactor ApplyWithCascades into user/system wrappers with failing test | none | pending | |
+| rule6-parent-reopen-auto-flag-1-2 | Update call sites and rename evaluateRule3 | none | pending | |
+| rule6-parent-reopen-auto-flag-1-3 | Integration tests for auto flag in JSONL | reparent triggers Rule 3 cascading through multiple levels | pending | |
