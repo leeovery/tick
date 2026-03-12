@@ -41,8 +41,8 @@ The spec states "`evaluateRule3` should be renamed to something descriptive (une
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Replaced vague rename note with concrete name: autoCompleteParentIfTerminal.
 
 ---
 

@@ -30,7 +30,7 @@ Update the doc comment on `applyWithCascades` to reflect the parameterized `auto
 | `validateAndReopenParent` | `internal/cli/helpers.go` | `ApplyWithCascades` → `ApplySystemTransition` |
 | `evaluateRule3` | `internal/cli/update.go` | `ApplyWithCascades` → `ApplySystemTransition` |
 
-`evaluateRule3` should be renamed to something descriptive (unexported, single call site).
+Rename `evaluateRule3` to `autoCompleteParentIfTerminal` (unexported, single call site).
 
 ### Testing
 
