@@ -13,7 +13,7 @@ approved_at: 2026-03-12
 - [ ] `ApplyWithCascades` is unexported (`applyWithCascades`); `ApplyUserTransition` and `ApplySystemTransition` are the only public entry points
 - [ ] `evaluateRule3` is renamed to `autoCompleteParentIfTerminal`
 - [ ] All three call sites use the correct wrapper (`RunTransition` calls `ApplyUserTransition`; `validateAndReopenParent` and `autoCompleteParentIfTerminal` call `ApplySystemTransition`)
-- [ ] Existing 13 `ApplyWithCascades` subtests pass unchanged under `ApplyUserTransition`
+- [ ] Existing 18 `ApplyWithCascades` subtests pass unchanged under `ApplyUserTransition`
 - [ ] New unit tests verify `ApplyUserTransition` records `auto=false` and `ApplySystemTransition` records `auto=true` on the primary target
 - [ ] Integration test confirms `create --parent <done-parent>` produces `auto=true` on parent reopen transition in JSONL
 - [ ] Integration test confirms `update --parent` reparent triggers auto-completion with `auto=true` in JSONL

@@ -30,8 +30,8 @@ The Phase 1 acceptance criteria state "Existing 13 ApplyWithCascades subtests pa
 - [ ] Existing 18 `ApplyWithCascades` subtests pass unchanged under `ApplyUserTransition`
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Updated planning.md acceptance criteria.
 
 ---
 
