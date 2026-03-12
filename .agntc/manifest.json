@@ -1,8 +1,8 @@
 {
   "leeovery/claude-technical-workflows": {
     "ref": null,
-    "commit": "9ed511cf1a55498fe249162ab40ef0709ade3ea4",
-    "installedAt": "2026-03-11T21:09:41.338Z",
+    "commit": "96906a840bd33d5ffedf320bab4d71ceeea63e2f",
+    "installedAt": "2026-03-12T08:56:51.795Z",
     "agents": [
       "claude"
     ],
@@ -60,6 +60,7 @@
       ".claude/skills/migrate/scripts/migrations/020-normalise-terminal-status.sh",
       ".claude/skills/migrate/scripts/migrations/021-research-filename-rename.sh",
       ".claude/skills/migrate/scripts/migrations/022-remove-session-state.sh",
+      ".claude/skills/migrate/scripts/migrations/023-clear-research-analysis-cache.sh",
       ".claude/skills/start-bugfix/",
       ".claude/skills/start-bugfix/SKILL.md",
       ".claude/skills/start-bugfix/references/",
@@ -182,6 +183,7 @@
       ".claude/skills/technical-review/references/invoke-review-synthesizer.md",
       ".claude/skills/technical-review/references/invoke-review-task-writer.md",
       ".claude/skills/technical-review/references/invoke-task-verifiers.md",
+      ".claude/skills/technical-review/references/present-review.md",
       ".claude/skills/technical-review/references/produce-review.md",
       ".claude/skills/technical-review/references/review-actions-loop.md",
       ".claude/skills/technical-review/references/review-checklist.md",
