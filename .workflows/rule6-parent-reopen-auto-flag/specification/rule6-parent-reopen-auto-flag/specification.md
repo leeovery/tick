@@ -34,7 +34,7 @@ Rename `evaluateRule3` to `autoCompleteParentIfTerminal` (unexported, single cal
 
 ### Testing
 
-- Update existing `ApplyWithCascades` unit tests for the new wrapper signatures
+- Migrate existing `ApplyWithCascades` unit tests to call `ApplyUserTransition`. All 13 existing subtests exercise user-initiated scenarios (direct transition on the primary target); none test the `validateAndReopenParent` or `evaluateRule3` code paths. No assertion changes needed — `Auto: false` on the primary is correct for user-initiated transitions.
 - Add unit test: `ApplySystemTransition` records `auto=true` on primary target
 - Add unit test: `ApplyUserTransition` records `auto=false` on primary target
 - Add integration test: `create --parent <done-parent>` produces `auto=true` on parent reopen (Rule 6)
