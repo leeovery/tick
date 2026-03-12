@@ -155,5 +155,5 @@ The initial bug report suggested either adding a parameter or patching after the
 ## Notes
 
 - The bug report only mentions Rule 6 (`validateAndReopenParent`), but `evaluateRule3` in `update.go` has the identical issue
-- `evaluateRule3` naming is poor (named after planning artefact) but renaming is out of scope for this bugfix
+- `evaluateRule3` to be renamed as part of this fix — unexported with one call site, trivial cleanup
 - Fix must preserve `Auto: false` for `RunTransition` (the only manual caller)
