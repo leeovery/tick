@@ -30,7 +30,8 @@
       "phase": 2,
       "task": "~",
       "ext_id": "tick-6d5cb7",
-      "external_dependencies": {}
+      "external_dependencies": {},
+      "review_cycle": 1
     }
   }
 }
