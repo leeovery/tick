@@ -81,11 +81,12 @@ Phase {N}: {Phase Name} — task list approved. Proceeding to authoring.
 
 ```
 · · · · · · · · · · · ·
-**To proceed:**
-- **`y`/`yes`** — Approved.
+Approve this task list?
+
+- **`y`/`yes`** — Proceed to authoring
 - **`a`/`auto`** — Approve this and all remaining task list gates automatically
-- **Or tell me what to change** — reorder, split, merge, add, edit, or remove tasks.
-- **Or navigate** — a different phase or task, or the leading edge.
+- **Tell me what to change** — reorder, split, merge, add, edit, or remove tasks
+- **Navigate** — a different phase or task, or the leading edge
 · · · · · · · · · · · ·
 ```
 
@@ -111,7 +112,7 @@ Note that `task_list_gate_mode` should be updated to `auto` in the manifest duri
 
 1. Advance the planning position in the manifest to the first task in this phase:
    ```bash
-   node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit} --phase planning --topic {topic} task {first-task-seq}
+   node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit} --phase planning --topic {topic} task {first_task_id}
    ```
 2. If user chose `auto` at this gate: update the manifest:
    ```bash

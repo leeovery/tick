@@ -1,8 +1,8 @@
 {
   "leeovery/claude-technical-workflows": {
     "ref": null,
-    "commit": "d331147ff5c000455a87e27b58d5309d465e22ee",
-    "installedAt": "2026-03-12T11:21:32.476Z",
+    "commit": "fcb6c80753b7f5fcc04692ecdc71b45ffcba46f9",
+    "installedAt": "2026-03-12T18:06:39.982Z",
     "agents": [
       "claude"
     ],
@@ -61,6 +61,7 @@
       ".claude/skills/migrate/scripts/migrations/021-research-filename-rename.sh",
       ".claude/skills/migrate/scripts/migrations/022-remove-session-state.sh",
       ".claude/skills/migrate/scripts/migrations/023-clear-research-analysis-cache.sh",
+      ".claude/skills/migrate/scripts/migrations/024-backfill-and-flatten-review.sh",
       ".claude/skills/start-bugfix/",
       ".claude/skills/start-bugfix/SKILL.md",
       ".claude/skills/start-bugfix/references/",
@@ -260,7 +261,6 @@
       ".claude/skills/workflow-review-entry/",
       ".claude/skills/workflow-review-entry/SKILL.md",
       ".claude/skills/workflow-review-entry/references/",
-      ".claude/skills/workflow-review-entry/references/determine-review-version.md",
       ".claude/skills/workflow-review-entry/references/invoke-skill.md",
       ".claude/skills/workflow-review-entry/references/validate-phase.md",
       ".claude/skills/workflow-shared/",
