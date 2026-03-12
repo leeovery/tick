@@ -40,6 +40,8 @@ Update the doc comment on `applyWithCascades` to reflect the parameterized `auto
 - Add integration test: `create --parent <done-parent>` produces `auto=true` on parent reopen (Rule 6)
 - Add integration test: `update --parent` reparent triggers auto-completion with `auto=true` (Rule 3)
 
+Integration tests verify the `auto` flag by reading the JSONL file directly and inspecting the last `TransitionRecord` on the affected task. This avoids coupling to CLI output format and tests the source of truth.
+
 ### Dependencies
 
 None. All affected code (`ApplyWithCascades`, `validateAndReopenParent`, `evaluateRule3`, `RunTransition`) already exists in the codebase. No external systems or prerequisites required.

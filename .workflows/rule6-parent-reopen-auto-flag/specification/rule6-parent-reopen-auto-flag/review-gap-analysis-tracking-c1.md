@@ -25,8 +25,8 @@ However, the current `show --json` output (`jsonTaskDetail`) does not include a 
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Added JSONL verification approach to Testing section.
 
 ---
 
