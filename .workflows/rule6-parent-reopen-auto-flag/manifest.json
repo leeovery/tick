@@ -9,7 +9,7 @@
       "status": "completed"
     },
     "specification": {
-      "status": "in-progress",
+      "status": "completed",
       "type": "feature",
       "review_cycle": 2,
       "finding_gate_mode": "gated",
