@@ -7,6 +7,18 @@
   "phases": {
     "investigation": {
       "status": "completed"
+    },
+    "specification": {
+      "status": "in-progress",
+      "type": "feature",
+      "review_cycle": 0,
+      "finding_gate_mode": "gated",
+      "date": "2026-03-12",
+      "sources": {
+        "rule6-parent-reopen-auto-flag": {
+          "status": "pending"
+        }
+      }
     }
   }
 }
