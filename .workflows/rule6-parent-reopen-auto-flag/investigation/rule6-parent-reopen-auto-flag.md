@@ -106,11 +106,54 @@ The parent reopen transition is recorded with `auto=false`, making it appear as 
 
 ## Fix Direction
 
-*Pending findings review*
+### Chosen Approach
+
+Add a parameter to `ApplyWithCascades` to control whether the primary target's transition is recorded as system-initiated or user-initiated. Then provide two exported wrapper methods that encode the distinction so callers don't deal with the boolean directly:
+
+- `ApplyUserTransition(tasks, target, action)` — for user-initiated commands (wraps with `auto=false`)
+- `ApplySystemTransition(tasks, target, action)` — for system-initiated side effects (wraps with `auto=true`)
+
+`ApplyWithCascades` becomes unexported (`applyWithCascades`) since callers use the wrappers.
+
+**Deciding factor:** The cascade engine logic is identical in both cases — same state machine, same cascade queue, same cascade recording. The only difference is one field on the primary's transition record. Duplication would be wrong; a parameter is the real fix; wrappers provide semantic clarity without exposing the boolean.
+
+### Options Explored
+
+1. **Add `auto bool` parameter directly to `ApplyWithCascades`** — correct fix but exposes a raw boolean to callers. Every call site needs to know what `true`/`false` means.
+
+2. **Two separate implementations** — rejected. Would duplicate the entire cascade engine for a one-line difference.
+
+3. **Patch transition record after the call** — fragile. Couples callers to internal recording details of `ApplyWithCascades`.
+
+4. **Separate concerns: remove recording from `ApplyWithCascades` entirely** — considered. Would push recording logic into every caller, creating duplication and risk of callers forgetting to record. Co-locating recording with mutation is a good guard rail.
+
+### Discussion
+
+The initial bug report suggested either adding a parameter or patching after the call. Discussion surfaced that:
+
+- The `auto` naming is too generic — the wrappers (`ApplyUserTransition`/`ApplySystemTransition`) express intent better than a boolean
+- `evaluateRule3` has the same bug (not just `validateAndReopenParent`) — named after a planning artefact, not what it does
+- The distinction is always static per call site (never computed at runtime), which makes wrappers natural — each caller knows at write time which one to use
+- All three callers hardcode their intent, so no caller ever needs the raw parameterized version
+
+### Testing Recommendations
+
+- Update existing `ApplyWithCascades` unit tests for new wrapper signatures
+- Add unit test: `ApplySystemTransition` records `auto=true` on primary target
+- Add unit test: `ApplyUserTransition` records `auto=false` on primary target
+- Add integration test: `create --parent <done-parent>` produces `auto=true` on parent reopen (Rule 6)
+- Add integration test: `update --parent` reparent triggers auto-completion with `auto=true` (Rule 3)
+
+### Risk Assessment
+
+- **Fix complexity:** Low — one parameter addition, two thin wrappers, three call sites updated
+- **Regression risk:** Low — cascade engine logic unchanged; only the auto flag on primary target changes for two call sites
+- **Recommended approach:** Regular release
 
 ---
 
 ## Notes
 
 - The bug report only mentions Rule 6 (`validateAndReopenParent`), but `evaluateRule3` in `update.go` has the identical issue
+- `evaluateRule3` naming is poor (named after planning artefact) but renaming is out of scope for this bugfix
 - Fix must preserve `Auto: false` for `RunTransition` (the only manual caller)
