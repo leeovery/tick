@@ -1,8 +1,8 @@
 {
   "leeovery/claude-technical-workflows": {
     "ref": null,
-    "commit": "3f5d65df8347d433e104abd9d516d952c946251d",
-    "installedAt": "2026-03-13T11:01:09.544Z",
+    "commit": "93ba2ea4e55e7e5ff986dae6e2a6a9a1ce50985a",
+    "installedAt": "2026-03-13T17:24:43.600Z",
     "agents": [
       "claude"
     ],
@@ -62,6 +62,8 @@
       ".claude/skills/migrate/scripts/migrations/022-remove-session-state.sh",
       ".claude/skills/migrate/scripts/migrations/023-clear-research-analysis-cache.sh",
       ".claude/skills/migrate/scripts/migrations/024-backfill-and-flatten-review.sh",
+      ".claude/skills/migrate/scripts/migrations/025-unify-manifest-items.sh",
+      ".claude/skills/migrate/scripts/migrations/026-rename-review-artifacts.sh",
       ".claude/skills/start-bugfix/",
       ".claude/skills/start-bugfix/SKILL.md",
       ".claude/skills/start-bugfix/references/",
