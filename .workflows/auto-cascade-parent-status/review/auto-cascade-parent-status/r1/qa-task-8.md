@@ -1,4 +1,4 @@
-TASK: Add task_transitions table to SQLite cache schema (acps-2-2)
+TASK: Add task_transitions table to SQLite cache schema (auto-cascade-parent-status-2-2)
 
 ACCEPTANCE CRITERIA:
 - task_transitions table created in SQLite cache schema

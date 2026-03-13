@@ -1,4 +1,4 @@
-TASK: Wire reparenting cascade logic into RunUpdate (acps-3-5)
+TASK: Wire reparenting cascade logic into RunUpdate (auto-cascade-parent-status-3-5)
 
 ACCEPTANCE CRITERIA:
 - Reparenting via update triggers Rule 6 (done parent reopen) and Rule 3 (original parent re-evaluation)

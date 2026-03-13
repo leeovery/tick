@@ -1,4 +1,4 @@
-TASK: Defensive copy of task data for cascade display output (acps-4-6)
+TASK: Defensive copy of task data for cascade display output (auto-cascade-parent-status-4-6)
 
 ACCEPTANCE CRITERIA:
 - No reference to the Mutate callback's tasks slice is held after Mutate returns

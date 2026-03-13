@@ -1,4 +1,4 @@
-TASK: Extract Rule 3 completion evaluation into shared function (acps-4-3)
+TASK: Extract Rule 3 completion evaluation into shared function (auto-cascade-parent-status-4-3)
 
 ACCEPTANCE CRITERIA:
 - Rule 3 completion evaluation logic extracted into a shared function

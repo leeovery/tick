@@ -14,13 +14,13 @@ topic: Auto-Cascade Parent Status
 
 **Type**: Hallucinated content
 **Spec Reference**: Architecture: StateMachine > API Surface; Rule 9
-**Plan Reference**: Phase 1 / acps-1-5 (tick-dc1dbf)
+**Plan Reference**: Phase 1 / auto-cascade-parent-status-1-5 (tick-dc1dbf)
 **Change Type**: update-task
 
 **Details**:
-The spec's API surface defines exactly 5 methods on StateMachine: Transition, ValidateAddChild, ValidateAddDep, Cascades, and ApplyWithCascades. Task acps-1-5 introduces a 6th method `ValidateReopen()` that is not in the spec.
+The spec's API surface defines exactly 5 methods on StateMachine: Transition, ValidateAddChild, ValidateAddDep, Cascades, and ApplyWithCascades. Task auto-cascade-parent-status-1-5 introduces a 6th method `ValidateReopen()` that is not in the spec.
 
-Additionally, the spec's Rule 9 says "Cannot reopen a child under a `cancelled` parent" -- referring to the direct parent. Task acps-1-5 walks the full ancestor chain (grandparent, great-grandparent, etc.), returning an error if any ancestor is cancelled. The spec does not require ancestor-chain walking for Rule 9.
+Additionally, the spec's Rule 9 says "Cannot reopen a child under a `cancelled` parent" -- referring to the direct parent. Task auto-cascade-parent-status-1-5 walks the full ancestor chain (grandparent, great-grandparent, etc.), returning an error if any ancestor is cancelled. The spec does not require ancestor-chain walking for Rule 9.
 
 The Rule 9 check should be integrated into Transition() (which is in the spec API) and should check only the direct parent, matching the spec text.
 
@@ -110,11 +110,11 @@ Spec Reference: .workflows/specification/auto-cascade-parent-status/specificatio
 
 **Type**: Hallucinated content
 **Spec Reference**: Architecture: StateMachine > API Surface
-**Plan Reference**: Phase 1 / acps-1-6 (tick-f998b0)
+**Plan Reference**: Phase 1 / auto-cascade-parent-status-1-6 (tick-f998b0)
 **Change Type**: update-task
 
 **Details**:
-Task acps-1-6 references `sm.ValidateReopen()` in the Do steps and acceptance criteria. If Finding 1 is accepted (Rule 9 integrated into Transition), the CLI caller no longer needs a separate ValidateReopen call.
+Task auto-cascade-parent-status-1-6 references `sm.ValidateReopen()` in the Do steps and acceptance criteria. If Finding 1 is accepted (Rule 9 integrated into Transition), the CLI caller no longer needs a separate ValidateReopen call.
 
 **Current**:
 ```
@@ -181,11 +181,11 @@ Tests:
 
 **Type**: Incomplete coverage
 **Spec Reference**: CLI Display section -- "Both formats show the same information -- the primary transition plus all cascaded changes and unchanged terminal children."
-**Plan Reference**: Phase 3 / acps-3-3 (tick-a24919)
+**Plan Reference**: Phase 3 / auto-cascade-parent-status-3-3 (tick-a24919)
 **Change Type**: add-to-task
 
 **Details**:
-The spec explicitly requires showing unchanged terminal children in cascade output. Task acps-3-1 defines `UnchangedEntry` in CascadeResult, and acps-3-2 renders them. But no task describes how unchanged terminal children are collected. ApplyWithCascades (acps-2-7) returns only `(TransitionResult, []CascadeChange, error)` per the spec API -- unchanged children are not in that return type. Task acps-3-3 says "build CascadeResult" but does not describe the logic for finding unchanged terminal children (children of the primary task that are already terminal and were not cascaded). An implementer would need to go back to the specification to understand this requirement.
+The spec explicitly requires showing unchanged terminal children in cascade output. Task auto-cascade-parent-status-3-1 defines `UnchangedEntry` in CascadeResult, and auto-cascade-parent-status-3-2 renders them. But no task describes how unchanged terminal children are collected. ApplyWithCascades (auto-cascade-parent-status-2-7) returns only `(TransitionResult, []CascadeChange, error)` per the spec API -- unchanged children are not in that return type. Task auto-cascade-parent-status-3-3 says "build CascadeResult" but does not describe the logic for finding unchanged terminal children (children of the primary task that are already terminal and were not cascaded). An implementer would need to go back to the specification to understand this requirement.
 
 **Current**:
 ```
@@ -208,4 +208,4 @@ Do:
 ```
 
 **Resolution**: Fixed
-**Notes**: Added explicit collection logic to acps-3-3 Do steps and acceptance criteria.
+**Notes**: Added explicit collection logic to auto-cascade-parent-status-3-3 Do steps and acceptance criteria.

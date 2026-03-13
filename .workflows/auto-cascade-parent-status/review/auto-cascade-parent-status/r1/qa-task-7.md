@@ -1,4 +1,4 @@
-TASK: Add Transition struct and Transitions field to Task (acps-2-1)
+TASK: Add Transition struct and Transitions field to Task (auto-cascade-parent-status-2-1)
 
 ACCEPTANCE CRITERIA:
 - Task.Transitions array field serializes/deserializes correctly in JSONL with `auto` boolean

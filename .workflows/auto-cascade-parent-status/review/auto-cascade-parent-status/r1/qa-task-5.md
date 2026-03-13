@@ -1,4 +1,4 @@
-TASK: Add reopen-under-cancelled-parent guard to Transition (acps-1-5)
+TASK: Add reopen-under-cancelled-parent guard to Transition (auto-cascade-parent-status-1-5)
 
 ACCEPTANCE CRITERIA:
 - Transition() blocks reopen under cancelled parent with correct error message (Rule 9)
@@ -12,7 +12,7 @@ SPEC CONTEXT: Rule 9 states "Cannot reopen a child under a cancelled parent. Err
 IMPLEMENTATION:
 - Status: Implemented (with architectural refinement)
 - Location: /Users/leeovery/Code/tick/internal/task/apply_cascades.go:19-30
-- Notes: Rule 9 was originally planned for `Transition()` but was moved to `ApplyWithCascades()` during analysis cycle 1 (task acps-4-2). This is a sound architectural decision: `Transition()` is a pure single-task state transition that should not need the full task list. `ApplyWithCascades()` already has the task list context needed to look up the parent. The guard checks only the direct parent (not ancestors), matching the spec exactly. A corresponding test in `state_machine_test.go:530-545` confirms `Transition()` itself intentionally does NOT check parent status.
+- Notes: Rule 9 was originally planned for `Transition()` but was moved to `ApplyWithCascades()` during analysis cycle 1 (task auto-cascade-parent-status-4-2). This is a sound architectural decision: `Transition()` is a pure single-task state transition that should not need the full task list. `ApplyWithCascades()` already has the task list context needed to look up the parent. The guard checks only the direct parent (not ancestors), matching the spec exactly. A corresponding test in `state_machine_test.go:530-545` confirms `Transition()` itself intentionally does NOT check parent status.
 
 TESTS:
 - Status: Adequate
@@ -42,4 +42,4 @@ BLOCKING ISSUES:
 - None
 
 NON-BLOCKING NOTES:
-- The plan task name says "Add reopen-under-cancelled-parent guard to Transition" but the guard lives in ApplyWithCascades. This is intentional per analysis cycle 1 findings (acps-4-2) and is the correct placement, but creates a minor naming mismatch with the original plan task description.
+- The plan task name says "Add reopen-under-cancelled-parent guard to Transition" but the guard lives in ApplyWithCascades. This is intentional per analysis cycle 1 findings (auto-cascade-parent-status-4-2) and is the correct placement, but creates a minor naming mismatch with the original plan task description.

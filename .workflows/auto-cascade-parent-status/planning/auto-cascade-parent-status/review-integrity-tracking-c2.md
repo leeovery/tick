@@ -18,7 +18,7 @@ topic: Auto-Cascade Parent Status
 **Change Type**: update-task
 
 **Details**:
-Phase 2 acceptance includes "Reparenting away triggers Rule 3 re-evaluation on original parent" but this behavior is implemented in Phase 3 task acps-3-5 (Wire reparenting cascade logic into RunUpdate). Phase 2 builds the domain-level Cascades() and ApplyWithCascades() methods -- it does not wire reparenting logic. An implementer verifying Phase 2 completion would be unable to satisfy this criterion because the reparenting wiring does not exist yet.
+Phase 2 acceptance includes "Reparenting away triggers Rule 3 re-evaluation on original parent" but this behavior is implemented in Phase 3 task auto-cascade-parent-status-3-5 (Wire reparenting cascade logic into RunUpdate). Phase 2 builds the domain-level Cascades() and ApplyWithCascades() methods -- it does not wire reparenting logic. An implementer verifying Phase 2 completion would be unable to satisfy this criterion because the reparenting wiring does not exist yet.
 
 **Current**:
 ```
@@ -54,15 +54,15 @@ Phase 2 acceptance includes "Reparenting away triggers Rule 3 re-evaluation on o
 
 ---
 
-### 2. acps-1-5 edge case description misaligned with direct-parent-only check
+### 2. auto-cascade-parent-status-1-5 edge case description misaligned with direct-parent-only check
 
 **Severity**: Minor
-**Plan Reference**: Phase 1 / acps-1-5 (tick-dc1dbf)
+**Plan Reference**: Phase 1 / auto-cascade-parent-status-1-5 (tick-dc1dbf)
 **Category**: Acceptance Criteria Quality
 **Change Type**: update-task
 
 **Details**:
-The plan table lists edge case "deeply nested ancestor chain with cancelled grandparent" for acps-1-5, but the task's Do section explicitly says "Only check the direct parent, not the full ancestor chain." The edge case as described is ambiguous -- it could be misread as requiring the grandparent check to block reopen. The tests section also lacks a test verifying that a cancelled grandparent with a non-cancelled direct parent does NOT block reopen, which would be the correct positive assertion for this edge case.
+The plan table lists edge case "deeply nested ancestor chain with cancelled grandparent" for auto-cascade-parent-status-1-5, but the task's Do section explicitly says "Only check the direct parent, not the full ancestor chain." The edge case as described is ambiguous -- it could be misread as requiring the grandparent check to block reopen. The tests section also lacks a test verifying that a cancelled grandparent with a non-cancelled direct parent does NOT block reopen, which would be the correct positive assertion for this edge case.
 
 **Current**:
 ```

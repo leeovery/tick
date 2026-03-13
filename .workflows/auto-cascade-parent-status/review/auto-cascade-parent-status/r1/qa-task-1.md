@@ -1,4 +1,4 @@
-TASK: Create StateMachine struct with Transition method (acps-1-1)
+TASK: Create StateMachine struct with Transition method (auto-cascade-parent-status-1-1)
 
 ACCEPTANCE CRITERIA:
 - StateMachine.Transition() passes all existing transition tests with identical behavior to task.Transition()

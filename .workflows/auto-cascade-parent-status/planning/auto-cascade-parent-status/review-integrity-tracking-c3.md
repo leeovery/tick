@@ -10,10 +10,10 @@ topic: Auto-Cascade Parent Status
 
 ## Findings
 
-### 1. acps-3-5 misstates Rule 3 condition and lacks self-contained decision logic
+### 1. auto-cascade-parent-status-3-5 misstates Rule 3 condition and lacks self-contained decision logic
 
 **Severity**: Important
-**Plan Reference**: Phase 3 / acps-3-5 (tick-2bf0f6)
+**Plan Reference**: Phase 3 / auto-cascade-parent-status-3-5 (tick-2bf0f6)
 **Category**: Task Self-Containment / Acceptance Criteria Quality
 **Change Type**: update-task
 
@@ -69,15 +69,15 @@ Acceptance Criteria:
 
 ---
 
-### 2. acps-3-5 missing test for mixed done/cancelled children on Rule 3 evaluation
+### 2. auto-cascade-parent-status-3-5 missing test for mixed done/cancelled children on Rule 3 evaluation
 
 **Severity**: Important
-**Plan Reference**: Phase 3 / acps-3-5 (tick-2bf0f6)
+**Plan Reference**: Phase 3 / auto-cascade-parent-status-3-5 (tick-2bf0f6)
 **Category**: Acceptance Criteria Quality
 **Change Type**: update-task
 
 **Details**:
-The test list for acps-3-5 lacks coverage for the case where the original parent has a mix of done and cancelled remaining children after reparenting away. This is the key differentiator of Rule 3's "at least one done" logic and should be explicitly tested at the CLI wiring level to catch misimplementation.
+The test list for auto-cascade-parent-status-3-5 lacks coverage for the case where the original parent has a mix of done and cancelled remaining children after reparenting away. This is the key differentiator of Rule 3's "at least one done" logic and should be explicitly tested at the CLI wiring level to catch misimplementation.
 
 **Current**:
 ```

@@ -1,4 +1,4 @@
-TASK: acps-2-5 — Implement Cascades for upward completion cascade (Rule 3)
+TASK: auto-cascade-parent-status-2-5 — Implement Cascades for upward completion cascade (Rule 3)
 
 ACCEPTANCE CRITERIA:
 - Upward completion cascade triggers parent done when at least one child done, cancelled when all cancelled (Rule 3)

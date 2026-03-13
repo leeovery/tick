@@ -1,4 +1,4 @@
-TASK: acps-2-7 — Implement ApplyWithCascades with queue-based processing
+TASK: auto-cascade-parent-status-2-7 — Implement ApplyWithCascades with queue-based processing
 
 ACCEPTANCE CRITERIA:
 - ApplyWithCascades() returns primary TransitionResult plus all []CascadeChange entries

@@ -17,7 +17,7 @@ Implementation aligns with the specification across all rules:
 - Rules 10-11 (cycle detection, child-blocked-by-parent) — migrated into StateMachine with full backward compatibility
 - Transition history with `auto` flag — serializes correctly in JSONL, cached in `task_transitions` table
 - CLI display — all three formats (Toon, Pretty, JSON) match spec examples
-- One intentional deviation: Rule 9 moved from Transition to ApplyWithCascades (analysis cycle finding acps-4-2) — architecturally sound, keeps Transition as a pure single-task method
+- One intentional deviation: Rule 9 moved from Transition to ApplyWithCascades (analysis cycle finding auto-cascade-parent-status-4-2) — architecturally sound, keeps Transition as a pure single-task method
 
 ### Plan Completion
 - [x] Phase 1 acceptance criteria met (StateMachine core + migration)
@@ -51,7 +51,7 @@ None.
 
 Non-blocking observations from QA verifiers:
 
-1. **Minor naming mismatch**: Task acps-1-5 is named "Add reopen-under-cancelled-parent guard to Transition" but the guard lives in ApplyWithCascades per acps-4-2. Not a code issue — just a plan-vs-implementation naming discrepancy.
+1. **Minor naming mismatch**: Task auto-cascade-parent-status-1-5 is named "Add reopen-under-cancelled-parent guard to Transition" but the guard lives in ApplyWithCascades per auto-cascade-parent-status-4-2. Not a code issue — just a plan-vs-implementation naming discrepancy.
 
 2. **`sm` prefix on helpers**: Package-level functions like `smValidateChildBlockedByParent`, `smDetectCycle`, `smDFS` use an `sm` prefix to disambiguate from old implementations. Acceptable in migration context but could be cleaned up if old functions are eventually removed.
 

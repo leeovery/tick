@@ -18,4 +18,4 @@ All 11 rules are covered by plan tasks with matching acceptance criteria and err
 
 ### Direction 2: Plan to Specification (Fidelity)
 
-All 18 tasks trace back to specific specification sections. No hallucinated requirements, edge cases, or acceptance criteria were found. One minor API surface deviation noted: Transition() gains a `tasks []Task` parameter (acps-1-5) not present in the spec's API sketch, but this is a pragmatic implementation choice to fulfill Rule 9 within the method as the spec requires. No invented behaviors or scope additions.
+All 18 tasks trace back to specific specification sections. No hallucinated requirements, edge cases, or acceptance criteria were found. One minor API surface deviation noted: Transition() gains a `tasks []Task` parameter (auto-cascade-parent-status-1-5) not present in the spec's API sketch, but this is a pragmatic implementation choice to fulfill Rule 9 within the method as the spec requires. No invented behaviors or scope additions.

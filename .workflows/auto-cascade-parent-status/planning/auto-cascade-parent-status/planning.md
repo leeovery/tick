@@ -41,12 +41,12 @@ ext_id: tick-38ca65
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| acps-1-1 | Create StateMachine struct with Transition method | unknown command, no-op on invalid transition (task unmodified) | authored | tick-7dc647 |
-| acps-1-2 | Migrate ValidateAddDep into StateMachine | mixed-case IDs, self-reference, multi-hop cycles | authored | tick-74527d |
-| acps-1-3 | Add ValidateAddChild for cancelled parent guard | none | authored | tick-cdaef4 |
-| acps-1-4 | Add cancelled dependency guard to ValidateAddDep | none | authored | tick-e272cc |
-| acps-1-5 | Add reopen-under-cancelled-parent guard to Transition | cancelled grandparent with non-cancelled direct parent does not block | authored | tick-dc1dbf |
-| acps-1-6 | Update CLI callers to use StateMachine methods | none | authored | tick-f998b0 |
+| auto-cascade-parent-status-1-1 | Create StateMachine struct with Transition method | unknown command, no-op on invalid transition (task unmodified) | authored | tick-7dc647 |
+| auto-cascade-parent-status-1-2 | Migrate ValidateAddDep into StateMachine | mixed-case IDs, self-reference, multi-hop cycles | authored | tick-74527d |
+| auto-cascade-parent-status-1-3 | Add ValidateAddChild for cancelled parent guard | none | authored | tick-cdaef4 |
+| auto-cascade-parent-status-1-4 | Add cancelled dependency guard to ValidateAddDep | none | authored | tick-e272cc |
+| auto-cascade-parent-status-1-5 | Add reopen-under-cancelled-parent guard to Transition | cancelled grandparent with non-cancelled direct parent does not block | authored | tick-dc1dbf |
+| auto-cascade-parent-status-1-6 | Update CLI callers to use StateMachine methods | none | authored | tick-f998b0 |
 
 ### Phase 2: Cascade Logic and Transition History
 status: approved
@@ -71,13 +71,13 @@ ext_id: tick-08e6f9
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| acps-2-1 | Add Transition struct and Transitions field to Task | empty transitions array omitted from JSON, backward-compatible deserialization of tasks without transitions field | authored | tick-9e630d |
-| acps-2-2 | Add task_transitions table to SQLite cache schema | pre-existing cache triggers delete+rebuild via version mismatch | authored | tick-c0b5c7 |
-| acps-2-3 | Implement Cascades for upward start cascade (Rule 2) | ancestor already in_progress skipped, deeply nested chain 5+ levels | authored | tick-4fe6a9 |
-| acps-2-4 | Implement Cascades for downward done/cancel cascade (Rule 4) | mixed terminal/non-terminal children, child with unresolved deps still cascaded | authored | tick-240557 |
-| acps-2-5 | Implement Cascades for upward completion cascade (Rule 3) | single child trivial case, mix of done and cancelled, parent with no children | authored | tick-30f9f9 |
-| acps-2-6 | Implement Cascades for reopen under done parent (Rule 5) | parent not done no-ops, deeply nested done ancestors, cancelled ancestor blocks | authored | tick-902c65 |
-| acps-2-7 | Implement ApplyWithCascades with queue-based processing | multi-level cascades chain, seen-map deduplication, empty cascade list | authored | tick-d5cbbc |
+| auto-cascade-parent-status-2-1 | Add Transition struct and Transitions field to Task | empty transitions array omitted from JSON, backward-compatible deserialization of tasks without transitions field | authored | tick-9e630d |
+| auto-cascade-parent-status-2-2 | Add task_transitions table to SQLite cache schema | pre-existing cache triggers delete+rebuild via version mismatch | authored | tick-c0b5c7 |
+| auto-cascade-parent-status-2-3 | Implement Cascades for upward start cascade (Rule 2) | ancestor already in_progress skipped, deeply nested chain 5+ levels | authored | tick-4fe6a9 |
+| auto-cascade-parent-status-2-4 | Implement Cascades for downward done/cancel cascade (Rule 4) | mixed terminal/non-terminal children, child with unresolved deps still cascaded | authored | tick-240557 |
+| auto-cascade-parent-status-2-5 | Implement Cascades for upward completion cascade (Rule 3) | single child trivial case, mix of done and cancelled, parent with no children | authored | tick-30f9f9 |
+| auto-cascade-parent-status-2-6 | Implement Cascades for reopen under done parent (Rule 5) | parent not done no-ops, deeply nested done ancestors, cancelled ancestor blocks | authored | tick-902c65 |
+| auto-cascade-parent-status-2-7 | Implement ApplyWithCascades with queue-based processing | multi-level cascades chain, seen-map deduplication, empty cascade list | authored | tick-d5cbbc |
 
 ### Phase 3: CLI Integration and Cascade Display
 status: approved
@@ -101,11 +101,11 @@ ext_id: tick-02a182
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| acps-3-1 | Add CascadeResult type and FormatCascadeTransition to Formatter interface | empty cascaded list, empty unchanged list, both empty | authored | tick-c4dc82 |
-| acps-3-2 | Implement FormatCascadeTransition for Toon, Pretty, and JSON formatters | deeply nested tree in Pretty, mixed cascaded and unchanged children, single cascade entry | authored | tick-079053 |
-| acps-3-3 | Wire ApplyWithCascades into RunTransition | no cascades (single-task uses FormatTransition), quiet mode suppresses output, task not found | authored | tick-a24919 |
-| acps-3-4 | Wire ValidateAddChild and done-parent reopen cascade into RunCreate | parent cancelled (error), parent open (no cascade), parent done (reopen cascade) | authored | tick-1dd3c8 |
-| acps-3-5 | Wire reparenting cascade logic into RunUpdate | reparent away triggers Rule 3 on original parent, reparent to done triggers Rule 6, clear parent | authored | tick-2bf0f6 |
+| auto-cascade-parent-status-3-1 | Add CascadeResult type and FormatCascadeTransition to Formatter interface | empty cascaded list, empty unchanged list, both empty | authored | tick-c4dc82 |
+| auto-cascade-parent-status-3-2 | Implement FormatCascadeTransition for Toon, Pretty, and JSON formatters | deeply nested tree in Pretty, mixed cascaded and unchanged children, single cascade entry | authored | tick-079053 |
+| auto-cascade-parent-status-3-3 | Wire ApplyWithCascades into RunTransition | no cascades (single-task uses FormatTransition), quiet mode suppresses output, task not found | authored | tick-a24919 |
+| auto-cascade-parent-status-3-4 | Wire ValidateAddChild and done-parent reopen cascade into RunCreate | parent cancelled (error), parent open (no cascade), parent done (reopen cascade) | authored | tick-1dd3c8 |
+| auto-cascade-parent-status-3-5 | Wire reparenting cascade logic into RunUpdate | reparent away triggers Rule 3 on original parent, reparent to done triggers Rule 6, clear parent | authored | tick-2bf0f6 |
 
 ### Phase 4: Analysis (Cycle 1)
 status: approved
@@ -116,9 +116,9 @@ ext_id: tick-35f54b
 #### Tasks
 | ID | Name | Edge Cases | Status | Ext ID |
 |----|------|------------|--------|--------|
-| acps-4-1 | Pretty format cascade tree rendering | none | authored | tick-0a4018 |
-| acps-4-2 | Move Rule 9 out of Transition into ApplyWithCascades | none | authored | tick-90d410 |
-| acps-4-3 | Extract Rule 3 completion evaluation into shared function | none | authored | tick-3a835e |
-| acps-4-4 | Extract cascade output helper function | none | authored | tick-20678b |
-| acps-4-5 | Extract parent validation and reopen helper | none | authored | tick-1baf3b |
-| acps-4-6 | Defensive copy of task data for cascade display output | none | authored | tick-f09744 |
+| auto-cascade-parent-status-4-1 | Pretty format cascade tree rendering | none | authored | tick-0a4018 |
+| auto-cascade-parent-status-4-2 | Move Rule 9 out of Transition into ApplyWithCascades | none | authored | tick-90d410 |
+| auto-cascade-parent-status-4-3 | Extract Rule 3 completion evaluation into shared function | none | authored | tick-3a835e |
+| auto-cascade-parent-status-4-4 | Extract cascade output helper function | none | authored | tick-20678b |
+| auto-cascade-parent-status-4-5 | Extract parent validation and reopen helper | none | authored | tick-1baf3b |
+| auto-cascade-parent-status-4-6 | Defensive copy of task data for cascade display output | none | authored | tick-f09744 |

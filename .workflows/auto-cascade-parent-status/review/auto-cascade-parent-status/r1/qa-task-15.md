@@ -1,4 +1,4 @@
-TASK: acps-3-2 — Implement FormatCascadeTransition for Toon, Pretty, and JSON formatters
+TASK: auto-cascade-parent-status-3-2 — Implement FormatCascadeTransition for Toon, Pretty, and JSON formatters
 
 ACCEPTANCE CRITERIA:
 - Pretty format renders cascade tree with box-drawing characters, unchanged terminal children shown

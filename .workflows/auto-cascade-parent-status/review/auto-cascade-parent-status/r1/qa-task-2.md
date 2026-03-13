@@ -6,12 +6,12 @@ ACCEPTANCE CRITERIA:
 
 STATUS: Complete
 
-SPEC CONTEXT: Rules 10 and 11 from the spec require cycle detection and child-blocked-by-parent rejection to be migrated into the StateMachine. Rule 8 (cancelled dependency guard) is also included in ValidateAddDep but is a separate task (acps-1-4). The spec states all ID comparisons should be case-insensitive via NormalizeID.
+SPEC CONTEXT: Rules 10 and 11 from the spec require cycle detection and child-blocked-by-parent rejection to be migrated into the StateMachine. Rule 8 (cancelled dependency guard) is also included in ValidateAddDep but is a separate task (auto-cascade-parent-status-1-4). The spec states all ID comparisons should be case-insensitive via NormalizeID.
 
 IMPLEMENTATION:
 - Status: Implemented
 - Location: /Users/leeovery/Code/tick/internal/task/state_machine.go:78-195
-- Notes: ValidateAddDep is implemented on StateMachine with proper case-insensitive ID handling via NormalizeID. The old dependency.go:6-9 now delegates to StateMachine as a thin wrapper (ValidateDependency calls sm.ValidateAddDep). The implementation covers self-reference check, DFS-based cycle detection with full path reporting, and child-blocked-by-parent validation. Rule 8 (cancelled blocker guard) is also wired in at line 87-94, which belongs to task acps-1-4 but was implemented here -- acceptable since the tasks are sequential. CLI callers in create.go, update.go, dep.go, and helpers.go all use sm.ValidateAddDep directly.
+- Notes: ValidateAddDep is implemented on StateMachine with proper case-insensitive ID handling via NormalizeID. The old dependency.go:6-9 now delegates to StateMachine as a thin wrapper (ValidateDependency calls sm.ValidateAddDep). The implementation covers self-reference check, DFS-based cycle detection with full path reporting, and child-blocked-by-parent validation. Rule 8 (cancelled blocker guard) is also wired in at line 87-94, which belongs to task auto-cascade-parent-status-1-4 but was implemented here -- acceptable since the tasks are sequential. CLI callers in create.go, update.go, dep.go, and helpers.go all use sm.ValidateAddDep directly.
 
 TESTS:
 - Status: Adequate

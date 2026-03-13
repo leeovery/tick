@@ -1,4 +1,4 @@
-TASK: Extract cascade output helper function (acps-4-4)
+TASK: Extract cascade output helper function (auto-cascade-parent-status-4-4)
 
 ACCEPTANCE CRITERIA: Cascade output formatting logic (building CascadeResult and calling FormatCascadeTransition) should be extracted into a helper to reduce duplication across RunTransition, RunCreate, and RunUpdate.
 

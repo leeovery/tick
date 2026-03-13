@@ -1,4 +1,4 @@
-TASK: Pretty format cascade tree rendering (acps-4-1)
+TASK: Pretty format cascade tree rendering (auto-cascade-parent-status-4-1)
 
 ACCEPTANCE CRITERIA:
 - Pretty format downward cascade output shows grandchildren indented under their parent child entries with nested box-drawing characters

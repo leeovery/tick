@@ -1,4 +1,4 @@
-TASK: acps-2-4 — Implement Cascades for downward done/cancel cascade (Rule 4)
+TASK: auto-cascade-parent-status-2-4 — Implement Cascades for downward done/cancel cascade (Rule 4)
 
 ACCEPTANCE CRITERIA:
 - Downward cascade propagates done/cancelled to non-terminal children recursively, leaves terminal children untouched (Rule 4)

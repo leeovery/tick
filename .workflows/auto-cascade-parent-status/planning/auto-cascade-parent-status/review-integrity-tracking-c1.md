@@ -13,12 +13,12 @@ topic: Auto-Cascade Parent Status
 ### 1. ApplyWithCascades Transition calls missing tasks parameter
 
 **Severity**: Important
-**Plan Reference**: Phase 2 / acps-2-7 (tick-d5cbbc)
+**Plan Reference**: Phase 2 / auto-cascade-parent-status-2-7 (tick-d5cbbc)
 **Category**: Task Self-Containment
 **Change Type**: update-task
 
 **Details**:
-Task acps-1-5 changes the `Transition()` signature to accept a `tasks []Task` parameter for Rule 9 parent checking. Task acps-2-7 (ApplyWithCascades) calls `sm.Transition()` in both Step 1 (primary transition) and Step 5 (cascade loop) but omits the `tasks` parameter in both places. This would cause a compilation error. An implementer would need to cross-reference acps-1-5 to discover the correct signature, violating self-containment.
+Task auto-cascade-parent-status-1-5 changes the `Transition()` signature to accept a `tasks []Task` parameter for Rule 9 parent checking. Task auto-cascade-parent-status-2-7 (ApplyWithCascades) calls `sm.Transition()` in both Step 1 (primary transition) and Step 5 (cascade loop) but omits the `tasks` parameter in both places. This would cause a compilation error. An implementer would need to cross-reference auto-cascade-parent-status-1-5 to discover the correct signature, violating self-containment.
 
 **Current**:
 ```
@@ -47,6 +47,6 @@ Do:
 ```
 
 **Resolution**: Fixed
-**Notes**: Updated both Transition() calls in acps-2-7 to pass tasks parameter.
+**Notes**: Updated both Transition() calls in auto-cascade-parent-status-2-7 to pass tasks parameter.
 
 ---
