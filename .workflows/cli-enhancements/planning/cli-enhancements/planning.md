@@ -3,7 +3,7 @@ topic: cli-enhancements
 status: concluded
 format: tick
 work_type: feature
-ext_id: tick-db58ad
+external_id: tick-db58ad
 specification: ../specification/cli-enhancements/specification.md
 spec_commit: 8aae967aad70c57432f9d24dcd226594f295358a
 created: 2026-02-28
@@ -22,7 +22,7 @@ planning:
 
 ### Phase 1: Partial ID Matching
 status: approved
-ext_id: tick-bc42b5
+external_id: tick-bc42b5
 approved_at: 2026-02-28
 
 **Goal**: Enable prefix-based task ID resolution so users can reference tasks by shortened hex prefixes across all commands.
@@ -39,8 +39,8 @@ approved_at: 2026-02-28
 - [ ] All commands accepting task IDs resolve through `ResolveID`: show, update, start, done, cancel, reopen, dep add/rm, remove, and ID-accepting flags (`--parent`, `--blocked-by`, `--blocks`)
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | cli-enhancements-1-1 | ResolveID method in storage layer | prefix shorter than 3 hex chars, ambiguous prefix matching 2+ tasks, exact full-ID bypass, mixed-case input, tick- prefix stripping | authored | tick-9283bb |
 | cli-enhancements-1-2 | Integrate ResolveID into positional ID commands | none | authored | tick-b45af0 |
 | cli-enhancements-1-3 | Integrate ResolveID into update and create ID-referencing flags | partial ID resolving to self-reference in --parent or --blocked-by | authored | tick-9540a5 |
@@ -48,7 +48,7 @@ approved_at: 2026-02-28
 
 ### Phase 2: Task Types and List Count
 status: approved
-ext_id: tick-ccdecb
+external_id: tick-ccdecb
 approved_at: 2026-02-28
 
 **Goal**: Add the `type` field to the Task model with create/update/filter/display support, and add the `--count` flag for capping list results.
@@ -67,8 +67,8 @@ approved_at: 2026-02-28
 - [ ] `--count N` on `list`, `ready`, `blocked` appends `LIMIT N` to query; value must be >= 1
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | cli-enhancements-2-1 | Add Type field to Task model and JSONL serialization | empty string on --type, mixed-case input, invalid type value, whitespace-only input | authored | tick-5a322f |
 | cli-enhancements-2-2 | Add Type column to SQLite schema and Cache.Rebuild | none | authored | tick-9e1481 |
 | cli-enhancements-2-3 | Create and update commands with --type and --clear-type flags | --type and --clear-type together on update, empty --type value | authored | tick-811654 |
@@ -78,7 +78,7 @@ approved_at: 2026-02-28
 
 ### Phase 3: Tags
 status: approved
-ext_id: tick-f33a8b
+external_id: tick-f33a8b
 approved_at: 2026-02-28
 
 **Goal**: Add multi-value tags with kebab-case validation, junction table storage, and composable AND/OR filtering on list commands.
@@ -96,8 +96,8 @@ approved_at: 2026-02-28
 - [ ] All three formatters updated for tags in show/detail views
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | cli-enhancements-3-1 | Tags field on Task model with validation and JSONL serialization | double hyphens, leading/trailing hyphens, mixed-case normalization, 31-char tag, 11 tags deduped to 10, empty string in list, tag with spaces | authored | tick-7d56c4 |
 | cli-enhancements-3-2 | Tags junction table in SQLite schema and Cache.Rebuild | task with empty tags slice, rebuild clearing stale tags | authored | tick-17334e |
 | cli-enhancements-3-3 | Tags display in show output and all formatters | task with no tags, task with 10 tags | authored | tick-d17558 |
@@ -106,7 +106,7 @@ approved_at: 2026-02-28
 
 ### Phase 4: External References and Notes
 status: approved
-ext_id: tick-af518b
+external_id: tick-af518b
 approved_at: 2026-02-28
 
 **Goal**: Add external reference links and timestamped notes to tasks, with refs on create/update and notes via a new `tick note` subcommand.
@@ -126,8 +126,8 @@ approved_at: 2026-02-28
 - [ ] All three formatters updated for refs and notes display in detail views
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | cli-enhancements-4-1 | Refs field on Task model with validation and JSONL serialization | ref containing commas, ref containing whitespace, ref exactly 200 chars, 201-char ref, 11 refs deduped to 10, 11 unique refs, empty string in list, whitespace-only ref | authored | tick-e7bb22 |
 | cli-enhancements-4-2 | Refs junction table in SQLite schema and Cache.Rebuild | task with empty refs slice, rebuild clearing stale refs | authored | tick-80ad02 |
 | cli-enhancements-4-3 | Create and update with --refs and --clear-refs flags | --refs and --clear-refs together, empty --refs value, --refs with duplicates, --clear-refs on task with no refs | authored | tick-6d5863 |
@@ -140,13 +140,13 @@ approved_at: 2026-02-28
 
 ### Phase 5: Analysis (Cycle 1)
 status: approved
-ext_id: tick-ebe119
+external_id: tick-ebe119
 
 **Goal**: Address findings from Analysis (Cycle 1).
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | cli-enhancements-5-1 | Add type column to queryShowData SQL query | none | authored | tick-2d8194 |
 | cli-enhancements-5-2 | Extract generic deduplication and validation helpers in internal/task | none | authored | tick-8cf37e |
 | cli-enhancements-5-3 | Extract shared buildStringListSection in toon_formatter.go | none | authored | tick-219286 |
@@ -155,13 +155,13 @@ ext_id: tick-ebe119
 
 ### Phase 6: Analysis (Cycle 2)
 status: approved
-ext_id: tick-c29eef
+external_id: tick-c29eef
 
 **Goal**: Address findings from Analysis (Cycle 2).
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | cli-enhancements-6-1 | Resolve partial IDs for list --parent | none | authored | tick-34dd9f |
 | cli-enhancements-6-2 | Extract query-scan helpers in show.go | none | authored | tick-de5bcc |
 | cli-enhancements-6-3 | ParseRefs should delegate to ValidateRefs | none | authored | tick-2d2971 |

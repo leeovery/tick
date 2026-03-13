@@ -3,7 +3,7 @@ topic: blocked-ancestor-ready
 status: concluded
 work_type: greenfield
 format: tick
-ext_id: tick-e679e0
+external_id: tick-e679e0
 specification: ../specification/blocked-ancestor-ready/specification.md
 spec_commit: e5c5d2995477fa95787af0a959e7162d1bb39cc3
 created: 2026-02-20
@@ -22,7 +22,7 @@ planning:
 
 ### Phase 1: Blocked Ancestor Ready Check
 status: approved
-ext_id: tick-3cf896
+external_id: tick-3cf896
 approved_at: 2026-02-20
 
 **Goal**: Tasks with dependency-blocked ancestors are excluded from ready results and included in blocked results across all code paths (list --ready, list --blocked, tick ready, stats).
@@ -41,18 +41,18 @@ approved_at: 2026-02-20
 - [ ] Stats ready count matches `list --ready` output for mixed scenarios with blocked ancestors
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | blocked-ancestor-ready-1-1 | Add ReadyNoBlockedAncestor helper and integrate into ReadyConditions | grandchild of blocked grandparent, intermediate grouping task, root task unaffected, ancestor blocker resolved | authored | tick-fb9d84 |
 | blocked-ancestor-ready-1-2 | Add blocked-ancestor EXISTS condition to BlockedConditions | grandchild appears in blocked, blocker resolution removes from blocked, stats count consistency | authored | tick-52f1cf |
 
 ### Phase 2: Analysis (Cycle 1)
 status: approved
-ext_id: tick-884d97
+external_id: tick-884d97
 
 **Goal**: Address findings from Analysis (Cycle 1).
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | blocked-ancestor-ready-2-1 | Compose BlockedConditions() from ReadyNo*() helpers instead of duplicating SQL | none | authored | tick-cbdae7 |

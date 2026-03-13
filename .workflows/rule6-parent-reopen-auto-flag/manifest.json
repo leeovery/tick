@@ -6,32 +6,44 @@
   "description": "Rule 6 parent reopen records auto=false in transition history when it should be auto=true since the reopen is system-initiated not manual",
   "phases": {
     "investigation": {
-      "status": "completed"
+      "items": {
+        "rule6-parent-reopen-auto-flag": {
+          "status": "completed"
+        }
+      }
     },
     "specification": {
-      "status": "completed",
-      "type": "feature",
-      "review_cycle": 2,
-      "finding_gate_mode": "gated",
-      "date": "2026-03-12",
-      "sources": {
+      "items": {
         "rule6-parent-reopen-auto-flag": {
-          "status": "incorporated"
+          "status": "completed",
+          "type": "feature",
+          "review_cycle": 2,
+          "finding_gate_mode": "gated",
+          "date": "2026-03-12",
+          "sources": {
+            "rule6-parent-reopen-auto-flag": {
+              "status": "incorporated"
+            }
+          }
         }
       }
     },
     "planning": {
-      "status": "completed",
-      "format": "tick",
-      "spec_commit": "5c919b6e934c151a76bc816b8c2f73c3c8557046",
-      "task_list_gate_mode": "gated",
-      "author_gate_mode": "auto",
-      "finding_gate_mode": "gated",
-      "phase": 2,
-      "task": "~",
-      "ext_id": "tick-6d5cb7",
-      "external_dependencies": {},
-      "review_cycle": 2
+      "items": {
+        "rule6-parent-reopen-auto-flag": {
+          "status": "completed",
+          "format": "tick",
+          "spec_commit": "5c919b6e934c151a76bc816b8c2f73c3c8557046",
+          "task_list_gate_mode": "gated",
+          "author_gate_mode": "auto",
+          "finding_gate_mode": "gated",
+          "phase": 2,
+          "task": "~",
+          "external_id": "tick-6d5cb7",
+          "external_dependencies": {},
+          "review_cycle": 2
+        }
+      }
     }
   }
 }

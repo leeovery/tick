@@ -53,8 +53,8 @@ approved_at: 2026-01-31
 - [ ] `scripts/install.sh` is idempotent (overwrites existing binary without error)
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | installation-1-1 | Minimal Go Binary | none | completed |
 | installation-1-2 | goreleaser Configuration | archive naming must match spec convention exactly | completed |
 | installation-1-3 | GitHub Actions Release Workflow | workflow should only trigger on semver tags | completed |
@@ -78,8 +78,8 @@ approved_at: 2026-01-31
 - [ ] Install script works correctly when run via `curl -fsSL ... | bash` (no interactive prompts, correct exit codes)
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | installation-2-1 | Homebrew Tap Repository and Formula | formula must handle both Intel and Apple Silicon macOS, version in formula URL must strip leading v | completed |
 | installation-2-2 | macOS Install Script: Homebrew Delegation | brew tap or brew install failure should propagate exit code, tick already installed via Homebrew (idempotent re-install) | completed |
 | installation-2-3 | macOS Install Script: No Homebrew Error Path | none | completed |
@@ -93,8 +93,8 @@ status: approved
 **Goal**: Address findings from implementation analysis cycle 1.
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | installation-3-1 | Extract shared findRepoRoot test utility | — | completed |
 | installation-3-2 | Extract step-search helper in release_test.go | — | completed |
 | installation-3-3 | Document Homebrew tap repository requirement | — | completed |
@@ -108,8 +108,8 @@ status: approved
 **Goal**: Address findings from implementation analysis cycle 2.
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | installation-4-1 | Move release workflow tests to a go-test-discoverable location | — | completed |
 | installation-4-2 | Extract loadScript helper in install_test.go | — | completed |
 
@@ -121,8 +121,8 @@ status: approved
 **Goal**: Address findings from implementation analysis cycle 3.
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | installation-5-1 | Extract TMPDIR extraction helper in install_test.go | — | completed |
 
 ---

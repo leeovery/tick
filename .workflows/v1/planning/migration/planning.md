@@ -54,8 +54,8 @@ approved_at: 2026-01-31
 - [ ] Imported tasks are retrievable via `tick list` after migration completes
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | migration-1-1 | Provider Contract & Migration Types | none | authored |
 | migration-1-2 | Beads Provider - Read & Map | missing .beads dir, missing issues.jsonl, empty file, malformed JSON lines, missing title, discarded fields, status mapping, priority mapping | authored |
 | migration-1-3 | Migration Engine - Iterate & Insert | empty provider (zero tasks), insertion failure | authored |
@@ -80,8 +80,8 @@ approved_at: 2026-01-31
 - [ ] Unknown provider name produces an error listing available providers
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | migration-2-1 | Engine Continue-on-Error | all tasks fail insertion, mixed validation and insertion failures | authored |
 | migration-2-2 | Presenter Failure Output | failure with empty title, failure reason with special characters, zero failures (detail section omitted) | authored |
 | migration-2-3 | Dry-Run Mode | dry-run with zero tasks, dry-run combined with --pending-only | authored |
@@ -96,8 +96,8 @@ status: approved
 **Goal**: Address findings from implementation analysis cycle 1.
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | migration-3-1 | Replace manual presenter calls in RunMigrate with Present function | — | authored |
 | migration-3-2 | Surface beads provider parse/validation errors as failed results instead of silently dropping | — | authored |
 | migration-3-3 | Consolidate inconsistent empty-title fallback strings | — | authored |
@@ -111,8 +111,8 @@ status: approved
 **Goal**: Address findings from implementation analysis cycle 2.
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | migration-4-1 | Fix beads provider to distinguish absent priority from priority zero | — | authored |
 
 ---

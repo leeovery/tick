@@ -2,7 +2,7 @@
 
 ### Phase 1: Flag Validation and Normalizations
 status: approved
-ext_id: tick-fd039e
+external_id: tick-fd039e
 approved_at: 2026-03-10
 
 **Goal**: All commands reject unknown flags with the specified error message. Flag metadata exported per command, validated centrally before dispatch. Prerequisite normalizations (dep rm to dep remove, --from= syntax removal) applied. Both dispatch paths (main switch and doctor/migrate) covered.
@@ -22,8 +22,8 @@ approved_at: 2026-03-10
 - [ ] Value-taking flags (e.g., `--priority 3`) correctly skip the value argument during validation
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | unknown-flags-silently-ignored-1-1 | Normalize dep rm to dep remove and remove --from=value syntax | existing tests referencing dep rm, --from= with empty value | authored | tick-928bf7 |
 | unknown-flags-silently-ignored-1-2 | Reproduce bug and build flag metadata with central validator | value-taking flags consuming next arg, short aliases (-f), two-level command error format | authored | tick-adbf78 |
 | unknown-flags-silently-ignored-1-3 | Wire validation into parseArgs and both dispatch paths | pre-subcommand unknown flag error format, help/version bypass, doctor/migrate dispatch path | authored | tick-8879b7 |
@@ -31,7 +31,7 @@ approved_at: 2026-03-10
 
 ### Phase 2: Parser Cleanup and Regression Verification
 status: approved
-ext_id: tick-c3e72b
+external_id: tick-c3e72b
 approved_at: 2026-03-10
 
 **Goal**: Remove now-dead silent-skip logic from individual command parsers. Verify no regressions across the full command surface with dedicated regression tests.
@@ -45,31 +45,31 @@ approved_at: 2026-03-10
 - [ ] Commands with no accepted flags (init, show, start, done, cancel, reopen, stats, doctor, rebuild, dep add, dep remove, note add, note remove) reject any flag passed to them
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | unknown-flags-silently-ignored-2-1 | Remove dead silent-skip logic from command parsers | parser with known flags alongside skip removal (create/update/remove), positional-only parsers (dep/note add) that use skip for extraction | authored | tick-f1dae6 |
 | unknown-flags-silently-ignored-2-2 | Comprehensive unknown-flag regression tests across all commands | short flags (-x) vs long flags (--unknown), two-level commands (dep add/remove, note add/remove), commands with accepted flags still reject unknown ones | authored | tick-f52ed8 |
 
 ### Phase 3: Analysis (Cycle 1)
 status: approved
-ext_id: tick-3d9a7e
+external_id: tick-3d9a7e
 
 **Goal**: Address findings from Analysis (Cycle 1).
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | unknown-flags-silently-ignored-3-1 | Consolidate overlapping flag validation test coverage | none | authored | tick-2ec1bc |
 | unknown-flags-silently-ignored-3-2 | Derive ready/blocked flag sets programmatically from list | none | authored | tick-40d7f9 |
 | unknown-flags-silently-ignored-3-3 | Add drift-detection test between commandFlags and help registry | none | authored | tick-c1a175 |
 
 ### Phase 4: Review Remediation (Cycle 1)
 status: approved
-ext_id: tick-c5a1ff
+external_id: tick-c5a1ff
 
 **Goal**: Address findings from Review Remediation (Cycle 1).
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | unknown-flags-silently-ignored-4-1 | Consolidate overlapping flag validation test coverage | none | authored | tick-b15fda |

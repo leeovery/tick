@@ -3,7 +3,7 @@ topic: task-removal
 status: concluded
 work_type: greenfield
 format: tick
-ext_id: tick-132530
+external_id: tick-132530
 specification: ../specification/task-removal/specification.md
 spec_commit: 739e6f02a7f56e6c4d785b981f74bf75b08ef36a
 created: 2026-02-18
@@ -22,7 +22,7 @@ planning:
 
 ### Phase 1: Walking Skeleton — Single Task Removal
 status: approved
-ext_id: tick-cf0a05
+external_id: tick-cf0a05
 approved_at: 2026-02-19
 
 **Goal**: Remove a single task by ID using `--force`, filtering it from JSONL via `Store.Mutate()`, with output through all three formatters and help text registration.
@@ -40,8 +40,8 @@ approved_at: 2026-02-19
 - [ ] All existing tests continue to pass
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | task-removal-1-1 | Add FormatRemoval to Formatter interface and all implementations | none | authored | tick-7314b0 |
 | task-removal-1-2 | Implement RunRemove handler with --force flag and wire into App.Run | case-insensitive ID matching | authored | tick-64566b |
 | task-removal-1-3 | Handle remove error cases | no-args message matches spec exactly | authored | tick-0607a0 |
@@ -49,7 +49,7 @@ approved_at: 2026-02-19
 
 ### Phase 2: Interactive Confirmation Prompt
 status: approved
-ext_id: tick-fca658
+external_id: tick-fca658
 approved_at: 2026-02-19
 
 **Goal**: Add the interactive confirmation gate when `--force` is not provided, reading user input from stdin and writing prompts/abort messages to stderr.
@@ -65,14 +65,14 @@ approved_at: 2026-02-19
 - [ ] `--force` continues to skip the prompt entirely (Phase 1 behavior preserved)
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | task-removal-2-1 | Add Stdin to App and thread through remove handler | none | authored | tick-8bc489 |
 | task-removal-2-2 | Implement confirmation prompt with accept and abort paths | case-insensitive y/yes, empty Enter aborts, whitespace-padded input, --force bypass preserved | authored | tick-0c56d2 |
 
 ### Phase 3: Cascade Deletion, Dependency Cleanup, and Bulk Removal
 status: approved
-ext_id: tick-192a68
+external_id: tick-192a68
 approved_at: 2026-02-19
 
 **Goal**: Support cascade deletion of parent-child hierarchies, automatic dependency reference cleanup on surviving tasks, and bulk removal of multiple task IDs with deduplication — all in a single atomic `Store.Mutate` call.
@@ -94,8 +94,8 @@ approved_at: 2026-02-19
 - [ ] All formatters (toon, pretty, JSON) render the combined removal + cascade + dependency cleanup output
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | task-removal-3-1 | Bulk argument parsing with deduplication | duplicate IDs silently deduplicated, single ID still works, mixed flags and positional args | authored | tick-2a1fa5 |
 | task-removal-3-2 | All-or-nothing ID validation for bulk removal | first ID valid but second invalid, all IDs invalid | authored | tick-37bab0 |
 | task-removal-3-3 | Cascade descendant collection | deep hierarchy (3+ levels), task with no children, child removal does not cascade upward | authored | tick-5b74ec |
@@ -104,23 +104,23 @@ approved_at: 2026-02-19
 
 ### Phase 4: Analysis (cycle 1)
 status: approved
-ext_id: tick-d5946b
+external_id: tick-d5946b
 
 **Goal**: Address findings from implementation analysis cycle 1.
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | task-removal-4-1 | Consolidate blast radius computation into Mutate callback | none | authored | tick-cf66a9 |
 | task-removal-4-2 | Align RunRemove signature with handler convention | none | authored | tick-21f1ab |
 
 ### Phase 5: Analysis (cycle 2)
 status: approved
-ext_id: tick-9c6995
+external_id: tick-9c6995
 
 **Goal**: Address findings from implementation analysis cycle 2.
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | task-removal-5-1 | Replace read-only Mutate with Store.ReadTasks and restructure handleRemove into a single-open flow | none | authored | tick-0c7c52 |

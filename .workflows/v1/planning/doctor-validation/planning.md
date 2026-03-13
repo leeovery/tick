@@ -58,8 +58,8 @@ approved_at: 2026-01-30
 - [ ] Doctor never modifies data
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | doctor-validation-1-1 | Check Interface & Diagnostic Runner | zero checks registered, all checks pass, all checks fail, mixed pass/fail | authored |
 | doctor-validation-1-2 | Output Formatter & Exit Code Logic | zero issues (summary says no issues), single issue, multiple issues from one check, suggestion text present vs absent | authored |
 | doctor-validation-1-3 | Cache Staleness Check | missing cache.db (report stale), missing tasks.jsonl, empty tasks.jsonl with matching hash, hash mismatch | authored |
@@ -81,8 +81,8 @@ approved_at: 2026-01-30
 - [ ] Errors from all checks contribute to summary count and exit code
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | doctor-validation-2-1 | JSONL Syntax Check | empty file, blank/whitespace-only lines, all lines valid, all lines malformed, single malformed line among many valid, trailing newline producing empty last line, missing tasks.jsonl | authored |
 | doctor-validation-2-2 | ID Format Check | empty ID field, missing ID field, uppercase hex chars, extra chars beyond 6 hex, wrong prefix, numeric-only random part, mixed valid and invalid IDs | authored |
 | doctor-validation-2-3 | Duplicate ID Check | exact-case duplicates, mixed-case duplicates (tick-ABC123 vs tick-abc123), more than two duplicates of same ID, multiple distinct duplicate groups, no duplicates, single task | authored |
@@ -106,8 +106,8 @@ approved_at: 2026-01-30
 - [ ] All 10 checks (9 errors + 1 warning) run in a single `tick doctor` invocation
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | doctor-validation-3-1 | Orphaned Parent Reference Check | missing tasks.jsonl, empty file, all parents valid, multiple orphaned parents, parent field null/absent (valid root task), unparseable lines skipped | authored |
 | doctor-validation-3-2 | Orphaned Dependency Reference Check | missing tasks.jsonl, empty file, single orphaned dep, multiple orphaned deps on same task, multiple orphaned deps across tasks, all deps valid, empty blocked_by array, unparseable lines skipped, blocked_by contains mix of valid and invalid refs | authored |
 | doctor-validation-3-3 | Self-Referential Dependency Check | missing tasks.jsonl, empty file, task blocked by itself among other valid deps, multiple tasks each self-referential, task with only self-reference, unparseable lines skipped | authored |
@@ -122,8 +122,8 @@ status: approved
 **Goal**: Address findings from implementation analysis cycle 1.
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | doctor-validation-4-1 | Extract shared JSONL line iterator and parse tasks.jsonl once per doctor run | — | authored |
 | doctor-validation-4-2 | Make tickDir an explicit parameter on the Check interface | — | authored |
 | doctor-validation-4-3 | Extract fileNotFoundResult helper for repeated tasks.jsonl-not-found error | — | authored |
@@ -134,8 +134,8 @@ status: approved
 **Goal**: Address findings from implementation analysis cycle 2.
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | doctor-validation-5-1 | Derive ParseTaskRelationships from ScanJSONLines output | — | approved |
 | doctor-validation-5-2 | Extract assertReadOnly test helper | — | approved |
 | doctor-validation-5-3 | Use DiagnosticReport methods for issue count in FormatReport | — | approved |
@@ -146,8 +146,8 @@ status: approved
 **Goal**: Address findings from implementation analysis cycle 3.
 
 #### Tasks
-| ID | Name | Edge Cases | Status |
-|----|------|------------|--------|
+| Internal ID | Name | Edge Cases | Status |
+|-------------|------|------------|--------|
 | doctor-validation-6-1 | Extract buildKnownIDs helper to eliminate 3-file duplication | — | approved |
 
 ---

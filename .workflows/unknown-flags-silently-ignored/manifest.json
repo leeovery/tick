@@ -6,82 +6,102 @@
   "description": "CLI commands silently discard unrecognised flags instead of erroring; all commands should reject unknown flags with a clear error message",
   "phases": {
     "investigation": {
-      "status": "completed"
+      "items": {
+        "unknown-flags-silently-ignored": {
+          "status": "completed"
+        }
+      }
     },
     "specification": {
-      "status": "completed",
-      "type": "feature",
-      "review_cycle": 3,
-      "finding_gate_mode": "gated",
-      "date": "2026-03-10",
-      "sources": {
+      "items": {
         "unknown-flags-silently-ignored": {
-          "status": "incorporated"
+          "status": "completed",
+          "type": "feature",
+          "review_cycle": 3,
+          "finding_gate_mode": "gated",
+          "date": "2026-03-10",
+          "sources": {
+            "unknown-flags-silently-ignored": {
+              "status": "incorporated"
+            }
+          }
         }
       }
     },
     "planning": {
-      "status": "completed",
-      "format": "tick",
-      "spec_commit": "d7107686580e05d2a3be7a25bb52f69adaeb56cd",
-      "task_list_gate_mode": "auto",
-      "author_gate_mode": "auto",
-      "finding_gate_mode": "gated",
-      "phase": 3,
-      "task": "~",
-      "ext_id": "tick-18747f",
-      "external_dependencies": {},
-      "review_cycle": 2
+      "items": {
+        "unknown-flags-silently-ignored": {
+          "status": "completed",
+          "format": "tick",
+          "spec_commit": "d7107686580e05d2a3be7a25bb52f69adaeb56cd",
+          "task_list_gate_mode": "auto",
+          "author_gate_mode": "auto",
+          "finding_gate_mode": "gated",
+          "phase": 3,
+          "task": "~",
+          "external_id": "tick-18747f",
+          "external_dependencies": {},
+          "review_cycle": 2
+        }
+      }
     },
     "implementation": {
-      "status": "completed",
-      "format": "tick",
-      "task_gate_mode": "gated",
-      "fix_gate_mode": "gated",
-      "analysis_gate_mode": "gated",
-      "fix_attempts": 0,
-      "analysis_cycle": 4,
-      "linters": [
-        {
-          "name": "golangci-lint",
-          "command": "golangci-lint run ./..."
-        },
-        {
-          "name": "go vet",
-          "command": "go vet ./..."
-        },
-        {
-          "name": "gofmt",
-          "command": "gofmt -w ./internal ./cmd"
+      "items": {
+        "unknown-flags-silently-ignored": {
+          "status": "completed",
+          "format": "tick",
+          "task_gate_mode": "gated",
+          "fix_gate_mode": "gated",
+          "analysis_gate_mode": "gated",
+          "fix_attempts": 0,
+          "analysis_cycle": 4,
+          "linters": [
+            {
+              "name": "golangci-lint",
+              "command": "golangci-lint run ./..."
+            },
+            {
+              "name": "go vet",
+              "command": "go vet ./..."
+            },
+            {
+              "name": "gofmt",
+              "command": "gofmt -w ./internal ./cmd"
+            }
+          ],
+          "project_skills": [
+            ".claude/skills/golang-pro/SKILL.md"
+          ],
+          "current_phase": 4,
+          "current_task": "~",
+          "completed_tasks": [
+            "unknown-flags-silently-ignored-1-1",
+            "unknown-flags-silently-ignored-1-2",
+            "unknown-flags-silently-ignored-1-3",
+            "unknown-flags-silently-ignored-1-4",
+            "unknown-flags-silently-ignored-2-1",
+            "unknown-flags-silently-ignored-2-2",
+            "unknown-flags-silently-ignored-3-1",
+            "unknown-flags-silently-ignored-3-2",
+            "unknown-flags-silently-ignored-3-3",
+            "unknown-flags-silently-ignored-4-1"
+          ],
+          "completed_phases": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "updated": "2026-03-11"
         }
-      ],
-      "project_skills": [
-        ".claude/skills/golang-pro/SKILL.md"
-      ],
-      "current_phase": 4,
-      "current_task": "~",
-      "completed_tasks": [
-        "tick-928bf7",
-        "tick-adbf78",
-        "tick-8879b7",
-        "tick-3abf54",
-        "tick-f1dae6",
-        "tick-f52ed8",
-        "tick-2ec1bc",
-        "tick-40d7f9",
-        "tick-c1a175",
-        "tick-b15fda"
-      ],
-      "completed_phases": [
-        1,
-        2,
-        3,
-        4
-      ],
-      "updated": "2026-03-11"
+      }
     },
     "review": {
-      "status": "completed"
+      "items": {
+        "unknown-flags-silently-ignored": {
+          "status": "completed"
+        }
+      }
     }
   }
 }

@@ -3,7 +3,7 @@ topic: auto-cascade-parent-status
 status: concluded
 format: tick
 work_type: feature
-ext_id: tick-b43d8e
+external_id: tick-b43d8e
 specification: ../specification/auto-cascade-parent-status/specification.md
 spec_commit: 1f0cc547b94c612b74f1f051d505f1915721b11b
 created: 2026-03-05
@@ -23,7 +23,7 @@ planning:
 ### Phase 1: StateMachine Core with Migration
 status: approved
 approved_at: 2026-03-05
-ext_id: tick-38ca65
+external_id: tick-38ca65
 
 **Goal**: Create the StateMachine struct in `internal/task/` with `Transition()`, `ValidateAddChild()`, and `ValidateAddDep()` methods, migrating existing logic from `transition.go` and `dependency.go`. Implements Rules 1, 7, 8, 9, 10, 11.
 
@@ -39,8 +39,8 @@ ext_id: tick-38ca65
 - [ ] All existing tests pass with no regressions
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | auto-cascade-parent-status-1-1 | Create StateMachine struct with Transition method | unknown command, no-op on invalid transition (task unmodified) | authored | tick-7dc647 |
 | auto-cascade-parent-status-1-2 | Migrate ValidateAddDep into StateMachine | mixed-case IDs, self-reference, multi-hop cycles | authored | tick-74527d |
 | auto-cascade-parent-status-1-3 | Add ValidateAddChild for cancelled parent guard | none | authored | tick-cdaef4 |
@@ -51,7 +51,7 @@ ext_id: tick-38ca65
 ### Phase 2: Cascade Logic and Transition History
 status: approved
 approved_at: 2026-03-05
-ext_id: tick-08e6f9
+external_id: tick-08e6f9
 
 **Goal**: Implement `Cascades()` and `ApplyWithCascades()` with queue-based cascade processing (Rules 2-6), plus the `Transitions` field on Task and `task_transitions` SQLite cache table.
 
@@ -69,8 +69,8 @@ ext_id: tick-08e6f9
 - [ ] `ApplyWithCascades()` returns primary `TransitionResult` plus all `[]CascadeChange` entries
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | auto-cascade-parent-status-2-1 | Add Transition struct and Transitions field to Task | empty transitions array omitted from JSON, backward-compatible deserialization of tasks without transitions field | authored | tick-9e630d |
 | auto-cascade-parent-status-2-2 | Add task_transitions table to SQLite cache schema | pre-existing cache triggers delete+rebuild via version mismatch | authored | tick-c0b5c7 |
 | auto-cascade-parent-status-2-3 | Implement Cascades for upward start cascade (Rule 2) | ancestor already in_progress skipped, deeply nested chain 5+ levels | authored | tick-4fe6a9 |
@@ -82,7 +82,7 @@ ext_id: tick-08e6f9
 ### Phase 3: CLI Integration and Cascade Display
 status: approved
 approved_at: 2026-03-05
-ext_id: tick-02a182
+external_id: tick-02a182
 
 **Goal**: Wire `ApplyWithCascades()` into `RunTransition` and parent-modifying commands (create with parent, update/reparent). Add `FormatCascadeTransition` to the Formatter interface with Toon, Pretty, and JSON implementations showing cascaded and unchanged tasks.
 
@@ -99,8 +99,8 @@ ext_id: tick-02a182
 - [ ] Unchanged terminal children appear in all cascade output formats
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | auto-cascade-parent-status-3-1 | Add CascadeResult type and FormatCascadeTransition to Formatter interface | empty cascaded list, empty unchanged list, both empty | authored | tick-c4dc82 |
 | auto-cascade-parent-status-3-2 | Implement FormatCascadeTransition for Toon, Pretty, and JSON formatters | deeply nested tree in Pretty, mixed cascaded and unchanged children, single cascade entry | authored | tick-079053 |
 | auto-cascade-parent-status-3-3 | Wire ApplyWithCascades into RunTransition | no cascades (single-task uses FormatTransition), quiet mode suppresses output, task not found | authored | tick-a24919 |
@@ -109,13 +109,13 @@ ext_id: tick-02a182
 
 ### Phase 4: Analysis (Cycle 1)
 status: approved
-ext_id: tick-35f54b
+external_id: tick-35f54b
 
 **Goal**: Address findings from Analysis (Cycle 1).
 
 #### Tasks
-| ID | Name | Edge Cases | Status | Ext ID |
-|----|------|------------|--------|--------|
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|--------|
 | auto-cascade-parent-status-4-1 | Pretty format cascade tree rendering | none | authored | tick-0a4018 |
 | auto-cascade-parent-status-4-2 | Move Rule 9 out of Transition into ApplyWithCascades | none | authored | tick-90d410 |
 | auto-cascade-parent-status-4-3 | Extract Rule 3 completion evaluation into shared function | none | authored | tick-3a835e |
