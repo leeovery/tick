@@ -1274,4 +1274,45 @@ func TestUpdate(t *testing.T) {
 			t.Errorf("taskB blocked_by = %v, want empty (no changes persisted)", targetB.BlockedBy)
 		}
 	})
+
+	t.Run("it records auto=true on original parent auto-completion when reparenting away", func(t *testing.T) {
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closedAt := now
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Original parent", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Child done", Status: task.StatusDone, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-ccc333", Title: "Child moving", Status: task.StatusOpen, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now},
+			{ID: "tick-ddd444", Title: "New parent", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		_, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-ddd444")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var origParent task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-aaa111" {
+				origParent = tk
+				break
+			}
+		}
+		if origParent.Status != task.StatusDone {
+			t.Errorf("original parent status = %q, want %q (Rule 3)", origParent.Status, task.StatusDone)
+		}
+		if len(origParent.Transitions) != 1 {
+			t.Fatalf("original parent transitions count = %d, want 1", len(origParent.Transitions))
+		}
+		if origParent.Transitions[0].From != task.StatusInProgress {
+			t.Errorf("transition from = %q, want %q", origParent.Transitions[0].From, task.StatusInProgress)
+		}
+		if origParent.Transitions[0].To != task.StatusDone {
+			t.Errorf("transition to = %q, want %q", origParent.Transitions[0].To, task.StatusDone)
+		}
+		if origParent.Transitions[0].Auto != true {
+			t.Errorf("transition auto = %v, want true", origParent.Transitions[0].Auto)
+		}
+	})
 }

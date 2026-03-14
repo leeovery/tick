@@ -1328,4 +1328,43 @@ func TestCreate(t *testing.T) {
 			t.Errorf("taskB blocked_by = %v, want [%s]", targetB.BlockedBy, newTask.ID)
 		}
 	})
+
+	t.Run("it records auto=true on parent reopen when creating child under done parent", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		closedAt := now
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Done parent", Status: task.StatusDone,
+			Priority: 2, Created: now, Updated: now, Closed: &closedAt,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{parentTask})
+
+		_, stderr, exitCode := runCreate(t, dir, "New child", "--parent", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		persisted := readPersistedTasks(t, tickDir)
+		var parent task.Task
+		for _, tk := range persisted {
+			if tk.ID == "tick-ppp111" {
+				parent = tk
+				break
+			}
+		}
+		if parent.Status != task.StatusOpen {
+			t.Errorf("parent status = %q, want %q", parent.Status, task.StatusOpen)
+		}
+		if len(parent.Transitions) != 1 {
+			t.Fatalf("parent transitions count = %d, want 1", len(parent.Transitions))
+		}
+		if parent.Transitions[0].From != task.StatusDone {
+			t.Errorf("transition from = %q, want %q", parent.Transitions[0].From, task.StatusDone)
+		}
+		if parent.Transitions[0].To != task.StatusOpen {
+			t.Errorf("transition to = %q, want %q", parent.Transitions[0].To, task.StatusOpen)
+		}
+		if parent.Transitions[0].Auto != true {
+			t.Errorf("transition auto = %v, want true", parent.Transitions[0].Auto)
+		}
+	})
 }
