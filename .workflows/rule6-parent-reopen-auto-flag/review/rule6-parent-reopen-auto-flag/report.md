@@ -5,7 +5,7 @@
 
 ## Summary
 
-Clean, well-executed bugfix. The root cause — `ApplyWithCascades` hardcoding `Auto: false` on the primary target's `TransitionRecord` — is correctly addressed by parameterizing the auto flag and exposing two semantic wrappers (`ApplyUserTransition` / `ApplySystemTransition`). All three call sites use the correct wrapper, the rename from `evaluateRule3` to `autoCompleteParentIfTerminal` improves readability, and integration tests verify the fix end-to-end through JSONL. Analysis-cycle improvements (defensive guard, test helper extraction) are clean and minimal. Zero blocking issues found across all 5 tasks.
+Clean, well-executed bugfix. The root cause — `ApplyWithCascades` hardcoding `Auto: false` on the primary target's `TransitionRecord` — is correctly addressed by parameterizing the auto flag and exposing two semantic wrappers (`ApplyUserTransition` / `ApplySystemTransition`). All three call sites use the correct wrapper, the rename from `evaluateRule3` to `autoCompleteParentIfTerminal` improves readability, and integration tests verify the fix end-to-end through JSONL. Analysis-cycle improvements (defensive guard, test helper extraction) are clean and minimal. Zero blocking issues found across all 5 tasks. Full test suite passes.
 
 ## QA Verification
 
@@ -17,6 +17,7 @@ Implementation aligns with the specification in all respects:
 - All three call sites (`RunTransition`, `validateAndReopenParent`, `autoCompleteParentIfTerminal`) use the correct wrapper
 - `evaluateRule3` is renamed to `autoCompleteParentIfTerminal` with updated doc comment
 - Cascade engine logic is unchanged — only the primary target's `Auto` field is affected
+- No references to `ApplyWithCascades` or `evaluateRule3` remain in Go source
 
 ### Plan Completion
 
@@ -24,6 +25,7 @@ Implementation aligns with the specification in all respects:
 - [x] Phase 2 acceptance criteria met
 - [x] All 5 tasks completed (3 Phase 1 + 2 Phase 2)
 - [x] No scope creep — all changes trace to planned tasks or analysis findings
+- [x] `go test ./...` passes with zero failures
 
 ### Code Quality
 
@@ -34,8 +36,9 @@ No issues found. Code follows project conventions (stdlib testing, `t.Run` subte
 Tests adequately verify requirements:
 - 18 existing subtests migrated to `ApplyUserTransition` with no assertion changes
 - 2 new unit tests verify `auto` flag distinction between wrappers
-- 2 integration tests verify `auto=true` flows through full stack to JSONL
-- No over-testing detected; minor overlap between the new auto=false unit test and the pre-existing "it records auto transitions on all cascaded tasks" test is acceptable as both were required by the plan
+- 2 integration tests verify `auto=true` flows through full stack to JSONL (source of truth)
+- `assertTransition` helper reduces duplication across 12 call sites while preserving assertion coverage
+- No over-testing detected
 
 ### Required Changes
 
