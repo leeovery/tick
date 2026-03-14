@@ -1,0 +1,8 @@
+AGENT: architecture
+FINDINGS:
+- FINDING: autoCompleteParentIfTerminal silently operates on tasks[0] if parent not found
+  SEVERITY: medium
+  FILES: internal/cli/update.go:141-148
+  DESCRIPTION: The variable `parentIdx` is declared as `var parentIdx int` (zero-value 0) and the subsequent loop searches for the parent. If the loop exits without finding the parent, `parentIdx` remains 0 and the function proceeds to call `ApplySystemTransition` on `tasks[0]` -- a completely unrelated task. Currently this is unreachable because `EvaluateParentCompletion` returns `shouldComplete=false` when the parent doesn't exist, so the function exits early at line 137. However, correctness depends on `EvaluateParentCompletion`'s behavior never changing -- the code-quality standard "correctness that depends on caller discipline rather than being self-contained" applies here. If `EvaluateParentCompletion` is ever refactored (e.g., to check only children without verifying the parent exists), this function would silently corrupt the wrong task.
+  RECOMMENDATION: Add an explicit not-found guard after the loop. Either return nil when the parent isn't found, or use a `parentIdx = -1` sentinel with a check. This makes the function self-contained and safe regardless of upstream changes. Example: initialize `parentIdx := -1`, and after the loop add `if parentIdx < 0 { return nil }`.
+SUMMARY: Implementation architecture is sound overall -- the ApplyUserTransition/ApplySystemTransition split is clean and the boolean parameter is properly hidden behind semantic constructors. One medium-severity issue: autoCompleteParentIfTerminal has a latent bug where a missing parent would silently mutate tasks[0], currently masked by an upstream guard.

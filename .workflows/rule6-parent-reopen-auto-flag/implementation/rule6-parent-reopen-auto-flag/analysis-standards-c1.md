@@ -1,0 +1,3 @@
+AGENT: standards
+FINDINGS: none
+SUMMARY: Implementation conforms to specification and project conventions. All three call sites updated correctly (RunTransition uses ApplyUserTransition, validateAndReopenParent and autoCompleteParentIfTerminal use ApplySystemTransition). The applyWithCascades function is unexported with the auto parameter. evaluateRule3 renamed to autoCompleteParentIfTerminal. All required tests present: existing subtests migrated to ApplyUserTransition, new unit tests for auto=false (user) and auto=true (system), and integration tests in create_test.go (Rule 6) and update_test.go (Rule 3) verify the auto flag via JSONL inspection. Doc comments on all three functions match spec requirements.
