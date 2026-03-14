@@ -2,10 +2,26 @@ package task
 
 import "fmt"
 
-// ApplyWithCascades applies a primary transition to target, then processes all resulting
+// ApplyUserTransition applies a user-initiated transition to target and processes all
+// resulting cascades. The primary target's TransitionRecord is recorded with Auto: false
+// since the user explicitly requested this transition. Cascade transitions are always
+// recorded with Auto: true.
+func (sm StateMachine) ApplyUserTransition(tasks []Task, target *Task, action string) (TransitionResult, []CascadeChange, error) {
+	return sm.applyWithCascades(tasks, target, action, false)
+}
+
+// ApplySystemTransition applies a system-initiated transition to target and processes all
+// resulting cascades. The primary target's TransitionRecord is recorded with Auto: true
+// since this transition was triggered automatically (e.g., Rule 6 parent reopen, Rule 3
+// auto-completion). Cascade transitions are always recorded with Auto: true.
+func (sm StateMachine) ApplySystemTransition(tasks []Task, target *Task, action string) (TransitionResult, []CascadeChange, error) {
+	return sm.applyWithCascades(tasks, target, action, true)
+}
+
+// applyWithCascades applies a primary transition to target, then processes all resulting
 // cascades via a queue until no further cascades are produced. Each cascaded task is
 // mutated in-place and receives a TransitionRecord with Auto: true. The primary task
-// receives a TransitionRecord with Auto: false.
+// receives a TransitionRecord with Auto set to the provided auto parameter.
 //
 // target must be a pointer to an element within the tasks slice (not a separate copy),
 // so that mutations are visible both through the pointer and through the slice.
@@ -15,7 +31,7 @@ import "fmt"
 //
 // Returns the primary TransitionResult, the full list of applied CascadeChanges, and any error.
 // On error (invalid primary transition), no tasks are mutated.
-func (sm StateMachine) ApplyWithCascades(tasks []Task, target *Task, action string) (TransitionResult, []CascadeChange, error) {
+func (sm StateMachine) applyWithCascades(tasks []Task, target *Task, action string, auto bool) (TransitionResult, []CascadeChange, error) {
 	// Rule 9: block reopen if direct parent is cancelled.
 	if action == "reopen" && target.Parent != "" {
 		parentNorm := NormalizeID(target.Parent)
@@ -35,12 +51,12 @@ func (sm StateMachine) ApplyWithCascades(tasks []Task, target *Task, action stri
 		return TransitionResult{}, nil, err
 	}
 
-	// Step 2: Record transition history on the primary task (Auto: false).
+	// Step 2: Record transition history on the primary task.
 	target.Transitions = append(target.Transitions, TransitionRecord{
 		From: result.OldStatus,
 		To:   result.NewStatus,
 		At:   target.Updated,
-		Auto: false,
+		Auto: auto,
 	})
 
 	// Step 3: Compute initial cascade list.

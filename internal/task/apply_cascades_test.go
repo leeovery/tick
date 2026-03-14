@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestStateMachine_ApplyWithCascades(t *testing.T) {
+func TestStateMachine_ApplyUserTransition(t *testing.T) {
 	var sm StateMachine
 	now := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -25,7 +25,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child := makeTask("tick-child1", StatusOpen, "")
 		tasks := []Task{child}
 
-		result, cascades, err := sm.ApplyWithCascades(tasks, &tasks[0], "start")
+		result, cascades, err := sm.ApplyUserTransition(tasks, &tasks[0], "start")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -48,7 +48,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child := makeTask("tick-child1", StatusOpen, "")
 		tasks := []Task{child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[0], "start")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[0], "start")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -76,7 +76,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child := makeTask("tick-child1", StatusOpen, "tick-parent1")
 		tasks := []Task{parent, child}
 
-		result, cascades, err := sm.ApplyWithCascades(tasks, &tasks[1], "start")
+		result, cascades, err := sm.ApplyUserTransition(tasks, &tasks[1], "start")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -107,7 +107,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child := makeTask("tick-child1", StatusOpen, "tick-parent1")
 		tasks := []Task{grandparent, parent, child}
 
-		_, cascades, err := sm.ApplyWithCascades(tasks, &tasks[0], "cancel")
+		_, cascades, err := sm.ApplyUserTransition(tasks, &tasks[0], "cancel")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -164,7 +164,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child2 := makeTask("tick-child2", StatusOpen, "tick-parent1")
 		tasks := []Task{grandparent, parent, child1, child2}
 
-		_, cascades, err := sm.ApplyWithCascades(tasks, &tasks[3], "done")
+		_, cascades, err := sm.ApplyUserTransition(tasks, &tasks[3], "done")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -230,7 +230,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child2 := makeTask("tick-child2", StatusOpen, "tick-parent1")
 		tasks := []Task{parent, child1, child2}
 
-		_, cascades, err := sm.ApplyWithCascades(tasks, &tasks[0], "cancel")
+		_, cascades, err := sm.ApplyUserTransition(tasks, &tasks[0], "cancel")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -251,7 +251,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		leaf := makeTask("tick-leaf1", StatusOpen, "")
 		tasks := []Task{leaf}
 
-		_, cascades, err := sm.ApplyWithCascades(tasks, &tasks[0], "start")
+		_, cascades, err := sm.ApplyUserTransition(tasks, &tasks[0], "start")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -267,7 +267,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		originalStatus := task.Status
 		tasks := []Task{task}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[0], "start")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[0], "start")
 		if err == nil {
 			t.Fatal("expected error for invalid transition, got nil")
 		}
@@ -292,7 +292,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child.Closed = closedTime()
 		tasks := []Task{grandparent, parent, child}
 
-		_, cascades, err := sm.ApplyWithCascades(tasks, &tasks[2], "reopen")
+		_, cascades, err := sm.ApplyUserTransition(tasks, &tasks[2], "reopen")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -357,7 +357,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child := makeTask("tick-child1", StatusOpen, "tick-parent1")
 		tasks := []Task{parent, child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "start")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[1], "start")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -392,7 +392,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child.Closed = closedTime()
 		tasks := []Task{parent, child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "reopen")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[1], "reopen")
 		if err == nil {
 			t.Fatal("expected error for reopen under cancelled parent, got nil")
 		}
@@ -411,12 +411,12 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		}
 	})
 
-	t.Run("it allows reopen with no parent via ApplyWithCascades", func(t *testing.T) {
+	t.Run("it allows reopen with no parent", func(t *testing.T) {
 		child := makeTask("tick-child1", StatusCancelled, "")
 		child.Closed = closedTime()
 		tasks := []Task{child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[0], "reopen")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[0], "reopen")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -426,13 +426,13 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		}
 	})
 
-	t.Run("it allows reopen under open parent via ApplyWithCascades", func(t *testing.T) {
+	t.Run("it allows reopen under open parent", func(t *testing.T) {
 		parent := makeTask("tick-parent1", StatusOpen, "")
 		child := makeTask("tick-child1", StatusDone, "tick-parent1")
 		child.Closed = closedTime()
 		tasks := []Task{parent, child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "reopen")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[1], "reopen")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -442,14 +442,14 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		}
 	})
 
-	t.Run("it allows reopen under done parent via ApplyWithCascades", func(t *testing.T) {
+	t.Run("it allows reopen under done parent", func(t *testing.T) {
 		parent := makeTask("tick-parent1", StatusDone, "")
 		parent.Closed = closedTime()
 		child := makeTask("tick-child1", StatusDone, "tick-parent1")
 		child.Closed = closedTime()
 		tasks := []Task{parent, child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "reopen")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[1], "reopen")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -459,13 +459,13 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		}
 	})
 
-	t.Run("it allows reopen under in_progress parent via ApplyWithCascades", func(t *testing.T) {
+	t.Run("it allows reopen under in_progress parent", func(t *testing.T) {
 		parent := makeTask("tick-parent1", StatusInProgress, "")
 		child := makeTask("tick-child1", StatusDone, "tick-parent1")
 		child.Closed = closedTime()
 		tasks := []Task{parent, child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "reopen")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[1], "reopen")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -484,7 +484,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child.Closed = closedTime()
 		tasks := []Task{grandparent, parent, child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[2], "reopen")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[2], "reopen")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -499,7 +499,7 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child.Closed = closedTime()
 		tasks := []Task{child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[0], "reopen")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[0], "reopen")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -515,13 +515,65 @@ func TestStateMachine_ApplyWithCascades(t *testing.T) {
 		child := makeTask("tick-child1", StatusOpen, "tick-parent1")
 		tasks := []Task{parent, child}
 
-		_, _, err := sm.ApplyWithCascades(tasks, &tasks[1], "start")
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[1], "start")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
 		if tasks[1].Status != StatusInProgress {
 			t.Errorf("expected status in_progress, got %q", tasks[1].Status)
+		}
+	})
+
+	t.Run("it records auto=false on primary target for user transition", func(t *testing.T) {
+		parent := makeTask("tick-parent1", StatusOpen, "")
+		child := makeTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		_, _, err := sm.ApplyUserTransition(tasks, &tasks[1], "start")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if len(tasks[1].Transitions) != 1 {
+			t.Fatalf("expected 1 transition on primary target, got %d", len(tasks[1].Transitions))
+		}
+		if tasks[1].Transitions[0].Auto {
+			t.Error("ApplyUserTransition should record Auto = false on primary target")
+		}
+
+		// Cascade transitions should still be Auto = true
+		if len(tasks[0].Transitions) != 1 {
+			t.Fatalf("expected 1 transition on cascaded parent, got %d", len(tasks[0].Transitions))
+		}
+		if !tasks[0].Transitions[0].Auto {
+			t.Error("cascade transition should have Auto = true regardless of wrapper")
+		}
+	})
+
+	t.Run("it records auto=true on primary target for system transition", func(t *testing.T) {
+		// Simulate Rule 6: done parent being reopened by system when child is added.
+		parent := makeTask("tick-parent1", StatusDone, "")
+		parent.Closed = closedTime()
+		child := makeTask("tick-child1", StatusOpen, "tick-parent1")
+		tasks := []Task{parent, child}
+
+		_, _, err := sm.ApplySystemTransition(tasks, &tasks[0], "reopen")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if len(tasks[0].Transitions) != 1 {
+			t.Fatalf("expected 1 transition on primary target, got %d", len(tasks[0].Transitions))
+		}
+		if !tasks[0].Transitions[0].Auto {
+			t.Error("ApplySystemTransition should record Auto = true on primary target")
+		}
+		if tasks[0].Transitions[0].From != StatusDone {
+			t.Errorf("From = %q, want %q", tasks[0].Transitions[0].From, StatusDone)
+		}
+		if tasks[0].Transitions[0].To != StatusOpen {
+			t.Errorf("To = %q, want %q", tasks[0].Transitions[0].To, StatusOpen)
 		}
 	})
 }

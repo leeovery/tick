@@ -128,7 +128,7 @@ type rule3Result struct {
 }
 
 // evaluateRule3 checks if the original parent's remaining children are all terminal
-// after a child was reparented away. If so, it triggers auto-completion via ApplyWithCascades:
+// after a child was reparented away. If so, it triggers auto-completion via ApplySystemTransition:
 // done if at least one child is done, cancelled if all children are cancelled.
 // Returns nil if Rule 3 does not apply.
 func evaluateRule3(tasks []task.Task, origParentID string, sm *task.StateMachine) *rule3Result {
@@ -148,7 +148,7 @@ func evaluateRule3(tasks []task.Task, origParentID string, sm *task.StateMachine
 	}
 
 	oldStatus := tasks[parentIdx].Status
-	_, cascades, err := sm.ApplyWithCascades(tasks, &tasks[parentIdx], action)
+	_, cascades, err := sm.ApplySystemTransition(tasks, &tasks[parentIdx], action)
 	if err != nil {
 		return nil
 	}

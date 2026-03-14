@@ -121,7 +121,7 @@ func validateAndReopenParent(tasks []task.Task, parentID string, sm *task.StateM
 			return task.TransitionResult{}, nil, false, err
 		}
 		if tasks[i].Status == task.StatusDone {
-			r, c, err := sm.ApplyWithCascades(tasks, &tasks[i], "reopen")
+			r, c, err := sm.ApplySystemTransition(tasks, &tasks[i], "reopen")
 			if err != nil {
 				return task.TransitionResult{}, nil, false, err
 			}

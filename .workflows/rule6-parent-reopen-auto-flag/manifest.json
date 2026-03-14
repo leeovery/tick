@@ -53,12 +53,30 @@
           "task_gate_mode": "gated",
           "fix_gate_mode": "gated",
           "analysis_gate_mode": "gated",
-          "fix_attempts": 0,
+          "fix_attempts": 1,
           "analysis_cycle": 0,
-          "linters": [],
-          "project_skills": [],
+          "linters": [
+            {
+              "name": "go-vet",
+              "command": "go vet ./..."
+            },
+            {
+              "name": "gofmt",
+              "command": "gofmt -l ."
+            },
+            {
+              "name": "golangci-lint",
+              "command": "golangci-lint run ./..."
+            }
+          ],
+          "project_skills": [
+            ".claude/skills/golang-pro"
+          ],
           "current_phase": 1,
-          "current_task": "~"
+          "current_task": "tick-be26d8",
+          "completed_tasks": [
+            "rule6-parent-reopen-auto-flag-1-1"
+          ]
         }
       }
     }

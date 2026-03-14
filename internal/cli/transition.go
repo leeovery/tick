@@ -34,7 +34,7 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		for i := range tasks {
 			if tasks[i].ID == id {
-				r, c, mutErr := sm.ApplyWithCascades(tasks, &tasks[i], command)
+				r, c, mutErr := sm.ApplyUserTransition(tasks, &tasks[i], command)
 				if mutErr != nil {
 					return nil, mutErr
 				}
