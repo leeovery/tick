@@ -5,6 +5,23 @@ import (
 	"time"
 )
 
+func assertTransition(t *testing.T, task Task, index int, from, to Status, auto bool) {
+	t.Helper()
+	if len(task.Transitions) <= index {
+		t.Fatalf("expected at least %d transition(s), got %d", index+1, len(task.Transitions))
+	}
+	tr := task.Transitions[index]
+	if tr.From != from {
+		t.Errorf("Transitions[%d].From = %q, want %q", index, tr.From, from)
+	}
+	if tr.To != to {
+		t.Errorf("Transitions[%d].To = %q, want %q", index, tr.To, to)
+	}
+	if tr.Auto != auto {
+		t.Errorf("Transitions[%d].Auto = %v, want %v", index, tr.Auto, auto)
+	}
+}
+
 func TestStateMachine_ApplyUserTransition(t *testing.T) {
 	var sm StateMachine
 	now := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -53,20 +70,8 @@ func TestStateMachine_ApplyUserTransition(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(tasks[0].Transitions) != 1 {
-			t.Fatalf("expected 1 transition record, got %d", len(tasks[0].Transitions))
-		}
-		tr := tasks[0].Transitions[0]
-		if tr.From != StatusOpen {
-			t.Errorf("From = %q, want %q", tr.From, StatusOpen)
-		}
-		if tr.To != StatusInProgress {
-			t.Errorf("To = %q, want %q", tr.To, StatusInProgress)
-		}
-		if tr.Auto {
-			t.Error("primary transition should have Auto = false")
-		}
-		if tr.At.IsZero() {
+		assertTransition(t, tasks[0], 0, StatusOpen, StatusInProgress, false)
+		if tasks[0].Transitions[0].At.IsZero() {
 			t.Error("transition At should not be zero")
 		}
 	})
@@ -126,31 +131,8 @@ func TestStateMachine_ApplyUserTransition(t *testing.T) {
 		}
 
 		// Verify transition records on cascaded tasks
-		if len(tasks[1].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on parent, got %d", len(tasks[1].Transitions))
-		}
-		if !tasks[1].Transitions[0].Auto {
-			t.Error("parent transition should have Auto = true")
-		}
-		if tasks[1].Transitions[0].From != StatusInProgress {
-			t.Errorf("parent transition From = %q, want in_progress", tasks[1].Transitions[0].From)
-		}
-		if tasks[1].Transitions[0].To != StatusCancelled {
-			t.Errorf("parent transition To = %q, want cancelled", tasks[1].Transitions[0].To)
-		}
-
-		if len(tasks[2].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on child, got %d", len(tasks[2].Transitions))
-		}
-		if !tasks[2].Transitions[0].Auto {
-			t.Error("child transition should have Auto = true")
-		}
-		if tasks[2].Transitions[0].From != StatusOpen {
-			t.Errorf("child transition From = %q, want open", tasks[2].Transitions[0].From)
-		}
-		if tasks[2].Transitions[0].To != StatusCancelled {
-			t.Errorf("child transition To = %q, want cancelled", tasks[2].Transitions[0].To)
-		}
+		assertTransition(t, tasks[1], 0, StatusInProgress, StatusCancelled, true)
+		assertTransition(t, tasks[2], 0, StatusOpen, StatusCancelled, true)
 	})
 
 	t.Run("it chains upward completion after downward cascade", func(t *testing.T) {
@@ -195,31 +177,8 @@ func TestStateMachine_ApplyUserTransition(t *testing.T) {
 		}
 
 		// Verify transition records on cascaded tasks
-		if len(tasks[0].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on grandparent, got %d", len(tasks[0].Transitions))
-		}
-		if !tasks[0].Transitions[0].Auto {
-			t.Error("grandparent transition should have Auto = true")
-		}
-		if tasks[0].Transitions[0].From != StatusInProgress {
-			t.Errorf("grandparent transition From = %q, want in_progress", tasks[0].Transitions[0].From)
-		}
-		if tasks[0].Transitions[0].To != StatusDone {
-			t.Errorf("grandparent transition To = %q, want done", tasks[0].Transitions[0].To)
-		}
-
-		if len(tasks[1].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on parent, got %d", len(tasks[1].Transitions))
-		}
-		if !tasks[1].Transitions[0].Auto {
-			t.Error("parent transition should have Auto = true")
-		}
-		if tasks[1].Transitions[0].From != StatusInProgress {
-			t.Errorf("parent transition From = %q, want in_progress", tasks[1].Transitions[0].From)
-		}
-		if tasks[1].Transitions[0].To != StatusDone {
-			t.Errorf("parent transition To = %q, want done", tasks[1].Transitions[0].To)
-		}
+		assertTransition(t, tasks[0], 0, StatusInProgress, StatusDone, true)
+		assertTransition(t, tasks[1], 0, StatusInProgress, StatusDone, true)
 	})
 
 	t.Run("it deduplicates via seen-map", func(t *testing.T) {
@@ -325,31 +284,8 @@ func TestStateMachine_ApplyUserTransition(t *testing.T) {
 		}
 
 		// Verify transition records on cascaded tasks
-		if len(tasks[0].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on grandparent, got %d", len(tasks[0].Transitions))
-		}
-		if !tasks[0].Transitions[0].Auto {
-			t.Error("grandparent transition should have Auto = true")
-		}
-		if tasks[0].Transitions[0].From != StatusDone {
-			t.Errorf("grandparent transition From = %q, want done", tasks[0].Transitions[0].From)
-		}
-		if tasks[0].Transitions[0].To != StatusOpen {
-			t.Errorf("grandparent transition To = %q, want open", tasks[0].Transitions[0].To)
-		}
-
-		if len(tasks[1].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on parent, got %d", len(tasks[1].Transitions))
-		}
-		if !tasks[1].Transitions[0].Auto {
-			t.Error("parent transition should have Auto = true")
-		}
-		if tasks[1].Transitions[0].From != StatusDone {
-			t.Errorf("parent transition From = %q, want done", tasks[1].Transitions[0].From)
-		}
-		if tasks[1].Transitions[0].To != StatusOpen {
-			t.Errorf("parent transition To = %q, want open", tasks[1].Transitions[0].To)
-		}
+		assertTransition(t, tasks[0], 0, StatusDone, StatusOpen, true)
+		assertTransition(t, tasks[1], 0, StatusDone, StatusOpen, true)
 	})
 
 	t.Run("it records auto transitions on all cascaded tasks", func(t *testing.T) {
@@ -363,26 +299,10 @@ func TestStateMachine_ApplyUserTransition(t *testing.T) {
 		}
 
 		// Primary task: Auto = false
-		if len(tasks[1].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on primary task, got %d", len(tasks[1].Transitions))
-		}
-		if tasks[1].Transitions[0].Auto {
-			t.Error("primary task transition should have Auto = false")
-		}
+		assertTransition(t, tasks[1], 0, StatusOpen, StatusInProgress, false)
 
 		// Cascaded parent: Auto = true
-		if len(tasks[0].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on cascaded parent, got %d", len(tasks[0].Transitions))
-		}
-		if !tasks[0].Transitions[0].Auto {
-			t.Error("cascaded task transition should have Auto = true")
-		}
-		if tasks[0].Transitions[0].From != StatusOpen {
-			t.Errorf("cascaded From = %q, want open", tasks[0].Transitions[0].From)
-		}
-		if tasks[0].Transitions[0].To != StatusInProgress {
-			t.Errorf("cascaded To = %q, want in_progress", tasks[0].Transitions[0].To)
-		}
+		assertTransition(t, tasks[0], 0, StatusOpen, StatusInProgress, true)
 	})
 
 	t.Run("it blocks reopen under cancelled direct parent", func(t *testing.T) {
@@ -535,20 +455,10 @@ func TestStateMachine_ApplyUserTransition(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(tasks[1].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on primary target, got %d", len(tasks[1].Transitions))
-		}
-		if tasks[1].Transitions[0].Auto {
-			t.Error("ApplyUserTransition should record Auto = false on primary target")
-		}
+		assertTransition(t, tasks[1], 0, StatusOpen, StatusInProgress, false)
 
 		// Cascade transitions should still be Auto = true
-		if len(tasks[0].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on cascaded parent, got %d", len(tasks[0].Transitions))
-		}
-		if !tasks[0].Transitions[0].Auto {
-			t.Error("cascade transition should have Auto = true regardless of wrapper")
-		}
+		assertTransition(t, tasks[0], 0, StatusOpen, StatusInProgress, true)
 	})
 
 	t.Run("it records auto=true on primary target for system transition", func(t *testing.T) {
@@ -563,17 +473,6 @@ func TestStateMachine_ApplyUserTransition(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(tasks[0].Transitions) != 1 {
-			t.Fatalf("expected 1 transition on primary target, got %d", len(tasks[0].Transitions))
-		}
-		if !tasks[0].Transitions[0].Auto {
-			t.Error("ApplySystemTransition should record Auto = true on primary target")
-		}
-		if tasks[0].Transitions[0].From != StatusDone {
-			t.Errorf("From = %q, want %q", tasks[0].Transitions[0].From, StatusDone)
-		}
-		if tasks[0].Transitions[0].To != StatusOpen {
-			t.Errorf("To = %q, want %q", tasks[0].Transitions[0].To, StatusOpen)
-		}
+		assertTransition(t, tasks[0], 0, StatusDone, StatusOpen, true)
 	})
 }
