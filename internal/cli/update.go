@@ -139,12 +139,15 @@ func autoCompleteParentIfTerminal(tasks []task.Task, origParentID string, sm *ta
 
 	// Find the parent to apply the transition.
 	normalizedParentID := task.NormalizeID(origParentID)
-	var parentIdx int
+	parentIdx := -1
 	for i := range tasks {
 		if task.NormalizeID(tasks[i].ID) == normalizedParentID {
 			parentIdx = i
 			break
 		}
+	}
+	if parentIdx < 0 {
+		return nil
 	}
 
 	oldStatus := tasks[parentIdx].Status
