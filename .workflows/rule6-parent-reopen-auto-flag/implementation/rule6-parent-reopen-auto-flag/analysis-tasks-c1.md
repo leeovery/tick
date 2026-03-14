@@ -6,7 +6,7 @@ total_proposed: 2
 # Analysis Tasks: rule6-parent-reopen-auto-flag (Cycle 1)
 
 ## Task 1: Add parent not-found guard in autoCompleteParentIfTerminal
-status: pending
+status: approved
 severity: medium
 sources: architecture
 
@@ -30,7 +30,7 @@ sources: architecture
 - Existing `TestUpdate` tests continue to pass, confirming no behavioral change for the reachable code path
 
 ## Task 2: Extract assertTransition test helper in apply_cascades_test.go
-status: pending
+status: approved
 severity: medium
 sources: duplication
 

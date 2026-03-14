@@ -25,3 +25,15 @@ approved_at: 2026-03-12
 | rule6-parent-reopen-auto-flag-1-1 | Refactor ApplyWithCascades into user/system wrappers with failing test | none | authored | tick-0930d3 |
 | rule6-parent-reopen-auto-flag-1-2 | Update call sites and rename evaluateRule3 | none | authored | tick-be26d8 |
 | rule6-parent-reopen-auto-flag-1-3 | Integration tests for auto flag in JSONL | none | authored | tick-d6e894 |
+
+### Phase 2: Analysis (Cycle 1)
+status: approved
+external_id: tick-57a66a
+
+**Goal**: Address findings from Analysis (Cycle 1).
+
+#### Tasks
+| Internal ID | Name | Edge Cases | Status | External ID |
+|-------------|------|------------|--------|-------------|
+| rule6-parent-reopen-auto-flag-2-1 | Add parent not-found guard in autoCompleteParentIfTerminal | none | authored | tick-ac09a5 |
+| rule6-parent-reopen-auto-flag-2-2 | Extract assertTransition test helper in apply_cascades_test.go | none | authored | tick-b119b3 |
