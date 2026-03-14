@@ -127,11 +127,11 @@ type rule3Result struct {
 	cascades    []task.CascadeChange
 }
 
-// evaluateRule3 checks if the original parent's remaining children are all terminal
-// after a child was reparented away. If so, it triggers auto-completion via ApplySystemTransition:
-// done if at least one child is done, cancelled if all children are cancelled.
-// Returns nil if Rule 3 does not apply.
-func evaluateRule3(tasks []task.Task, origParentID string, sm *task.StateMachine) *rule3Result {
+// autoCompleteParentIfTerminal checks if the original parent's remaining children are all
+// terminal after a child was reparented away. If so, it triggers auto-completion via
+// ApplySystemTransition: done if at least one child is done, cancelled if all children
+// are cancelled. Returns nil if auto-completion does not apply.
+func autoCompleteParentIfTerminal(tasks []task.Task, origParentID string, sm *task.StateMachine) *rule3Result {
 	action, shouldComplete := task.EvaluateParentCompletion(tasks, origParentID)
 	if !shouldComplete {
 		return nil
@@ -374,7 +374,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 			// Evaluate Rule 3 on original parent if parent changed and original was non-empty.
 			if opts.parent != nil && originalParent != *opts.parent && originalParent != "" {
-				r3 := evaluateRule3(tasks, originalParent, &sm)
+				r3 := autoCompleteParentIfTerminal(tasks, originalParent, &sm)
 				if r3 != nil {
 					r3ParentID = r3.parentID
 					r3Result = r3.result
