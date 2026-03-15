@@ -20,11 +20,30 @@ Follow these steps EXACTLY as written. Do not skip steps or combine them.
 
 ---
 
+> *Output the next fenced block as a code block:*
+
+```
+    ___   _____________   __________________
+   /   | / ____/ ____/ | / /_  __/  _/ ____/
+  / /| |/ / __/ __/ /  |/ / / /  / // /
+ / ___ / /_/ / /___/ /|  / / / _/ // /___
+/_/  |_\____/_____/_/ |_/ /_/ /___/\____/
+ _       ______  ____  __ __ ________    ____ _       _______
+| |     / / __ \/ __ \/ //_// ____/ /   / __ \ |     / / ___/
+| | /| / / / / / /_/ / ,<  / /_  / /   / / / / | /| / /\__ \
+| |/ |/ / /_/ / _, _/ /| |/ __/ / /___/ /_/ /| |/ |/ /___/ /
+|__/|__/\____/_/ |_/_/ |_/_/   /_____/\____/ |__/|__//____/
+
+Agentic engineering workflows — from idea to implementation.
+```
+
+---
+
 ## Step 0: Run Migrations
 
 **This step is mandatory. You must complete it before proceeding.**
 
-Invoke the `/migrate` skill and follow its instructions exactly — if it issues a STOP gate, you must stop.
+Invoke the `/workflow-migrate` skill and follow its instructions exactly — if it issues a STOP gate, you must stop.
 
 ---
 

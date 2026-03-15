@@ -28,14 +28,22 @@ Store the selected work unit.
 
 → Proceed to **B. Implementation Check**.
 
-## B. Implementation Check
+## B. Pre-Checks
 
-Default `implementation_completed` = false.
+Default `implementation_completed` = false, `has_plan` = false.
+
+Check whether the planning phase exists:
+
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.js exists {selected.name}.planning
+```
+
+If the result is `true`, set `has_plan` = true.
 
 Check whether the implementation phase exists:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js exists {selected.name} phases.implementation
+node .claude/skills/workflow-manifest/scripts/manifest.js exists {selected.name}.implementation
 ```
 
 #### If the result is `false`
@@ -49,7 +57,7 @@ node .claude/skills/workflow-manifest/scripts/manifest.js exists {selected.name}
 ## C. Completion Check
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js get {selected.name} --phase implementation --topic "*" status
+node .claude/skills/workflow-manifest/scripts/manifest.js get {selected.name}.implementation.* status
 ```
 
 This returns all topic statuses in the implementation phase.
@@ -77,6 +85,9 @@ Set `implementation_completed` = true.
 @endif
 @if(selected.work_type == 'feature')
 - **`p`/`pivot`** — Convert to epic (enables multiple topics)
+@endif
+@if(has_plan)
+- **`v`/`view-plan`** — View the implementation plan
 @endif
 - **`c`/`cancel`** — Mark as cancelled
 - **`b`/`back`** — Return
@@ -126,6 +137,12 @@ Invoke the `/continue-epic` skill. This is terminal — do not return to the cal
 **If user chose `b`/`back`:**
 
 → Return to caller to redisplay main view (re-run discovery, re-render from top).
+
+#### If user chose `v`/`view-plan`
+
+→ Load **[view-plan.md](view-plan.md)** and follow its instructions as written.
+
+→ Return to **D. Action Menu**.
 
 #### If user chose `c`/`cancel`
 

@@ -4,7 +4,7 @@ user-invocable: false
 allowed-tools: Bash(node .claude/skills/workflow-discussion-entry/scripts/discovery.js), Bash(mkdir -p .workflows/*/.state), Bash(rm .workflows/*/.state/research-analysis.md), Bash(node .claude/skills/workflow-manifest/scripts/manifest.js), Bash(ls .workflows/)
 ---
 
-Invoke the **technical-discussion** skill for this conversation.
+Invoke the **workflow-discussion-process** skill for this conversation.
 
 > **⚠️ ZERO OUTPUT RULE**: Do not narrate your processing. Produce no output until a step or reference file explicitly specifies display content. No "proceeding with...", no discovery summaries, no routing decisions, no transition text. Your first output must be content explicitly called for by the instructions.
 
@@ -51,7 +51,7 @@ Store work_unit for the handoff.
 Check if discussion phase entry exists:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js exists {work_unit} --phase discussion --topic {topic}
+node .claude/skills/workflow-manifest/scripts/manifest.js exists {work_unit}.discussion.{topic}
 ```
 
 **If exists (`true`):**

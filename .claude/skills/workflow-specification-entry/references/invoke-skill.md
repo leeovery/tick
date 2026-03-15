@@ -6,7 +6,7 @@
 
 This skill's purpose is now fulfilled.
 
-Invoke the [technical-specification](../../technical-specification/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
+Invoke the [workflow-specification-process](../../workflow-specification-process/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
 
 ---
 
@@ -25,7 +25,7 @@ Source material:
 Work unit: {work_unit}
 Action: {verb} specification
 
-Invoke the technical-specification skill.
+Invoke the workflow-specification-process skill.
 ```
 
 #### If `work_type` is `bugfix`
@@ -39,12 +39,12 @@ Source material:
 Work unit: {work_unit}
 Action: {verb} specification
 
-Invoke the technical-specification skill.
+Invoke the workflow-specification-process skill.
 ```
 
 #### If `work_type` is `epic`
 
-Read the spec's source discussions from the manifest: `node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase specification --topic {topic} sources`. List each source discussion file.
+Read the spec's source discussions from the manifest: `node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.specification.{topic} sources`. List each source discussion file.
 
 ```
 Specification session for: {topic}
@@ -58,5 +58,5 @@ Work unit: {work_unit}
 Topic: {topic}
 Action: {verb} specification
 
-Invoke the technical-specification skill.
+Invoke the workflow-specification-process skill.
 ```

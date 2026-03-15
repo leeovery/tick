@@ -4,7 +4,7 @@ user-invocable: false
 allowed-tools: Bash(node .claude/skills/workflow-manifest/scripts/manifest.js)
 ---
 
-Invoke the **technical-investigation** skill for this conversation.
+Invoke the **workflow-investigation-process** skill for this conversation.
 
 > **⚠️ ZERO OUTPUT RULE**: Do not narrate your processing. Produce no output until a step or reference file explicitly specifies display content. No "proceeding with...", no discovery summaries, no routing decisions, no transition text. Your first output must be content explicitly called for by the instructions.
 
@@ -46,7 +46,7 @@ Investigation is always bugfix work_type. Store work_unit for the handoff.
 Check if the investigation phase entry exists:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js exists {work_unit} --phase investigation --topic {topic}
+node .claude/skills/workflow-manifest/scripts/manifest.js exists {work_unit}.investigation.{topic}
 ```
 
 **If exists (`true`):**

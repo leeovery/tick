@@ -23,13 +23,13 @@ Follow these steps EXACTLY as written. Do not skip steps or combine them.
 
 **This step is mandatory. You must complete it before proceeding.**
 
-Invoke the `/migrate` skill and follow its instructions exactly — if it issues a STOP gate, you must stop.
+Invoke the `/workflow-migrate` skill and follow its instructions exactly — if it issues a STOP gate, you must stop.
 
 ---
 
 ## Step 1: Gather Epic Context
 
-Load **[gather-epic-context.md](references/gather-epic-context.md)** and follow its instructions.
+Load **[gather-epic-context.md](references/gather-epic-context.md)** and follow its instructions as written.
 
 → Proceed to **Step 2**.
 
@@ -37,7 +37,7 @@ Load **[gather-epic-context.md](references/gather-epic-context.md)** and follow 
 
 ## Step 2: Epic Name and Conflict Check
 
-Load **[name-check.md](references/name-check.md)** and follow its instructions.
+Load **[name-check.md](references/name-check.md)** and follow its instructions as written.
 
 → Proceed to **Step 3**.
 
@@ -45,7 +45,7 @@ Load **[name-check.md](references/name-check.md)** and follow its instructions.
 
 ## Step 3: Route to First Phase
 
-Load **[route-first-phase.md](references/route-first-phase.md)** and follow its instructions.
+Load **[route-first-phase.md](references/route-first-phase.md)** and follow its instructions as written.
 
 → Proceed to **Step 4**.
 

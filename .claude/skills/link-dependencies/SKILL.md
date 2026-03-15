@@ -18,7 +18,7 @@ Use simple, individual commands. Never combine multiple operations into bash loo
 
 **This step is mandatory. You must complete it before proceeding.**
 
-Invoke the `/migrate` skill and follow its instructions exactly — if it issues a STOP gate, you must stop.
+Invoke the `/workflow-migrate` skill and follow its instructions exactly — if it issues a STOP gate, you must stop.
 
 ---
 
@@ -82,7 +82,7 @@ Scan the selected work unit for existing plans:
    - Each subdirectory is a topic that may contain a `planning.md` file
 
 2. **Extract plan metadata**: For each topic with a plan
-   - Read the format via manifest CLI: `node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase planning --topic {topic} format`
+   - Read the format via manifest CLI: `node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planning.{topic} format`
    - Note the format used by each plan
 
 #### If no plans exist
@@ -139,7 +139,7 @@ format. Consolidate your plans to a single format before linking.
 
 For each plan, read the `external_dependencies` from the manifest:
 
-1. **Read `external_dependencies`** via manifest CLI: `node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase planning --topic {topic} external_dependencies`
+1. **Read `external_dependencies`** via manifest CLI: `node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planning.{topic} external_dependencies`
 2. **Categorize each dependency** by iterating the object's entries. Each key is a topic, each value has a `state` field:
    - **Unresolved**: `state: unresolved` (no task linked)
    - **Resolved**: `state: resolved` (has `task_id`)
@@ -180,7 +180,7 @@ For each unresolved dependency:
 
 2. **If plan exists**: Load the format's reading reference
    - Read `format` from the dependency plan's manifest
-   - Load `../technical-planning/references/output-formats/{format}/reading.md`
+   - Load `../workflow-planning-process/references/output-formats/{format}/reading.md`
    - Use the task extraction instructions to search for matching tasks
 
 3. **Handle ambiguous matches**:
@@ -192,11 +192,11 @@ For each unresolved dependency:
 For each resolved match:
 
 1. **Update the dependency in the manifest** via dot-path set:
-   - Set `state` to `resolved`: `node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit} --phase planning --topic {topic} external_dependencies.{dep-topic}.state resolved`
-   - Set `task_id`: `node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit} --phase planning --topic {topic} external_dependencies.{dep-topic}.task_id {internal_id}`
+   - Set `state` to `resolved`: `node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} external_dependencies.{dep-topic}.state resolved`
+   - Set `task_id`: `node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} external_dependencies.{dep-topic}.task_id {internal_id}`
 
 2. **Create dependency in output format**:
-   - Load `../technical-planning/references/output-formats/{format}/graph.md`
+   - Load `../workflow-planning-process/references/output-formats/{format}/graph.md`
    - Follow the "Adding a Dependency" section to create the blocking relationship
 
 ## Step 7: Bidirectional Check

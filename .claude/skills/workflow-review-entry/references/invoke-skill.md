@@ -4,12 +4,12 @@
 
 ---
 
-Invoke the [technical-review](../../technical-review/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
+Invoke the [workflow-review-process](../../workflow-review-process/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
 
 Query format from manifest:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase planning --topic {topic} format
+node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planning.{topic} format
 ```
 
 **Handoff:**
@@ -23,5 +23,5 @@ Plans to review:
     format: {format}
     specification: .workflows/{work_unit}/specification/{topic}/specification.md (exists: {true|false})
 
-Invoke the technical-review skill.
+Invoke the workflow-review-process skill.
 ```

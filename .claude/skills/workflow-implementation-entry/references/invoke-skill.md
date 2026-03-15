@@ -6,7 +6,7 @@
 
 This skill's purpose is now fulfilled.
 
-Invoke the [technical-implementation](../../technical-implementation/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
+Invoke the [workflow-implementation-process](../../workflow-implementation-process/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
 
 ---
 
@@ -15,14 +15,14 @@ Invoke the [technical-implementation](../../technical-implementation/SKILL.md) s
 Query format and external_id from manifest:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase planning --topic {topic} format
-node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase planning --topic {topic} external_id
+node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planning.{topic} format
+node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planning.{topic} external_id
 ```
 
 Check implementation status:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit} --phase implementation --topic {topic} status
+node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.implementation.{topic} status
 ```
 
 ```
@@ -38,5 +38,5 @@ Implementation: {exists | new} (status: {in-progress | not-started | completed})
 Dependencies: {All satisfied | List any notes}
 Environment: {Setup required | No special setup required}
 
-Invoke the technical-implementation skill.
+Invoke the workflow-implementation-process skill.
 ```

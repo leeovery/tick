@@ -6,11 +6,11 @@
 
 Before invoking the skill, reset `finding_gate_mode` to `gated` via manifest CLI:
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit} --phase specification --topic {topic} finding_gate_mode gated
+node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.specification.{topic} finding_gate_mode gated
 ```
 Commit if changed: `spec({work_unit}): reset gate mode`
 
-This skill's purpose is now fulfilled. Invoke the [technical-specification](../../../technical-specification/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded — it contains the instructions for how to proceed.
+This skill's purpose is now fulfilled. Invoke the [workflow-specification-process](../../../workflow-specification-process/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded — it contains the instructions for how to proceed.
 
 ```
 Specification session for: {Title Case Name}
@@ -26,5 +26,5 @@ Previously extracted (for reference):
 Context: This specification was previously completed. New source discussions have been identified. Extract and incorporate their content while maintaining consistency with the existing specification.
 
 ---
-Invoke the technical-specification skill.
+Invoke the workflow-specification-process skill.
 ```
