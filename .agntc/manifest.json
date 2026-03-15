@@ -1,8 +1,8 @@
 {
   "leeovery/claude-technical-workflows": {
     "ref": null,
-    "commit": "62f839b3d79bc1d29576622c1c1a8807214e28a2",
-    "installedAt": "2026-03-15T11:57:32.365Z",
+    "commit": "52bdee39acab4795c60f44aa57a9cc3bd20298e5",
+    "installedAt": "2026-03-15T12:00:42.963Z",
     "agents": [
       "claude"
     ],
@@ -318,6 +318,7 @@
       ".claude/skills/workflow-start/references/view-completed.md",
       ".claude/skills/workflow-start/references/view-plan.md",
       ".claude/skills/workflow-start/scripts/",
+      ".claude/skills/workflow-start/scripts/banner.sh",
       ".claude/skills/workflow-start/scripts/discovery.js",
       ".claude/agents/workflow-implementation-analysis-architecture.md",
       ".claude/agents/workflow-implementation-analysis-duplication.md",
