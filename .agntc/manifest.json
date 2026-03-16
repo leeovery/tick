@@ -1,8 +1,8 @@
 {
   "leeovery/claude-technical-workflows": {
     "ref": null,
-    "commit": "e2a8715a1f48666d1c6c2de20f66c66465ef069b",
-    "installedAt": "2026-03-15T12:11:05.606Z",
+    "commit": "2d050b55902246616e0b37fe7d78ed46ea4bed72",
+    "installedAt": "2026-03-16T11:04:05.771Z",
     "agents": [
       "claude"
     ],
@@ -31,8 +31,6 @@
       ".claude/skills/continue-feature/references/validate-selection.md",
       ".claude/skills/continue-feature/scripts/",
       ".claude/skills/continue-feature/scripts/discovery.js",
-      ".claude/skills/link-dependencies/",
-      ".claude/skills/link-dependencies/SKILL.md",
       ".claude/skills/start-bugfix/",
       ".claude/skills/start-bugfix/SKILL.md",
       ".claude/skills/start-bugfix/references/",
@@ -90,6 +88,7 @@
       ".claude/skills/workflow-implementation-entry/references/check-dependencies.md",
       ".claude/skills/workflow-implementation-entry/references/environment-check.md",
       ".claude/skills/workflow-implementation-entry/references/invoke-skill.md",
+      ".claude/skills/workflow-implementation-entry/references/validate-dependencies.md",
       ".claude/skills/workflow-implementation-entry/references/validate-phase.md",
       ".claude/skills/workflow-implementation-process/",
       ".claude/skills/workflow-implementation-process/SKILL.md",
@@ -160,6 +159,7 @@
       ".claude/skills/workflow-migrate/scripts/migrations/024-backfill-and-flatten-review.sh",
       ".claude/skills/workflow-migrate/scripts/migrations/025-unify-manifest-items.sh",
       ".claude/skills/workflow-migrate/scripts/migrations/026-rename-review-artifacts.sh",
+      ".claude/skills/workflow-migrate/scripts/migrations/027-rename-external-deps-task-id.sh",
       ".claude/skills/workflow-planning-entry/",
       ".claude/skills/workflow-planning-entry/SKILL.md",
       ".claude/skills/workflow-planning-entry/references/",
