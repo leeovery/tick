@@ -98,7 +98,14 @@
           "specification": "../../specification/blocked-ancestor-ready/specification.md",
           "spec_commit": "e5c5d2995477fa95787af0a959e7162d1bb39cc3",
           "finding_gate_mode": "auto",
-          "author_gate_mode": "auto"
+          "author_gate_mode": "auto",
+          "task_map": {
+            "blocked-ancestor-ready-1-1": "tick-fb9d84",
+            "blocked-ancestor-ready-1-2": "tick-52f1cf",
+            "blocked-ancestor-ready-2-1": "tick-cbdae7",
+            "blocked-ancestor-ready-1": "tick-3cf896",
+            "blocked-ancestor-ready-2": "tick-884d97"
+          }
         },
         "doctor-validation": {
           "status": "completed",
@@ -125,7 +132,28 @@
           "specification": "../../specification/task-removal/specification.md",
           "spec_commit": "739e6f02a7f56e6c4d785b981f74bf75b08ef36a",
           "finding_gate_mode": "gated",
-          "author_gate_mode": "gated"
+          "author_gate_mode": "gated",
+          "task_map": {
+            "task-removal-1-1": "tick-7314b0",
+            "task-removal-1-2": "tick-64566b",
+            "task-removal-1-3": "tick-0607a0",
+            "task-removal-1-4": "tick-1777bc",
+            "task-removal-2-1": "tick-8bc489",
+            "task-removal-2-2": "tick-0c56d2",
+            "task-removal-3-1": "tick-2a1fa5",
+            "task-removal-3-2": "tick-37bab0",
+            "task-removal-3-3": "tick-5b74ec",
+            "task-removal-3-4": "tick-9e0c27",
+            "task-removal-3-5": "tick-0424d3",
+            "task-removal-4-1": "tick-cf66a9",
+            "task-removal-4-2": "tick-21f1ab",
+            "task-removal-5-1": "tick-0c7c52",
+            "task-removal-1": "tick-cf0a05",
+            "task-removal-2": "tick-fca658",
+            "task-removal-3": "tick-192a68",
+            "task-removal-4": "tick-d5946b",
+            "task-removal-5": "tick-9c6995"
+          }
         },
         "tick-core": {
           "status": "completed",
@@ -383,7 +411,11 @@
       }
     },
     "research": {
-      "status": "completed"
+      "items": {
+        "exploration": {
+          "status": "completed"
+        }
+      }
     }
   }
 }
