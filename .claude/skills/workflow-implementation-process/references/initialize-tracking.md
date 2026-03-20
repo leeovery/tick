@@ -4,11 +4,16 @@
 
 ---
 
-#### If `.workflows/{work_unit}/implementation/{topic}/implementation.md` already exists
+Check if implementation entry exists in the manifest:
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.js exists {work_unit}.implementation.{topic}
+```
 
-→ Return to **[the skill](../SKILL.md)**.
+#### If implementation entry exists
 
-#### If no implementation file exists
+→ Return to caller.
+
+#### If implementation entry does not exist
 
 1. Set implementation state via manifest CLI:
    ```bash
@@ -24,14 +29,6 @@
    node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.implementation.{topic} current_task ~
    ```
 
-2. Create `.workflows/{work_unit}/implementation/{topic}/implementation.md`:
+2. Commit: `impl({work_unit}): start implementation`
 
-   ```markdown
-   # Implementation: {Topic Name}
-
-   Implementation started.
-   ```
-
-3. Commit: `impl({work_unit}): start implementation`
-
-→ Return to **[the skill](../SKILL.md)**.
+→ Return to caller.

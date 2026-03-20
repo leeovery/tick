@@ -8,7 +8,7 @@ This step uses the `workflow-planning-task-designer` agent (`../../../agents/wor
 
 ---
 
-## Design the Task List
+## A. Design Task List
 
 > *Output the next fenced block as a code block:*
 
@@ -32,13 +32,12 @@ Invoke `workflow-planning-task-designer` with these file paths:
 3. **Cross-cutting specs**: cross-cutting spec paths if any
 4. **task-design.md**: `task-design.md`
 5. **Context guidance**: `task-design/{work_type}.md` (default to `epic` if `work_type` is empty)
-6. **All approved phases**: the complete phase structure from the Plan Index File body
+6. **All approved phases**: the complete phase structure from the planning file
 7. **Target phase number**: the phase being broken into tasks
-8. **plan-index-schema.md**: `plan-index-schema.md`
 
 ### Present the Output
 
-The agent returns a task overview and task table. Write the task table directly to the Plan Index File under the phase.
+The agent returns a task overview and task table. Write the task table to the planning file under the phase.
 
 Update the manifest planning position:
 ```bash
@@ -56,16 +55,18 @@ Present the task overview to the user:
 {task overview from workflow-planning-task-designer agent}
 ```
 
-Then check the gate mode.
+→ Proceed to **B. Check Gate Mode**.
 
-### Check Gate Mode
+---
+
+## B. Check Gate Mode
 
 Check `task_list_gate_mode` via manifest CLI:
 ```bash
 node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planning.{topic} task_list_gate_mode
 ```
 
-#### If `task_list_gate_mode: auto`
+#### If `task_list_gate_mode` is `auto`
 
 > *Output the next fenced block as a code block:*
 
@@ -73,9 +74,9 @@ node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planni
 Phase {N}: {Phase Name} — task list approved. Proceeding to authoring.
 ```
 
-→ Proceed to **If approved** below.
+→ Proceed to **C. Finalize Approval**.
 
-#### If `task_list_gate_mode: gated`
+#### If `task_list_gate_mode` is `gated`
 
 > *Output the next fenced block as markdown (not a code block):*
 
@@ -98,28 +99,35 @@ Re-invoke `workflow-planning-task-designer` with all original inputs PLUS:
 - **Previous output**: the current task list
 - **User feedback**: what the user wants changed
 
-Update the Plan Index File with the revised task table, re-present, and ask again. Repeat until approved.
+Update the planning file with the revised task table.
+
+→ Return to **B. Check Gate Mode**.
 
 #### If `auto`
 
-Note that `task_list_gate_mode` should be updated to `auto` in the manifest during the commit step below.
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} task_list_gate_mode auto
+```
 
-→ Proceed to **If approved** below.
+→ Proceed to **C. Finalize Approval**.
 
-#### If approved (`y`/`yes` or `auto`)
+#### If approved (`y`/`yes`)
+
+→ Proceed to **C. Finalize Approval**.
+
+---
+
+## C. Finalize Approval
 
 **If the task list is new or was amended:**
 
-1. Advance the planning position in the manifest to the first task in this phase:
+1. Update the task table in the planning file: set `status: approved` and `approved_at: YYYY-MM-DD` (use today's actual date)
+2. Advance the planning position in the manifest to the first task in this phase:
    ```bash
    node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} task {first_task_id}
-   ```
-2. If user chose `auto` at this gate: update the manifest:
-   ```bash
-   node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} task_list_gate_mode auto
    ```
 3. Commit: `planning({work_unit}): approve Phase {N} task list`
 
 If the task list was already approved and unchanged, no updates are needed.
 
-→ Return to **[plan-construction.md](plan-construction.md)**.
+→ Return to caller.

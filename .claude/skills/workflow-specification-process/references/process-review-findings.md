@@ -18,7 +18,7 @@ Check if the tracking file exists at the expected path.
 {review_type} complete — no findings.
 ```
 
-→ Return to **[spec-review.md](spec-review.md)** for the next phase.
+→ Return to caller.
 
 #### If tracking file exists
 
@@ -116,7 +116,9 @@ Finding {N} of {total}: {brief_title:(titlecase)} — approved. Added to specifi
 
 #### If the user provides feedback
 
-Incorporate feedback and re-present the proposed content **in full**. Update the tracking file with the revised content. Then ask the same choice again. Repeat until approved or skipped.
+Incorporate feedback and re-present the proposed content **in full**. Update the tracking file with the revised content.
+
+→ Return to **B. Process One Item at a Time**.
 
 #### If `approved`
 
@@ -168,4 +170,4 @@ Finding {N} of {total}: {brief_title:(titlecase)} — skipped.
 {review_type} complete — {N} findings processed.
 ```
 
-→ Return to **[spec-review.md](spec-review.md)** for the next phase.
+→ Return to caller.

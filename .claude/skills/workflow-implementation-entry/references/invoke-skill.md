@@ -4,9 +4,7 @@
 
 ---
 
-This skill's purpose is now fulfilled.
-
-Invoke the [workflow-implementation-process](../../workflow-implementation-process/SKILL.md) skill for your next instructions. Do not act on the gathered information until the skill is loaded - it contains the instructions for how to proceed.
+This skill's purpose is now fulfilled. Construct the handoff and invoke the processing skill.
 
 ---
 
@@ -29,7 +27,6 @@ node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.implem
 Implementation session for: {topic}
 Work unit: {work_unit}
 
-Plan: .workflows/{work_unit}/planning/{topic}/planning.md
 Format: {format}
 External ID: {external_id} (if applicable)
 Specification: .workflows/{work_unit}/specification/{topic}/specification.md (exists: {true|false})
@@ -40,3 +37,5 @@ Environment: {Setup required | No special setup required}
 
 Invoke the workflow-implementation-process skill.
 ```
+
+Invoke the [workflow-implementation-process](../../workflow-implementation-process/SKILL.md) skill. Do not act on the gathered information until the skill is loaded — it contains the instructions for how to proceed. Terminal.

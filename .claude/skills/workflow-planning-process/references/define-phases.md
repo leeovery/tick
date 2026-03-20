@@ -8,9 +8,9 @@ This step uses the `workflow-planning-phase-designer` agent (`../../../agents/wo
 
 ---
 
-## Determine Phase State
+## A. Determine Phase State
 
-Read the Plan Index File. Check if phases already exist in the body.
+Read the planning file at `.workflows/{work_unit}/planning/{topic}/planning.md`. Check if phases already exist in the body.
 
 #### If phases exist
 
@@ -20,7 +20,7 @@ Read the Plan Index File. Check if phases already exist in the body.
 Phase structure already exists. I'll present it for your review.
 ```
 
-Continue to **Review and Approve** below.
+→ Proceed to **B. Review and Approve**.
 
 #### If no phases exist
 
@@ -31,8 +31,6 @@ I'll delegate phase design to a specialist agent. It will read the full
 specification and propose a phase structure — how we break this into
 independently testable stages.
 ```
-
-### Invoke the Agent
 
 Read `work_type` from the manifest:
 ```bash
@@ -46,10 +44,9 @@ Invoke `workflow-planning-phase-designer` with these file paths:
 3. **Cross-cutting specs**: cross-cutting spec paths if any
 4. **phase-design.md**: `phase-design.md`
 5. **Context guidance**: `phase-design/{work_type}.md` (default to `epic` if `work_type` is empty)
-6. **task-design.md**: `task-design.md`
-7. **plan-index-schema.md**: `plan-index-schema.md`
+6. **task-design.md**: `task-design.md` *(for granularity awareness only — helps the agent judge whether a phase is too thin or too thick. The agent must NOT produce task tables or task lists.)*
 
-The agent returns a complete phase structure. Write it directly to the Plan Index File body.
+The agent returns phases only — goals, ordering rationale, and acceptance criteria. **Task lists are designed separately in a later step; do not request or include them.** Write the phase structure directly to the planning file body.
 
 Update the manifest planning position:
 ```bash
@@ -59,11 +56,11 @@ node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planni
 
 Commit: `planning({work_unit}): draft phase structure`
 
-Continue to **Review and Approve** below.
+→ Proceed to **B. Review and Approve**.
 
 ---
 
-## Review and Approve
+## B. Review and Approve
 
 Present the phase structure to the user as rendered markdown (not in a code block). Then, separately, present the choices:
 
@@ -87,13 +84,17 @@ Re-invoke `workflow-planning-phase-designer` with all original inputs PLUS:
 - **Previous output**: the current phase structure
 - **User feedback**: what the user wants changed
 
-Update the Plan Index File with the revised output, re-present, and ask again. Repeat until approved.
+Update the planning file with the revised output.
+
+→ Return to **B. Review and Approve**.
 
 #### If `approved`
 
 **If the phase structure is new or was amended:**
 
-1. Update each phase in the Plan Index File: set `status: approved` and `approved_at: YYYY-MM-DD` (use today's actual date). See **Phase Entry** in plan-index-schema for field definitions.
+1. Update each phase in the planning file: set `status: approved` and `approved_at: YYYY-MM-DD` (use today's actual date)
 2. Commit: `planning({work_unit}): approve phase structure`
 
 If the phase structure was already approved and unchanged, no updates are needed.
+
+→ Return to caller.

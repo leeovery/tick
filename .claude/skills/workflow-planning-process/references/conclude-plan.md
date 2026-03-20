@@ -4,7 +4,7 @@
 
 ---
 
-> **CHECKPOINT**: Do not conclude if any tasks in the Plan Index File show `status: pending`. All tasks must be `authored` before concluding.
+> **CHECKPOINT**: Do not conclude if any designed task internal IDs are missing from `task_map` in the manifest. All tasks must be authored before concluding.
 
 > *Output the next fenced block as markdown (not a code block):*
 
@@ -13,23 +13,15 @@
 Ready to conclude?
 
 - **`y`/`yes`** — Conclude plan and mark as completed
-- **Comment** — Add context before concluding
+- **`n`/`no`** — Go back and make changes
 · · · · · · · · · · · ·
 ```
 
 **STOP.** Wait for user response.
 
-#### If comment
+#### If `no`
 
-Discuss the user's context.
-
-**If additional work is needed:**
-
-→ Return to **[the skill](../SKILL.md)** for **Step 7** or **Step 8** as appropriate.
-
-**Otherwise:**
-
-Re-present the sign-off prompt above.
+→ Return to **[the skill](../SKILL.md)** for **Step 5**.
 
 #### If `yes`
 
@@ -58,3 +50,5 @@ Completed phase: planning
 
 Invoke the workflow-bridge skill to enter plan mode with continuation instructions.
 ```
+
+**STOP.** Do not proceed — terminal condition.

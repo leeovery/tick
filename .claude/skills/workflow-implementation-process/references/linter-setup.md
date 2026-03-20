@@ -71,7 +71,7 @@ Skip linters again?
 
 **If `yes`:**
 
-→ Return to **[the skill](../SKILL.md)**.
+→ Return to caller.
 
 **If `no`:**
 
@@ -114,7 +114,11 @@ Copy to topic level:
 node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.implementation.{topic} linters [{phase-level values}]
 ```
 
-→ Return to **[the skill](../SKILL.md)**.
+→ Return to caller.
+
+**If `source` is `topic`:**
+
+→ Return to caller.
 
 #### If `no`
 
@@ -170,11 +174,13 @@ node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.implem
 node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.implementation linters [...]
 ```
 
-→ Return to **[the skill](../SKILL.md)**.
+→ Return to caller.
 
 #### If `change`
 
-Adjust based on user input, re-present for confirmation.
+Adjust based on user input.
+
+→ Return to **C. Discovery**.
 
 #### If `skip`
 
@@ -184,4 +190,4 @@ node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.implem
 node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.implementation linters []
 ```
 
-→ Return to **[the skill](../SKILL.md)**.
+→ Return to caller.

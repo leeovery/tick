@@ -6,7 +6,7 @@
 
 Display all active work and present a unified menu for continuing or starting work.
 
-## Display
+## A. Display and Menu
 
 > *Output the next fenced block as a code block:*
 
@@ -40,6 +40,23 @@ Epics:
 @endforeach
 @endif
 
+@if(has_inbox)
+
+Inbox:
+@if(idea_count > 0)
+  Ideas:
+@foreach(idea in inbox.ideas)
+    • {idea.title} — {idea.date}
+@endforeach
+@endif
+@if(bug_count > 0)
+  Bugs:
+@foreach(bug in inbox.bugs)
+    • {bug.title} — {bug.date}
+@endforeach
+@endif
+@endif
+
 @if(completed_count > 0 || cancelled_count > 0)
 {completed_count} completed, {cancelled_count} cancelled.
 @endif
@@ -49,7 +66,7 @@ Build from discovery output. Only show sections that have work units. Numbering 
 
 ## Menu
 
-Build a numbered menu with continue items first, then start-new options, then lifecycle options, separated by blank lines.
+Build the menu with numbered continue items first, then command options for start-new and lifecycle actions, separated by blank lines.
 
 > *Output the next fenced block as markdown (not a code block):*
 
@@ -61,22 +78,24 @@ What would you like to do?
 2. Continue "{bugfix.name:(titlecase)}" — bugfix, {bugfix.phase_label}
 3. Continue "{epic.name:(titlecase)}" — epic
 
-4. Start new feature
-5. Start new epic
-6. Start new bugfix
-
+- **`f`/`feature`** — Start new feature
+- **`e`/`epic`** — Start new epic
+- **`b`/`bugfix`** — Start new bugfix
+@if(has_inbox)
+- **`i`/`inbox`** — Start from an inbox item
+@endif
 @if(completed_count > 0 || cancelled_count > 0)
-7. View completed & cancelled work units
+- **`v`/`view`** — View completed & cancelled work units
 @endif
 - **`m`/`manage`** — Manage a work unit's lifecycle
 
-Select an option (enter number):
+Select an option (enter number or command):
 · · · · · · · · · · · ·
 ```
 
 **Continue items:** Feature/bugfix shows type + phase label. Epic just shows "epic" (detail is in continue-epic). No auto-select — always show the full menu. No "(recommended)" labels.
 
-**Start-new items:** Always show all three start options.
+**Command options:** Start-new, inbox, view, and manage are always command options (not numbered). Always show all three start options.
 
 Recreate with actual work units from discovery.
 
@@ -97,10 +116,24 @@ Invoke the selected skill:
 
 This skill ends. The invoked skill will load into context and provide additional instructions. Terminal.
 
-#### If user chose "View completed & cancelled"
+#### If user chose `v`/`view`
 
-→ Load **[view-completed.md](view-completed.md)** with no work_type filter (unified across all types). On return, re-run discovery and redisplay from the top of this reference.
+→ Load **[view-completed.md](view-completed.md)** and follow its instructions as written.
+
+Re-run discovery to refresh state after potential changes.
+
+→ Return to **A. Display and Menu**.
+
+#### If user chose `i`/`inbox`
+
+→ Load **[start-from-inbox.md](start-from-inbox.md)** and follow its instructions as written.
+
+→ Return to **A. Display and Menu**.
 
 #### If user chose `m`/`manage`
 
-→ Load **[manage-work-unit.md](manage-work-unit.md)**. On return, re-run discovery and redisplay from the top of this reference.
+→ Load **[manage-work-unit.md](manage-work-unit.md)** and follow its instructions as written.
+
+Re-run discovery to refresh state after potential changes.
+
+→ Return to **A. Display and Menu**.

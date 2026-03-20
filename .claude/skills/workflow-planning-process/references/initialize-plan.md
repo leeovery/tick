@@ -58,7 +58,7 @@ Existing plans use **{format}**. Use the same format?
 ## C. Register Plan
 
 1. Capture the current git commit hash: `git rev-parse HEAD`
-2. Create the Plan Index File at `.workflows/{work_unit}/planning/{topic}/planning.md` using the **Title** template from **[plan-index-schema.md](plan-index-schema.md)**.
+2. Create the planning file at `.workflows/{work_unit}/planning/{topic}/planning.md` with the title `# Plan: {Topic Name}`.
 3. Register planning and set metadata in the manifest:
    ```bash
    node .claude/skills/workflow-manifest/scripts/manifest.js init-phase {work_unit}.planning.{topic}
@@ -70,8 +70,9 @@ Existing plans use **{format}**. Use the same format?
    node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} finding_gate_mode gated
    node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} phase 1
    node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} task ~
+   node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} task_map '{}'
    ```
 
 4. Commit: `planning({work_unit}): initialize plan`
 
-→ Return to **[the skill](../SKILL.md)**.
+→ Return to caller.

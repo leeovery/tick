@@ -4,7 +4,7 @@
 
 ---
 
-Display completed and cancelled work units. Self-contained — receives context from caller (completed/cancelled arrays, optional work_type filter).
+Display completed and cancelled work units from discovery output.
 
 ## A. Display List
 
@@ -44,7 +44,7 @@ Cancelled:
 @endif
 ```
 
-Build from the completed and cancelled arrays passed by the caller. Numbering is continuous across both sections. Blank line between each numbered item.
+Build from the completed and cancelled sections in the discovery output. Numbering is continuous across both sections. Blank line between each numbered item.
 
 → Proceed to **B. Select**.
 
@@ -100,12 +100,14 @@ node .claude/skills/workflow-manifest/scripts/manifest.js set {selected.name} st
 "{selected.name:(titlecase)}" reactivated.
 ```
 
-→ Return to caller to redisplay main view (re-run discovery, re-render from top).
+→ Return to caller.
 
 #### If user chose `b`/`back`
 
-→ Return to **A. Display List** (re-render with current data).
+→ Return to **A. Display List**.
 
 #### If user asked a question
 
-Answer the question, then redisplay the action menu (section C).
+Answer the question.
+
+→ Return to **C. Action Menu**.

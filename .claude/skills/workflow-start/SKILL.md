@@ -42,9 +42,11 @@ Agentic engineering workflows — from idea to implementation.
 
 ---
 
-## Step 0: Run Migrations
+## Step 0: Initialisation
 
-**This step is mandatory. You must complete it before proceeding.**
+Load **[casing-conventions.md](../workflow-shared/references/casing-conventions.md)** and follow its instructions as written.
+
+**Run migrations — this is mandatory. You must complete it before proceeding.**
 
 Invoke the `/workflow-migrate` skill and follow its instructions exactly — if it issues a STOP gate, you must stop.
 
@@ -75,8 +77,14 @@ Parse the output to understand the current workflow state:
 - Non-active work units with name, work_type, status, last_phase
 - `completed_count`, `cancelled_count`
 
+**From `inbox` section (only present when inbox items exist):**
+- `ideas` — slug, date, title for each idea
+- `bugs` — slug, date, title for each bug
+- `idea_count`, `bug_count`, `total_count`
+
 **From `state` section:**
 - Counts for each work type, `has_any_work` flag
+- `has_inbox`, `inbox_count`
 
 → Proceed to **Step 2**.
 

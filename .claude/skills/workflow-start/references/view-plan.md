@@ -19,7 +19,7 @@ Set `topic` = `selected.name`.
 Query manifest for all planning topics:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js get {selected.name}.planning.* status
+node .claude/skills/workflow-manifest/scripts/manifest.js get '{selected.name}.planning.*' status
 ```
 
 **If only one topic exists:**
@@ -58,11 +58,14 @@ Set `topic` to the selected topic.
 
 ## B. Read Plan
 
-Read the `format` from the manifest:
+Read the `format` and `external_id` from the manifest:
 
 ```bash
 node .claude/skills/workflow-manifest/scripts/manifest.js get {selected.name}.planning.{topic} format
+node .claude/skills/workflow-manifest/scripts/manifest.js get {selected.name}.planning.{topic} external_id
 ```
+
+Use `external_id` as the plan-level parent identifier when following the format adapter's instructions below.
 
 → Load **[reading.md](../../workflow-planning-process/references/output-formats/{format}/reading.md)** and follow its instructions as written.
 
@@ -94,4 +97,4 @@ Show:
 
 Keep it scannable — this is for quick reference, not full detail.
 
-→ Return to **[manage-work-unit.md](manage-work-unit.md)**.
+→ Return to caller.

@@ -104,7 +104,10 @@ Nothing to remove.
 
 ## D. Resolve Current Plan's Dependencies
 
-For each unresolved dependency, check if `.workflows/{work_unit}/planning/{dep_topic}/planning.md` exists.
+For each unresolved dependency, check if the planning entry exists in the manifest:
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.js exists {work_unit}.planning.{dep_topic}
+```
 
 #### If the plan does not exist
 
@@ -177,7 +180,7 @@ After all topics have been checked:
 No external dependencies for this topic. No reverse resolutions needed.
 ```
 
-→ Return to **[the skill](../SKILL.md)**.
+→ Return to caller.
 
 #### If changes were made
 
@@ -225,7 +228,7 @@ Approve the dependency resolution?
 
 Commit: `planning({work_unit}): resolve external dependencies`
 
-→ Return to **[the skill](../SKILL.md)**.
+→ Return to caller.
 
 #### If the user provides feedback
 

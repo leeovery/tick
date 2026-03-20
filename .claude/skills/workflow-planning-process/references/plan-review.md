@@ -8,7 +8,7 @@ Two-part review dispatched to sub-agents. Traceability runs first — its approv
 
 ---
 
-## A. Cycle Management
+## A. Cycle Initialization
 
 Check the `review_cycle` field in the manifest:
 ```bash
@@ -17,10 +17,14 @@ node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planni
 
 #### If `review_cycle` is missing or not set
 
-Set `review_cycle: 1` in the manifest:
+Set `review_cycle` to 1 in the manifest:
 ```bash
 node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planning.{topic} review_cycle 1
 ```
+
+Record the current cycle number — passed to both review agents for tracking file naming (`c{N}`).
+
+→ Proceed to **C. Traceability Review**.
 
 #### If `review_cycle` is already set
 
@@ -31,51 +35,98 @@ node .claude/skills/workflow-manifest/scripts/manifest.js set {work_unit}.planni
 
 Record the current cycle number — passed to both review agents for tracking file naming (`c{N}`).
 
-→ Proceed to **B. Traceability Review**.
+→ Proceed to **B. Cycle Gate**.
 
 ---
 
-## B. Traceability Review
+## B. Cycle Gate
 
-1. Load **[invoke-review-traceability.md](invoke-review-traceability.md)** and follow its instructions as written.
+Check `finding_gate_mode` via manifest CLI:
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planning.{topic} finding_gate_mode
+```
+
+#### If `review_cycle` <= 3
+
+→ Proceed to **C. Traceability Review**.
+
+#### If `review_cycle` > 3 and `finding_gate_mode` is `auto`
+
+Auto mode is active — pass through to review. Section E's safety cap (cycle 5) handles escalation.
+
+→ Proceed to **C. Traceability Review**.
+
+#### If `review_cycle` > 3 and `finding_gate_mode` is `gated` (or not set)
+
+> *Output the next fenced block as a code block:*
+
+```
+Review cycle {N}
+
+Review has run {N-1} times so far. You can continue (recommended if issues
+were still found last cycle) or skip to completion.
+```
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+· · · · · · · · · · · ·
+Continue with review?
+
+- **`p`/`proceed`** — Continue review
+- **`s`/`skip`** — Skip review, proceed to completion
+· · · · · · · · · · · ·
+```
+
+**STOP.** Wait for user response.
+
+**If `proceed`:**
+
+→ Proceed to **C. Traceability Review**.
+
+**If `skip`:**
+
+→ Proceed to **F. Completion**.
+
+---
+
+## C. Traceability Review
+
+→ Load **[invoke-review-traceability.md](invoke-review-traceability.md)** and follow its instructions as written.
 
 > **CHECKPOINT**: Do not proceed until the agent has returned its result.
 
-2. On receipt of result, load **[process-review-findings.md](process-review-findings.md)** and follow its instructions as written.
+→ Load **[process-review-findings.md](process-review-findings.md)** and follow its instructions as written.
 
-→ Proceed to **C. Plan Integrity Review**.
+→ Proceed to **D. Plan Integrity Review**.
 
 ---
 
-## C. Plan Integrity Review
+## D. Plan Integrity Review
 
-1. Load **[invoke-review-integrity.md](invoke-review-integrity.md)** and follow its instructions as written.
+→ Load **[invoke-review-integrity.md](invoke-review-integrity.md)** and follow its instructions as written.
 
 > **CHECKPOINT**: Do not proceed until the agent has returned its result.
 
-2. On receipt of result, load **[process-review-findings.md](process-review-findings.md)** and follow its instructions as written.
+→ Load **[process-review-findings.md](process-review-findings.md)** and follow its instructions as written.
 
-→ Proceed to **D. Re-Loop Prompt**.
+→ Proceed to **E. Re-Loop Prompt**.
 
 ---
 
-## D. Re-Loop Prompt
+## E. Re-Loop Prompt
 
-#### If no findings were surfaced in this cycle
-
-→ Proceed to **E. Completion**.
-
-#### If findings were surfaced
-
-Check `finding_gate_mode` and `review_cycle` in the manifest:
+Check `finding_gate_mode` and `review_cycle` via manifest CLI:
 ```bash
 node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planning.{topic} finding_gate_mode
 node .claude/skills/workflow-manifest/scripts/manifest.js get {work_unit}.planning.{topic} review_cycle
 ```
 
-#### If `finding_gate_mode: auto` and `review_cycle < 5`
+#### If no findings were surfaced in this cycle
 
-Announce (one line, no stop):
+→ Proceed to **F. Completion**.
+
+#### If `finding_gate_mode` is `auto` and `review_cycle` < 5
 
 > *Output the next fenced block as a code block:*
 
@@ -83,15 +134,17 @@ Announce (one line, no stop):
 Review cycle {N} complete — findings applied. Running follow-up cycle.
 ```
 
-→ Return to **A. Cycle Management**.
+→ Return to **A. Cycle Initialization**.
 
-#### If `finding_gate_mode: auto` and `review_cycle >= 5`
+#### If `finding_gate_mode` is `auto` and `review_cycle` >= 5
 
-Review has auto-cycled 5 times without converging. Escalating for human review.
+> *Output the next fenced block as a code block:*
 
-Present the gated re-loop prompt below.
+```
+Review cycle {N}
 
-#### If `finding_gate_mode: gated`
+Auto-review has not converged after 5 cycles — escalating for human review.
+```
 
 > *Output the next fenced block as a code block:*
 
@@ -114,17 +167,48 @@ Run another review round?
 
 **STOP.** Wait for user response.
 
-#### If `reanalyse`
+**If `reanalyse`:**
 
-→ Return to **A. Cycle Management** to begin a fresh cycle.
+→ Return to **A. Cycle Initialization**.
 
-#### If `proceed`
+**If `proceed`:**
 
-→ Proceed to **E. Completion**.
+→ Proceed to **F. Completion**.
+
+#### If `finding_gate_mode` is `gated`
+
+> *Output the next fenced block as a code block:*
+
+```
+Fixes applied this cycle may have shifted dependencies, introduced gaps,
+or affected other tasks. A follow-up round reviews the corrected plan
+with fresh context — 2-3 cycles typically surface anything cascading.
+```
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+· · · · · · · · · · · ·
+Run another review round?
+
+- **`r`/`reanalyse`** — Run another round (traceability + integrity)
+- **`p`/`proceed`** — Proceed to conclusion
+· · · · · · · · · · · ·
+```
+
+**STOP.** Wait for user response.
+
+**If `reanalyse`:**
+
+→ Return to **A. Cycle Initialization**.
+
+**If `proceed`:**
+
+→ Proceed to **F. Completion**.
 
 ---
 
-## E. Completion
+## F. Completion
 
 1. **Verify tracking files are marked complete** — All traceability and integrity tracking files across all cycles must have `status: complete`.
 
@@ -138,4 +222,4 @@ Run another review round?
 Plan review complete — {N} cycle(s), all tracking files finalised.
 ```
 
-→ Return to **[the skill](../SKILL.md)** for **Step 9**.
+→ Return to caller.

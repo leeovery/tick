@@ -4,15 +4,44 @@
 
 ---
 
-Manage an in-progress work unit's lifecycle. Self-contained four-step flow. Uses the numbered in-progress items already displayed by the caller.
+Manage an in-progress work unit's lifecycle. Self-contained four-step flow.
 
 ## A. Select
+
+> *Output the next fenced block as a code block:*
+
+```
+Manage
+
+@if(feature_count > 0)
+Features:
+@foreach(unit in features.work_units)
+  {N}. {unit.name:(titlecase)}
+@endforeach
+@endif
+
+@if(bugfix_count > 0)
+Bugfixes:
+@foreach(unit in bugfixes.work_units)
+  {N}. {unit.name:(titlecase)}
+@endforeach
+@endif
+
+@if(epic_count > 0)
+Epics:
+@foreach(unit in epics.work_units)
+  {N}. {unit.name:(titlecase)}
+@endforeach
+@endif
+```
+
+Build from discovery output. Only show sections that have work units. Numbering is continuous across sections — same numbers as the overview.
 
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
 · · · · · · · · · · · ·
-Which work unit would you like to manage? (enter number from list above, or **`b`/`back`** to return)
+Select a work unit (enter number, or **`b`/`back`** to return):
 · · · · · · · · · · · ·
 ```
 
@@ -26,7 +55,7 @@ Which work unit would you like to manage? (enter number from list above, or **`b
 
 Store the selected work unit.
 
-→ Proceed to **B. Implementation Check**.
+→ Proceed to **B. Pre-Checks**.
 
 ## B. Pre-Checks
 
@@ -57,7 +86,7 @@ node .claude/skills/workflow-manifest/scripts/manifest.js exists {selected.name}
 ## C. Completion Check
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.js get {selected.name}.implementation.* status
+node .claude/skills/workflow-manifest/scripts/manifest.js get '{selected.name}.implementation.*' status
 ```
 
 This returns all topic statuses in the implementation phase.
@@ -109,7 +138,7 @@ node .claude/skills/workflow-manifest/scripts/manifest.js set {selected.name} st
 "{selected.name:(titlecase)}" marked as completed.
 ```
 
-→ Return to caller to redisplay main view (re-run discovery, re-render from top).
+→ Return to caller.
 
 #### If user chose `p`/`pivot`
 
@@ -136,7 +165,7 @@ Invoke the `/continue-epic` skill. This is terminal — do not return to the cal
 
 **If user chose `b`/`back`:**
 
-→ Return to caller to redisplay main view (re-run discovery, re-render from top).
+→ Return to caller.
 
 #### If user chose `v`/`view-plan`
 
@@ -156,7 +185,7 @@ node .claude/skills/workflow-manifest/scripts/manifest.js set {selected.name} st
 "{selected.name:(titlecase)}" marked as cancelled.
 ```
 
-→ Return to caller to redisplay main view (re-run discovery, re-render from top).
+→ Return to caller.
 
 #### If user chose `b`/`back`
 
@@ -164,4 +193,6 @@ node .claude/skills/workflow-manifest/scripts/manifest.js set {selected.name} st
 
 #### If user asked a question
 
-Answer the question, then redisplay the action menu (section D).
+Answer the question.
+
+→ Return to **D. Action Menu**.

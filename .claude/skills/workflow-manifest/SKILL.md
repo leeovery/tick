@@ -126,7 +126,7 @@ node .claude/skills/workflow-manifest/scripts/manifest.js get <name>.specificati
 **Wildcard topic** (3 segments, `*` as topic):
 ```bash
 # Collect status from all topics in a phase
-node .claude/skills/workflow-manifest/scripts/manifest.js get <name>.discussion.* status
+node .claude/skills/workflow-manifest/scripts/manifest.js get '<name>.discussion.*' status
 ```
 
 Output is a JSON array of `{topic, value}` objects:
@@ -243,6 +243,17 @@ node .claude/skills/workflow-manifest/scripts/manifest.js push <name>.implementa
 node .claude/skills/workflow-manifest/scripts/manifest.js push <name>.review.{topic} reviewed_tasks "{topic}-1-1"
 ```
 
+### `key-of`
+
+Find the key in an object whose value matches. Useful for reverse lookups — e.g., finding an internal ID from an external ID in `task_map`.
+
+```bash
+# Find internal ID from external ID
+node .claude/skills/workflow-manifest/scripts/manifest.js key-of <name>.planning.<topic> task_map {external_id}
+```
+
+Output: the matching key to stdout (e.g., `portal-1-1`). Errors if the value is not found or the path is not an object.
+
 ### `exists`
 
 Check whether a work unit, field, or phase entry exists. Always exits 0 — both `true` and `false` are valid results. Outputs `true` or `false` to stdout, nothing to stderr.
@@ -262,8 +273,8 @@ node .claude/skills/workflow-manifest/scripts/manifest.js exists <name>.discussi
 node .claude/skills/workflow-manifest/scripts/manifest.js exists <name>.discussion.auth-flow status
 
 # Wildcard: does any topic in the phase have this field?
-node .claude/skills/workflow-manifest/scripts/manifest.js exists <name>.discussion.*
-node .claude/skills/workflow-manifest/scripts/manifest.js exists <name>.discussion.* status
+node .claude/skills/workflow-manifest/scripts/manifest.js exists '<name>.discussion.*'
+node .claude/skills/workflow-manifest/scripts/manifest.js exists '<name>.discussion.*' status
 ```
 
 If the work unit doesn't exist and a deeper path is requested, outputs `false` (no error). Actual usage errors (missing args, invalid phase name) still use `die()`.
@@ -278,16 +289,16 @@ The CLI validates structural values to prevent invalid state:
 |--------------------------------|------------------------------------------|
 | `work_type`                    | `epic`, `feature`, `bugfix`              |
 | `status` (work unit)           | `in-progress`, `completed`, `cancelled`  |
-| `phases.research.status`       | `in-progress`, `completed`               |
-| `phases.discussion.status`     | `in-progress`, `completed`               |
-| `phases.investigation.status`  | `in-progress`, `completed`               |
-| `phases.specification.status`  | `in-progress`, `completed`, `superseded` |
-| `phases.planning.status`       | `in-progress`, `completed`               |
-| `phases.implementation.status` | `in-progress`, `completed`               |
-| `phases.review.status`         | `in-progress`, `completed`               |
+| Item `status` (research)       | `in-progress`, `completed`               |
+| Item `status` (discussion)     | `in-progress`, `completed`               |
+| Item `status` (investigation)  | `in-progress`, `completed`               |
+| Item `status` (specification)  | `in-progress`, `completed`, `superseded` |
+| Item `status` (planning)       | `in-progress`, `completed`               |
+| Item `status` (implementation) | `in-progress`, `completed`               |
+| Item `status` (review)         | `in-progress`, `completed`               |
 | Gate modes (`*_gate_mode`)     | `gated`, `auto`                          |
 
-Item-level statuses within epic phases follow the same phase-level rules.
+Status is always tracked at the item level (`phases.{phase}.items.{topic}.status`), never at the phase level.
 
 ## Output Conventions
 
