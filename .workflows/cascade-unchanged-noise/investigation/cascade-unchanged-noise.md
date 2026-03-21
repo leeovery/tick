@@ -116,10 +116,34 @@ This isn't a regression — it's original behavior that proves problematic at sc
 
 ## Fix Direction
 
-*To be completed after findings review.*
+### Chosen Approach
 
----
+Remove the unchanged collection and rendering entirely. Clean deletion of the feature — no new behavior, no flags, no conditional logic.
 
-## Notes
+1. Remove the unchanged collection loop in `buildCascadeResult()` (lines 117-135)
+2. Remove `UnchangedEntry` type and `Unchanged` field from `CascadeResult`
+3. Remove unchanged rendering from all three formatters
+4. Update tests to remove unchanged assertions
 
-*Additional observations during investigation.*
+**Deciding factor:** Unchanged entries carry no actionable information. If a task didn't change, there's nothing to report.
+
+### Options Explored
+
+Only one approach considered — full removal. Alternatives like verbose-flag gating or keeping the JSON array for backwards compat were discussed and dismissed. No backwards compat needed for a v0 tool.
+
+### Discussion
+
+Straightforward fix. User confirmed no backwards compatibility concerns. The unchanged feature was well-intentioned but adds noise that scales with hierarchy depth.
+
+### Testing Recommendations
+
+- Update `TestBuildCascadeResult` — remove "it collects unchanged terminal descendants recursively" and "it populates ParentID on unchanged entries for direct children" subtests
+- Update formatter cascade tests — remove `Unchanged` fields from test inputs, remove assertions on unchanged rendering
+- Verify remaining cascade tests still pass with unchanged removal
+- Add a test confirming that terminal siblings are NOT included in cascade output
+
+### Risk Assessment
+
+- **Fix complexity:** Low — pure deletion
+- **Regression risk:** Low — removing output, not changing state logic
+- **Recommended approach:** Regular release
