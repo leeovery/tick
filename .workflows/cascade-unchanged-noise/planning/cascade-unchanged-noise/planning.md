@@ -3,7 +3,8 @@
 ## Phases
 
 ### Phase 1: Remove unchanged cascade output
-status: draft
+status: approved
+approved_at: 2026-03-21
 
 **Goal**: Eliminate the "unchanged" feature from cascade output — remove the type, collection logic, rendering in all three formatters, and associated tests — then add a negative-case test confirming terminal siblings no longer appear in cascade output.
 
