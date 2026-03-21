@@ -24,5 +24,4 @@ approved_at: 2026-03-21
 
 | Internal ID | Name | Edge Cases |
 |-------------|------|------------|
-| cascade-unchanged-noise-1-1 | Add negative-case test confirming terminal siblings excluded from cascade output | terminal child with done status, terminal child with cancelled status |
-| cascade-unchanged-noise-1-2 | Remove UnchangedEntry type and all unchanged collection and rendering | pretty formatter tree node count with only cascaded entries, JSON output no longer includes unchanged key, empty cascade result still renders correctly |
+| cascade-unchanged-noise-1-1 | Remove UnchangedEntry type and all unchanged collection and rendering, with negative-case test | terminal child with done status excluded, terminal child with cancelled status excluded, pretty formatter tree node count with only cascaded entries, JSON output no longer includes unchanged key, empty cascade result still renders correctly |

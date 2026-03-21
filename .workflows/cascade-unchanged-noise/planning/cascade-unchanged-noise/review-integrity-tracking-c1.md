@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-21
 cycle: 1
 phase: Plan Integrity Review
@@ -34,7 +34,7 @@ Task 1-2 (tick-f9cb01): "Remove UnchangedEntry type and all unchanged collection
 **Proposed**:
 Remove Task 1-1 as a standalone task. Merge its content into Task 1-2 (which becomes the sole task in the phase). See Finding 2 for the updated Task 1-2 content.
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**: If the user prefers to keep two tasks, Task 1 needs restructuring so the test passes on current code (e.g., asserting the current behavior, then Task 2 rewrites it). But that adds unnecessary churn. Merging is cleaner.
 
 ---
@@ -277,7 +277,7 @@ Planning.md phase acceptance criteria update -- add the negative-case test crite
 - [ ] `go vet ./...` and full test suite `go test ./...` pass with no failures
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**: This finding is paired with Finding 1. Together they propose collapsing from 2 tasks to 1 task. The internal ID changes from cascade-unchanged-noise-1-2 to cascade-unchanged-noise-1-1 (renumbered as sole task). The tick task management entries (tick-4b03c8 removed, tick-f9cb01 becomes the sole child of tick-dcb013) would need updating by the orchestrator.
 
 ---
