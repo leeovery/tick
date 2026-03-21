@@ -37,8 +37,13 @@
           "author_gate_mode": "gated",
           "finding_gate_mode": "gated",
           "phase": 1,
-          "task": "cascade-unchanged-noise-1-1",
-          "task_map": {}
+          "task": "cascade-unchanged-noise-1-2",
+          "task_map": {
+            "cascade-unchanged-noise-1-1": "tick-4b03c8",
+            "cascade-unchanged-noise-1": "tick-dcb013",
+            "cascade-unchanged-noise": "tick-4db2a3"
+          },
+          "external_id": "tick-4db2a3"
         }
       },
       "format": "tick"
