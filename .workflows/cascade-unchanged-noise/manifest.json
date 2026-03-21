@@ -44,7 +44,8 @@
             "cascade-unchanged-noise": "tick-4db2a3",
             "cascade-unchanged-noise-1-2": "tick-f9cb01"
           },
-          "external_id": "tick-4db2a3"
+          "external_id": "tick-4db2a3",
+          "review_cycle": 1
         }
       },
       "format": "tick"
