@@ -57,23 +57,60 @@ The `buildCascadeResult` function actively collects terminal descendants that we
 
 ### Code Trace
 
-*To be completed during analysis phase.*
+**Entry point:**
+`internal/cli/transition.go:14` — `RunTransition()` handles `start`, `done`, `cancel`, `reopen` commands.
+
+**Execution path:**
+1. `transition.go:37` — `sm.ApplyUserTransition()` returns `result` + `cascades`
+2. `transition.go:42-44` — If cascades exist, calls `buildCascadeResult(id, title, result, cascades, tasks)`
+3. `transition.go:66-138` — `buildCascadeResult()` constructs `CascadeResult`:
+   - Lines 92-108: Builds `Cascaded` entries from actual cascade changes
+   - Lines 110-115: Builds `involvedIDs` set (primary + all cascaded tasks)
+   - **Lines 117-135: THE BUG** — Iterates ALL tasks, finds children of involved tasks that are terminal (done/cancelled) and not in the cascade set, adds them to `cr.Unchanged`
+4. `helpers.go:102-108` — `outputTransitionOrCascade()` routes to `FormatCascadeTransition()`
+5. Each formatter renders unchanged entries:
+   - `toon_formatter.go:154-156` — `{id}: {status} (unchanged)`
+   - `pretty_formatter.go:224-231` — Tree node with `(unchanged)` label
+   - `json_formatter.go:304-310` — `unchanged` array in JSON output
+
+**Key files involved:**
+- `internal/cli/transition.go` — `buildCascadeResult()` actively collects unchanged entries
+- `internal/cli/format.go` — `CascadeResult.Unchanged []UnchangedEntry` and `UnchangedEntry` type
+- `internal/cli/toon_formatter.go` — Renders unchanged lines
+- `internal/cli/pretty_formatter.go` — Renders unchanged in tree
+- `internal/cli/json_formatter.go` — Renders unchanged array
+- `internal/cli/cascade_formatter_test.go` — Tests validate unchanged rendering
+- `internal/cli/helpers_test.go` — Tests `outputTransitionOrCascade`
 
 ### Root Cause
 
-*To be completed during analysis phase.*
+The unchanged collection is **intentional code, not a bug in logic**. Lines 117-135 of `buildCascadeResult()` deliberately walk descendants of involved tasks and collect terminal ones that weren't cascaded. This was a design decision — the feature was built to show what *didn't* change alongside what did.
+
+The problem is that this design decision produces noisy output. The unchanged entries carry no actionable information — if a task didn't change, there's nothing the user needs to know or act on.
 
 ### Contributing Factors
 
-*To be completed during analysis phase.*
+- The `Unchanged` field and `UnchangedEntry` type are baked into the `CascadeResult` struct, meaning all formatters must handle them
+- Tests actively validate unchanged collection and rendering, reinforcing the behavior as "correct"
+- The feature was likely added for completeness/transparency, but in practice the noise outweighs the signal
 
 ### Why It Wasn't Caught
 
-*To be completed during analysis phase.*
+This isn't a regression — it's original behavior that proves problematic at scale. Small hierarchies (1-2 unchanged) are tolerable; the issue becomes apparent with deeper trees where unchanged entries outnumber real transitions.
 
 ### Blast Radius
 
-*To be completed during analysis phase.*
+**Directly affected:**
+- `internal/cli/transition.go` — `buildCascadeResult()` unchanged collection loop
+- `internal/cli/format.go` — `CascadeResult` struct, `UnchangedEntry` type
+- `internal/cli/toon_formatter.go` — Unchanged rendering
+- `internal/cli/pretty_formatter.go` — Unchanged tree rendering
+- `internal/cli/json_formatter.go` — Unchanged JSON rendering
+- `internal/cli/cascade_formatter_test.go` — Tests asserting unchanged behavior
+- `internal/cli/helpers_test.go` — Related integration tests
+
+**Potentially affected:**
+- Any external consumers parsing JSON output that depend on the `unchanged` array (unlikely but possible)
 
 ---
 
