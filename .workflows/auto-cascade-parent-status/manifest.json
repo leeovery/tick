@@ -16,9 +16,13 @@
       "items": {
         "auto-cascade-parent-status": {
           "status": "completed",
-          "type": "feature",
           "review_cycle": 4,
-          "finding_gate_mode": "gated"
+          "finding_gate_mode": "gated",
+          "sources": {
+            "auto-cascade-parent-status": {
+              "status": "incorporated"
+            }
+          }
         }
       }
     },

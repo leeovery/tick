@@ -61,31 +61,79 @@
       "items": {
         "blocked-ancestor-ready": {
           "status": "completed",
-          "type": "feature",
           "review_cycle": 1,
-          "finding_gate_mode": "gated"
+          "finding_gate_mode": "gated",
+          "sources": {
+            "blocked-ancestor-ready": {
+              "status": "incorporated"
+            }
+          }
         },
         "doctor-validation": {
           "status": "completed",
-          "type": "feature"
+          "sources": {
+            "doctor-command-validation": {
+              "status": "incorporated"
+            }
+          }
         },
         "installation": {
           "status": "completed",
-          "type": "feature"
+          "sources": {
+            "installation-options": {
+              "status": "incorporated"
+            }
+          }
         },
         "migration": {
           "status": "completed",
-          "type": "feature"
+          "sources": {
+            "migration-subcommand": {
+              "status": "incorporated"
+            }
+          }
         },
         "task-removal": {
           "status": "completed",
-          "type": "feature",
           "review_cycle": 3,
-          "finding_gate_mode": "gated"
+          "finding_gate_mode": "gated",
+          "sources": {
+            "task-removal": {
+              "status": "incorporated"
+            }
+          }
         },
         "tick-core": {
           "status": "completed",
-          "type": "feature"
+          "sources": {
+            "project-fundamentals": {
+              "status": "incorporated"
+            },
+            "data-schema-design": {
+              "status": "incorporated"
+            },
+            "freshness-dual-write": {
+              "status": "incorporated"
+            },
+            "id-format-implementation": {
+              "status": "incorporated"
+            },
+            "hierarchy-dependency-model": {
+              "status": "incorporated"
+            },
+            "cli-command-structure-ux": {
+              "status": "incorporated"
+            },
+            "toon-output-format": {
+              "status": "incorporated"
+            },
+            "tui": {
+              "status": "incorporated"
+            },
+            "task-scoping-by-plan": {
+              "status": "incorporated"
+            }
+          }
         }
       }
     },

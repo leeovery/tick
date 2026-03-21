@@ -16,7 +16,6 @@
       "items": {
         "rule6-parent-reopen-auto-flag": {
           "status": "completed",
-          "type": "feature",
           "review_cycle": 2,
           "finding_gate_mode": "gated",
           "date": "2026-03-12",

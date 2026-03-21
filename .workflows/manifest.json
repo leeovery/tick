@@ -1,0 +1,22 @@
+{
+  "work_units": {
+    "auto-cascade-parent-status": {
+      "work_type": "feature"
+    },
+    "cache-schema-versioning": {
+      "work_type": "bugfix"
+    },
+    "cli-enhancements": {
+      "work_type": "feature"
+    },
+    "rule6-parent-reopen-auto-flag": {
+      "work_type": "bugfix"
+    },
+    "unknown-flags-silently-ignored": {
+      "work_type": "bugfix"
+    },
+    "v1": {
+      "work_type": "epic"
+    }
+  }
+}
