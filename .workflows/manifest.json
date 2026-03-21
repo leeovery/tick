@@ -17,6 +17,9 @@
     },
     "v1": {
       "work_type": "epic"
+    },
+    "cascade-unchanged-noise": {
+      "work_type": "bugfix"
     }
   }
 }
