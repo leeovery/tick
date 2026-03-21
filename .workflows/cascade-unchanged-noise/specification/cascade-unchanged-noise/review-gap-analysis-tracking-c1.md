@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-21
 cycle: 1
 phase: Gap Analysis
@@ -28,8 +28,8 @@ An implementer following only the Testing section as written would miss breaking
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Testing section expanded to enumerate all affected test files and nature of changes.
 
 ---
 
@@ -44,8 +44,8 @@ The Fix section says to remove the unchanged collection loop at lines 117-135. H
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Line range updated from 117-135 to 110-135 in Fix item 1.
 
 ---
 
@@ -62,5 +62,5 @@ Affected test files: `cascade_formatter_test.go`, `format_test.go`, `transition_
 
 **Proposed Addition**:
 
-**Resolution**: Pending
-**Notes**: This is closely related to Finding 1 but concerns the Fix section rather than Testing. The Fix section's numbered file list reads as exhaustive but isn't.
+**Resolution**: Approved
+**Notes**: Test files added as items 6-8 in the Fix section's numbered list.

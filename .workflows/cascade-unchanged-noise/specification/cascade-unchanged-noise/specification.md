@@ -35,16 +35,25 @@ tick-18747f: in_progress → done (auto)
 
 Remove the unchanged feature entirely. No flags, no conditional logic — clean deletion.
 
-1. **`internal/cli/transition.go`** — Remove the unchanged collection loop in `buildCascadeResult()` (lines 117–135)
+1. **`internal/cli/transition.go`** — Remove the `involvedIDs` map (lines 110–115) and the unchanged collection loop (lines 117–135) in `buildCascadeResult()` — the map exists solely to support the loop and becomes dead code without it
 2. **`internal/cli/format.go`** — Remove `UnchangedEntry` type and `Unchanged` field from `CascadeResult`
 3. **`internal/cli/toon_formatter.go`** — Remove unchanged rendering
 4. **`internal/cli/pretty_formatter.go`** — Remove unchanged tree rendering
 5. **`internal/cli/json_formatter.go`** — Remove unchanged array from JSON output
+6. **`internal/cli/cascade_formatter_test.go`** — Remove/update tests referencing `Unchanged`/`UnchangedEntry`
+7. **`internal/cli/format_test.go`** — Remove `Unchanged` fields from test constructions
+8. **`internal/cli/transition_test.go`** — Remove/rewrite unchanged integration test
 
 ### Testing
 
-- Remove subtests in `TestBuildCascadeResult` that assert unchanged collection ("it collects unchanged terminal descendants recursively", "it populates ParentID on unchanged entries for direct children")
-- Remove `Unchanged` fields from formatter cascade test inputs and assertions on unchanged rendering
+Affected test files and required changes:
+
+- **`internal/cli/cascade_formatter_test.go`** — Remove subtests that assert unchanged collection ("it collects unchanged terminal descendants recursively", "it populates ParentID on unchanged entries for direct children"). Remove `Unchanged` fields from `CascadeResult` construction in remaining test cases and remove assertions on unchanged rendering (~8 additional cases including "it renders mixed cascaded and unchanged children", "it renders unchanged terminal grandchildren in tree", JSON unchanged array assertions, "all formatters handle both empty cascaded and unchanged").
+- **`internal/cli/transition_test.go`** — Remove or rewrite "it includes unchanged terminal children in cascade output" integration test. This can become the negative-case test confirming terminal siblings are NOT included in cascade output.
+- **`internal/cli/format_test.go`** — Update `TestCascadeResultStruct` and `FormatCascadeTransition` tests that construct `CascadeResult` with `Unchanged` fields — remove those fields and related assertions.
+- **`internal/cli/helpers_test.go`** — Uses `buildCascadeResult` but does not assert on `Unchanged` directly; should compile cleanly after type changes with no modifications needed.
+
+Additional:
 - Add a test confirming terminal siblings are NOT included in cascade output
 - Verify all remaining cascade tests pass
 
