@@ -1,0 +1,16 @@
+{
+  "name": "cascade-unchanged-noise",
+  "work_type": "bugfix",
+  "status": "in-progress",
+  "created": "2026-03-21",
+  "description": "Cascade output includes unchanged terminal tasks as noise, burying real transitions",
+  "phases": {
+    "investigation": {
+      "items": {
+        "cascade-unchanged-noise": {
+          "status": "in-progress"
+        }
+      }
+    }
+  }
+}
