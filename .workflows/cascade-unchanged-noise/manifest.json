@@ -32,7 +32,7 @@
         "cascade-unchanged-noise": {
           "status": "in-progress",
           "format": "tick",
-          "spec_commit": "db3e7b8531af91419a93e878630c0ffac906a7de",
+          "spec_commit": "a5ef589689aabff9201e32a2262852c269d740ac",
           "task_list_gate_mode": "gated",
           "author_gate_mode": "gated",
           "finding_gate_mode": "gated",
