@@ -94,6 +94,16 @@
           "command": "gofmt -l ./internal ./cmd"
         }
       ]
+    },
+    "review": {
+      "items": {
+        "cascade-unchanged-noise": {
+          "status": "in-progress",
+          "reviewed_tasks": [
+            "cascade-unchanged-noise-1-1"
+          ]
+        }
+      }
     }
   }
 }
