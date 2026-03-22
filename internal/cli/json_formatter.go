@@ -271,22 +271,14 @@ type jsonCascadeEntry struct {
 	To    string `json:"to"`
 }
 
-// jsonUnchangedEntry represents an unchanged task in cascade JSON output.
-type jsonUnchangedEntry struct {
-	ID     string `json:"id"`
-	Title  string `json:"title"`
-	Status string `json:"status"`
-}
-
 // jsonCascadeResult represents the full cascade result in JSON output.
 type jsonCascadeResult struct {
 	Transition jsonCascadeTransition `json:"transition"`
 	Cascaded   []jsonCascadeEntry    `json:"cascaded"`
-	Unchanged  []jsonUnchangedEntry  `json:"unchanged"`
 }
 
 // FormatCascadeTransition renders a cascade transition as structured JSON.
-// cascaded and unchanged are always [] not null.
+// cascaded is always [] not null.
 func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) string {
 	if result.TaskID == "" {
 		return ""
@@ -301,23 +293,13 @@ func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) string {
 		})
 	}
 
-	unchanged := make([]jsonUnchangedEntry, 0, len(result.Unchanged))
-	for _, u := range result.Unchanged {
-		unchanged = append(unchanged, jsonUnchangedEntry{
-			ID:     u.ID,
-			Title:  u.Title,
-			Status: u.Status,
-		})
-	}
-
 	return marshalIndentJSON(jsonCascadeResult{
 		Transition: jsonCascadeTransition{
 			ID:   result.TaskID,
 			From: result.OldStatus,
 			To:   result.NewStatus,
 		},
-		Cascaded:  cascaded,
-		Unchanged: unchanged,
+		Cascaded: cascaded,
 	})
 }
 

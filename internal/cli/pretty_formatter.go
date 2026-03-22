@@ -203,8 +203,7 @@ func (f *PrettyFormatter) FormatCascadeTransition(result CascadeResult) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s: %s \u2192 %s", result.TaskID, result.OldStatus, result.NewStatus)
 
-	totalEntries := len(result.Cascaded) + len(result.Unchanged)
-	if totalEntries == 0 {
+	if len(result.Cascaded) == 0 {
 		return b.String()
 	}
 
@@ -221,23 +220,11 @@ func (f *PrettyFormatter) FormatCascadeTransition(result CascadeResult) string {
 		nodes[c.ID] = n
 		orderedIDs = append(orderedIDs, c.ID)
 	}
-	for _, u := range result.Unchanged {
-		n := &cascadeNode{
-			id:   u.ID,
-			text: fmt.Sprintf("%s %q: %s (unchanged)", u.ID, u.Title, u.Status),
-		}
-		nodes[u.ID] = n
-		orderedIDs = append(orderedIDs, u.ID)
-	}
-
 	// Build tree: attach children to parents.
 	var roots []*cascadeNode
 	parentIDOf := make(map[string]string)
 	for _, c := range result.Cascaded {
 		parentIDOf[c.ID] = c.ParentID
-	}
-	for _, u := range result.Unchanged {
-		parentIDOf[u.ID] = u.ParentID
 	}
 
 	for _, id := range orderedIDs {

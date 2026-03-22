@@ -511,40 +511,6 @@ func TestTransitionCommands(t *testing.T) {
 		}
 	})
 
-	t.Run("it includes unchanged terminal children in cascade output", func(t *testing.T) {
-		// Parent with one open child and one done child.
-		// Cancel parent: open child cascades, done child is unchanged.
-		closedAt := now
-		parentTask := task.Task{
-			ID: "tick-ppp111", Title: "Parent task", Status: task.StatusInProgress,
-			Priority: 2, Created: now, Updated: now,
-		}
-		openChild := task.Task{
-			ID: "tick-ccc111", Title: "Open child", Status: task.StatusOpen,
-			Priority: 2, Parent: "tick-ppp111",
-			Created: now, Updated: now,
-		}
-		doneChild := task.Task{
-			ID: "tick-ccc222", Title: "Done child", Status: task.StatusDone,
-			Priority: 2, Parent: "tick-ppp111",
-			Created: now, Updated: now, Closed: &closedAt,
-		}
-		dir, _ := setupTickProjectWithTasks(t, []task.Task{parentTask, openChild, doneChild})
-
-		stdout, _, exitCode := runTransition(t, dir, "cancel", "tick-ppp111")
-		if exitCode != 0 {
-			t.Fatalf("exit code = %d, want 0", exitCode)
-		}
-
-		// Should contain the unchanged done child
-		if !strings.Contains(stdout, "tick-ccc222") {
-			t.Errorf("stdout should contain unchanged child ID tick-ccc222, got %q", stdout)
-		}
-		if !strings.Contains(stdout, "unchanged") {
-			t.Errorf("stdout should contain 'unchanged' marker, got %q", stdout)
-		}
-	})
-
 	t.Run("it renders upward cascade entries flat not nested", func(t *testing.T) {
 		// 3-level hierarchy: grandparent > parent > child.
 		// Starting child should cascade parent and grandparent to in_progress.
@@ -616,6 +582,45 @@ func TestTransitionCommands(t *testing.T) {
 				t.Errorf("cascade entry %s: ParentID = %q, want %q (primary task ID for flat rendering)",
 					entry.ID, entry.ParentID, "tick-ccc111")
 			}
+		}
+	})
+
+	t.Run("it excludes terminal siblings from cascade output", func(t *testing.T) {
+		// Parent with one open child and one already-done child.
+		// Cancel parent: open child cascades, done child must NOT appear in output.
+		closedAt := now
+		parentTask := task.Task{
+			ID: "tick-ppp111", Title: "Parent task", Status: task.StatusInProgress,
+			Priority: 2, Created: now, Updated: now,
+		}
+		openChild := task.Task{
+			ID: "tick-ccc111", Title: "Open child", Status: task.StatusOpen,
+			Priority: 2, Parent: "tick-ppp111",
+			Created: now, Updated: now,
+		}
+		doneChild := task.Task{
+			ID: "tick-ccc222", Title: "Done child", Status: task.StatusDone,
+			Priority: 2, Parent: "tick-ppp111",
+			Created: now, Updated: now, Closed: &closedAt,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parentTask, openChild, doneChild})
+
+		stdout, _, exitCode := runTransition(t, dir, "cancel", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		// The already-done child should NOT appear in cascade output
+		if strings.Contains(stdout, "tick-ccc222") {
+			t.Errorf("stdout should NOT contain terminal sibling tick-ccc222, got %q", stdout)
+		}
+		if strings.Contains(stdout, "unchanged") {
+			t.Errorf("stdout should NOT contain 'unchanged' marker, got %q", stdout)
+		}
+
+		// The cascaded child should still appear
+		if !strings.Contains(stdout, "tick-ccc111") {
+			t.Errorf("stdout should contain cascaded child tick-ccc111, got %q", stdout)
 		}
 	})
 

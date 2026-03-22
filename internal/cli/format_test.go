@@ -384,9 +384,6 @@ func TestCascadeTypes(t *testing.T) {
 			Cascaded: []CascadeEntry{
 				{ID: "tick-def456", Title: "Child", OldStatus: "open", NewStatus: "in_progress"},
 			},
-			Unchanged: []UnchangedEntry{
-				{ID: "tick-789abc", Title: "Done child", Status: "done"},
-			},
 		}
 		for _, f := range formatters {
 			_ = f.FormatCascadeTransition(result)
@@ -437,9 +434,6 @@ func TestCascadeResultStruct(t *testing.T) {
 				{ID: "tick-111111", Title: "Child 1", OldStatus: "open", NewStatus: "in_progress"},
 				{ID: "tick-222222", Title: "Child 2", OldStatus: "open", NewStatus: "in_progress"},
 			},
-			Unchanged: []UnchangedEntry{
-				{ID: "tick-333333", Title: "Done child", Status: "done"},
-			},
 		}
 		if result.TaskID != "tick-abc123" {
 			t.Errorf("TaskID = %q, want %q", result.TaskID, "tick-abc123")
@@ -458,12 +452,6 @@ func TestCascadeResultStruct(t *testing.T) {
 		}
 		if result.Cascaded[0].ID != "tick-111111" {
 			t.Errorf("Cascaded[0].ID = %q, want %q", result.Cascaded[0].ID, "tick-111111")
-		}
-		if len(result.Unchanged) != 1 {
-			t.Errorf("Unchanged length = %d, want 1", len(result.Unchanged))
-		}
-		if result.Unchanged[0].Status != "done" {
-			t.Errorf("Unchanged[0].Status = %q, want %q", result.Unchanged[0].Status, "done")
 		}
 	})
 }

@@ -136,23 +136,14 @@ type CascadeEntry struct {
 	NewStatus string
 }
 
-// UnchangedEntry holds a terminal child that was not affected by a cascade.
-type UnchangedEntry struct {
-	ID       string
-	Title    string
-	ParentID string
-	Status   string
-}
-
 // CascadeResult holds all data needed to render a cascade transition:
-// the primary transition, cascaded changes, and unchanged terminal children.
+// the primary transition and cascaded changes.
 type CascadeResult struct {
 	TaskID    string
 	TaskTitle string
 	OldStatus string
 	NewStatus string
 	Cascaded  []CascadeEntry
-	Unchanged []UnchangedEntry
 }
 
 // Formatter defines the interface for rendering CLI output in different formats.
