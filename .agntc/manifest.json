@@ -1,8 +1,8 @@
 {
   "leeovery/agentic-workflows": {
-    "ref": null,
-    "commit": "5c6b69f6f24386dcc5c6274904f7f77ce7d342b8",
-    "installedAt": "2026-03-21T22:26:04.725Z",
+    "ref": "v0.1.0",
+    "commit": "af08b7f2c02e36be7babe72710658a7687f201b7",
+    "installedAt": "2026-03-25T17:56:54.180Z",
     "agents": [
       "claude"
     ],
@@ -185,6 +185,7 @@
       ".claude/skills/workflow-migrate/scripts/migrations/032-promote-cross-cutting-specs.sh",
       ".claude/skills/workflow-migrate/scripts/migrations/033-rename-inbox-to-dotinbox.sh",
       ".claude/skills/workflow-migrate/scripts/migrations/034-show-clear-context-on-plan-accept.sh",
+      ".claude/skills/workflow-migrate/scripts/migrations/035-phase-to-project-defaults.sh",
       ".claude/skills/workflow-planning-entry/",
       ".claude/skills/workflow-planning-entry/SKILL.md",
       ".claude/skills/workflow-planning-entry/references/",
@@ -365,6 +366,7 @@
       ".claude/agents/workflow-specification-review-gap-analysis.md",
       ".claude/agents/workflow-specification-review-input.md"
     ],
-    "cloneUrl": "https://github.com/leeovery/agentic-workflows.git"
+    "cloneUrl": "https://github.com/leeovery/agentic-workflows.git",
+    "constraint": "^0.1.0"
   }
 }
