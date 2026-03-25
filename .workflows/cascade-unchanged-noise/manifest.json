@@ -46,8 +46,7 @@
           "external_id": "tick-4db2a3",
           "review_cycle": 2
         }
-      },
-      "format": "tick"
+      }
     },
     "implementation": {
       "items": {
@@ -80,20 +79,7 @@
             1
           ]
         }
-      },
-      "project_skills": [
-        ".claude/skills/golang-pro"
-      ],
-      "linters": [
-        {
-          "name": "go vet",
-          "command": "go vet ./..."
-        },
-        {
-          "name": "gofmt",
-          "command": "gofmt -l ./internal ./cmd"
-        }
-      ]
+      }
     },
     "review": {
       "items": {
