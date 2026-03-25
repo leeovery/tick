@@ -20,6 +20,9 @@
     },
     "cascade-unchanged-noise": {
       "work_type": "bugfix"
+    },
+    "dep-tree-visualization": {
+      "work_type": "feature"
     }
   }
 }

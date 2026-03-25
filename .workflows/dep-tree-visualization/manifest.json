@@ -1,0 +1,16 @@
+{
+  "name": "dep-tree-visualization",
+  "work_type": "feature",
+  "status": "in-progress",
+  "created": "2026-03-25",
+  "description": "Render dependency graphs as ASCII trees in the terminal, showing upstream blockers and downstream unblocks",
+  "phases": {
+    "discussion": {
+      "items": {
+        "dep-tree-visualization": {
+          "status": "in-progress"
+        }
+      }
+    }
+  }
+}
