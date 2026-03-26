@@ -27,7 +27,7 @@ This is purely a presentation concern — no data model changes needed. The form
       - Should dep tree include parent/child relationships alongside dependency edges?
       - Combined view vs separate views
       - Risk of noise in deeply nested projects
-- [ ] How should edge cases be handled?
+- [x] How should edge cases be handled?
       - Tasks with no dependencies
       - Very wide or very deep graphs
       - Terminal width constraints
@@ -141,5 +141,36 @@ Tasks have two relationship types: parent/child (decomposition) and dependencies
 Parent/child and dependencies have different semantics — decomposition vs ordering. Mixing them in one tree creates ambiguity (is B under A because A blocks B, or because B is a child of A?). Considered annotating parent info inline (e.g., `(child of tick-a1b2)`) but parent hierarchies can be multiple levels deep, making annotations messy and noisy.
 
 The command is `tick dependency tree` — it shows dependencies. Parent/child hierarchy visualization is a separate feature if ever needed.
+
+---
+
+## How should edge cases be handled?
+
+### Decision
+All edge cases handled naturally by the rendering approach — no special design needed:
+
+- **Task with no dependencies** (focused mode): Show the task itself with "No dependencies."
+- **No dependencies in project** (full graph mode): "No dependencies found."
+- **Very wide graphs** (task blocked by many): Vertical list with indentation, terminal handles fine.
+- **Very deep graphs** (long chains): Indentation at 2-3 chars per level stays manageable. Tick projects won't realistically hit problematic depths.
+- **Terminal width**: Truncate titles to fit available width after indentation + ID + status.
+
+---
+
+## Summary
+
+### Key Insights
+1. The dependency tree is purely a presentation feature — no data model changes
+2. `tick dependency tree` extends an existing subcommand pattern, not a new convention
+3. Dependencies and parent/child are different relationship types and should not be mixed
+4. All three formatter implementations needed — toon edge-list format is useful for agent consumption
+
+### Current State
+- All questions resolved
+- Command shape, rendering, formatter integration, hierarchy scope, and edge cases decided
+
+### Next Steps
+- [ ] Specification
+- [ ] Implementation
 
 ---
