@@ -16,7 +16,7 @@ This is purely a presentation concern — no data model changes needed. The form
       - Subcommand name and arguments
       - Direction control: upstream vs downstream vs both
       - Default behavior when no direction specified
-- [ ] How should the tree be rendered?
+- [x] How should the tree be rendered?
       - ASCII art style and characters
       - How to show task status, priority, and other metadata inline
       - Handling of circular or complex graph structures
@@ -70,5 +70,33 @@ Key realisation: the command should work with and without an ID argument. No ID 
 2. **Focused view** (`tick dependency tree <id>`) — walks both directions from the target task. "Blocked by" section walks upstream (what blocks me, what blocks those). "Blocks" section walks downstream (what I unblock, what those unblock). Full transitive depth — no artificial cap.
 
 **Open question:** Whether tasks with zero dependencies should appear in the full graph. Leaning towards omitting them (they're not interesting in a dependency view) but feels slightly incomplete. Parking this — will revisit after seeing it in practice.
+
+---
+
+## How should the tree be rendered?
+
+### Context
+Need to decide on visual style, what info to show per task, and how to handle DAG structures (diamond dependencies where a task is blocked by multiple paths).
+
+### Options Considered
+
+**Inline metadata — what to show per task:**
+- Full: ID + title + status + priority + type — too noisy
+- Moderate: ID + title + status + priority — priority irrelevant in dependency context
+- Minimal: ID + title + status — the actionable info
+
+**Diamond dependencies (task blocked by multiple paths):**
+- Deduplicate with back-references like `(→ see above)` — adds complexity
+- Show once, flatten — loses graph structure
+- Just duplicate — show the task wherever it appears in the graph
+
+### Decision
+**Rendering style:** Box-drawing characters (`├──`, `└──`, `│`) for pretty format.
+
+**Inline metadata:** ID + title (truncated) + status. Priority is orthogonal to dependencies — it doesn't help you understand what's blocking what.
+
+**Diamond dependencies:** Just duplicate. If a task appears in multiple places in the graph, show it in all of them. No special markers or back-references. It's a visualization, not a normalized data store.
+
+**Depth:** Full transitive — walk the entire chain, no artificial cap.
 
 ---
