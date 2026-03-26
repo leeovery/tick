@@ -20,7 +20,7 @@ This is purely a presentation concern — no data model changes needed. The form
       - ASCII art style and characters
       - How to show task status, priority, and other metadata inline
       - Handling of circular or complex graph structures
-- [ ] How should this integrate with the existing formatter system?
+- [x] How should this integrate with the existing formatter system?
       - New method on `Formatter` interface vs standalone renderer
       - What each format (toon/pretty/JSON) should output
 - [ ] What about the parent/child hierarchy?
@@ -98,5 +98,34 @@ Need to decide on visual style, what info to show per task, and how to handle DA
 **Diamond dependencies:** Just duplicate. If a task appears in multiple places in the graph, show it in all of them. No special markers or back-references. It's a visualization, not a normalized data store.
 
 **Depth:** Full transitive — walk the entire chain, no artificial cap.
+
+---
+
+## How should this integrate with the existing formatter system?
+
+### Context
+The `Formatter` interface has 8 methods, with three implementations (toon, pretty, JSON). Every command output goes through this system. Question is whether the dep tree should too.
+
+### Options Considered
+
+**Option A: New method on `Formatter` interface**
+- Pros: Consistent with every other command, all three formats get representations, maintains the contract
+- Cons: Three implementations to write
+
+**Option B: Standalone renderer, bypass `Formatter`**
+- Pros: Simpler if only pretty output is needed
+- Cons: Breaks the formatter contract, inconsistent with the rest of the CLI
+
+### Journey
+Initially considered whether toon and JSON were even needed for a tree visualization. The pretty format is the obvious human-facing output. But toon is the format agents consume — a flat edge list (`dep_tree[3]{from,to}:`) is trivial to parse and actually useful for agents reasoning about dependency chains. JSON similarly — a structured graph representation is arguably more useful than pretty for tooling/scripting. The toon and JSON implementations are also simpler than pretty (no box-drawing logic — just dump edges or nested structure).
+
+### Decision
+**Option A: New method on `Formatter` interface.** All three formats implemented:
+
+- **Pretty:** Box-drawing tree with ID + title + status per line. Full graph mode shows root tasks with what they block. Focused mode walks both directions. Summary line at bottom.
+- **Toon:** Flat edge list in standard toon format — `dep_tree[N]{from,to}:` with one edge per line. Machine-parseable.
+- **JSON:** Structured graph — nodes array + edges array, or nested object mirroring the tree structure. TBD on exact shape during implementation.
+
+Consistency wins. Every command goes through the formatter, this one should too.
 
 ---
