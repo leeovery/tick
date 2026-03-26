@@ -23,7 +23,7 @@ This is purely a presentation concern — no data model changes needed. The form
 - [x] How should this integrate with the existing formatter system?
       - New method on `Formatter` interface vs standalone renderer
       - What each format (toon/pretty/JSON) should output
-- [ ] What about the parent/child hierarchy?
+- [x] What about the parent/child hierarchy?
       - Should dep tree include parent/child relationships alongside dependency edges?
       - Combined view vs separate views
       - Risk of noise in deeply nested projects
@@ -127,5 +127,19 @@ Initially considered whether toon and JSON were even needed for a tree visualiza
 - **JSON:** Structured graph — nodes array + edges array, or nested object mirroring the tree structure. TBD on exact shape during implementation.
 
 Consistency wins. Every command goes through the formatter, this one should too.
+
+---
+
+## What about the parent/child hierarchy?
+
+### Context
+Tasks have two relationship types: parent/child (decomposition) and dependencies (ordering). Should the dep tree mix them?
+
+### Decision
+**Dependencies only. No parent/child relationships, no parent annotations.**
+
+Parent/child and dependencies have different semantics — decomposition vs ordering. Mixing them in one tree creates ambiguity (is B under A because A blocks B, or because B is a child of A?). Considered annotating parent info inline (e.g., `(child of tick-a1b2)`) but parent hierarchies can be multiple levels deep, making annotations messy and noisy.
+
+The command is `tick dependency tree` — it shows dependencies. Parent/child hierarchy visualization is a separate feature if ever needed.
 
 ---
