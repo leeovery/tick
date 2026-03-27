@@ -38,11 +38,12 @@
           "finding_gate_mode": "gated",
           "review_cycle": 0,
           "phase": 1,
-          "task": "dep-tree-visualization-1-3",
+          "task": "dep-tree-visualization-1-4",
           "task_map": {
             "dep-tree-visualization-1-1": "tick-38bd4e",
             "dep-tree-visualization-1": "tick-7f41cf",
-            "dep-tree-visualization-1-2": "tick-7b6419"
+            "dep-tree-visualization-1-2": "tick-7b6419",
+            "dep-tree-visualization-1-3": "tick-8d0709"
           },
           "external_id": "tick-86603c"
         }
