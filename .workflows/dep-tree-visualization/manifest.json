@@ -78,7 +78,8 @@
           "current_phase": 1,
           "current_task": "~",
           "completed_tasks": [
-            "dep-tree-visualization-1-1"
+            "dep-tree-visualization-1-1",
+            "dep-tree-visualization-1-2"
           ]
         }
       }
