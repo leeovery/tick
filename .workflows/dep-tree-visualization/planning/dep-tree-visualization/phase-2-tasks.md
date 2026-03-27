@@ -81,7 +81,7 @@
 
 **Problem**: The `JSONFormatter.FormatDepTree` is a stub returning `""`. The JSON format is used for debugging and programmatic consumption, and needs a structured representation of the dependency tree. Without this implementation, `tick dep tree` and `tick dep tree <id>` produce empty output when the `--json` flag is used.
 
-**Solution**: Implement `FormatDepTree` on `JSONFormatter` in `internal/cli/json_formatter.go`. Use the nested tree structure (mirroring the `DepTreeResult` data model) rather than a flat nodes+edges representation, since the tree is already built by the graph algorithm. For full-graph mode, output a JSON object with `mode`, `roots` (nested tree), `chains`, `longest`, and `blocked`. For focused mode, output a JSON object with `mode`, `target`, `blocked_by` (upstream tree), and `blocks` (downstream tree). Empty arrays render as `[]` not `null`, following the existing JSON formatter convention. Asymmetric focused views include both keys but render the empty direction as `[]`.
+**Solution**: Implement `FormatDepTree` on `JSONFormatter` in `internal/cli/json_formatter.go`. Use the nested tree structure (mirroring the `DepTreeResult` data model) rather than a flat nodes+edges representation, since the tree is already built by the graph algorithm. For full-graph mode, output a JSON object with `mode`, `roots` (nested tree), `chains`, `longest`, and `blocked`. For focused mode, output a JSON object with `mode`, `target`, `blocked_by` (upstream tree), and `blocks` (downstream tree). Empty arrays render as `[]` not `null`, following the existing JSON formatter convention. Asymmetric focused views omit the empty direction's key from the JSON object entirely, matching the spec's "Only show sections that have content" rule. Use conditional marshalling -- only include `blocked_by` when non-empty, only include `blocks` when non-empty.
 
 **Outcome**: `JSONFormatter.FormatDepTree` produces valid, well-structured JSON output for both modes. All arrays are `[]` not `null`. Diamond dependencies appear as duplicate nodes in the nested tree. The output follows existing JSON formatter conventions (snake_case keys, 2-space indent, `json.MarshalIndent`).
 
@@ -110,8 +110,8 @@
    type jsonDepTreeFocused struct {
        Mode      string             `json:"mode"`
        Target    jsonDepTreeTask    `json:"target"`
-       BlockedBy []jsonDepTreeNode  `json:"blocked_by"`
-       Blocks    []jsonDepTreeNode  `json:"blocks"`
+       BlockedBy []jsonDepTreeNode  `json:"blocked_by,omitempty"`
+       Blocks    []jsonDepTreeNode  `json:"blocks,omitempty"`
    }
    ```
 2. **`internal/cli/json_formatter.go`** -- Implement a helper function `toJSONDepTreeNodes(nodes []DepTreeNode) []jsonDepTreeNode` that recursively converts `[]DepTreeNode` to `[]jsonDepTreeNode`. For each node, convert `node.Task` to `jsonDepTreeTask` and recursively convert `node.Children`. Critically, always initialize `Children` as `make([]jsonDepTreeNode, 0)` for leaf nodes to ensure JSON serialization produces `[]` not `null`.
@@ -122,9 +122,9 @@
      c. Return `marshalIndentJSON(obj)`.
    - **Focused mode** (`result.Mode == "focused"`):
      a. Convert `result.Target` to `jsonDepTreeTask`.
-     b. Convert `result.BlockedBy` to `[]jsonDepTreeNode` via `toJSONDepTreeNodes`. If nil or empty, use `make([]jsonDepTreeNode, 0)` to ensure `[]` in JSON.
-     c. Convert `result.Blocks` to `[]jsonDepTreeNode` via `toJSONDepTreeNodes`. Same nil-safety.
-     d. Build `jsonDepTreeFocused{Mode: "focused", Target: target, BlockedBy: blockedBy, Blocks: blocks}`.
+     b. Convert `result.BlockedBy` to `[]jsonDepTreeNode` via `toJSONDepTreeNodes` if non-empty, otherwise leave as nil.
+     c. Convert `result.Blocks` to `[]jsonDepTreeNode` via `toJSONDepTreeNodes` if non-empty, otherwise leave as nil.
+     d. Build `jsonDepTreeFocused{Mode: "focused", Target: target, BlockedBy: blockedBy, Blocks: blocks}`. The `BlockedBy` and `Blocks` fields use `json:"blocked_by,omitempty"` and `json:"blocks,omitempty"` tags so empty directions are omitted from JSON output.
      e. Return `marshalIndentJSON(obj)`.
 
 4. **`internal/cli/json_formatter_test.go`** -- Add a `TestJSONFormatDepTree` test function with subtests. Parse output with `json.Unmarshal` into `map[string]interface{}` to verify structure, following the existing JSON test pattern.
@@ -134,8 +134,9 @@
 - [ ] Focused mode outputs valid JSON with `mode`, `target`, `blocked_by`, `blocks` keys
 - [ ] All keys use snake_case (no camelCase)
 - [ ] Empty `roots` in full graph mode renders as `[]` not `null`
-- [ ] Empty `blocked_by` or `blocks` in focused mode renders as `[]` not `null`
-- [ ] Leaf node `children` renders as `[]` not `null`
+- [ ] Asymmetric focused view omits the empty direction key from JSON output entirely (key absent, not `[]`)
+- [ ] Leaf node `children` renders as `[]` not `null` (children is always present on nodes)
+- [ ] Empty `roots` in full graph mode renders as `[]` not `null`
 - [ ] Diamond dependencies appear as duplicate nodes in the nested tree structure
 - [ ] Output uses 2-space indentation via `marshalIndentJSON`
 - [ ] All output is valid JSON parseable by `json.Unmarshal`
@@ -148,15 +149,15 @@
 - `"it renders leaf children as [] not null"` -- A blocks B (B is leaf): B's `children` in JSON must be `[]` not `null`
 - `"it duplicates diamond dependency nodes in tree"` -- A->B->D, A->C->D: root A has children B and C; B has child D, C also has child D. Both D nodes present in parsed JSON.
 - `"it renders focused mode with both directions"` -- B in chain A->B->C: JSON has `mode: "focused"`, `target` with B's info, `blocked_by` array with A tree, `blocks` array with C tree
-- `"it renders focused blocked_by as [] when only downstream"` -- root task A blocking B: `blocked_by` is `[]`, `blocks` has content
-- `"it renders focused blocks as [] when only upstream"` -- leaf task C blocked by B: `blocks` is `[]`, `blocked_by` has content
+- `"it omits blocked_by key when only downstream exists"` -- root task A blocking B: JSON has no `blocked_by` key, `blocks` has content
+- `"it omits blocks key when only upstream exists"` -- leaf task C blocked by B: JSON has no `blocks` key, `blocked_by` has content
 - `"it uses snake_case for all keys"` -- parse JSON, verify no camelCase keys like `blockedBy` or `chainCount`
 - `"it renders target task with id, title, status"` -- focused mode target has exactly these three fields
 - `"it produces valid 2-space indented JSON"` -- output contains `\n  ` indentation patterns
 
 **Edge Cases**:
 - Diamond dependencies produce duplicate nodes in tree: since `DepTreeNode` trees already contain duplicated nodes, the JSON conversion preserves this duplication. Task D appearing under both B and C in the tree will appear as two separate node objects in the JSON output.
-- Asymmetric focused view: unlike the toon format which omits empty sections, the JSON format always includes both `blocked_by` and `blocks` keys, rendering the empty direction as `[]`. This follows the existing JSON convention where arrays are always present (e.g., `blocked_by` and `children` in `FormatTaskDetail` are always `[]` not omitted). The spec says "omits empty arrays" for focused view, but this should be interpreted as "empty arrays render as `[]`" to maintain JSON structural consistency. This is noted as an ambiguity -- the spec's phrasing "Asymmetric focused view omits empty arrays" could mean either "omit the key" or "render as empty array". Given the project's strong convention of always including array keys (never omitting them), we render as `[]`.
+- Asymmetric focused view: the spec says "Only show sections that have content." For JSON focused mode, this means omitting the `blocked_by` key entirely when there are no upstream dependencies, and omitting the `blocks` key when there are no downstream dependencies. Use `omitempty` JSON struct tags on the `BlockedBy` and `Blocks` fields of `jsonDepTreeFocused`. Note: this differs from the full-graph `roots` field and node `children` fields which are always present (rendered as `[]` not `null`) because those are structural elements, not directional sections.
 - Empty arrays render as `[]` not `null`: the `toJSONDepTreeNodes` helper must initialize slices with `make([]T, 0)` rather than leaving them as nil, since Go's `json.Marshal` renders nil slices as `null`. This matches the pattern in `toJSONRelated` and `FormatTaskList`.
 
 **Context**:

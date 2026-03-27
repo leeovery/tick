@@ -179,8 +179,8 @@ With:
    }
 ```
 
-**Resolution**: Pending
-**Notes**: The existing codebase convention of always including array keys (e.g., blocked_by in FormatTaskDetail) is noted but the spec's explicit "Only show sections that have content" directive for the asymmetric focused view should take precedence. The spec's "Exact shape determined during implementation" for JSON grants latitude on structure but the asymmetric omission rule is a cross-format edge case requirement, not a JSON-specific design choice. If the user prefers to keep both keys as [] for JSON consistency, they can reject this finding.
+**Resolution**: Fixed
+**Notes**: Applied omitempty to jsonDepTreeFocused struct, updated tests and edge cases. The existing codebase convention of always including array keys (e.g., blocked_by in FormatTaskDetail) is noted but the spec's explicit "Only show sections that have content" directive for the asymmetric focused view should take precedence. The spec's "Exact shape determined during implementation" for JSON grants latitude on structure but the asymmetric omission rule is a cross-format edge case requirement, not a JSON-specific design choice. If the user prefers to keep both keys as [] for JSON consistency, they can reject this finding.
 
 ---
 

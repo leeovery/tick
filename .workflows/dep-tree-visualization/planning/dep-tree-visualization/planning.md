@@ -49,4 +49,4 @@ approved_at: 2026-03-27
 | ID | Task | Edge Cases |
 |----|------|------------|
 | dep-tree-visualization-2-1 | ToonFormatter FormatDepTree | diamond dependencies produce duplicate edges, asymmetric focused view omits empty section, wide graph with many edges |
-| dep-tree-visualization-2-2 | JSONFormatter FormatDepTree | diamond dependencies produce duplicate nodes in tree, asymmetric focused view omits empty arrays, empty arrays render as [] not null |
+| dep-tree-visualization-2-2 | JSONFormatter FormatDepTree | diamond dependencies produce duplicate nodes in tree, asymmetric focused view omits empty key from JSON object, empty arrays for non-omitted keys render as [] not null |
