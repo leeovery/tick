@@ -303,8 +303,100 @@ func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) string {
 	})
 }
 
-// FormatDepTree returns an empty string (stub).
-func (f *JSONFormatter) FormatDepTree(_ DepTreeResult) string { return "" }
+// jsonDepTreeTask represents a task in dep tree JSON output.
+type jsonDepTreeTask struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Status string `json:"status"`
+}
+
+// jsonDepTreeNode represents a node in the dep tree with nested children.
+type jsonDepTreeNode struct {
+	Task     jsonDepTreeTask   `json:"task"`
+	Children []jsonDepTreeNode `json:"children"`
+}
+
+// jsonDepTreeFull represents the full graph mode JSON output.
+type jsonDepTreeFull struct {
+	Mode    string            `json:"mode"`
+	Roots   []jsonDepTreeNode `json:"roots"`
+	Chains  int               `json:"chains"`
+	Longest int               `json:"longest"`
+	Blocked int               `json:"blocked"`
+}
+
+// jsonDepTreeFocused represents the focused mode JSON output.
+// BlockedBy and Blocks use omitempty to omit empty directions entirely.
+type jsonDepTreeFocused struct {
+	Mode      string            `json:"mode"`
+	Target    jsonDepTreeTask   `json:"target"`
+	BlockedBy []jsonDepTreeNode `json:"blocked_by,omitempty"`
+	Blocks    []jsonDepTreeNode `json:"blocks,omitempty"`
+}
+
+// toJSONDepTreeNodes recursively converts []DepTreeNode to []jsonDepTreeNode.
+// Leaf nodes get an empty non-nil children slice to render as [] not null.
+func toJSONDepTreeNodes(nodes []DepTreeNode) []jsonDepTreeNode {
+	result := make([]jsonDepTreeNode, 0, len(nodes))
+	for _, n := range nodes {
+		result = append(result, jsonDepTreeNode{
+			Task: jsonDepTreeTask{
+				ID:     n.Task.ID,
+				Title:  n.Task.Title,
+				Status: n.Task.Status,
+			},
+			Children: toJSONDepTreeNodes(n.Children),
+		})
+	}
+	return result
+}
+
+// FormatDepTree renders a dependency tree as structured JSON.
+// Full graph: {mode, roots, chains, longest, blocked}.
+// Focused: {mode, target, blocked_by?, blocks?} with omitempty on directions.
+func (f *JSONFormatter) FormatDepTree(result DepTreeResult) string {
+	if result.Message != "" {
+		return marshalIndentJSON(jsonMessage{Message: result.Message})
+	}
+
+	if result.Target != nil {
+		return f.formatFocusedDepTreeJSON(result)
+	}
+	return f.formatFullDepTreeJSON(result)
+}
+
+// formatFullDepTreeJSON renders the full graph as nested JSON.
+func (f *JSONFormatter) formatFullDepTreeJSON(result DepTreeResult) string {
+	return marshalIndentJSON(jsonDepTreeFull{
+		Mode:    "full",
+		Roots:   toJSONDepTreeNodes(result.Roots),
+		Chains:  result.ChainCount,
+		Longest: result.LongestChain,
+		Blocked: result.BlockedCount,
+	})
+}
+
+// formatFocusedDepTreeJSON renders focused mode as JSON with optional directions.
+func (f *JSONFormatter) formatFocusedDepTreeJSON(result DepTreeResult) string {
+	obj := jsonDepTreeFocused{
+		Mode: "focused",
+		Target: jsonDepTreeTask{
+			ID:     result.Target.ID,
+			Title:  result.Target.Title,
+			Status: result.Target.Status,
+		},
+	}
+
+	if len(result.BlockedBy) > 0 {
+		obj.BlockedBy = toJSONDepTreeNodes(result.BlockedBy)
+	}
+
+	if len(result.Blocks) > 0 {
+		obj.Blocks = toJSONDepTreeNodes(result.Blocks)
+	}
+
+	return marshalIndentJSON(obj)
+}
 
 // marshalIndentJSON marshals v as 2-space indented JSON.
 // Returns "null" on marshal failure (should not happen with controlled types).

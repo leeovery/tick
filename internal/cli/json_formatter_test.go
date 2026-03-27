@@ -1018,3 +1018,456 @@ func TestJSONFormatter(t *testing.T) {
 		}
 	})
 }
+
+func TestJSONFormatDepTree(t *testing.T) {
+	f := &JSONFormatter{}
+
+	t.Run("it renders full graph mode as structured JSON", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Child", Status: "open"}},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 1,
+			BlockedCount: 1,
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		if parsed["mode"] != "full" {
+			t.Errorf("mode = %v, want %q", parsed["mode"], "full")
+		}
+		if parsed["chains"] != float64(1) {
+			t.Errorf("chains = %v, want 1", parsed["chains"])
+		}
+		if parsed["longest"] != float64(1) {
+			t.Errorf("longest = %v, want 1", parsed["longest"])
+		}
+		if parsed["blocked"] != float64(1) {
+			t.Errorf("blocked = %v, want 1", parsed["blocked"])
+		}
+
+		roots, ok := parsed["roots"].([]interface{})
+		if !ok {
+			t.Fatalf("roots should be array, got %T: %v", parsed["roots"], parsed["roots"])
+		}
+		if len(roots) != 1 {
+			t.Fatalf("roots length = %d, want 1", len(roots))
+		}
+
+		root := roots[0].(map[string]interface{})
+		rootTask, ok := root["task"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("root.task should be object, got %T", root["task"])
+		}
+		if rootTask["id"] != "tick-aaa111" {
+			t.Errorf("root task id = %v, want %q", rootTask["id"], "tick-aaa111")
+		}
+
+		children, ok := root["children"].([]interface{})
+		if !ok {
+			t.Fatalf("root.children should be array, got %T", root["children"])
+		}
+		if len(children) != 1 {
+			t.Fatalf("root.children length = %d, want 1", len(children))
+		}
+
+		child := children[0].(map[string]interface{})
+		childTask := child["task"].(map[string]interface{})
+		if childTask["id"] != "tick-bbb222" {
+			t.Errorf("child task id = %v, want %q", childTask["id"], "tick-bbb222")
+		}
+	})
+
+	t.Run("it renders multi-level chain in full graph", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+					Children: []DepTreeNode{
+						{
+							Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "in_progress"},
+							Children: []DepTreeNode{
+								{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "done"}},
+							},
+						},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 2,
+			BlockedCount: 2,
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		roots := parsed["roots"].([]interface{})
+		root := roots[0].(map[string]interface{})
+		level1 := root["children"].([]interface{})
+		if len(level1) != 1 {
+			t.Fatalf("level 1 children = %d, want 1", len(level1))
+		}
+		child1 := level1[0].(map[string]interface{})
+		level2 := child1["children"].([]interface{})
+		if len(level2) != 1 {
+			t.Fatalf("level 2 children = %d, want 1", len(level2))
+		}
+		grandchild := level2[0].(map[string]interface{})
+		gcTask := grandchild["task"].(map[string]interface{})
+		if gcTask["id"] != "tick-ccc333" {
+			t.Errorf("grandchild id = %v, want %q", gcTask["id"], "tick-ccc333")
+		}
+		if gcTask["status"] != "done" {
+			t.Errorf("grandchild status = %v, want %q", gcTask["status"], "done")
+		}
+	})
+
+	t.Run("it renders roots as [] not null when empty", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots:        nil,
+			ChainCount:   0,
+			LongestChain: 0,
+			BlockedCount: 0,
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		roots, ok := parsed["roots"].([]interface{})
+		if !ok {
+			t.Fatalf("roots should be array (not null), got %T: %v", parsed["roots"], parsed["roots"])
+		}
+		if len(roots) != 0 {
+			t.Errorf("roots should be empty, got %d items", len(roots))
+		}
+	})
+
+	t.Run("it renders leaf children as [] not null", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Leaf", Status: "open"}},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 1,
+			BlockedCount: 1,
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		roots := parsed["roots"].([]interface{})
+		root := roots[0].(map[string]interface{})
+		children := root["children"].([]interface{})
+		leaf := children[0].(map[string]interface{})
+
+		leafChildren, ok := leaf["children"].([]interface{})
+		if !ok {
+			t.Fatalf("leaf children should be array (not null), got %T: %v", leaf["children"], leaf["children"])
+		}
+		if len(leafChildren) != 0 {
+			t.Errorf("leaf children should be empty, got %d items", len(leafChildren))
+		}
+	})
+
+	t.Run("it duplicates diamond dependency nodes in tree", func(t *testing.T) {
+		// A -> B, A -> C, B -> D, C -> D (D appears twice)
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+					Children: []DepTreeNode{
+						{
+							Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
+							Children: []DepTreeNode{
+								{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
+							},
+						},
+						{
+							Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"},
+							Children: []DepTreeNode{
+								{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
+							},
+						},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 2,
+			BlockedCount: 3,
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		roots := parsed["roots"].([]interface{})
+		root := roots[0].(map[string]interface{})
+		children := root["children"].([]interface{})
+		if len(children) != 2 {
+			t.Fatalf("root children = %d, want 2", len(children))
+		}
+
+		// B's children should contain D
+		b := children[0].(map[string]interface{})
+		bChildren := b["children"].([]interface{})
+		if len(bChildren) != 1 {
+			t.Fatalf("B children = %d, want 1", len(bChildren))
+		}
+		bChild := bChildren[0].(map[string]interface{})
+		bChildTask := bChild["task"].(map[string]interface{})
+		if bChildTask["id"] != "tick-ddd444" {
+			t.Errorf("B child id = %v, want %q", bChildTask["id"], "tick-ddd444")
+		}
+
+		// C's children should also contain D (duplicate)
+		c := children[1].(map[string]interface{})
+		cChildren := c["children"].([]interface{})
+		if len(cChildren) != 1 {
+			t.Fatalf("C children = %d, want 1", len(cChildren))
+		}
+		cChild := cChildren[0].(map[string]interface{})
+		cChildTask := cChild["task"].(map[string]interface{})
+		if cChildTask["id"] != "tick-ddd444" {
+			t.Errorf("C child id = %v, want %q", cChildTask["id"], "tick-ddd444")
+		}
+	})
+
+	t.Run("it renders focused mode with both directions", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-bbb222", Title: "Target", Status: "in_progress"},
+			BlockedBy: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-aaa111", Title: "Blocker", Status: "open"}},
+			},
+			Blocks: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-ccc333", Title: "Blocked", Status: "open"}},
+			},
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		if parsed["mode"] != "focused" {
+			t.Errorf("mode = %v, want %q", parsed["mode"], "focused")
+		}
+
+		target, ok := parsed["target"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("target should be object, got %T", parsed["target"])
+		}
+		if target["id"] != "tick-bbb222" {
+			t.Errorf("target id = %v, want %q", target["id"], "tick-bbb222")
+		}
+
+		blockedBy, ok := parsed["blocked_by"].([]interface{})
+		if !ok {
+			t.Fatalf("blocked_by should be array, got %T: %v", parsed["blocked_by"], parsed["blocked_by"])
+		}
+		if len(blockedBy) != 1 {
+			t.Fatalf("blocked_by length = %d, want 1", len(blockedBy))
+		}
+
+		blocks, ok := parsed["blocks"].([]interface{})
+		if !ok {
+			t.Fatalf("blocks should be array, got %T: %v", parsed["blocks"], parsed["blocks"])
+		}
+		if len(blocks) != 1 {
+			t.Fatalf("blocks length = %d, want 1", len(blocks))
+		}
+	})
+
+	t.Run("it omits blocked_by key when only downstream exists", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target:    &DepTreeTask{ID: "tick-aaa111", Title: "Root blocker", Status: "open"},
+			BlockedBy: nil,
+			Blocks: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-bbb222", Title: "Blocked", Status: "open"}},
+			},
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		if _, exists := parsed["blocked_by"]; exists {
+			t.Errorf("blocked_by should be omitted when empty, got %v", parsed["blocked_by"])
+		}
+
+		blocks, ok := parsed["blocks"].([]interface{})
+		if !ok {
+			t.Fatalf("blocks should be array, got %T: %v", parsed["blocks"], parsed["blocks"])
+		}
+		if len(blocks) != 1 {
+			t.Fatalf("blocks length = %d, want 1", len(blocks))
+		}
+	})
+
+	t.Run("it omits blocks key when only upstream exists", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-bbb222", Title: "Leaf", Status: "open"},
+			BlockedBy: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-aaa111", Title: "Blocker", Status: "done"}},
+			},
+			Blocks: nil,
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		if _, exists := parsed["blocks"]; exists {
+			t.Errorf("blocks should be omitted when empty, got %v", parsed["blocks"])
+		}
+
+		blockedBy, ok := parsed["blocked_by"].([]interface{})
+		if !ok {
+			t.Fatalf("blocked_by should be array, got %T: %v", parsed["blocked_by"], parsed["blocked_by"])
+		}
+		if len(blockedBy) != 1 {
+			t.Fatalf("blocked_by length = %d, want 1", len(blockedBy))
+		}
+	})
+
+	t.Run("it uses snake_case for all keys", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-bbb222", Title: "Target", Status: "open"},
+			BlockedBy: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-aaa111", Title: "Blocker", Status: "open"}},
+			},
+			Blocks: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-ccc333", Title: "Blocked", Status: "open"}},
+			},
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		// Expected keys
+		expectedKeys := []string{"mode", "target", "blocked_by", "blocks"}
+		for _, key := range expectedKeys {
+			if _, exists := parsed[key]; !exists {
+				t.Errorf("expected snake_case key %q not found", key)
+			}
+		}
+
+		// No camelCase keys
+		camelKeys := []string{"blockedBy", "BlockedBy", "Blocks", "Target", "Mode"}
+		for _, key := range camelKeys {
+			if _, exists := parsed[key]; exists {
+				t.Errorf("found non-snake_case key %q", key)
+			}
+		}
+
+		// Check full graph keys too
+		fullResult := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Child", Status: "open"}},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 1,
+			BlockedCount: 1,
+		})
+
+		var fullParsed map[string]interface{}
+		if err := json.Unmarshal([]byte(fullResult), &fullParsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, fullResult)
+		}
+
+		fullExpected := []string{"mode", "roots", "chains", "longest", "blocked"}
+		for _, key := range fullExpected {
+			if _, exists := fullParsed[key]; !exists {
+				t.Errorf("expected snake_case key %q not found in full graph", key)
+			}
+		}
+	})
+
+	t.Run("it renders target task with id, title, status", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-abc123", Title: "My target task", Status: "in_progress"},
+			Blocks: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-def456", Title: "Downstream", Status: "open"}},
+			},
+		})
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		target, ok := parsed["target"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("target should be object, got %T", parsed["target"])
+		}
+		if target["id"] != "tick-abc123" {
+			t.Errorf("target id = %v, want %q", target["id"], "tick-abc123")
+		}
+		if target["title"] != "My target task" {
+			t.Errorf("target title = %v, want %q", target["title"], "My target task")
+		}
+		if target["status"] != "in_progress" {
+			t.Errorf("target status = %v, want %q", target["status"], "in_progress")
+		}
+	})
+
+	t.Run("it produces valid 2-space indented JSON", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Child", Status: "open"}},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 1,
+			BlockedCount: 1,
+		})
+
+		// Must be valid JSON
+		if !json.Valid([]byte(result)) {
+			t.Fatalf("output is not valid JSON:\n%s", result)
+		}
+
+		// Must contain 2-space indentation
+		if !strings.Contains(result, "  \"mode\"") {
+			t.Errorf("expected 2-space indentation, got:\n%s", result)
+		}
+
+		// Must not contain tab indentation
+		if strings.Contains(result, "\t") {
+			t.Errorf("should not contain tab indentation, got:\n%s", result)
+		}
+	})
+}
