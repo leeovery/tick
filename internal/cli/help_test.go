@@ -131,13 +131,13 @@ func TestHelp(t *testing.T) {
 		}
 	})
 
-	t.Run("it shows <add|remove> in dep help text", func(t *testing.T) {
+	t.Run("it shows <add|remove|tree> in dep help text", func(t *testing.T) {
 		stdout, _, code := runHelp(t, "help", "dep")
 		if code != 0 {
 			t.Fatalf("exit code = %d, want 0", code)
 		}
-		if !strings.Contains(stdout, "<add|remove>") {
-			t.Errorf("stdout should contain '<add|remove>', got %q", stdout)
+		if !strings.Contains(stdout, "<add|remove|tree>") {
+			t.Errorf("stdout should contain '<add|remove|tree>', got %q", stdout)
 		}
 	})
 

@@ -303,6 +303,9 @@ func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) string {
 	})
 }
 
+// FormatDepTree returns an empty string (stub).
+func (f *JSONFormatter) FormatDepTree(_ DepTreeResult) string { return "" }
+
 // marshalIndentJSON marshals v as 2-space indented JSON.
 // Returns "null" on marshal failure (should not happen with controlled types).
 func marshalIndentJSON(v interface{}) string {

@@ -135,7 +135,7 @@ func TestFlagValidationAllCommands(t *testing.T) {
 	// Commands with no flags — every unknown flag must be rejected.
 	noFlagCommands := []string{
 		"init", "show", "start", "done", "cancel", "reopen",
-		"dep add", "dep remove", "note add", "note remove",
+		"dep add", "dep remove", "dep tree", "note add", "note remove",
 		"stats", "doctor", "rebuild",
 	}
 
@@ -188,7 +188,7 @@ func TestBlockedRejectsBlocked(t *testing.T) {
 
 func TestGlobalFlagsAcceptedOnAnyCommand(t *testing.T) {
 	globalFlags := []string{"--quiet", "-q", "--verbose", "-v", "--toon", "--pretty", "--json", "--help", "-h"}
-	commands := []string{"create", "list", "show", "dep add", "update", "remove", "ready", "blocked", "migrate", "start", "done", "cancel", "reopen", "init", "stats", "doctor", "rebuild", "note add", "note remove", "dep remove"}
+	commands := []string{"create", "list", "show", "dep add", "dep remove", "dep tree", "update", "remove", "ready", "blocked", "migrate", "start", "done", "cancel", "reopen", "init", "stats", "doctor", "rebuild", "note add", "note remove"}
 
 	for _, cmd := range commands {
 		for _, gf := range globalFlags {

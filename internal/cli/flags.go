@@ -73,6 +73,7 @@ var commandFlags = CommandFlags{
 	"reopen":      {},
 	"dep add":     {},
 	"dep remove":  {},
+	"dep tree":    {},
 	"note add":    {},
 	"note remove": {},
 	"remove": {

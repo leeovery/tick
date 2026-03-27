@@ -16,7 +16,7 @@ func (a *App) handleDep(fc FormatConfig, fmtr Formatter, subArgs []string) error
 	}
 
 	if len(subArgs) == 0 {
-		return fmt.Errorf("sub-command required. Usage: tick dep <add|remove> <task_id> <blocked_by_id>")
+		return fmt.Errorf("sub-command required. Usage: tick dep <add|remove|tree> <task_id> <blocked_by_id>")
 	}
 
 	subCmd := subArgs[0]
@@ -27,8 +27,10 @@ func (a *App) handleDep(fc FormatConfig, fmtr Formatter, subArgs []string) error
 		return RunDepAdd(dir, fc, fmtr, rest, a.Stdout)
 	case "remove":
 		return RunDepRemove(dir, fc, fmtr, rest, a.Stdout)
+	case "tree":
+		return RunDepTree(dir, fc, fmtr, rest, a.Stdout)
 	default:
-		return fmt.Errorf("unknown dep sub-command '%s'. Usage: tick dep <add|remove> <task_id> <blocked_by_id>", subCmd)
+		return fmt.Errorf("unknown dep sub-command '%s'. Usage: tick dep <add|remove|tree> <task_id> <blocked_by_id>", subCmd)
 	}
 }
 

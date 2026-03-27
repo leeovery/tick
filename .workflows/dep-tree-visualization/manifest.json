@@ -57,15 +57,29 @@
       "items": {
         "dep-tree-visualization": {
           "status": "in-progress",
-          "task_gate_mode": "gated",
+          "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
           "analysis_gate_mode": "gated",
           "fix_attempts": 0,
           "analysis_cycle": 0,
-          "linters": [],
-          "project_skills": [],
+          "linters": [
+            {
+              "name": "go vet",
+              "command": "go vet ./..."
+            },
+            {
+              "name": "gofmt",
+              "command": "gofmt -l ./internal ./cmd"
+            }
+          ],
+          "project_skills": [
+            ".claude/skills/golang-pro/SKILL.md"
+          ],
           "current_phase": 1,
-          "current_task": "~"
+          "current_task": "~",
+          "completed_tasks": [
+            "dep-tree-visualization-1-1"
+          ]
         }
       }
     }

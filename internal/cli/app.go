@@ -372,7 +372,7 @@ func qualifyCommand(subcmd string, subArgs []string) (string, []string) {
 	}
 	sub := subArgs[0]
 	switch sub {
-	case "add", "remove":
+	case "add", "remove", "tree":
 		return subcmd + " " + sub, subArgs[1:]
 	default:
 		return subcmd, subArgs

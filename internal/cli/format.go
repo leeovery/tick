@@ -146,6 +146,36 @@ type CascadeResult struct {
 	Cascaded  []CascadeEntry
 }
 
+// DepTreeTask holds the minimal task data needed for dependency tree rendering.
+type DepTreeTask struct {
+	ID     string
+	Title  string
+	Status string
+}
+
+// DepTreeNode represents a node in the dependency tree with its children.
+type DepTreeNode struct {
+	Task     DepTreeTask
+	Children []DepTreeNode
+}
+
+// DepTreeResult holds all data needed to render a dep tree command output.
+// For full graph mode: Roots contains the top-level trees, Summary is populated.
+// For focused mode: BlockedBy and Blocks contain upstream/downstream trees.
+type DepTreeResult struct {
+	// Full graph mode fields
+	Roots   []DepTreeNode
+	Summary string
+
+	// Focused mode fields
+	Target    *DepTreeTask
+	BlockedBy []DepTreeNode
+	Blocks    []DepTreeNode
+
+	// Message for edge cases (e.g., "No dependencies found.")
+	Message string
+}
+
 // Formatter defines the interface for rendering CLI output in different formats.
 // Concrete implementations (Toon, Pretty, JSON) are provided by tasks 4-2 through 4-4.
 type Formatter interface {
@@ -165,6 +195,8 @@ type Formatter interface {
 	FormatRemoval(result RemovalResult) string
 	// FormatCascadeTransition renders a status transition with cascaded child changes.
 	FormatCascadeTransition(result CascadeResult) string
+	// FormatDepTree renders a dependency tree visualization.
+	FormatDepTree(result DepTreeResult) string
 }
 
 // baseFormatter provides shared implementations of FormatTransition, FormatDepChange,
@@ -187,6 +219,9 @@ func (b *baseFormatter) FormatDepChange(action string, taskID string, depID stri
 
 // FormatCascadeTransition returns an empty string (stub for text-based formatters).
 func (b *baseFormatter) FormatCascadeTransition(_ CascadeResult) string { return "" }
+
+// FormatDepTree returns an empty string (stub for text-based formatters).
+func (b *baseFormatter) FormatDepTree(_ DepTreeResult) string { return "" }
 
 // FormatRemoval renders the result of a task removal as plain text.
 // One line per removed task as 'Removed {id} "{title}"', plus an optional
@@ -232,6 +267,9 @@ func (s *StubFormatter) FormatRemoval(_ RemovalResult) string { return "" }
 
 // FormatCascadeTransition returns an empty string (stub).
 func (s *StubFormatter) FormatCascadeTransition(_ CascadeResult) string { return "" }
+
+// FormatDepTree returns an empty string (stub).
+func (s *StubFormatter) FormatDepTree(_ DepTreeResult) string { return "" }
 
 // NewFormatter creates a Formatter for the given Format.
 func NewFormatter(f Format) Formatter {
