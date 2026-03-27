@@ -70,8 +70,8 @@ Context:
 > Diamond dependencies appear as duplicate DepTreeNode entries (no deduplication).
 ```
 
-**Resolution**: Pending
-**Notes**: The exact field names may vary slightly from what Task 1-1 implements, but this gives the implementer enough structural understanding to work independently.
+**Resolution**: Fixed
+**Notes**: Added context to both tick tasks. The exact field names may vary slightly from what Task 1-1 implements, but this gives the implementer enough structural understanding to work independently.
 
 ---
 
