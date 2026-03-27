@@ -2,10 +2,44 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/leeovery/tick/internal/task"
 )
+
+// treeStyle defines the box-drawing characters used by writeTree.
+type treeStyle struct {
+	mid       string // connector prefix for non-last siblings (e.g. "├── ")
+	last      string // connector prefix for last sibling (e.g. "└── ")
+	childMid  string // indentation prefix under non-last siblings (e.g. "│   ")
+	childLast string // indentation prefix under last sibling (e.g. "    ")
+}
+
+// writeTree renders a generic tree of nodes with box-drawing connectors.
+// Each node is preceded by a newline. renderLine writes the node content
+// (excluding the newline) given the writer, node, combined prefix, and depth.
+// getChildren returns the child nodes for recursion.
+func writeTree[T any](w io.Writer, nodes []T, prefix string, depth int, style treeStyle, renderLine func(io.Writer, T, string, int), getChildren func(T) []T) {
+	for i, node := range nodes {
+		isLast := i == len(nodes)-1
+		connector := style.mid
+		if isLast {
+			connector = style.last
+		}
+		fmt.Fprint(w, "\n")
+		renderLine(w, node, prefix+connector, depth)
+
+		kids := getChildren(node)
+		if len(kids) > 0 {
+			childPrefix := prefix + style.childMid
+			if isLast {
+				childPrefix = prefix + style.childLast
+			}
+			writeTree(w, kids, childPrefix, depth+1, style, renderLine, getChildren)
+		}
+	}
+}
 
 const maxListTitleLen = 50
 
@@ -242,24 +276,24 @@ func (f *PrettyFormatter) FormatCascadeTransition(result CascadeResult) string {
 	return b.String()
 }
 
+// cascadeTreeStyle defines box-drawing characters for cascade transition trees.
+var cascadeTreeStyle = treeStyle{
+	mid:       "\u251c\u2500",
+	last:      "\u2514\u2500",
+	childMid:  "\u2502  ",
+	childLast: "   ",
+}
+
 // writeCascadeTree recursively renders tree nodes with box-drawing characters.
 func writeCascadeTree(b *strings.Builder, nodes []*cascadeNode, prefix string) {
-	for i, n := range nodes {
-		isLast := i == len(nodes)-1
-		connector := "\u251c\u2500"
-		if isLast {
-			connector = "\u2514\u2500"
-		}
-		fmt.Fprintf(b, "\n%s%s %s", prefix, connector, n.text)
-
-		if len(n.children) > 0 {
-			childPrefix := prefix + "\u2502  "
-			if isLast {
-				childPrefix = prefix + "   "
-			}
-			writeCascadeTree(b, n.children, childPrefix)
-		}
-	}
+	writeTree(b, nodes, prefix, 0, cascadeTreeStyle,
+		func(w io.Writer, n *cascadeNode, linePrefix string, _ int) {
+			fmt.Fprintf(w, "%s %s", linePrefix, n.text)
+		},
+		func(n *cascadeNode) []*cascadeNode {
+			return n.children
+		},
+	)
 }
 
 // depTreeLineWidth is the assumed terminal width for title truncation in dep tree output.
@@ -325,31 +359,30 @@ func (f *PrettyFormatter) formatFocusedDepTree(result DepTreeResult) string {
 
 // writeDepTreeTaskLine writes a single task line: {prefix}{id}  {title} ({status}).
 // The title is truncated to fit within depTreeLineWidth.
-func writeDepTreeTaskLine(b *strings.Builder, task DepTreeTask, prefix string, depth int) {
+func writeDepTreeTaskLine(w io.Writer, task DepTreeTask, prefix string, depth int) {
 	title := truncateDepTreeTitle(task.Title, depth)
-	fmt.Fprintf(b, "%s%s  %s (%s)", prefix, task.ID, title, task.Status)
+	fmt.Fprintf(w, "%s%s  %s (%s)", prefix, task.ID, title, task.Status)
+}
+
+// depTreeStyle defines box-drawing characters for dependency tree rendering.
+var depTreeStyle = treeStyle{
+	mid:       "├── ",
+	last:      "└── ",
+	childMid:  "│   ",
+	childLast: "    ",
 }
 
 // writeDepTreeNodes recursively renders tree nodes with box-drawing characters.
 // Each node is written as a new line (prefixed with \n).
 func writeDepTreeNodes(b *strings.Builder, nodes []DepTreeNode, prefix string, depth int) {
-	for i, node := range nodes {
-		isLast := i == len(nodes)-1
-		connector := "├── "
-		if isLast {
-			connector = "└── "
-		}
-		b.WriteString("\n")
-		writeDepTreeTaskLine(b, node.Task, prefix+connector, depth)
-
-		if len(node.Children) > 0 {
-			childPrefix := prefix + "│   "
-			if isLast {
-				childPrefix = prefix + "    "
-			}
-			writeDepTreeNodes(b, node.Children, childPrefix, depth+1)
-		}
-	}
+	writeTree(b, nodes, prefix, depth, depTreeStyle,
+		func(w io.Writer, node DepTreeNode, linePrefix string, d int) {
+			writeDepTreeTaskLine(w, node.Task, linePrefix, d)
+		},
+		func(node DepTreeNode) []DepTreeNode {
+			return node.Children
+		},
+	)
 }
 
 // truncateDepTreeTitle truncates a title to fit the available width in dep tree output.
