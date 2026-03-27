@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-27
 cycle: 1
 phase: Plan Integrity Review
@@ -110,5 +110,5 @@ Do:
 7. help.go - Update dep help entry to mention tree
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Removed redundant pretty/toon stub steps, clarified baseFormatter embedding.

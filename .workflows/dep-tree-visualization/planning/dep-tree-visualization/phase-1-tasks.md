@@ -18,14 +18,13 @@
    - `DepTreeNode` struct: `Task DepTreeTask`, `Children []DepTreeNode`
    - `DepTreeTask` struct: `ID string`, `Title string`, `Status string`
 2. **`internal/cli/format.go`** — Add `FormatDepTree(result DepTreeResult) string` to the `Formatter` interface.
-3. **`internal/cli/format.go`** — Add stub `FormatDepTree` on `StubFormatter` returning `""` and `baseFormatter` returning `""`.
-4. **`internal/cli/pretty_formatter.go`** — Add stub `FormatDepTree` on `PrettyFormatter` returning `""` (will be implemented in Task 4).
-5. **`internal/cli/toon_formatter.go`** — Add stub `FormatDepTree` on `ToonFormatter` returning `""` (Phase 2).
-6. **`internal/cli/json_formatter.go`** — Add stub `FormatDepTree` on `JSONFormatter` returning `""` (Phase 2).
-7. **`internal/cli/flags.go`** — Add `"dep tree": {}` to `commandFlags`.
-8. **`internal/cli/app.go`** — In `qualifyCommand`, extend the `dep` case to also match `"tree"` as a sub-subcommand: `case "add", "remove", "tree":`.
-9. **`internal/cli/dep.go`** — In `handleDep`, add a `case "tree":` that calls `RunDepTree(dir, fc, fmtr, rest, a.Stdout)`. Create a placeholder `RunDepTree` function in a new file `internal/cli/dep_tree.go` that returns `nil` for now (Task 3 implements it fully).
-10. **`internal/cli/help.go`** — Update the `dep` command's help entry: change Usage to `"tick dep <add|remove|tree> <task-id> [<blocked-by-id>]"`, update Description to mention the `tree` subcommand, and add a line explaining `tree` shows dependency relationships.
+3. **`internal/cli/format.go`** — Add stub `FormatDepTree` on `baseFormatter` returning `""` (PrettyFormatter and ToonFormatter inherit via embedding).
+4. **`internal/cli/json_formatter.go`** — Add stub `FormatDepTree` on `JSONFormatter` returning `""` (JSONFormatter does not embed baseFormatter).
+5. **`internal/cli/format.go`** — Add stub `FormatDepTree` on `StubFormatter` returning `""`.
+6. **`internal/cli/flags.go`** — Add `"dep tree": {}` to `commandFlags`.
+7. **`internal/cli/app.go`** — In `qualifyCommand`, extend the `dep` case to also match `"tree"` as a sub-subcommand: `case "add", "remove", "tree":`.
+8. **`internal/cli/dep.go`** — In `handleDep`, add a `case "tree":` that calls `RunDepTree(dir, fc, fmtr, rest, a.Stdout)`. Create a placeholder `RunDepTree` function in a new file `internal/cli/dep_tree.go` that returns `nil` for now (Task 3 implements it fully).
+9. **`internal/cli/help.go`** — Update the `dep` command's help entry: change Usage to `"tick dep <add|remove|tree> <task-id> [<blocked-by-id>]"`, update Description to mention the `tree` subcommand, and add a line explaining `tree` shows dependency relationships.
 
 **Acceptance Criteria**:
 - [ ] `commandFlags` contains `"dep tree"` with an empty flag set
