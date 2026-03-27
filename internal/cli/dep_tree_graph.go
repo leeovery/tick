@@ -38,9 +38,17 @@ func toDepTreeTask(t task.Task) DepTreeTask {
 
 // walkDownstream recursively walks the "blocks" direction from a given task ID,
 // producing a tree of DepTreeNode. No deduplication — diamond dependencies are duplicated.
-func walkDownstream(id string, blocks map[string][]string, taskIdx map[string]task.Task) []DepTreeNode {
+// The ancestors set tracks the current path to prevent infinite recursion on cycles.
+// Nodes are removed from ancestors after processing so the same node can appear via different paths.
+func walkDownstream(id string, blocks map[string][]string, taskIdx map[string]task.Task, ancestors map[string]bool) []DepTreeNode {
+	if ancestors[id] {
+		return nil
+	}
+	ancestors[id] = true
+
 	children, ok := blocks[id]
 	if !ok {
+		delete(ancestors, id)
 		return nil
 	}
 	var nodes []DepTreeNode
@@ -51,21 +59,31 @@ func walkDownstream(id string, blocks map[string][]string, taskIdx map[string]ta
 		}
 		node := DepTreeNode{
 			Task:     toDepTreeTask(t),
-			Children: walkDownstream(childID, blocks, taskIdx),
+			Children: walkDownstream(childID, blocks, taskIdx, ancestors),
 		}
 		nodes = append(nodes, node)
 	}
+	delete(ancestors, id)
 	return nodes
 }
 
 // walkUpstream recursively walks the "blocked by" direction from a given task ID,
 // producing a tree of DepTreeNode. No deduplication — diamond dependencies are duplicated.
-func walkUpstream(id string, taskIdx map[string]task.Task) []DepTreeNode {
+// The ancestors set tracks the current path to prevent infinite recursion on cycles.
+// Nodes are removed from ancestors after processing so the same node can appear via different paths.
+func walkUpstream(id string, taskIdx map[string]task.Task, ancestors map[string]bool) []DepTreeNode {
+	if ancestors[id] {
+		return nil
+	}
+	ancestors[id] = true
+
 	t, exists := taskIdx[id]
 	if !exists {
+		delete(ancestors, id)
 		return nil
 	}
 	if len(t.BlockedBy) == 0 {
+		delete(ancestors, id)
 		return nil
 	}
 	var nodes []DepTreeNode
@@ -76,10 +94,11 @@ func walkUpstream(id string, taskIdx map[string]task.Task) []DepTreeNode {
 		}
 		node := DepTreeNode{
 			Task:     toDepTreeTask(dep),
-			Children: walkUpstream(depID, taskIdx),
+			Children: walkUpstream(depID, taskIdx, ancestors),
 		}
 		nodes = append(nodes, node)
 	}
+	delete(ancestors, id)
 	return nodes
 }
 
@@ -129,7 +148,7 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 		if _, blocksOthers := blocks[t.ID]; blocksOthers {
 			node := DepTreeNode{
 				Task:     toDepTreeTask(t),
-				Children: walkDownstream(t.ID, blocks, taskIdx),
+				Children: walkDownstream(t.ID, blocks, taskIdx, make(map[string]bool)),
 			}
 			roots = append(roots, node)
 		}
@@ -237,8 +256,8 @@ func BuildFocusedDepTree(tasks []task.Task, targetID string) (DepTreeResult, err
 	blocks := buildBlocksIndex(tasks)
 
 	targetDTT := toDepTreeTask(target)
-	blockedBy := walkUpstream(targetID, taskIdx)
-	downstream := walkDownstream(targetID, blocks, taskIdx)
+	blockedBy := walkUpstream(targetID, taskIdx, make(map[string]bool))
+	downstream := walkDownstream(targetID, blocks, taskIdx, make(map[string]bool))
 
 	var message string
 	if len(blockedBy) == 0 && len(downstream) == 0 {

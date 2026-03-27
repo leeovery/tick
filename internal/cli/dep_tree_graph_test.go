@@ -521,6 +521,209 @@ func TestBuildFocusedDepTree(t *testing.T) {
 	})
 }
 
+func TestCycleGuard(t *testing.T) {
+	t.Run("it terminates walkDownstream with circular dependency A blocks B blocks A", func(t *testing.T) {
+		// Corrupted data: A blocked by B, B blocked by A — a cycle
+		tasks := []task.Task{
+			makeTask("tick-aaa111", "Task A", task.StatusOpen, "tick-bbb222"),
+			makeTask("tick-bbb222", "Task B", task.StatusOpen, "tick-aaa111"),
+		}
+
+		// Full graph: no task has empty BlockedBy, so no roots.
+		// But focused view exercises walkDownstream directly.
+		result, err := BuildFocusedDepTree(tasks, "tick-aaa111")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Blocks: A blocks B (walkDownstream). B blocks A but cycle guard stops.
+		// The tree should be finite — B appears as child, but A should NOT recurse infinitely.
+		if len(result.Blocks) != 1 {
+			t.Fatalf("Blocks = %d, want 1", len(result.Blocks))
+		}
+		if result.Blocks[0].Task.ID != "tick-bbb222" {
+			t.Errorf("Blocks[0].ID = %q, want %q", result.Blocks[0].Task.ID, "tick-bbb222")
+		}
+		// B's children should include A (since B blocks A), but A's children must stop (cycle guard)
+		totalNodes := countNodes(result.Blocks)
+		if totalNodes > 10 {
+			t.Errorf("tree has %d nodes, expected finite tree (cycle guard should prevent unbounded growth)", totalNodes)
+		}
+	})
+
+	t.Run("it terminates walkUpstream with circular dependency A blocks B blocks A", func(t *testing.T) {
+		// Corrupted data: A blocked by B, B blocked by A — a cycle
+		tasks := []task.Task{
+			makeTask("tick-aaa111", "Task A", task.StatusOpen, "tick-bbb222"),
+			makeTask("tick-bbb222", "Task B", task.StatusOpen, "tick-aaa111"),
+		}
+
+		result, err := BuildFocusedDepTree(tasks, "tick-aaa111")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// BlockedBy: A is blocked by B (walkUpstream). B is blocked by A but cycle guard stops.
+		if len(result.BlockedBy) != 1 {
+			t.Fatalf("BlockedBy = %d, want 1", len(result.BlockedBy))
+		}
+		if result.BlockedBy[0].Task.ID != "tick-bbb222" {
+			t.Errorf("BlockedBy[0].ID = %q, want %q", result.BlockedBy[0].Task.ID, "tick-bbb222")
+		}
+		totalNodes := countNodes(result.BlockedBy)
+		if totalNodes > 10 {
+			t.Errorf("tree has %d nodes, expected finite tree (cycle guard should prevent unbounded growth)", totalNodes)
+		}
+	})
+
+	t.Run("it terminates walkDownstream with three-node cycle", func(t *testing.T) {
+		// Corrupted data: A->B->C->A cycle
+		tasks := []task.Task{
+			makeTask("tick-aaa111", "Task A", task.StatusOpen, "tick-ccc333"),
+			makeTask("tick-bbb222", "Task B", task.StatusOpen, "tick-aaa111"),
+			makeTask("tick-ccc333", "Task C", task.StatusOpen, "tick-bbb222"),
+		}
+
+		result, err := BuildFocusedDepTree(tasks, "tick-aaa111")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Downstream from A: A blocks B, B blocks C, C blocks A (cycle stops)
+		totalNodes := countNodes(result.Blocks)
+		if totalNodes > 10 {
+			t.Errorf("downstream tree has %d nodes, expected finite tree", totalNodes)
+		}
+	})
+
+	t.Run("it terminates full graph with circular dependency", func(t *testing.T) {
+		// All tasks in a cycle — every task is blocked, so no root in full mode
+		// But BuildFullDepTree should not hang
+		tasks := []task.Task{
+			makeTask("tick-aaa111", "Task A", task.StatusOpen, "tick-bbb222"),
+			makeTask("tick-bbb222", "Task B", task.StatusOpen, "tick-aaa111"),
+		}
+
+		result := BuildFullDepTree(tasks)
+
+		// No roots (all tasks are blocked), so should get "No dependencies found."
+		if len(result.Roots) != 0 {
+			t.Errorf("Roots = %d, want 0 (all tasks in cycle have BlockedBy)", len(result.Roots))
+		}
+	})
+
+	t.Run("it preserves acyclic diamond duplication after cycle guard addition", func(t *testing.T) {
+		// Diamond: A -> B -> D, A -> C -> D (D should still be duplicated)
+		tasks := []task.Task{
+			makeTask("tick-aaa111", "Task A", task.StatusOpen),
+			makeTask("tick-bbb222", "Task B", task.StatusOpen, "tick-aaa111"),
+			makeTask("tick-ccc333", "Task C", task.StatusOpen, "tick-aaa111"),
+			makeTask("tick-ddd444", "Task D", task.StatusOpen, "tick-bbb222", "tick-ccc333"),
+		}
+
+		result := BuildFullDepTree(tasks)
+
+		if len(result.Roots) != 1 {
+			t.Fatalf("Roots = %d, want 1", len(result.Roots))
+		}
+		root := result.Roots[0]
+		if len(root.Children) != 2 {
+			t.Fatalf("root children = %d, want 2", len(root.Children))
+		}
+		// Both B and C should have D as child (diamond duplication preserved)
+		for _, child := range root.Children {
+			if len(child.Children) != 1 {
+				t.Errorf("child %s has %d children, want 1 (diamond duplication)", child.Task.ID, len(child.Children))
+				continue
+			}
+			if child.Children[0].Task.ID != "tick-ddd444" {
+				t.Errorf("grandchild of %s = %q, want %q", child.Task.ID, child.Children[0].Task.ID, "tick-ddd444")
+			}
+		}
+	})
+
+	t.Run("it duplicates diamond node with children under both paths", func(t *testing.T) {
+		// Deep diamond: A -> B -> D -> E, A -> C -> D -> E
+		// D has child E. With permanent-visited, D visited via B would suppress
+		// D's children when reached via C. Ancestor tracking fixes this.
+		tasks := []task.Task{
+			makeTask("tick-aaa111", "Task A", task.StatusOpen),
+			makeTask("tick-bbb222", "Task B", task.StatusOpen, "tick-aaa111"),
+			makeTask("tick-ccc333", "Task C", task.StatusOpen, "tick-aaa111"),
+			makeTask("tick-ddd444", "Task D", task.StatusOpen, "tick-bbb222", "tick-ccc333"),
+			makeTask("tick-eee555", "Task E", task.StatusOpen, "tick-ddd444"),
+		}
+
+		result := BuildFullDepTree(tasks)
+
+		if len(result.Roots) != 1 {
+			t.Fatalf("Roots = %d, want 1", len(result.Roots))
+		}
+		root := result.Roots[0]
+		if len(root.Children) != 2 {
+			t.Fatalf("root children = %d, want 2", len(root.Children))
+		}
+		// Both B and C should have D as child, and D should have E as child in both branches
+		for _, child := range root.Children {
+			if len(child.Children) != 1 {
+				t.Errorf("child %s has %d children, want 1", child.Task.ID, len(child.Children))
+				continue
+			}
+			d := child.Children[0]
+			if d.Task.ID != "tick-ddd444" {
+				t.Errorf("grandchild of %s = %q, want %q", child.Task.ID, d.Task.ID, "tick-ddd444")
+				continue
+			}
+			if len(d.Children) != 1 {
+				t.Errorf("D under %s has %d children, want 1 (E should appear)", child.Task.ID, len(d.Children))
+				continue
+			}
+			if d.Children[0].Task.ID != "tick-eee555" {
+				t.Errorf("great-grandchild of %s = %q, want %q", child.Task.ID, d.Children[0].Task.ID, "tick-eee555")
+			}
+		}
+	})
+
+	t.Run("it preserves acyclic focused view after cycle guard addition", func(t *testing.T) {
+		// A -> B -> C, focused on B
+		tasks := []task.Task{
+			makeTask("tick-aaa111", "Task A", task.StatusOpen),
+			makeTask("tick-bbb222", "Task B", task.StatusInProgress, "tick-aaa111"),
+			makeTask("tick-ccc333", "Task C", task.StatusOpen, "tick-bbb222"),
+		}
+
+		result, err := BuildFocusedDepTree(tasks, "tick-bbb222")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if result.Target.ID != "tick-bbb222" {
+			t.Errorf("Target.ID = %q, want %q", result.Target.ID, "tick-bbb222")
+		}
+		if len(result.BlockedBy) != 1 {
+			t.Fatalf("BlockedBy = %d, want 1", len(result.BlockedBy))
+		}
+		if result.BlockedBy[0].Task.ID != "tick-aaa111" {
+			t.Errorf("BlockedBy[0].ID = %q, want %q", result.BlockedBy[0].Task.ID, "tick-aaa111")
+		}
+		if len(result.Blocks) != 1 {
+			t.Fatalf("Blocks = %d, want 1", len(result.Blocks))
+		}
+		if result.Blocks[0].Task.ID != "tick-ccc333" {
+			t.Errorf("Blocks[0].ID = %q, want %q", result.Blocks[0].Task.ID, "tick-ccc333")
+		}
+	})
+}
+
+// countNodes counts the total number of nodes in a tree (recursive).
+func countNodes(nodes []DepTreeNode) int {
+	count := len(nodes)
+	for _, n := range nodes {
+		count += countNodes(n.Children)
+	}
+	return count
+}
+
 // containsID checks if any node in the tree has the given ID (recursive).
 func containsID(nodes []DepTreeNode, id string) bool {
 	for _, n := range nodes {

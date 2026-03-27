@@ -64,7 +64,7 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "auto",
           "analysis_gate_mode": "auto",
-          "fix_attempts": 0,
+          "fix_attempts": 1,
           "analysis_cycle": 1,
           "linters": [
             {
@@ -88,7 +88,8 @@
             "dep-tree-visualization-1-4",
             "dep-tree-visualization-2-1",
             "dep-tree-visualization-2-2",
-            "dep-tree-visualization-3-1"
+            "dep-tree-visualization-3-1",
+            "dep-tree-visualization-3-2"
           ],
           "completed_phases": [
             1,
