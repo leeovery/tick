@@ -31,6 +31,8 @@ Dependency tree visualization for the Tick CLI. Purely a presentation feature â€
 
 **Title truncation:** Truncate titles to fit available width after accounting for indentation + ID + status.
 
+**Focused view section headers:** The focused view renders with distinct labeled sections â€” a "Blocked by:" header followed by the upstream tree, then a "Blocks:" header followed by the downstream tree. Clear visual separation between the two directions.
+
 ## Formatter Integration
 
 New method on the `Formatter` interface. All three format implementations required:
