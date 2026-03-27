@@ -64,8 +64,8 @@ Test replace with:
 - `"it outputs no dependencies for isolated task in focused mode"` -- setup task with no deps, run focused on it, output contains task ID and title and "No dependencies."
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied to phase-1-tasks.md and tick task tick-8d0709.
 
 ---
 

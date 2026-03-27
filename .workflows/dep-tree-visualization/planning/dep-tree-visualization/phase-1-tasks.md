@@ -151,7 +151,7 @@
      - If `len(args) == 0`: full graph mode.
      - If `len(args) >= 1`: focused mode. The first positional arg is the task ID. Normalize with `task.NormalizeID(args[0])`, then resolve partial ID via `store.ResolveID(args[0])`.
    - **Full graph mode**: Call `BuildFullDepTree(tasks)`. If result has empty `Roots` (no dependencies found), output `fmtr.FormatMessage("No dependencies found.")` and return. Otherwise output `fmtr.FormatDepTree(result)`.
-   - **Focused mode**: Call `BuildFocusedDepTree(tasks, resolvedID)`. If error (task not found), return the error. If both `BlockedBy` and `Blocks` are empty, output `fmtr.FormatMessage("No dependencies.")` and return. Otherwise output `fmtr.FormatDepTree(result)`.
+   - **Focused mode**: Call `BuildFocusedDepTree(tasks, resolvedID)`. If error (task not found), return the error. If both `BlockedBy` and `Blocks` are empty, show the target task (ID + title + status) then output `fmtr.FormatMessage("No dependencies.")` and return. Otherwise output `fmtr.FormatDepTree(result)`.
    - Write output to `stdout` with trailing newline via `fmt.Fprintln`.
 
 2. **`internal/cli/dep_tree_test.go`** — Integration tests using `setupTickProjectWithTasks` to create a .tick project with pre-built task data, then calling `RunDepTree` or `App.Run` and checking output. Use `--pretty` flag since test buffers are non-TTY.
@@ -160,7 +160,7 @@
 - [ ] `tick dep tree` with no dependencies outputs "No dependencies found."
 - [ ] `tick dep tree` with dependencies produces non-empty output via `FormatDepTree`
 - [ ] `tick dep tree <id>` with a valid task ID that has dependencies produces focused output via `FormatDepTree`
-- [ ] `tick dep tree <id>` with a valid task ID that has no dependencies outputs "No dependencies."
+- [ ] `tick dep tree <id>` with a valid task ID that has no dependencies shows the task itself (ID + title + status) with "No dependencies."
 - [ ] `tick dep tree <id>` with an invalid/nonexistent ID returns an error
 - [ ] Partial ID matching works (e.g., `tick dep tree abc` resolves to `tick-abc123`)
 - [ ] `--quiet` flag suppresses all output
@@ -171,7 +171,7 @@
 - `"it outputs no dependencies found for project with no tasks"` — empty tasks.jsonl, output contains "No dependencies found."
 - `"it outputs dep tree for project with dependencies"` — setup A blocks B, run full graph, output is non-empty and does not contain "No dependencies"
 - `"it outputs focused view for task with dependencies"` — setup A blocks B blocks C, run focused on B, output is non-empty
-- `"it outputs no dependencies for isolated task in focused mode"` — setup task with no deps, run focused on it, output contains "No dependencies."
+- `"it outputs no dependencies for isolated task in focused mode"` — setup task with no deps, run focused on it, output contains task ID and title and "No dependencies."
 - `"it returns error for nonexistent task ID"` — run focused on "tick-nonexist", error returned
 - `"it resolves partial task ID"` — setup task tick-abc123, run focused with "abc", resolves correctly
 - `"it suppresses output in quiet mode"` — `fc.Quiet = true`, output buffer is empty
