@@ -33,8 +33,8 @@ Add dependency: Phase 2 (tick-fda1e3) blocked_by Phase 1 (tick-7f41cf).
 tick dep add tick-fda1e3 tick-7f41cf
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied dependency via tick dep add.
 
 ---
 
