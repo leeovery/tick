@@ -126,8 +126,10 @@
 
 **Context**:
 > The specification explicitly states: "Diamond dependencies (task reachable via multiple paths): Duplicate the task wherever it appears in the graph. No deduplication, no back-references, no special markers." This means the recursive walk must NOT use a visited set. The specification also states: "Tasks with zero dependencies (neither blocking nor blocked) are omitted" from the full graph view. The "Depth: Full transitive — walk the entire chain with no artificial cap" constraint means no depth limit. For the summary line: "chain = connected component of the dependency graph, longest = longest path measured in edges, blocked = tasks with at least one BlockedBy entry."
+>
+> Scope constraint: "Dependencies only. No parent/child relationships, no parent annotations." The graph algorithm must only use BlockedBy fields (dependency relationships) and must not traverse or display Parent fields (hierarchy relationships). Parent/child and dependencies have different semantics -- mixing them creates ambiguity about whether B is under A because A blocks B or because B is a child of A.
 
-**Spec Reference**: `.workflows/dep-tree-visualization/specification/dep-tree-visualization/specification.md` — "Command Structure" (full graph and focused view definitions), "Rendering" (diamond dependencies, depth), and "Edge Cases" sections.
+**Spec Reference**: `.workflows/dep-tree-visualization/specification/dep-tree-visualization/specification.md` — "Command Structure" (full graph and focused view definitions), "Rendering" (diamond dependencies, depth), "Scope" (dependencies only), and "Edge Cases" sections.
 
 ## dep-tree-visualization-1-3 | approved
 

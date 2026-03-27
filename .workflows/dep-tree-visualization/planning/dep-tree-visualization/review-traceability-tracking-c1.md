@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-03-27
 cycle: 1
 phase: Traceability Review
@@ -210,5 +210,5 @@ In phase-1-tasks.md, Task 2 Context section:
 > Scope constraint: "Dependencies only. No parent/child relationships, no parent annotations." The graph algorithm must only use BlockedBy fields (dependency relationships) and must not traverse or display Parent fields (hierarchy relationships). Parent/child and dependencies have different semantics -- mixing them creates ambiguity about whether B is under A because A blocks B or because B is a child of A.
 ```
 
-**Resolution**: Pending
-**Notes**: The algorithm is already correct by construction since it only reads BlockedBy fields. This finding adds explicit documentation of the constraint to prevent scope creep during implementation, particularly in the formatter tasks where someone might add parent annotations to task display lines.
+**Resolution**: Fixed
+**Notes**: Added scope constraint to Context section. The algorithm is already correct by construction since it only reads BlockedBy fields. This finding adds explicit documentation of the constraint to prevent scope creep during implementation, particularly in the formatter tasks where someone might add parent annotations to task display lines.
