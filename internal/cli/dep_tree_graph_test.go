@@ -38,6 +38,15 @@ func TestBuildFullDepTree(t *testing.T) {
 		if result.Message != "No dependencies found." {
 			t.Errorf("Message = %q, want %q", result.Message, "No dependencies found.")
 		}
+		if result.ChainCount != 0 {
+			t.Errorf("ChainCount = %d, want 0", result.ChainCount)
+		}
+		if result.LongestChain != 0 {
+			t.Errorf("LongestChain = %d, want 0", result.LongestChain)
+		}
+		if result.BlockedCount != 0 {
+			t.Errorf("BlockedCount = %d, want 0", result.BlockedCount)
+		}
 	})
 
 	t.Run("it returns empty result when task list is empty", func(t *testing.T) {
@@ -51,6 +60,15 @@ func TestBuildFullDepTree(t *testing.T) {
 		}
 		if result.Message != "No dependencies found." {
 			t.Errorf("Message = %q, want %q", result.Message, "No dependencies found.")
+		}
+		if result.ChainCount != 0 {
+			t.Errorf("ChainCount = %d, want 0", result.ChainCount)
+		}
+		if result.LongestChain != 0 {
+			t.Errorf("LongestChain = %d, want 0", result.LongestChain)
+		}
+		if result.BlockedCount != 0 {
+			t.Errorf("BlockedCount = %d, want 0", result.BlockedCount)
 		}
 	})
 
@@ -87,6 +105,15 @@ func TestBuildFullDepTree(t *testing.T) {
 		if result.Summary != "1 chain, longest: 2, 2 blocked" {
 			t.Errorf("Summary = %q, want %q", result.Summary, "1 chain, longest: 2, 2 blocked")
 		}
+		if result.ChainCount != 1 {
+			t.Errorf("ChainCount = %d, want 1", result.ChainCount)
+		}
+		if result.LongestChain != 2 {
+			t.Errorf("LongestChain = %d, want 2", result.LongestChain)
+		}
+		if result.BlockedCount != 2 {
+			t.Errorf("BlockedCount = %d, want 2", result.BlockedCount)
+		}
 		if result.Message != "" {
 			t.Errorf("Message = %q, want empty", result.Message)
 		}
@@ -120,6 +147,15 @@ func TestBuildFullDepTree(t *testing.T) {
 		}
 		if result.Summary != "2 chains, longest: 1, 2 blocked" {
 			t.Errorf("Summary = %q, want %q", result.Summary, "2 chains, longest: 1, 2 blocked")
+		}
+		if result.ChainCount != 2 {
+			t.Errorf("ChainCount = %d, want 2", result.ChainCount)
+		}
+		if result.LongestChain != 1 {
+			t.Errorf("LongestChain = %d, want 1", result.LongestChain)
+		}
+		if result.BlockedCount != 2 {
+			t.Errorf("BlockedCount = %d, want 2", result.BlockedCount)
 		}
 	})
 
@@ -220,6 +256,15 @@ func TestBuildFullDepTree(t *testing.T) {
 		if result.Summary != "2 chains, longest: 2, 3 blocked" {
 			t.Errorf("Summary = %q, want %q", result.Summary, "2 chains, longest: 2, 3 blocked")
 		}
+		if result.ChainCount != 2 {
+			t.Errorf("ChainCount = %d, want 2", result.ChainCount)
+		}
+		if result.LongestChain != 2 {
+			t.Errorf("LongestChain = %d, want 2", result.LongestChain)
+		}
+		if result.BlockedCount != 3 {
+			t.Errorf("BlockedCount = %d, want 3", result.BlockedCount)
+		}
 	})
 
 	t.Run("it counts blocked tasks correctly", func(t *testing.T) {
@@ -234,6 +279,15 @@ func TestBuildFullDepTree(t *testing.T) {
 
 		if result.Summary != "1 chain, longest: 1, 2 blocked" {
 			t.Errorf("Summary = %q, want %q", result.Summary, "1 chain, longest: 1, 2 blocked")
+		}
+		if result.ChainCount != 1 {
+			t.Errorf("ChainCount = %d, want 1", result.ChainCount)
+		}
+		if result.LongestChain != 1 {
+			t.Errorf("LongestChain = %d, want 1", result.LongestChain)
+		}
+		if result.BlockedCount != 2 {
+			t.Errorf("BlockedCount = %d, want 2", result.BlockedCount)
 		}
 	})
 }

@@ -663,3 +663,307 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 }
+
+func TestToonFormatDepTree(t *testing.T) {
+	f := &ToonFormatter{}
+
+	t.Run("it renders single chain as edge list in full graph mode", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Child", Status: "open"}},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 1,
+			BlockedCount: 1,
+		})
+		lines := strings.Split(result, "\n")
+		if lines[0] != "dep_tree[1]{from,to}:" {
+			t.Errorf("header = %q, want %q", lines[0], "dep_tree[1]{from,to}:")
+		}
+		if lines[1] != "  tick-aaa111,tick-bbb222" {
+			t.Errorf("edge = %q, want %q", lines[1], "  tick-aaa111,tick-bbb222")
+		}
+	})
+
+	t.Run("it renders multi-level chain as edge list", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+					Children: []DepTreeNode{
+						{
+							Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
+							Children: []DepTreeNode{
+								{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"}},
+							},
+						},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 2,
+			BlockedCount: 2,
+		})
+		lines := strings.Split(result, "\n")
+		if lines[0] != "dep_tree[2]{from,to}:" {
+			t.Errorf("header = %q, want %q", lines[0], "dep_tree[2]{from,to}:")
+		}
+		if lines[1] != "  tick-aaa111,tick-bbb222" {
+			t.Errorf("edge 1 = %q, want %q", lines[1], "  tick-aaa111,tick-bbb222")
+		}
+		if lines[2] != "  tick-bbb222,tick-ccc333" {
+			t.Errorf("edge 2 = %q, want %q", lines[2], "  tick-bbb222,tick-ccc333")
+		}
+	})
+
+	t.Run("it renders multiple independent chains", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
+					},
+				},
+				{
+					Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
+					},
+				},
+			},
+			ChainCount:   2,
+			LongestChain: 1,
+			BlockedCount: 2,
+		})
+		lines := strings.Split(result, "\n")
+		if lines[0] != "dep_tree[2]{from,to}:" {
+			t.Errorf("header = %q, want %q", lines[0], "dep_tree[2]{from,to}:")
+		}
+		if lines[1] != "  tick-aaa111,tick-bbb222" {
+			t.Errorf("edge 1 = %q, want %q", lines[1], "  tick-aaa111,tick-bbb222")
+		}
+		if lines[2] != "  tick-ccc333,tick-ddd444" {
+			t.Errorf("edge 2 = %q, want %q", lines[2], "  tick-ccc333,tick-ddd444")
+		}
+	})
+
+	t.Run("it duplicates edges for diamond dependencies", func(t *testing.T) {
+		// A -> B, A -> C, B -> D, C -> D (D appears twice)
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+					Children: []DepTreeNode{
+						{
+							Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
+							Children: []DepTreeNode{
+								{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
+							},
+						},
+						{
+							Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"},
+							Children: []DepTreeNode{
+								{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
+							},
+						},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 2,
+			BlockedCount: 3,
+		})
+		lines := strings.Split(result, "\n")
+		if lines[0] != "dep_tree[4]{from,to}:" {
+			t.Errorf("header = %q, want %q", lines[0], "dep_tree[4]{from,to}:")
+		}
+		expectedEdges := []string{
+			"  tick-aaa111,tick-bbb222",
+			"  tick-bbb222,tick-ddd444",
+			"  tick-aaa111,tick-ccc333",
+			"  tick-ccc333,tick-ddd444",
+		}
+		for i, want := range expectedEdges {
+			if lines[i+1] != want {
+				t.Errorf("edge %d = %q, want %q", i, lines[i+1], want)
+			}
+		}
+	})
+
+	t.Run("it renders summary as single-object section", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
+					},
+				},
+			},
+			ChainCount:   3,
+			LongestChain: 5,
+			BlockedCount: 7,
+		})
+		// Result should have two sections separated by blank line
+		sections := strings.Split(result, "\n\n")
+		if len(sections) != 2 {
+			t.Fatalf("expected 2 sections, got %d: %q", len(sections), result)
+		}
+		summaryLines := strings.Split(sections[1], "\n")
+		expectedHeader := "summary{chains,longest,blocked}:"
+		if summaryLines[0] != expectedHeader {
+			t.Errorf("summary header = %q, want %q", summaryLines[0], expectedHeader)
+		}
+		expectedRow := "  3,5,7"
+		if summaryLines[1] != expectedRow {
+			t.Errorf("summary row = %q, want %q", summaryLines[1], expectedRow)
+		}
+	})
+
+	t.Run("it renders focused view with both directions", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
+			BlockedBy: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"}},
+			},
+			Blocks: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"}},
+			},
+		})
+		sections := strings.Split(result, "\n\n")
+		if len(sections) != 2 {
+			t.Fatalf("expected 2 sections, got %d: %q", len(sections), result)
+		}
+		// blocked_by section: edges from blocker to target
+		blockedByLines := strings.Split(sections[0], "\n")
+		if blockedByLines[0] != "blocked_by[1]{from,to}:" {
+			t.Errorf("blocked_by header = %q, want %q", blockedByLines[0], "blocked_by[1]{from,to}:")
+		}
+		if blockedByLines[1] != "  tick-aaa111,tick-bbb222" {
+			t.Errorf("blocked_by edge = %q, want %q", blockedByLines[1], "  tick-aaa111,tick-bbb222")
+		}
+		// blocks section: edges from target to blocked
+		blocksLines := strings.Split(sections[1], "\n")
+		if blocksLines[0] != "blocks[1]{from,to}:" {
+			t.Errorf("blocks header = %q, want %q", blocksLines[0], "blocks[1]{from,to}:")
+		}
+		if blocksLines[1] != "  tick-bbb222,tick-ccc333" {
+			t.Errorf("blocks edge = %q, want %q", blocksLines[1], "  tick-bbb222,tick-ccc333")
+		}
+	})
+
+	t.Run("it omits blocked_by section when only downstream exists", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+			Blocks: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
+			},
+		})
+		if strings.Contains(result, "blocked_by") {
+			t.Errorf("should not contain blocked_by section, got: %q", result)
+		}
+		lines := strings.Split(result, "\n")
+		if lines[0] != "blocks[1]{from,to}:" {
+			t.Errorf("header = %q, want %q", lines[0], "blocks[1]{from,to}:")
+		}
+		if lines[1] != "  tick-aaa111,tick-bbb222" {
+			t.Errorf("edge = %q, want %q", lines[1], "  tick-aaa111,tick-bbb222")
+		}
+	})
+
+	t.Run("it omits blocks section when only upstream exists", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
+			BlockedBy: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"}},
+			},
+		})
+		if strings.Contains(result, "blocks[") || strings.Contains(result, "blocks{") {
+			t.Errorf("should not contain blocks section, got: %q", result)
+		}
+		lines := strings.Split(result, "\n")
+		if lines[0] != "blocked_by[1]{from,to}:" {
+			t.Errorf("header = %q, want %q", lines[0], "blocked_by[1]{from,to}:")
+		}
+		if lines[1] != "  tick-aaa111,tick-bbb222" {
+			t.Errorf("edge = %q, want %q", lines[1], "  tick-aaa111,tick-bbb222")
+		}
+	})
+
+	t.Run("it renders wide graph with many edges", func(t *testing.T) {
+		// One root blocking 4 tasks
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
+						{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"}},
+						{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
+						{Task: DepTreeTask{ID: "tick-eee555", Title: "E", Status: "open"}},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 1,
+			BlockedCount: 4,
+		})
+		lines := strings.Split(result, "\n")
+		if lines[0] != "dep_tree[4]{from,to}:" {
+			t.Errorf("header = %q, want %q", lines[0], "dep_tree[4]{from,to}:")
+		}
+		expectedEdges := []string{
+			"  tick-aaa111,tick-bbb222",
+			"  tick-aaa111,tick-ccc333",
+			"  tick-aaa111,tick-ddd444",
+			"  tick-aaa111,tick-eee555",
+		}
+		for i, want := range expectedEdges {
+			if lines[i+1] != want {
+				t.Errorf("edge %d = %q, want %q", i, lines[i+1], want)
+			}
+		}
+	})
+
+	t.Run("it duplicates edges in focused downstream for diamond", func(t *testing.T) {
+		// Target blocks B and C, both of which block D
+		result := f.FormatDepTree(DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+			Blocks: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
+					},
+				},
+				{
+					Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
+					},
+				},
+			},
+		})
+		lines := strings.Split(result, "\n")
+		if lines[0] != "blocks[4]{from,to}:" {
+			t.Errorf("header = %q, want %q", lines[0], "blocks[4]{from,to}:")
+		}
+		expectedEdges := []string{
+			"  tick-aaa111,tick-bbb222",
+			"  tick-bbb222,tick-ddd444",
+			"  tick-aaa111,tick-ccc333",
+			"  tick-ccc333,tick-ddd444",
+		}
+		for i, want := range expectedEdges {
+			if lines[i+1] != want {
+				t.Errorf("edge %d = %q, want %q", i, lines[i+1], want)
+			}
+		}
+	})
+}

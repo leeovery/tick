@@ -154,6 +154,101 @@ func (f *ToonFormatter) FormatCascadeTransition(result CascadeResult) string {
 	return strings.Join(lines, "\n")
 }
 
+// toonEdgeRow is a TOON-serializable row for dep tree edge list output.
+type toonEdgeRow struct {
+	From string `toon:"from"`
+	To   string `toon:"to"`
+}
+
+// toonDepTreeSummary is a TOON-serializable row for the dep tree summary section.
+type toonDepTreeSummary struct {
+	Chains  int `toon:"chains"`
+	Longest int `toon:"longest"`
+	Blocked int `toon:"blocked"`
+}
+
+// FormatDepTree renders a dependency tree in TOON edge-list format.
+// Full graph: dep_tree[N]{from,to}: section + summary{chains,longest,blocked}: section.
+// Focused mode: separate blocked_by[N]{from,to}: and blocks[N]{from,to}: sections,
+// omitting empty directions entirely.
+func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
+	if result.Message != "" {
+		return result.Message
+	}
+
+	if result.Target != nil {
+		return f.formatFocusedDepTree(result)
+	}
+	return f.formatFullDepTree(result)
+}
+
+// formatFullDepTree renders the full graph as a dep_tree edge list with summary.
+func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
+	var edges []toonEdgeRow
+	for _, root := range result.Roots {
+		edges = append(edges, collectDownstreamEdges(root.Task.ID, root.Children)...)
+	}
+
+	var sections []string
+	sections = append(sections, buildEdgeSection("dep_tree", edges))
+
+	summary := toonDepTreeSummary{
+		Chains:  result.ChainCount,
+		Longest: result.LongestChain,
+		Blocked: result.BlockedCount,
+	}
+	sections = append(sections, encodeToonSingleObject("summary", summary))
+
+	return strings.Join(sections, "\n\n")
+}
+
+// formatFocusedDepTree renders focused mode with blocked_by and blocks sections.
+func (f *ToonFormatter) formatFocusedDepTree(result DepTreeResult) string {
+	var sections []string
+
+	if len(result.BlockedBy) > 0 {
+		edges := collectUpstreamEdges(result.Target.ID, result.BlockedBy)
+		sections = append(sections, buildEdgeSection("blocked_by", edges))
+	}
+
+	if len(result.Blocks) > 0 {
+		edges := collectDownstreamEdges(result.Target.ID, result.Blocks)
+		sections = append(sections, buildEdgeSection("blocks", edges))
+	}
+
+	return strings.Join(sections, "\n\n")
+}
+
+// collectDownstreamEdges recursively collects edges from parent to each child node.
+// Used for full graph mode and the "blocks" direction of focused mode.
+func collectDownstreamEdges(parentID string, nodes []DepTreeNode) []toonEdgeRow {
+	var edges []toonEdgeRow
+	for _, node := range nodes {
+		edges = append(edges, toonEdgeRow{From: parentID, To: node.Task.ID})
+		edges = append(edges, collectDownstreamEdges(node.Task.ID, node.Children)...)
+	}
+	return edges
+}
+
+// collectUpstreamEdges recursively collects edges from each blocker node to the blocked task.
+// Used for the "blocked_by" direction of focused mode.
+func collectUpstreamEdges(blockedID string, nodes []DepTreeNode) []toonEdgeRow {
+	var edges []toonEdgeRow
+	for _, node := range nodes {
+		edges = append(edges, toonEdgeRow{From: node.Task.ID, To: blockedID})
+		edges = append(edges, collectUpstreamEdges(node.Task.ID, node.Children)...)
+	}
+	return edges
+}
+
+// buildEdgeSection renders a named toon section of edge rows.
+func buildEdgeSection(name string, edges []toonEdgeRow) string {
+	if len(edges) == 0 {
+		return fmt.Sprintf("%s[0]{from,to}:", name)
+	}
+	return encodeToonSection(name, edges)
+}
+
 // buildTaskSection builds the task section with dynamic schema (omitting parent/closed when null).
 func buildTaskSection(t task.Task) string {
 	var fields []toon.Field

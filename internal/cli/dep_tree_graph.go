@@ -168,9 +168,12 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 	}
 
 	return DepTreeResult{
-		Roots:   roots,
-		Summary: summary,
-		Message: message,
+		Roots:        roots,
+		Summary:      summary,
+		ChainCount:   chains,
+		LongestChain: longest,
+		BlockedCount: blocked,
+		Message:      message,
 	}
 }
 

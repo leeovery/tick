@@ -160,12 +160,15 @@ type DepTreeNode struct {
 }
 
 // DepTreeResult holds all data needed to render a dep tree command output.
-// For full graph mode: Roots contains the top-level trees, Summary is populated.
+// For full graph mode: Roots contains the top-level trees, summary stats are populated.
 // For focused mode: BlockedBy and Blocks contain upstream/downstream trees.
 type DepTreeResult struct {
 	// Full graph mode fields
-	Roots   []DepTreeNode
-	Summary string
+	Roots        []DepTreeNode
+	Summary      string
+	ChainCount   int
+	LongestChain int
+	BlockedCount int
 
 	// Focused mode fields
 	Target    *DepTreeTask
