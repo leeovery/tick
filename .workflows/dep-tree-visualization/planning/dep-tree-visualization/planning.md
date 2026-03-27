@@ -50,3 +50,24 @@ approved_at: 2026-03-27
 |----|------|------------|
 | dep-tree-visualization-2-1 | ToonFormatter FormatDepTree | diamond dependencies produce duplicate edges, asymmetric focused view omits empty section, wide graph with many edges |
 | dep-tree-visualization-2-2 | JSONFormatter FormatDepTree | diamond dependencies produce duplicate nodes in tree, asymmetric focused view omits empty key from JSON object, empty arrays for non-omitted keys render as [] not null |
+
+## Phase 3: Analysis (Cycle 1)
+status: approved
+approved_at: 2026-03-27
+
+**Goal**: Address findings from Analysis (Cycle 1).
+
+**Acceptance**:
+- [ ] Focused no-deps edge case routes entirely through formatter in all three formats, producing valid structured output
+- [ ] walkDownstream and walkUpstream use visited sets to guard against cycles in corrupted data
+- [ ] Box-drawing tree rendering logic is extracted into a single shared helper used by both cascade and dep tree rendering
+
+### Tasks
+status: approved
+approved_at: 2026-03-27
+
+| ID | Task | Edge Cases |
+|----|------|------------|
+| dep-tree-visualization-3-1 | Fix Focused No-Deps Edge Case to Route Entirely Through Formatter | JSON output must contain both target task info and message, no raw fmt.Fprintf bypass |
+| dep-tree-visualization-3-2 | Add Cycle Guard to walkDownstream and walkUpstream | corrupted JSONL with dependency cycles, normal acyclic output unchanged |
+| dep-tree-visualization-3-3 | Extract Shared Box-Drawing Tree Helper From PrettyFormatter | existing cascade and dep tree output visually identical after refactor |

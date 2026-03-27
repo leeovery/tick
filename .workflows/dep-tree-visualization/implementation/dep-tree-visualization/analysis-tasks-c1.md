@@ -6,7 +6,7 @@ total_proposed: 3
 # Analysis Tasks: dep-tree-visualization (Cycle 1)
 
 ## Task 1: Fix focused no-deps edge case to route entirely through formatter
-status: pending
+status: approved
 severity: high
 sources: standards
 
@@ -36,7 +36,7 @@ sources: standards
 - Test focused dep tree on a task with no dependencies using toon formatter: verify output contains task info and message in toon format
 
 ## Task 2: Add cycle guard to walkDownstream and walkUpstream
-status: pending
+status: approved
 severity: medium
 sources: architecture
 
@@ -64,7 +64,7 @@ sources: architecture
 - Test that normal acyclic dep tree output is identical before and after the change
 
 ## Task 3: Extract shared box-drawing tree helper from PrettyFormatter
-status: pending
+status: approved
 severity: medium
 sources: duplication
 

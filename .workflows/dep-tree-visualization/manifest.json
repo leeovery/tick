@@ -47,7 +47,11 @@
             "dep-tree-visualization-1-4": "tick-7a553b",
             "dep-tree-visualization-2-1": "tick-964a0b",
             "dep-tree-visualization-2": "tick-fda1e3",
-            "dep-tree-visualization-2-2": "tick-f0bfcd"
+            "dep-tree-visualization-2-2": "tick-f0bfcd",
+            "dep-tree-visualization-3": "tick-d6d528",
+            "dep-tree-visualization-3-1": "tick-5f8703",
+            "dep-tree-visualization-3-2": "tick-aa2517",
+            "dep-tree-visualization-3-3": "tick-b5d370"
           },
           "external_id": "tick-86603c"
         }
@@ -59,7 +63,7 @@
           "status": "in-progress",
           "task_gate_mode": "auto",
           "fix_gate_mode": "auto",
-          "analysis_gate_mode": "gated",
+          "analysis_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle": 1,
           "linters": [
