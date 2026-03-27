@@ -262,6 +262,109 @@ func writeCascadeTree(b *strings.Builder, nodes []*cascadeNode, prefix string) {
 	}
 }
 
+// depTreeLineWidth is the assumed terminal width for title truncation in dep tree output.
+const depTreeLineWidth = 80
+
+// depTreeMinTitle is the minimum number of title characters to display before truncating.
+const depTreeMinTitle = 10
+
+// FormatDepTree renders a dependency tree visualization with box-drawing characters.
+// Supports both full-graph mode (Roots populated) and focused mode (Target populated).
+func (f *PrettyFormatter) FormatDepTree(result DepTreeResult) string {
+	if result.Target != nil {
+		return f.formatFocusedDepTree(result)
+	}
+	return f.formatFullDepTree(result)
+}
+
+// formatFullDepTree renders root tasks with their downstream dependency trees and a summary line.
+func (f *PrettyFormatter) formatFullDepTree(result DepTreeResult) string {
+	if len(result.Roots) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	for i, root := range result.Roots {
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		writeDepTreeTaskLine(&b, root.Task, "", 0)
+		writeDepTreeNodes(&b, root.Children, "", 1)
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
+	b.WriteString(result.Summary)
+	return b.String()
+}
+
+// formatFocusedDepTree renders the target task header followed by labeled
+// "Blocked by:" and "Blocks:" sections, omitting empty sections.
+func (f *PrettyFormatter) formatFocusedDepTree(result DepTreeResult) string {
+	var b strings.Builder
+	writeDepTreeTaskLine(&b, *result.Target, "", 0)
+
+	if len(result.BlockedBy) > 0 {
+		b.WriteString("\n\nBlocked by:")
+		writeDepTreeNodes(&b, result.BlockedBy, "", 1)
+	}
+
+	if len(result.Blocks) > 0 {
+		b.WriteString("\n\nBlocks:")
+		writeDepTreeNodes(&b, result.Blocks, "", 1)
+	}
+
+	return b.String()
+}
+
+// writeDepTreeTaskLine writes a single task line: {prefix}{id}  {title} ({status}).
+// The title is truncated to fit within depTreeLineWidth.
+func writeDepTreeTaskLine(b *strings.Builder, task DepTreeTask, prefix string, depth int) {
+	title := truncateDepTreeTitle(task.Title, depth)
+	fmt.Fprintf(b, "%s%s  %s (%s)", prefix, task.ID, title, task.Status)
+}
+
+// writeDepTreeNodes recursively renders tree nodes with box-drawing characters.
+// Each node is written as a new line (prefixed with \n).
+func writeDepTreeNodes(b *strings.Builder, nodes []DepTreeNode, prefix string, depth int) {
+	for i, node := range nodes {
+		isLast := i == len(nodes)-1
+		connector := "├── "
+		if isLast {
+			connector = "└── "
+		}
+		b.WriteString("\n")
+		writeDepTreeTaskLine(b, node.Task, prefix+connector, depth)
+
+		if len(node.Children) > 0 {
+			childPrefix := prefix + "│   "
+			if isLast {
+				childPrefix = prefix + "    "
+			}
+			writeDepTreeNodes(b, node.Children, childPrefix, depth+1)
+		}
+	}
+}
+
+// truncateDepTreeTitle truncates a title to fit the available width in dep tree output.
+// Available width accounts for indentation (depth * 4), ID length, status, and formatting.
+// Ensures at minimum depTreeMinTitle characters are shown (or full title if shorter).
+func truncateDepTreeTitle(title string, depth int) string {
+	// Overhead: prefix (depth*4) + ID (~11 chars "tick-XXXXXX") + 2 spaces + " (" + status (~11 chars max "in_progress") + ")"
+	// = depth*4 + 11 + 2 + 2 + 11 + 1 = depth*4 + 27
+	overhead := depth*4 + 27
+	available := depTreeLineWidth - overhead
+	if available < depTreeMinTitle {
+		available = depTreeMinTitle
+	}
+	if len(title) <= available {
+		return title
+	}
+	if available <= 3 {
+		return title[:available]
+	}
+	return title[:available-3] + "..."
+}
+
 // typeOrDash returns the type string or "-" if empty, for Pretty formatter display.
 func typeOrDash(typ string) string {
 	if typ == "" {

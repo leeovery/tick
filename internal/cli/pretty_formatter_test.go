@@ -741,3 +741,326 @@ func TestPrettyFormatter(t *testing.T) {
 		}
 	})
 }
+
+func TestPrettyFormatDepTree(t *testing.T) {
+	f := &PrettyFormatter{}
+
+	t.Run("it renders single linear chain in full graph mode", func(t *testing.T) {
+		result := DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "in_progress"}},
+					},
+				},
+			},
+			Summary: "1 chain, longest: 1, 1 blocked",
+		}
+		got := f.FormatDepTree(result)
+		expected := "" +
+			"tick-aaa111  Task A (open)\n" +
+			"└── tick-bbb222  Task B (in_progress)\n" +
+			"\n" +
+			"1 chain, longest: 1, 1 blocked"
+		if got != expected {
+			t.Errorf("got:\n%s\nwant:\n%s", got, expected)
+		}
+	})
+
+	t.Run("it renders multiple roots in full graph mode", func(t *testing.T) {
+		result := DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "open"}},
+					},
+				},
+				{
+					Task: DepTreeTask{ID: "tick-ccc333", Title: "Task C", Status: "done"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-ddd444", Title: "Task D", Status: "open"}},
+					},
+				},
+			},
+			Summary: "2 chains, longest: 1, 2 blocked",
+		}
+		got := f.FormatDepTree(result)
+		expected := "" +
+			"tick-aaa111  Task A (open)\n" +
+			"└── tick-bbb222  Task B (open)\n" +
+			"\n" +
+			"tick-ccc333  Task C (done)\n" +
+			"└── tick-ddd444  Task D (open)\n" +
+			"\n" +
+			"2 chains, longest: 1, 2 blocked"
+		if got != expected {
+			t.Errorf("got:\n%s\nwant:\n%s", got, expected)
+		}
+	})
+
+	t.Run("it renders diamond dependency duplicated in full graph mode", func(t *testing.T) {
+		// A blocks B and C; both B and C block D.
+		// D appears under both B and C.
+		result := DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+					Children: []DepTreeNode{
+						{
+							Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "open"},
+							Children: []DepTreeNode{
+								{Task: DepTreeTask{ID: "tick-ddd444", Title: "Task D", Status: "open"}},
+							},
+						},
+						{
+							Task: DepTreeTask{ID: "tick-ccc333", Title: "Task C", Status: "open"},
+							Children: []DepTreeNode{
+								{Task: DepTreeTask{ID: "tick-ddd444", Title: "Task D", Status: "open"}},
+							},
+						},
+					},
+				},
+			},
+			Summary: "1 chain, longest: 2, 3 blocked",
+		}
+		got := f.FormatDepTree(result)
+		expected := "" +
+			"tick-aaa111  Task A (open)\n" +
+			"├── tick-bbb222  Task B (open)\n" +
+			"│   └── tick-ddd444  Task D (open)\n" +
+			"└── tick-ccc333  Task C (open)\n" +
+			"    └── tick-ddd444  Task D (open)\n" +
+			"\n" +
+			"1 chain, longest: 2, 3 blocked"
+		if got != expected {
+			t.Errorf("got:\n%s\nwant:\n%s", got, expected)
+		}
+	})
+
+	t.Run("it renders deep chain with correct indentation", func(t *testing.T) {
+		result := DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+					Children: []DepTreeNode{
+						{
+							Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "open"},
+							Children: []DepTreeNode{
+								{
+									Task: DepTreeTask{ID: "tick-ccc333", Title: "Task C", Status: "open"},
+									Children: []DepTreeNode{
+										{Task: DepTreeTask{ID: "tick-ddd444", Title: "Task D", Status: "open"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Summary: "1 chain, longest: 3, 3 blocked",
+		}
+		got := f.FormatDepTree(result)
+		expected := "" +
+			"tick-aaa111  Task A (open)\n" +
+			"└── tick-bbb222  Task B (open)\n" +
+			"    └── tick-ccc333  Task C (open)\n" +
+			"        └── tick-ddd444  Task D (open)\n" +
+			"\n" +
+			"1 chain, longest: 3, 3 blocked"
+		if got != expected {
+			t.Errorf("got:\n%s\nwant:\n%s", got, expected)
+		}
+	})
+
+	t.Run("it renders summary line with correct counts", func(t *testing.T) {
+		result := DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
+					},
+				},
+			},
+			Summary: "3 chains, longest: 5, 7 blocked",
+		}
+		got := f.FormatDepTree(result)
+		if !strings.HasSuffix(got, "3 chains, longest: 5, 7 blocked") {
+			t.Errorf("should end with summary line, got:\n%s", got)
+		}
+	})
+
+	t.Run("it renders focused view with both sections", func(t *testing.T) {
+		result := DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "in_progress"},
+			BlockedBy: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"}},
+			},
+			Blocks: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-ccc333", Title: "Task C", Status: "open"}},
+			},
+		}
+		got := f.FormatDepTree(result)
+		expected := "" +
+			"tick-bbb222  Task B (in_progress)\n" +
+			"\n" +
+			"Blocked by:\n" +
+			"└── tick-aaa111  Task A (open)\n" +
+			"\n" +
+			"Blocks:\n" +
+			"└── tick-ccc333  Task C (open)"
+		if got != expected {
+			t.Errorf("got:\n%s\nwant:\n%s", got, expected)
+		}
+	})
+
+	t.Run("it renders focused view with only blocked-by section", func(t *testing.T) {
+		result := DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-ccc333", Title: "Task C", Status: "open"},
+			BlockedBy: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "in_progress"}},
+			},
+		}
+		got := f.FormatDepTree(result)
+		expected := "" +
+			"tick-ccc333  Task C (open)\n" +
+			"\n" +
+			"Blocked by:\n" +
+			"└── tick-bbb222  Task B (in_progress)"
+		if got != expected {
+			t.Errorf("got:\n%s\nwant:\n%s", got, expected)
+		}
+	})
+
+	t.Run("it renders focused view with only blocks section", func(t *testing.T) {
+		result := DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+			Blocks: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "in_progress"}},
+			},
+		}
+		got := f.FormatDepTree(result)
+		expected := "" +
+			"tick-aaa111  Task A (open)\n" +
+			"\n" +
+			"Blocks:\n" +
+			"└── tick-bbb222  Task B (in_progress)"
+		if got != expected {
+			t.Errorf("got:\n%s\nwant:\n%s", got, expected)
+		}
+	})
+
+	t.Run("it omits empty sections in asymmetric focused view", func(t *testing.T) {
+		// Root task: blocks others but not blocked itself
+		result := DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+			Blocks: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "open"}},
+			},
+		}
+		got := f.FormatDepTree(result)
+		if strings.Contains(got, "Blocked by:") {
+			t.Errorf("should not contain 'Blocked by:' when there are no blockers, got:\n%s", got)
+		}
+	})
+
+	t.Run("it truncates long titles with ellipsis", func(t *testing.T) {
+		longTitle := "This is a very long title that should be truncated because it exceeds the available width for display in the tree"
+		result := DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
+					Children: []DepTreeNode{
+						{
+							Task: DepTreeTask{ID: "tick-bbb222", Title: longTitle, Status: "open"},
+							Children: []DepTreeNode{
+								{
+									Task: DepTreeTask{ID: "tick-ccc333", Title: longTitle, Status: "open"},
+								},
+							},
+						},
+					},
+				},
+			},
+			Summary: "1 chain, longest: 2, 2 blocked",
+		}
+		got := f.FormatDepTree(result)
+		// The long title at depth 1 should be truncated with "..."
+		if !strings.Contains(got, "...") {
+			t.Errorf("should contain truncated title with '...', got:\n%s", got)
+		}
+		// Full title should NOT appear
+		if strings.Contains(got, longTitle) {
+			t.Errorf("full long title should not appear in output, got:\n%s", got)
+		}
+	})
+
+	t.Run("it uses box-drawing characters for tree structure", func(t *testing.T) {
+		result := DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Child 1", Status: "open"}},
+						{Task: DepTreeTask{ID: "tick-ccc333", Title: "Child 2", Status: "open"}},
+					},
+				},
+			},
+			Summary: "1 chain, longest: 1, 2 blocked",
+		}
+		got := f.FormatDepTree(result)
+		if !strings.Contains(got, "├── ") {
+			t.Errorf("should contain middle connector (├──), got:\n%s", got)
+		}
+		if !strings.Contains(got, "└── ") {
+			t.Errorf("should contain last connector (└──), got:\n%s", got)
+		}
+	})
+
+	t.Run("it shows task ID and status in each line", func(t *testing.T) {
+		result := DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "done"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "in_progress"}},
+					},
+				},
+			},
+			Summary: "1 chain, longest: 1, 1 blocked",
+		}
+		got := f.FormatDepTree(result)
+		lines := strings.Split(got, "\n")
+		// First line: root
+		if !strings.Contains(lines[0], "tick-aaa111") {
+			t.Errorf("root line should contain ID, got: %q", lines[0])
+		}
+		if !strings.Contains(lines[0], "(done)") {
+			t.Errorf("root line should contain status in parens, got: %q", lines[0])
+		}
+		// Second line: child
+		if !strings.Contains(lines[1], "tick-bbb222") {
+			t.Errorf("child line should contain ID, got: %q", lines[1])
+		}
+		if !strings.Contains(lines[1], "(in_progress)") {
+			t.Errorf("child line should contain status in parens, got: %q", lines[1])
+		}
+	})
+
+	t.Run("it renders target task header in focused mode", func(t *testing.T) {
+		result := DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "in_progress"},
+			BlockedBy: []DepTreeNode{
+				{Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"}},
+			},
+		}
+		got := f.FormatDepTree(result)
+		lines := strings.Split(got, "\n")
+		expectedFirst := "tick-bbb222  Task B (in_progress)"
+		if lines[0] != expectedFirst {
+			t.Errorf("first line = %q, want %q", lines[0], expectedFirst)
+		}
+	})
+}
