@@ -136,7 +136,6 @@
 - [ ] Empty `roots` in full graph mode renders as `[]` not `null`
 - [ ] Asymmetric focused view omits the empty direction key from JSON output entirely (key absent, not `[]`)
 - [ ] Leaf node `children` renders as `[]` not `null` (children is always present on nodes)
-- [ ] Empty `roots` in full graph mode renders as `[]` not `null`
 - [ ] Diamond dependencies appear as duplicate nodes in the nested tree structure
 - [ ] Output uses 2-space indentation via `marshalIndentJSON`
 - [ ] All output is valid JSON parseable by `json.Unmarshal`
