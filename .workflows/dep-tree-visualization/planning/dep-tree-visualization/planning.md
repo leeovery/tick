@@ -17,7 +17,8 @@ approved_at: 2026-03-27
 - [ ] All existing tests pass (`go test ./...`)
 
 ### Tasks
-status: draft
+status: approved
+approved_at: 2026-03-27
 
 | ID | Task | Edge Cases |
 |----|------|------------|
