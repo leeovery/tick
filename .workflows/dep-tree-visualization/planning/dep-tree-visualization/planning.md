@@ -41,3 +41,12 @@ approved_at: 2026-03-27
 - [ ] Asymmetric focused view: only shows sections with content (omits empty "Blocked by:" or "Blocks:" sections)
 - [ ] All three formatters produce correct output for diamond dependencies, deep chains, and wide graphs
 - [ ] All existing tests pass (`go test ./...`)
+
+### Tasks
+status: approved
+approved_at: 2026-03-27
+
+| ID | Task | Edge Cases |
+|----|------|------------|
+| dep-tree-visualization-2-1 | ToonFormatter FormatDepTree | diamond dependencies produce duplicate edges, asymmetric focused view omits empty section, wide graph with many edges |
+| dep-tree-visualization-2-2 | JSONFormatter FormatDepTree | diamond dependencies produce duplicate nodes in tree, asymmetric focused view omits empty arrays, empty arrays render as [] not null |
