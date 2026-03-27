@@ -32,7 +32,7 @@
         "dep-tree-visualization": {
           "status": "in-progress",
           "format": "tick",
-          "spec_commit": "8d53bcb246270fefb48eea1f5c5ab8941794cc31",
+          "spec_commit": "737a87fe763589e9e120a315e61bbe1d756ec86a",
           "task_list_gate_mode": "gated",
           "author_gate_mode": "gated",
           "finding_gate_mode": "gated",
