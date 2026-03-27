@@ -16,6 +16,16 @@ approved_at: 2026-03-27
 - [ ] Tasks with no dependency relationships are omitted from full graph output
 - [ ] All existing tests pass (`go test ./...`)
 
+### Tasks
+status: draft
+
+| ID | Task | Edge Cases |
+|----|------|------------|
+| dep-tree-visualization-1-1 | Command Wiring and Formatter Interface | none |
+| dep-tree-visualization-1-2 | Dep Tree Data Model and Graph-Walking Algorithm | diamond dependencies duplicated without deduplication, task with no dependencies in focused mode, empty project with no dependencies, asymmetric focused view omits empty sections |
+| dep-tree-visualization-1-3 | RunDepTree Command Handler | invalid task ID in focused mode, task not found |
+| dep-tree-visualization-1-4 | Pretty Formatter FormatDepTree | title truncation to fit available width, very deep chains with cumulative indentation, asymmetric focused view with only one section |
+
 ## Phase 2: Toon and JSON Formatters with Edge Cases
 status: approved
 approved_at: 2026-03-27
