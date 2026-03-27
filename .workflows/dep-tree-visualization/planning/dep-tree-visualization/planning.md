@@ -1,7 +1,8 @@
 # Plan: Dep Tree Visualization
 
 ## Phase 1: Core Graph Logic, Command Wiring, and Pretty Formatter
-status: draft
+status: approved
+approved_at: 2026-03-27
 
 **Goal**: Deliver working `tick dep tree` and `tick dep tree <id>` with Pretty output, including the graph-walking algorithm, data structures, command dispatch, flag validation, help registration, and the Pretty formatter with box-drawing tree rendering.
 
@@ -16,7 +17,8 @@ status: draft
 - [ ] All existing tests pass (`go test ./...`)
 
 ## Phase 2: Toon and JSON Formatters with Edge Cases
-status: draft
+status: approved
+approved_at: 2026-03-27
 
 **Goal**: Complete all three formatter implementations and handle every edge case defined in the specification.
 
