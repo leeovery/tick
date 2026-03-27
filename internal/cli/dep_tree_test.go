@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -271,6 +272,47 @@ func TestRunDepTree(t *testing.T) {
 
 		if stdout != "" {
 			t.Errorf("stdout should be empty with --quiet, got %q", stdout)
+		}
+	})
+
+	t.Run("it outputs valid JSON for focused no-deps case", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		var stdoutBuf, stderrBuf bytes.Buffer
+		app := &App{
+			Stdout: &stdoutBuf,
+			Stderr: &stderrBuf,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		exitCode := app.Run([]string{"tick", "--json", "dep", "tree", "tick-aaa111"})
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderrBuf.String())
+		}
+
+		output := strings.TrimSpace(stdoutBuf.String())
+		// Must be valid JSON (not raw text + JSON mixed)
+		if !json.Valid([]byte(output)) {
+			t.Fatalf("output is not valid JSON:\n%s", output)
+		}
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(output), &parsed); err != nil {
+			t.Fatalf("failed to parse JSON: %v", err)
+		}
+
+		// Must contain target info and message
+		target, ok := parsed["target"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("target field missing or not an object, got %v", parsed["target"])
+		}
+		if target["id"] != "tick-aaa111" {
+			t.Errorf("target.id = %v, want %q", target["id"], "tick-aaa111")
+		}
+		if parsed["message"] != "No dependencies." {
+			t.Errorf("message = %v, want %q", parsed["message"], "No dependencies.")
 		}
 	})
 

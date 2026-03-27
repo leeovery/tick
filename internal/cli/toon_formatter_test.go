@@ -966,4 +966,28 @@ func TestToonFormatDepTree(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("it renders focused no-deps with task info and message", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+			Message: "No dependencies.",
+		})
+
+		// Must contain task ID
+		if !strings.Contains(result, "tick-aaa111") {
+			t.Errorf("output should contain task ID, got:\n%s", result)
+		}
+		// Must contain task title
+		if !strings.Contains(result, "Task A") {
+			t.Errorf("output should contain task title, got:\n%s", result)
+		}
+		// Must contain task status
+		if !strings.Contains(result, "open") {
+			t.Errorf("output should contain task status, got:\n%s", result)
+		}
+		// Must contain the message
+		if !strings.Contains(result, "No dependencies.") {
+			t.Errorf("output should contain 'No dependencies.', got:\n%s", result)
+		}
+	})
 }

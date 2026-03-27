@@ -1063,4 +1063,35 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			t.Errorf("first line = %q, want %q", lines[0], expectedFirst)
 		}
 	})
+
+	t.Run("it renders focused no-deps with task info and message", func(t *testing.T) {
+		result := DepTreeResult{
+			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+			Message: "No dependencies.",
+		}
+		got := f.FormatDepTree(result)
+
+		// Must contain task info line
+		if !strings.Contains(got, "tick-aaa111") {
+			t.Errorf("output should contain task ID, got:\n%s", got)
+		}
+		if !strings.Contains(got, "Task A") {
+			t.Errorf("output should contain task title, got:\n%s", got)
+		}
+		if !strings.Contains(got, "(open)") {
+			t.Errorf("output should contain task status in parens, got:\n%s", got)
+		}
+
+		// Must contain the message
+		if !strings.Contains(got, "No dependencies.") {
+			t.Errorf("output should contain 'No dependencies.', got:\n%s", got)
+		}
+
+		// First line should be the task info
+		lines := strings.Split(got, "\n")
+		expectedFirst := "tick-aaa111  Task A (open)"
+		if lines[0] != expectedFirst {
+			t.Errorf("first line = %q, want %q", lines[0], expectedFirst)
+		}
+	})
 }

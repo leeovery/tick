@@ -299,9 +299,16 @@ func (f *PrettyFormatter) formatFullDepTree(result DepTreeResult) string {
 
 // formatFocusedDepTree renders the target task header followed by labeled
 // "Blocked by:" and "Blocks:" sections, omitting empty sections.
+// When both directions are empty, renders the task info followed by the message.
 func (f *PrettyFormatter) formatFocusedDepTree(result DepTreeResult) string {
 	var b strings.Builder
 	writeDepTreeTaskLine(&b, *result.Target, "", 0)
+
+	if len(result.BlockedBy) == 0 && len(result.Blocks) == 0 && result.Message != "" {
+		b.WriteString("\n")
+		b.WriteString(result.Message)
+		return b.String()
+	}
 
 	if len(result.BlockedBy) > 0 {
 		b.WriteString("\n\nBlocked by:")

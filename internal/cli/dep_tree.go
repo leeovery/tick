@@ -58,12 +58,6 @@ func runFocusedDepTree(store interface{ ResolveID(string) (string, error) }, tas
 		return err
 	}
 
-	if len(result.BlockedBy) == 0 && len(result.Blocks) == 0 {
-		fmt.Fprintf(stdout, "%s %s [%s]\n", result.Target.ID, result.Target.Title, result.Target.Status)
-		fmt.Fprintln(stdout, fmtr.FormatMessage(result.Message))
-		return nil
-	}
-
 	fmt.Fprintln(stdout, fmtr.FormatDepTree(result))
 	return nil
 }

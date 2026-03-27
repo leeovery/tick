@@ -170,15 +170,17 @@ type toonDepTreeSummary struct {
 // FormatDepTree renders a dependency tree in TOON edge-list format.
 // Full graph: dep_tree[N]{from,to}: section + summary{chains,longest,blocked}: section.
 // Focused mode: separate blocked_by[N]{from,to}: and blocks[N]{from,to}: sections,
-// omitting empty directions entirely.
+// omitting empty directions entirely. When the target has no dependencies, renders
+// the target task info followed by the message.
 func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
+	if result.Target != nil {
+		return f.formatFocusedDepTree(result)
+	}
+
 	if result.Message != "" {
 		return result.Message
 	}
 
-	if result.Target != nil {
-		return f.formatFocusedDepTree(result)
-	}
 	return f.formatFullDepTree(result)
 }
 
@@ -203,7 +205,12 @@ func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
 }
 
 // formatFocusedDepTree renders focused mode with blocked_by and blocks sections.
+// When both directions are empty, renders the target task info followed by the message.
 func (f *ToonFormatter) formatFocusedDepTree(result DepTreeResult) string {
+	if len(result.BlockedBy) == 0 && len(result.Blocks) == 0 && result.Message != "" {
+		return fmt.Sprintf("%s  %s (%s)\n%s", result.Target.ID, result.Target.Title, result.Target.Status, result.Message)
+	}
+
 	var sections []string
 
 	if len(result.BlockedBy) > 0 {

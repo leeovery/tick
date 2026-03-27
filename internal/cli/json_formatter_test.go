@@ -1470,4 +1470,47 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Errorf("should not contain tab indentation, got:\n%s", result)
 		}
 	})
+
+	t.Run("it renders focused no-deps as valid JSON with target and message", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+			Message: "No dependencies.",
+		})
+
+		// Must be valid JSON
+		if !json.Valid([]byte(result)) {
+			t.Fatalf("output is not valid JSON:\n%s", result)
+		}
+
+		// Parse and verify fields
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("failed to parse JSON: %v", err)
+		}
+
+		// Must have mode = "focused"
+		if parsed["mode"] != "focused" {
+			t.Errorf("mode = %v, want %q", parsed["mode"], "focused")
+		}
+
+		// Must have target with task info
+		target, ok := parsed["target"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("target field missing or not an object, got %v", parsed["target"])
+		}
+		if target["id"] != "tick-aaa111" {
+			t.Errorf("target.id = %v, want %q", target["id"], "tick-aaa111")
+		}
+		if target["title"] != "Task A" {
+			t.Errorf("target.title = %v, want %q", target["title"], "Task A")
+		}
+		if target["status"] != "open" {
+			t.Errorf("target.status = %v, want %q", target["status"], "open")
+		}
+
+		// Must have message field
+		if parsed["message"] != "No dependencies." {
+			t.Errorf("message = %v, want %q", parsed["message"], "No dependencies.")
+		}
+	})
 }

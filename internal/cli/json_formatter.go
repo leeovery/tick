@@ -327,11 +327,13 @@ type jsonDepTreeFull struct {
 
 // jsonDepTreeFocused represents the focused mode JSON output.
 // BlockedBy and Blocks use omitempty to omit empty directions entirely.
+// Message is included when the target has no dependencies.
 type jsonDepTreeFocused struct {
 	Mode      string            `json:"mode"`
 	Target    jsonDepTreeTask   `json:"target"`
 	BlockedBy []jsonDepTreeNode `json:"blocked_by,omitempty"`
 	Blocks    []jsonDepTreeNode `json:"blocks,omitempty"`
+	Message   string            `json:"message,omitempty"`
 }
 
 // toJSONDepTreeNodes recursively converts []DepTreeNode to []jsonDepTreeNode.
@@ -353,15 +355,17 @@ func toJSONDepTreeNodes(nodes []DepTreeNode) []jsonDepTreeNode {
 
 // FormatDepTree renders a dependency tree as structured JSON.
 // Full graph: {mode, roots, chains, longest, blocked}.
-// Focused: {mode, target, blocked_by?, blocks?} with omitempty on directions.
+// Focused: {mode, target, blocked_by?, blocks?, message?} with omitempty on directions.
+// Message-only (no target): {message}.
 func (f *JSONFormatter) FormatDepTree(result DepTreeResult) string {
+	if result.Target != nil {
+		return f.formatFocusedDepTreeJSON(result)
+	}
+
 	if result.Message != "" {
 		return marshalIndentJSON(jsonMessage{Message: result.Message})
 	}
 
-	if result.Target != nil {
-		return f.formatFocusedDepTreeJSON(result)
-	}
 	return f.formatFullDepTreeJSON(result)
 }
 
@@ -377,6 +381,7 @@ func (f *JSONFormatter) formatFullDepTreeJSON(result DepTreeResult) string {
 }
 
 // formatFocusedDepTreeJSON renders focused mode as JSON with optional directions.
+// When both BlockedBy and Blocks are empty, includes the message field.
 func (f *JSONFormatter) formatFocusedDepTreeJSON(result DepTreeResult) string {
 	obj := jsonDepTreeFocused{
 		Mode: "focused",
@@ -393,6 +398,10 @@ func (f *JSONFormatter) formatFocusedDepTreeJSON(result DepTreeResult) string {
 
 	if len(result.Blocks) > 0 {
 		obj.Blocks = toJSONDepTreeNodes(result.Blocks)
+	}
+
+	if len(result.BlockedBy) == 0 && len(result.Blocks) == 0 {
+		obj.Message = result.Message
 	}
 
 	return marshalIndentJSON(obj)
