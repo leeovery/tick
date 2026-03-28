@@ -258,17 +258,59 @@ tick note remove tick-a1b2 1          # remove note at index 1 (1-based)
 
 ### `dep`
 
-Manage task dependencies. Tick validates all dependency changes and prevents cycles, self-references, children blocked by their own parent, and dependencies on cancelled tasks.
+Manage and visualize task dependencies. Tick validates all dependency changes and prevents cycles, self-references, children blocked by their own parent, and dependencies on cancelled tasks.
 
 ```bash
 tick dep add    <task-id> <blocked-by-id>
 tick dep remove <task-id> <blocked-by-id>
+tick dep tree   [task-id]
 ```
 
 ```bash
 tick dep add    tick-a1b2 tick-c3d4    # tick-a1b2 is now blocked by tick-c3d4
 tick dep remove tick-a1b2 tick-c3d4    # remove that dependency
 ```
+
+**`dep tree`** — Visualize dependency chains. Two modes:
+
+```bash
+tick dep tree                          # full graph: all dependency chains
+tick dep tree tick-a1b2                # focused: upstream + downstream from a task
+```
+
+Full graph shows root tasks (tasks that block others but aren't blocked themselves) with their downstream chains, plus a summary line. Focused view walks both directions from the target — what blocks it and what it unblocks. Diamond dependencies are duplicated at each path.
+
+<table>
+<tr>
+<td>
+
+**Pretty** (box-drawing tree)
+```
+$ tick dep tree
+tick-a1b2  Setup auth (done)
+└── tick-c3d4  Login endpoint (open)
+    └── tick-f3e4  Write tests (open)
+
+1 chain, longest: 2, 2 blocked
+```
+
+</td>
+<td>
+
+**TOON** (flat edge list)
+```
+$ tick dep tree
+dep_tree[2]{from,to}:
+  tick-a1b2,tick-c3d4
+  tick-c3d4,tick-f3e4
+
+summary{chains,longest,blocked}:
+  1,2,2
+```
+
+</td>
+</tr>
+</table>
 
 ### `stats`
 

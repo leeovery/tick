@@ -45,7 +45,7 @@ release                   → release script with AI-generated notes via Claude 
 
 - **DI via struct fields:** App injects Stdout, Stderr, Getwd, IsTTY. Store uses functional options (`StoreOption`).
 - **Handler signature:** `Run<Command>(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error`
-- **Formatter interface:** `Formatter` with methods FormatTaskList, FormatTaskDetail, FormatTransition, FormatCascadeTransition, FormatDepChange, FormatStats, FormatMessage, FormatRemoval. Three implementations: ToonFormatter, PrettyFormatter, JSONFormatter.
+- **Formatter interface:** `Formatter` with methods FormatTaskList, FormatTaskDetail, FormatTransition, FormatCascadeTransition, FormatDepChange, FormatDepTree, FormatStats, FormatMessage, FormatRemoval. Three implementations: ToonFormatter, PrettyFormatter, JSONFormatter.
 - **Format auto-detection:** TTY → pretty, non-TTY → toon. Override with `--toon`, `--pretty`, `--json`.
 - **Error wrapping:** `fmt.Errorf("context: %w", err)` throughout.
 - **Task IDs:** `tick-` prefix + 6 hex chars (3 random bytes). Partial ID matching supported (unique prefix resolves to full ID).
