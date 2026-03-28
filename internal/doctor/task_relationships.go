@@ -49,7 +49,7 @@ func taskRelationshipsFromLines(lines []JSONLine) []TaskRelationshipData {
 		}
 
 		if blockedVal, exists := jl.Parsed["blocked_by"]; exists {
-			if blockedArr, ok := blockedVal.([]interface{}); ok {
+			if blockedArr, ok := blockedVal.([]any); ok {
 				for _, item := range blockedArr {
 					if s, ok := item.(string); ok {
 						entry.BlockedBy = append(entry.BlockedBy, s)

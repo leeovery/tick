@@ -152,7 +152,7 @@ func TestWorkflowIntegration(t *testing.T) {
 		t.Fatalf("stats failed: exit=%d stderr=%q", exitCode, stderr)
 	}
 
-	var stats map[string]interface{}
+	var stats map[string]any
 	if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &stats); err != nil {
 		t.Fatalf("invalid stats JSON: %v\nstdout: %s", err, stdout)
 	}
@@ -162,7 +162,7 @@ func TestWorkflowIntegration(t *testing.T) {
 		t.Errorf("stats total = %v, want 5", stats["total"])
 	}
 
-	byStatus := stats["by_status"].(map[string]interface{})
+	byStatus := stats["by_status"].(map[string]any)
 	if byStatus["done"] != float64(5) {
 		t.Errorf("stats done = %v, want 5", byStatus["done"])
 	}
@@ -176,7 +176,7 @@ func TestWorkflowIntegration(t *testing.T) {
 		t.Errorf("stats cancelled = %v, want 0", byStatus["cancelled"])
 	}
 
-	workflow := stats["workflow"].(map[string]interface{})
+	workflow := stats["workflow"].(map[string]any)
 	if workflow["ready"] != float64(0) {
 		t.Errorf("stats ready = %v, want 0", workflow["ready"])
 	}

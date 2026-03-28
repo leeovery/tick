@@ -17,7 +17,7 @@ type JSONLine struct {
 	// Raw is the original line text.
 	Raw string
 	// Parsed is the parsed JSON map, or nil if parsing failed.
-	Parsed map[string]interface{}
+	Parsed map[string]any
 }
 
 // ScanJSONLines reads tasks.jsonl from the given tick directory and returns
@@ -50,7 +50,7 @@ func ScanJSONLines(tickDir string) ([]JSONLine, error) {
 			Raw:     text,
 		}
 
-		var obj map[string]interface{}
+		var obj map[string]any
 		if err := json.Unmarshal([]byte(text), &obj); err == nil {
 			line.Parsed = obj
 		}

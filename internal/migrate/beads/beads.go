@@ -37,7 +37,7 @@ type beadsIssue struct {
 	ClosedAt     string        `json:"closed_at"`
 	CloseReason  string        `json:"close_reason"`
 	CreatedBy    string        `json:"created_by"`
-	Dependencies []interface{} `json:"dependencies"`
+	Dependencies []any `json:"dependencies"`
 }
 
 // BeadsProvider reads tasks from .beads/issues.jsonl in a given base directory.

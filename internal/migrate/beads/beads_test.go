@@ -509,7 +509,7 @@ func TestMapToMigratedTask(t *testing.T) {
 			ClosedAt:     "2026-01-15T10:00:00Z",
 			CloseReason:  "completed",
 			CreatedBy:    "alice",
-			Dependencies: []interface{}{"b-002", "b-003"},
+			Dependencies: []any{"b-002", "b-003"},
 		}
 
 		tk := mapToMigratedTask(issue)

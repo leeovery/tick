@@ -47,7 +47,7 @@ func TestStats(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nstdout: %s", err, stdout)
 		}
@@ -56,7 +56,7 @@ func TestStats(t *testing.T) {
 			t.Errorf("total = %v, want 7", parsed["total"])
 		}
 
-		byStatus := parsed["by_status"].(map[string]interface{})
+		byStatus := parsed["by_status"].(map[string]any)
 		if byStatus["open"] != float64(2) {
 			t.Errorf("open = %v, want 2", byStatus["open"])
 		}
@@ -94,12 +94,12 @@ func TestStats(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nstdout: %s", err, stdout)
 		}
 
-		workflow := parsed["workflow"].(map[string]interface{})
+		workflow := parsed["workflow"].(map[string]any)
 		// Ready: tick-aaa111 (open, unblocked, no children) + tick-ccc222 (open, unblocked, no children) = 2
 		if workflow["ready"] != float64(2) {
 			t.Errorf("ready = %v, want 2", workflow["ready"])
@@ -123,19 +123,19 @@ func TestStats(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nstdout: %s", err, stdout)
 		}
 
-		byPriority := parsed["by_priority"].([]interface{})
+		byPriority := parsed["by_priority"].([]any)
 		if len(byPriority) != 5 {
 			t.Fatalf("by_priority length = %d, want 5", len(byPriority))
 		}
 
 		expectedCounts := []float64{0, 0, 2, 0, 0}
 		for i, expected := range expectedCounts {
-			entry := byPriority[i].(map[string]interface{})
+			entry := byPriority[i].(map[string]any)
 			if entry["priority"] != float64(i) {
 				t.Errorf("by_priority[%d].priority = %v, want %v", i, entry["priority"], i)
 			}
@@ -153,7 +153,7 @@ func TestStats(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nstdout: %s", err, stdout)
 		}
@@ -162,14 +162,14 @@ func TestStats(t *testing.T) {
 			t.Errorf("total = %v, want 0", parsed["total"])
 		}
 
-		byStatus := parsed["by_status"].(map[string]interface{})
+		byStatus := parsed["by_status"].(map[string]any)
 		for _, key := range []string{"open", "in_progress", "done", "cancelled"} {
 			if byStatus[key] != float64(0) {
 				t.Errorf("by_status.%s = %v, want 0", key, byStatus[key])
 			}
 		}
 
-		workflow := parsed["workflow"].(map[string]interface{})
+		workflow := parsed["workflow"].(map[string]any)
 		if workflow["ready"] != float64(0) {
 			t.Errorf("workflow.ready = %v, want 0", workflow["ready"])
 		}
@@ -177,12 +177,12 @@ func TestStats(t *testing.T) {
 			t.Errorf("workflow.blocked = %v, want 0", workflow["blocked"])
 		}
 
-		byPriority := parsed["by_priority"].([]interface{})
+		byPriority := parsed["by_priority"].([]any)
 		if len(byPriority) != 5 {
 			t.Fatalf("by_priority length = %d, want 5", len(byPriority))
 		}
 		for i := 0; i < 5; i++ {
-			entry := byPriority[i].(map[string]interface{})
+			entry := byPriority[i].(map[string]any)
 			if entry["count"] != float64(0) {
 				t.Errorf("by_priority[%d].count = %v, want 0", i, entry["count"])
 			}
@@ -287,7 +287,7 @@ func TestStats(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nstdout: %s", err, stdout)
 		}
@@ -311,7 +311,7 @@ func TestStats(t *testing.T) {
 			t.Errorf("total = %v, want 2", parsed["total"])
 		}
 
-		byStatus := parsed["by_status"].(map[string]interface{})
+		byStatus := parsed["by_status"].(map[string]any)
 		if byStatus["open"] != float64(1) {
 			t.Errorf("by_status.open = %v, want 1", byStatus["open"])
 		}
@@ -319,7 +319,7 @@ func TestStats(t *testing.T) {
 			t.Errorf("by_status.done = %v, want 1", byStatus["done"])
 		}
 
-		workflow := parsed["workflow"].(map[string]interface{})
+		workflow := parsed["workflow"].(map[string]any)
 		if workflow["ready"] != float64(1) {
 			t.Errorf("workflow.ready = %v, want 1", workflow["ready"])
 		}

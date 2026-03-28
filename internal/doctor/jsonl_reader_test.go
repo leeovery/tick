@@ -137,7 +137,7 @@ func TestGetJSONLines(t *testing.T) {
 		tickDir := setupTickDir(t)
 		// No file needed - context should provide the data.
 		preloaded := []JSONLine{
-			{LineNum: 1, Raw: "{\"id\":\"abc\"}", Parsed: map[string]interface{}{"id": "abc"}},
+			{LineNum: 1, Raw: "{\"id\":\"abc\"}", Parsed: map[string]any{"id": "abc"}},
 		}
 		ctx := context.WithValue(ctxWithTickDir(tickDir), JSONLinesKey, preloaded)
 
@@ -179,7 +179,7 @@ func TestGetTaskRelationships(t *testing.T) {
 		tickDir := setupTickDir(t)
 		// No file needed - context should provide the JSONLine data.
 		preloaded := []JSONLine{
-			{LineNum: 1, Raw: `{"id":"tick-aaa111","status":"open"}`, Parsed: map[string]interface{}{"id": "tick-aaa111", "status": "open"}},
+			{LineNum: 1, Raw: `{"id":"tick-aaa111","status":"open"}`, Parsed: map[string]any{"id": "tick-aaa111", "status": "open"}},
 		}
 		ctx := context.WithValue(ctxWithTickDir(tickDir), JSONLinesKey, preloaded)
 

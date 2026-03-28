@@ -50,7 +50,7 @@ func TestFormatIntegration(t *testing.T) {
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
 					// JSON format: should be valid JSON with "id" key
-					var obj map[string]interface{}
+					var obj map[string]any
 					if err := json.Unmarshal([]byte(stdout), &obj); err != nil {
 						t.Errorf("json format should be valid JSON, got error: %v, output: %q", err, stdout)
 						return
@@ -111,7 +111,7 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--json",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					var obj map[string]interface{}
+					var obj map[string]any
 					if err := json.Unmarshal([]byte(stdout), &obj); err != nil {
 						t.Errorf("json transition should be valid JSON, got error: %v, output: %q", err, stdout)
 						return
@@ -182,7 +182,7 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--json",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					var obj map[string]interface{}
+					var obj map[string]any
 					if err := json.Unmarshal([]byte(stdout), &obj); err != nil {
 						t.Errorf("json dep should be valid JSON, got error: %v, output: %q", err, stdout)
 						return
@@ -256,7 +256,7 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--json",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					var arr []map[string]interface{}
+					var arr []map[string]any
 					if err := json.Unmarshal([]byte(stdout), &arr); err != nil {
 						t.Errorf("json list should be valid JSON array, got error: %v, output: %q", err, stdout)
 						return
@@ -321,7 +321,7 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--json",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					var obj map[string]interface{}
+					var obj map[string]any
 					if err := json.Unmarshal([]byte(stdout), &obj); err != nil {
 						t.Errorf("json show should be valid JSON, got error: %v, output: %q", err, stdout)
 						return
@@ -382,7 +382,7 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--json",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					var obj map[string]interface{}
+					var obj map[string]any
 					if err := json.Unmarshal([]byte(stdout), &obj); err != nil {
 						t.Errorf("json init should be valid JSON, got error: %v, output: %q", err, stdout)
 						return
@@ -696,7 +696,7 @@ func TestFormatIntegration(t *testing.T) {
 			if exitCode != 0 {
 				t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderrBuf.String())
 			}
-			var obj map[string]interface{}
+			var obj map[string]any
 			if err := json.Unmarshal([]byte(strings.TrimSpace(stdoutBuf.String())), &obj); err != nil {
 				t.Errorf("--json should force JSON format, got error: %v, output: %q", err, stdoutBuf.String())
 			}

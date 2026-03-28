@@ -26,7 +26,7 @@ func TestTagMarshalJSON(t *testing.T) {
 			t.Fatalf("Marshal error: %v", err)
 		}
 
-		var raw map[string]interface{}
+		var raw map[string]any
 		if err := json.Unmarshal(data, &raw); err != nil {
 			t.Fatalf("Unmarshal raw error: %v", err)
 		}
@@ -35,7 +35,7 @@ func TestTagMarshalJSON(t *testing.T) {
 		if !ok {
 			t.Fatal("expected 'tags' key in JSON output, not found")
 		}
-		tagsArr, ok := tagsRaw.([]interface{})
+		tagsArr, ok := tagsRaw.([]any)
 		if !ok {
 			t.Fatalf("expected tags to be an array, got %T", tagsRaw)
 		}

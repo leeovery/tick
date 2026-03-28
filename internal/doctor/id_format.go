@@ -82,7 +82,7 @@ func (c *IdFormatCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 }
 
 // formatNonStringID returns a display string for non-string id values.
-func formatNonStringID(val interface{}) string {
+func formatNonStringID(val any) string {
 	if val == nil {
 		return "<null>"
 	}

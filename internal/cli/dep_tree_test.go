@@ -298,13 +298,13 @@ func TestRunDepTree(t *testing.T) {
 			t.Fatalf("output is not valid JSON:\n%s", output)
 		}
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(output), &parsed); err != nil {
 			t.Fatalf("failed to parse JSON: %v", err)
 		}
 
 		// Must contain target info and message
-		target, ok := parsed["target"].(map[string]interface{})
+		target, ok := parsed["target"].(map[string]any)
 		if !ok {
 			t.Fatalf("target field missing or not an object, got %v", parsed["target"])
 		}

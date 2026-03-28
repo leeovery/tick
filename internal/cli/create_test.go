@@ -494,7 +494,7 @@ func TestCreate(t *testing.T) {
 		}
 
 		// Verify it's valid JSONL
-		var raw map[string]interface{}
+		var raw map[string]any
 		lines := strings.TrimSpace(string(data))
 		if err := json.Unmarshal([]byte(lines), &raw); err != nil {
 			t.Errorf("tasks.jsonl content is not valid JSON: %v", err)

@@ -259,9 +259,9 @@ func queryDescendantIDs(db *sql.DB, parentID string) ([]string, error) {
 
 // buildListQuery composes a SQL query string and args based on the filter.
 // When descendantIDs is non-empty, results are restricted to those IDs.
-func buildListQuery(f ListFilter, descendantIDs []string) (string, []interface{}) {
+func buildListQuery(f ListFilter, descendantIDs []string) (string, []any) {
 	var conditions []string
-	var args []interface{}
+	var args []any
 
 	if f.Ready {
 		conditions = append(conditions, ReadyConditions()...)
@@ -321,9 +321,9 @@ func buildListQuery(f ListFilter, descendantIDs []string) (string, []interface{}
 // buildTagFilterSQL generates a SQL condition and args for tag group filtering.
 // Each group is an AND (task must have all tags in the group). Multiple groups
 // are OR'd together: (group1) OR (group2).
-func buildTagFilterSQL(tagGroups [][]string) (string, []interface{}) {
+func buildTagFilterSQL(tagGroups [][]string) (string, []any) {
 	var groupClauses []string
-	var args []interface{}
+	var args []any
 
 	for _, group := range tagGroups {
 		placeholders := make([]string, len(group))

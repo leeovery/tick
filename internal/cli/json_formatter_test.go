@@ -22,7 +22,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskList(tasks)
 
-		var parsed []map[string]interface{}
+		var parsed []map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -93,7 +93,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -128,27 +128,27 @@ func TestJSONFormatter(t *testing.T) {
 		}
 
 		// Verify blocked_by array
-		blockedBy, ok := parsed["blocked_by"].([]interface{})
+		blockedBy, ok := parsed["blocked_by"].([]any)
 		if !ok {
 			t.Fatalf("blocked_by is not an array: %v", parsed["blocked_by"])
 		}
 		if len(blockedBy) != 1 {
 			t.Fatalf("blocked_by length = %d, want 1", len(blockedBy))
 		}
-		blocker := blockedBy[0].(map[string]interface{})
+		blocker := blockedBy[0].(map[string]any)
 		if blocker["id"] != "tick-c3d4" {
 			t.Errorf("blocker id = %v, want %q", blocker["id"], "tick-c3d4")
 		}
 
 		// Verify children array
-		children, ok := parsed["children"].([]interface{})
+		children, ok := parsed["children"].([]any)
 		if !ok {
 			t.Fatalf("children is not an array: %v", parsed["children"])
 		}
 		if len(children) != 1 {
 			t.Fatalf("children length = %d, want 1", len(children))
 		}
-		child := children[0].(map[string]interface{})
+		child := children[0].(map[string]any)
 		if child["id"] != "tick-g7h8" {
 			t.Errorf("child id = %v, want %q", child["id"], "tick-g7h8")
 		}
@@ -172,7 +172,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -204,13 +204,13 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
 		// blocked_by must be present as empty array, not null or missing
-		blockedBy, ok := parsed["blocked_by"].([]interface{})
+		blockedBy, ok := parsed["blocked_by"].([]any)
 		if !ok {
 			t.Fatalf("blocked_by should be array, got %T: %v", parsed["blocked_by"], parsed["blocked_by"])
 		}
@@ -219,7 +219,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 
 		// children must be present as empty array, not null or missing
-		children, ok := parsed["children"].([]interface{})
+		children, ok := parsed["children"].([]any)
 		if !ok {
 			t.Fatalf("children should be array, got %T: %v", parsed["children"], parsed["children"])
 		}
@@ -244,13 +244,13 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
 		// Must still be [], not null
-		blockedBy, ok := parsed["blocked_by"].([]interface{})
+		blockedBy, ok := parsed["blocked_by"].([]any)
 		if !ok {
 			t.Fatalf("blocked_by should be array even with nil input, got %T: %v", parsed["blocked_by"], parsed["blocked_by"])
 		}
@@ -258,7 +258,7 @@ func TestJSONFormatter(t *testing.T) {
 			t.Errorf("blocked_by should be empty, got %d items", len(blockedBy))
 		}
 
-		children, ok := parsed["children"].([]interface{})
+		children, ok := parsed["children"].([]any)
 		if !ok {
 			t.Fatalf("children should be array even with nil input, got %T: %v", parsed["children"], parsed["children"])
 		}
@@ -285,7 +285,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -329,7 +329,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v", err)
 		}
@@ -365,7 +365,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatStats(stats)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -376,7 +376,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 
 		// Verify by_status nested object
-		byStatus, ok := parsed["by_status"].(map[string]interface{})
+		byStatus, ok := parsed["by_status"].(map[string]any)
 		if !ok {
 			t.Fatalf("by_status should be object, got %T: %v", parsed["by_status"], parsed["by_status"])
 		}
@@ -394,7 +394,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 
 		// Verify workflow nested object
-		workflow, ok := parsed["workflow"].(map[string]interface{})
+		workflow, ok := parsed["workflow"].(map[string]any)
 		if !ok {
 			t.Fatalf("workflow should be object, got %T: %v", parsed["workflow"], parsed["workflow"])
 		}
@@ -406,7 +406,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 
 		// Verify by_priority array
-		byPriority, ok := parsed["by_priority"].([]interface{})
+		byPriority, ok := parsed["by_priority"].([]any)
 		if !ok {
 			t.Fatalf("by_priority should be array, got %T: %v", parsed["by_priority"], parsed["by_priority"])
 		}
@@ -415,7 +415,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		expectedCounts := []float64{2, 8, 25, 7, 5}
 		for i, expected := range expectedCounts {
-			entry := byPriority[i].(map[string]interface{})
+			entry := byPriority[i].(map[string]any)
 			if entry["priority"] != float64(i) {
 				t.Errorf("by_priority[%d].priority = %v, want %v", i, entry["priority"], i)
 			}
@@ -433,12 +433,12 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatStats(stats)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		byPriority, ok := parsed["by_priority"].([]interface{})
+		byPriority, ok := parsed["by_priority"].([]any)
 		if !ok {
 			t.Fatalf("by_priority should be array, got %T: %v", parsed["by_priority"], parsed["by_priority"])
 		}
@@ -446,7 +446,7 @@ func TestJSONFormatter(t *testing.T) {
 			t.Fatalf("by_priority length = %d, want 5", len(byPriority))
 		}
 		for i := 0; i < 5; i++ {
-			entry := byPriority[i].(map[string]interface{})
+			entry := byPriority[i].(map[string]any)
 			if entry["priority"] != float64(i) {
 				t.Errorf("by_priority[%d].priority = %v, want %v", i, entry["priority"], i)
 			}
@@ -461,7 +461,7 @@ func TestJSONFormatter(t *testing.T) {
 
 		// Transition
 		transResult := f.FormatTransition("tick-a1b2", "open", "in_progress")
-		var transObj map[string]interface{}
+		var transObj map[string]any
 		if err := json.Unmarshal([]byte(transResult), &transObj); err != nil {
 			t.Fatalf("transition invalid JSON: %v\nresult: %s", err, transResult)
 		}
@@ -477,7 +477,7 @@ func TestJSONFormatter(t *testing.T) {
 
 		// Dep change - added
 		depAddResult := f.FormatDepChange("added", "tick-c3d4", "tick-a1b2")
-		var depAddObj map[string]interface{}
+		var depAddObj map[string]any
 		if err := json.Unmarshal([]byte(depAddResult), &depAddObj); err != nil {
 			t.Fatalf("dep add invalid JSON: %v\nresult: %s", err, depAddResult)
 		}
@@ -493,7 +493,7 @@ func TestJSONFormatter(t *testing.T) {
 
 		// Dep change - removed
 		depRmResult := f.FormatDepChange("removed", "tick-c3d4", "tick-a1b2")
-		var depRmObj map[string]interface{}
+		var depRmObj map[string]any
 		if err := json.Unmarshal([]byte(depRmResult), &depRmObj); err != nil {
 			t.Fatalf("dep remove invalid JSON: %v\nresult: %s", err, depRmResult)
 		}
@@ -503,7 +503,7 @@ func TestJSONFormatter(t *testing.T) {
 
 		// Message
 		msgResult := f.FormatMessage("Tick initialized in /path/to/project")
-		var msgObj map[string]interface{}
+		var msgObj map[string]any
 		if err := json.Unmarshal([]byte(msgResult), &msgObj); err != nil {
 			t.Fatalf("message invalid JSON: %v\nresult: %s", err, msgResult)
 		}
@@ -562,19 +562,19 @@ func TestJSONFormatter(t *testing.T) {
 			DepsUpdated: []string{},
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		removed, ok := parsed["removed"].([]interface{})
+		removed, ok := parsed["removed"].([]any)
 		if !ok {
 			t.Fatalf("removed should be array, got %T: %v", parsed["removed"], parsed["removed"])
 		}
 		if len(removed) != 1 {
 			t.Fatalf("removed length = %d, want 1", len(removed))
 		}
-		item := removed[0].(map[string]interface{})
+		item := removed[0].(map[string]any)
 		if item["id"] != "tick-a1b2" {
 			t.Errorf("removed[0].id = %v, want %q", item["id"], "tick-a1b2")
 		}
@@ -582,7 +582,7 @@ func TestJSONFormatter(t *testing.T) {
 			t.Errorf("removed[0].title = %v, want %q", item["title"], "My task")
 		}
 
-		depsUpdated, ok := parsed["deps_updated"].([]interface{})
+		depsUpdated, ok := parsed["deps_updated"].([]any)
 		if !ok {
 			t.Fatalf("deps_updated should be array, got %T: %v", parsed["deps_updated"], parsed["deps_updated"])
 		}
@@ -601,23 +601,23 @@ func TestJSONFormatter(t *testing.T) {
 			DepsUpdated: []string{},
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		removed, ok := parsed["removed"].([]interface{})
+		removed, ok := parsed["removed"].([]any)
 		if !ok {
 			t.Fatalf("removed should be array, got %T: %v", parsed["removed"], parsed["removed"])
 		}
 		if len(removed) != 2 {
 			t.Fatalf("removed length = %d, want 2", len(removed))
 		}
-		first := removed[0].(map[string]interface{})
+		first := removed[0].(map[string]any)
 		if first["id"] != "tick-a1b2" {
 			t.Errorf("removed[0].id = %v, want %q", first["id"], "tick-a1b2")
 		}
-		second := removed[1].(map[string]interface{})
+		second := removed[1].(map[string]any)
 		if second["id"] != "tick-c3d4" {
 			t.Errorf("removed[1].id = %v, want %q", second["id"], "tick-c3d4")
 		}
@@ -632,12 +632,12 @@ func TestJSONFormatter(t *testing.T) {
 			DepsUpdated: []string{"tick-e5f6", "tick-g7h8"},
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		depsUpdated, ok := parsed["deps_updated"].([]interface{})
+		depsUpdated, ok := parsed["deps_updated"].([]any)
 		if !ok {
 			t.Fatalf("deps_updated should be array, got %T: %v", parsed["deps_updated"], parsed["deps_updated"])
 		}
@@ -661,12 +661,12 @@ func TestJSONFormatter(t *testing.T) {
 			DepsUpdated: nil,
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		depsUpdated, ok := parsed["deps_updated"].([]interface{})
+		depsUpdated, ok := parsed["deps_updated"].([]any)
 		if !ok {
 			t.Fatalf("deps_updated should be array (not null), got %T: %v", parsed["deps_updated"], parsed["deps_updated"])
 		}
@@ -682,12 +682,12 @@ func TestJSONFormatter(t *testing.T) {
 			DepsUpdated: nil,
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		removed, ok := parsed["removed"].([]interface{})
+		removed, ok := parsed["removed"].([]any)
 		if !ok {
 			t.Fatalf("removed should be array (not null), got %T: %v", parsed["removed"], parsed["removed"])
 		}
@@ -695,7 +695,7 @@ func TestJSONFormatter(t *testing.T) {
 			t.Errorf("removed should be empty, got %d items", len(removed))
 		}
 
-		depsUpdated, ok := parsed["deps_updated"].([]interface{})
+		depsUpdated, ok := parsed["deps_updated"].([]any)
 		if !ok {
 			t.Fatalf("deps_updated should be array (not null), got %T: %v", parsed["deps_updated"], parsed["deps_updated"])
 		}
@@ -713,7 +713,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskList(tasks)
 
-		var parsed []map[string]interface{}
+		var parsed []map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -746,12 +746,12 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		tags, ok := parsed["tags"].([]interface{})
+		tags, ok := parsed["tags"].([]any)
 		if !ok {
 			t.Fatalf("tags should be array, got %T: %v", parsed["tags"], parsed["tags"])
 		}
@@ -783,12 +783,12 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		tags, ok := parsed["tags"].([]interface{})
+		tags, ok := parsed["tags"].([]any)
 		if !ok {
 			t.Fatalf("tags should be array (not null), got %T: %v", parsed["tags"], parsed["tags"])
 		}
@@ -815,7 +815,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -832,7 +832,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskList(tasks)
 
-		var parsed []map[string]interface{}
+		var parsed []map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -885,12 +885,12 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		refs, ok := parsed["refs"].([]interface{})
+		refs, ok := parsed["refs"].([]any)
 		if !ok {
 			t.Fatalf("refs should be array, got %T: %v", parsed["refs"], parsed["refs"])
 		}
@@ -922,12 +922,12 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		refs, ok := parsed["refs"].([]interface{})
+		refs, ok := parsed["refs"].([]any)
 		if !ok {
 			t.Fatalf("refs should be array (not null), got %T: %v", parsed["refs"], parsed["refs"])
 		}
@@ -957,12 +957,12 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		notes, ok := parsed["notes"].([]interface{})
+		notes, ok := parsed["notes"].([]any)
 		if !ok {
 			t.Fatalf("notes should be array, got %T: %v", parsed["notes"], parsed["notes"])
 		}
@@ -970,7 +970,7 @@ func TestJSONFormatter(t *testing.T) {
 			t.Fatalf("notes length = %d, want 2", len(notes))
 		}
 
-		note0 := notes[0].(map[string]interface{})
+		note0 := notes[0].(map[string]any)
 		if note0["text"] != "Started investigating the auth flow" {
 			t.Errorf("notes[0].text = %v, want %q", note0["text"], "Started investigating the auth flow")
 		}
@@ -978,7 +978,7 @@ func TestJSONFormatter(t *testing.T) {
 			t.Errorf("notes[0].created = %v, want %q", note0["created"], "2026-02-27T10:00:00Z")
 		}
 
-		note1 := notes[1].(map[string]interface{})
+		note1 := notes[1].(map[string]any)
 		if note1["text"] != "Root cause found" {
 			t.Errorf("notes[1].text = %v, want %q", note1["text"], "Root cause found")
 		}
@@ -1004,12 +1004,12 @@ func TestJSONFormatter(t *testing.T) {
 		}
 		result := f.FormatTaskDetail(detail)
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		notes, ok := parsed["notes"].([]interface{})
+		notes, ok := parsed["notes"].([]any)
 		if !ok {
 			t.Fatalf("notes should be array (not null), got %T: %v", parsed["notes"], parsed["notes"])
 		}
@@ -1037,7 +1037,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			BlockedCount: 1,
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -1055,7 +1055,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Errorf("blocked = %v, want 1", parsed["blocked"])
 		}
 
-		roots, ok := parsed["roots"].([]interface{})
+		roots, ok := parsed["roots"].([]any)
 		if !ok {
 			t.Fatalf("roots should be array, got %T: %v", parsed["roots"], parsed["roots"])
 		}
@@ -1063,8 +1063,8 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("roots length = %d, want 1", len(roots))
 		}
 
-		root := roots[0].(map[string]interface{})
-		rootTask, ok := root["task"].(map[string]interface{})
+		root := roots[0].(map[string]any)
+		rootTask, ok := root["task"].(map[string]any)
 		if !ok {
 			t.Fatalf("root.task should be object, got %T", root["task"])
 		}
@@ -1072,7 +1072,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Errorf("root task id = %v, want %q", rootTask["id"], "tick-aaa111")
 		}
 
-		children, ok := root["children"].([]interface{})
+		children, ok := root["children"].([]any)
 		if !ok {
 			t.Fatalf("root.children should be array, got %T", root["children"])
 		}
@@ -1080,8 +1080,8 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("root.children length = %d, want 1", len(children))
 		}
 
-		child := children[0].(map[string]interface{})
-		childTask := child["task"].(map[string]interface{})
+		child := children[0].(map[string]any)
+		childTask := child["task"].(map[string]any)
 		if childTask["id"] != "tick-bbb222" {
 			t.Errorf("child task id = %v, want %q", childTask["id"], "tick-bbb222")
 		}
@@ -1107,24 +1107,24 @@ func TestJSONFormatDepTree(t *testing.T) {
 			BlockedCount: 2,
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		roots := parsed["roots"].([]interface{})
-		root := roots[0].(map[string]interface{})
-		level1 := root["children"].([]interface{})
+		roots := parsed["roots"].([]any)
+		root := roots[0].(map[string]any)
+		level1 := root["children"].([]any)
 		if len(level1) != 1 {
 			t.Fatalf("level 1 children = %d, want 1", len(level1))
 		}
-		child1 := level1[0].(map[string]interface{})
-		level2 := child1["children"].([]interface{})
+		child1 := level1[0].(map[string]any)
+		level2 := child1["children"].([]any)
 		if len(level2) != 1 {
 			t.Fatalf("level 2 children = %d, want 1", len(level2))
 		}
-		grandchild := level2[0].(map[string]interface{})
-		gcTask := grandchild["task"].(map[string]interface{})
+		grandchild := level2[0].(map[string]any)
+		gcTask := grandchild["task"].(map[string]any)
 		if gcTask["id"] != "tick-ccc333" {
 			t.Errorf("grandchild id = %v, want %q", gcTask["id"], "tick-ccc333")
 		}
@@ -1141,12 +1141,12 @@ func TestJSONFormatDepTree(t *testing.T) {
 			BlockedCount: 0,
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		roots, ok := parsed["roots"].([]interface{})
+		roots, ok := parsed["roots"].([]any)
 		if !ok {
 			t.Fatalf("roots should be array (not null), got %T: %v", parsed["roots"], parsed["roots"])
 		}
@@ -1170,17 +1170,17 @@ func TestJSONFormatDepTree(t *testing.T) {
 			BlockedCount: 1,
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		roots := parsed["roots"].([]interface{})
-		root := roots[0].(map[string]interface{})
-		children := root["children"].([]interface{})
-		leaf := children[0].(map[string]interface{})
+		roots := parsed["roots"].([]any)
+		root := roots[0].(map[string]any)
+		children := root["children"].([]any)
+		leaf := children[0].(map[string]any)
 
-		leafChildren, ok := leaf["children"].([]interface{})
+		leafChildren, ok := leaf["children"].([]any)
 		if !ok {
 			t.Fatalf("leaf children should be array (not null), got %T: %v", leaf["children"], leaf["children"])
 		}
@@ -1216,38 +1216,38 @@ func TestJSONFormatDepTree(t *testing.T) {
 			BlockedCount: 3,
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		roots := parsed["roots"].([]interface{})
-		root := roots[0].(map[string]interface{})
-		children := root["children"].([]interface{})
+		roots := parsed["roots"].([]any)
+		root := roots[0].(map[string]any)
+		children := root["children"].([]any)
 		if len(children) != 2 {
 			t.Fatalf("root children = %d, want 2", len(children))
 		}
 
 		// B's children should contain D
-		b := children[0].(map[string]interface{})
-		bChildren := b["children"].([]interface{})
+		b := children[0].(map[string]any)
+		bChildren := b["children"].([]any)
 		if len(bChildren) != 1 {
 			t.Fatalf("B children = %d, want 1", len(bChildren))
 		}
-		bChild := bChildren[0].(map[string]interface{})
-		bChildTask := bChild["task"].(map[string]interface{})
+		bChild := bChildren[0].(map[string]any)
+		bChildTask := bChild["task"].(map[string]any)
 		if bChildTask["id"] != "tick-ddd444" {
 			t.Errorf("B child id = %v, want %q", bChildTask["id"], "tick-ddd444")
 		}
 
 		// C's children should also contain D (duplicate)
-		c := children[1].(map[string]interface{})
-		cChildren := c["children"].([]interface{})
+		c := children[1].(map[string]any)
+		cChildren := c["children"].([]any)
 		if len(cChildren) != 1 {
 			t.Fatalf("C children = %d, want 1", len(cChildren))
 		}
-		cChild := cChildren[0].(map[string]interface{})
-		cChildTask := cChild["task"].(map[string]interface{})
+		cChild := cChildren[0].(map[string]any)
+		cChildTask := cChild["task"].(map[string]any)
 		if cChildTask["id"] != "tick-ddd444" {
 			t.Errorf("C child id = %v, want %q", cChildTask["id"], "tick-ddd444")
 		}
@@ -1264,7 +1264,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			},
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -1273,7 +1273,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Errorf("mode = %v, want %q", parsed["mode"], "focused")
 		}
 
-		target, ok := parsed["target"].(map[string]interface{})
+		target, ok := parsed["target"].(map[string]any)
 		if !ok {
 			t.Fatalf("target should be object, got %T", parsed["target"])
 		}
@@ -1281,7 +1281,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Errorf("target id = %v, want %q", target["id"], "tick-bbb222")
 		}
 
-		blockedBy, ok := parsed["blocked_by"].([]interface{})
+		blockedBy, ok := parsed["blocked_by"].([]any)
 		if !ok {
 			t.Fatalf("blocked_by should be array, got %T: %v", parsed["blocked_by"], parsed["blocked_by"])
 		}
@@ -1289,7 +1289,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("blocked_by length = %d, want 1", len(blockedBy))
 		}
 
-		blocks, ok := parsed["blocks"].([]interface{})
+		blocks, ok := parsed["blocks"].([]any)
 		if !ok {
 			t.Fatalf("blocks should be array, got %T: %v", parsed["blocks"], parsed["blocks"])
 		}
@@ -1307,7 +1307,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			},
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -1316,7 +1316,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Errorf("blocked_by should be omitted when empty, got %v", parsed["blocked_by"])
 		}
 
-		blocks, ok := parsed["blocks"].([]interface{})
+		blocks, ok := parsed["blocks"].([]any)
 		if !ok {
 			t.Fatalf("blocks should be array, got %T: %v", parsed["blocks"], parsed["blocks"])
 		}
@@ -1334,7 +1334,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			Blocks: nil,
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -1343,7 +1343,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Errorf("blocks should be omitted when empty, got %v", parsed["blocks"])
 		}
 
-		blockedBy, ok := parsed["blocked_by"].([]interface{})
+		blockedBy, ok := parsed["blocked_by"].([]any)
 		if !ok {
 			t.Fatalf("blocked_by should be array, got %T: %v", parsed["blocked_by"], parsed["blocked_by"])
 		}
@@ -1363,7 +1363,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			},
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
@@ -1399,7 +1399,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			BlockedCount: 1,
 		})
 
-		var fullParsed map[string]interface{}
+		var fullParsed map[string]any
 		if err := json.Unmarshal([]byte(fullResult), &fullParsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, fullResult)
 		}
@@ -1420,12 +1420,12 @@ func TestJSONFormatDepTree(t *testing.T) {
 			},
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		target, ok := parsed["target"].(map[string]interface{})
+		target, ok := parsed["target"].(map[string]any)
 		if !ok {
 			t.Fatalf("target should be object, got %T", parsed["target"])
 		}
@@ -1483,7 +1483,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 		}
 
 		// Parse and verify fields
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("failed to parse JSON: %v", err)
 		}
@@ -1494,7 +1494,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 		}
 
 		// Must have target with task info
-		target, ok := parsed["target"].(map[string]interface{})
+		target, ok := parsed["target"].(map[string]any)
 		if !ok {
 			t.Fatalf("target field missing or not an object, got %v", parsed["target"])
 		}

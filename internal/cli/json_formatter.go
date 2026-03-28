@@ -409,7 +409,7 @@ func (f *JSONFormatter) formatFocusedDepTreeJSON(result DepTreeResult) string {
 
 // marshalIndentJSON marshals v as 2-space indented JSON.
 // Returns "null" on marshal failure (should not happen with controlled types).
-func marshalIndentJSON(v interface{}) string {
+func marshalIndentJSON(v any) string {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return "null"

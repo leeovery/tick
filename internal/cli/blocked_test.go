@@ -428,12 +428,12 @@ func TestBlocked(t *testing.T) {
 			t.Fatalf("stats exit code = %d, want 0", exitCode)
 		}
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(strings.TrimSpace(statsStdout)), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nstdout: %s", err, statsStdout)
 		}
 
-		workflow := parsed["workflow"].(map[string]interface{})
+		workflow := parsed["workflow"].(map[string]any)
 		statsReady := int(workflow["ready"].(float64))
 		statsBlocked := int(workflow["blocked"].(float64))
 
@@ -442,7 +442,7 @@ func TestBlocked(t *testing.T) {
 		}
 
 		// Verify ready + blocked = open count
-		byStatus := parsed["by_status"].(map[string]interface{})
+		byStatus := parsed["by_status"].(map[string]any)
 		openCount := int(byStatus["open"].(float64))
 		if statsReady+statsBlocked != openCount {
 			t.Errorf("ready(%d) + blocked(%d) = %d, but open = %d; should match",

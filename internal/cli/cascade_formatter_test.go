@@ -159,13 +159,13 @@ func TestJSONFormatterCascadeTransition(t *testing.T) {
 			},
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
 		// Verify transition object
-		transition, ok := parsed["transition"].(map[string]interface{})
+		transition, ok := parsed["transition"].(map[string]any)
 		if !ok {
 			t.Fatalf("transition should be object, got %T: %v", parsed["transition"], parsed["transition"])
 		}
@@ -180,14 +180,14 @@ func TestJSONFormatterCascadeTransition(t *testing.T) {
 		}
 
 		// Verify cascaded array
-		cascaded, ok := parsed["cascaded"].([]interface{})
+		cascaded, ok := parsed["cascaded"].([]any)
 		if !ok {
 			t.Fatalf("cascaded should be array, got %T: %v", parsed["cascaded"], parsed["cascaded"])
 		}
 		if len(cascaded) != 1 {
 			t.Fatalf("cascaded length = %d, want 1", len(cascaded))
 		}
-		entry := cascaded[0].(map[string]interface{})
+		entry := cascaded[0].(map[string]any)
 		if entry["id"] != "tick-def456" {
 			t.Errorf("cascaded[0].id = %v, want %q", entry["id"], "tick-def456")
 		}
@@ -217,12 +217,12 @@ func TestJSONFormatterCascadeTransition(t *testing.T) {
 			Cascaded:  nil,
 		})
 
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		cascaded, ok := parsed["cascaded"].([]interface{})
+		cascaded, ok := parsed["cascaded"].([]any)
 		if !ok {
 			t.Fatalf("cascaded should be array (not null), got %T: %v", parsed["cascaded"], parsed["cascaded"])
 		}
@@ -287,12 +287,12 @@ func TestAllFormattersCascadeEmptyArrays(t *testing.T) {
 
 		// JSON: should have empty cascaded array
 		jsonResult := (&JSONFormatter{}).FormatCascadeTransition(result)
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(jsonResult), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, jsonResult)
 		}
 
-		cascaded, ok := parsed["cascaded"].([]interface{})
+		cascaded, ok := parsed["cascaded"].([]any)
 		if !ok {
 			t.Fatalf("cascaded should be array, got %T: %v", parsed["cascaded"], parsed["cascaded"])
 		}

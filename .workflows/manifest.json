@@ -23,7 +23,7 @@
     },
     "dep-tree-visualization": {
       "work_type": "feature"
-    }
+    },
   },
   "defaults": {
     "plan_format": "tick",

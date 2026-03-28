@@ -67,7 +67,7 @@ func TestNoteMarshalJSON(t *testing.T) {
 			t.Fatalf("Marshal error: %v", err)
 		}
 
-		var raw map[string]interface{}
+		var raw map[string]any
 		if err := json.Unmarshal(data, &raw); err != nil {
 			t.Fatalf("Unmarshal raw error: %v", err)
 		}

@@ -237,9 +237,9 @@ func TestParseTaskRelationships(t *testing.T) {
 func TestTaskRelationshipsFromLines(t *testing.T) {
 	t.Run("it skips entries where Parsed is nil", func(t *testing.T) {
 		lines := []JSONLine{
-			{LineNum: 1, Raw: `{"id":"tick-aaa111","status":"open"}`, Parsed: map[string]interface{}{"id": "tick-aaa111", "status": "open"}},
+			{LineNum: 1, Raw: `{"id":"tick-aaa111","status":"open"}`, Parsed: map[string]any{"id": "tick-aaa111", "status": "open"}},
 			{LineNum: 2, Raw: "not json", Parsed: nil},
-			{LineNum: 3, Raw: `{"id":"tick-bbb222"}`, Parsed: map[string]interface{}{"id": "tick-bbb222"}},
+			{LineNum: 3, Raw: `{"id":"tick-bbb222"}`, Parsed: map[string]any{"id": "tick-bbb222"}},
 		}
 
 		result := taskRelationshipsFromLines(lines)
@@ -266,7 +266,7 @@ func TestTaskRelationshipsFromLines(t *testing.T) {
 
 	t.Run("it skips entries with missing id field", func(t *testing.T) {
 		lines := []JSONLine{
-			{LineNum: 1, Raw: `{"title":"no id"}`, Parsed: map[string]interface{}{"title": "no id"}},
+			{LineNum: 1, Raw: `{"title":"no id"}`, Parsed: map[string]any{"title": "no id"}},
 		}
 
 		result := taskRelationshipsFromLines(lines)
@@ -278,7 +278,7 @@ func TestTaskRelationshipsFromLines(t *testing.T) {
 
 	t.Run("it skips entries with non-string id", func(t *testing.T) {
 		lines := []JSONLine{
-			{LineNum: 1, Raw: `{"id":42}`, Parsed: map[string]interface{}{"id": float64(42)}},
+			{LineNum: 1, Raw: `{"id":42}`, Parsed: map[string]any{"id": float64(42)}},
 		}
 
 		result := taskRelationshipsFromLines(lines)
@@ -293,10 +293,10 @@ func TestTaskRelationshipsFromLines(t *testing.T) {
 			{
 				LineNum: 5,
 				Raw:     `{"id":"tick-aaa111","parent":"tick-bbb222","blocked_by":["tick-ccc333"],"status":"open"}`,
-				Parsed: map[string]interface{}{
+				Parsed: map[string]any{
 					"id":         "tick-aaa111",
 					"parent":     "tick-bbb222",
-					"blocked_by": []interface{}{"tick-ccc333"},
+					"blocked_by": []any{"tick-ccc333"},
 					"status":     "open",
 				},
 			},
@@ -337,7 +337,7 @@ func TestTaskRelationshipsFromLines(t *testing.T) {
 
 	t.Run("it initializes BlockedBy to empty slice when absent", func(t *testing.T) {
 		lines := []JSONLine{
-			{LineNum: 1, Raw: `{"id":"tick-aaa111"}`, Parsed: map[string]interface{}{"id": "tick-aaa111"}},
+			{LineNum: 1, Raw: `{"id":"tick-aaa111"}`, Parsed: map[string]any{"id": "tick-aaa111"}},
 		}
 
 		result := taskRelationshipsFromLines(lines)

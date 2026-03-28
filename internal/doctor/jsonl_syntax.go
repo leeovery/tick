@@ -28,7 +28,7 @@ func (c *JsonlSyntaxCheck) Run(ctx context.Context, tickDir string) []CheckResul
 			continue
 		}
 		// Parsed is nil — check if the raw line is syntactically valid JSON.
-		// ScanJSONLines only parses into map[string]interface{}, so valid JSON
+		// ScanJSONLines only parses into map[string]any, so valid JSON
 		// arrays or primitives will have nil Parsed. Use json.Valid to confirm
 		// actual syntax errors.
 		if !json.Valid([]byte(line.Raw)) {
