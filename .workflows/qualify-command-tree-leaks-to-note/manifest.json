@@ -26,6 +26,26 @@
           }
         }
       }
+    },
+    "planning": {
+      "items": {
+        "qualify-command-tree-leaks-to-note": {
+          "status": "in-progress",
+          "format": "tick",
+          "spec_commit": "9ce7d140af2fd006e51927994d82d8b29087d3ca",
+          "task_list_gate_mode": "auto",
+          "author_gate_mode": "auto",
+          "finding_gate_mode": "gated",
+          "review_cycle": 0,
+          "phase": 1,
+          "task": "qualify-command-tree-leaks-to-note-1-2",
+          "task_map": {
+            "qualify-command-tree-leaks-to-note-1-1": "tick-db3c7a",
+            "qualify-command-tree-leaks-to-note-1": "tick-31494c"
+          },
+          "external_id": "tick-0e8cc7"
+        }
+      }
     }
   }
 }
