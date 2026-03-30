@@ -3,5 +3,8 @@
     "qualify-command-tree-leaks-to-note": {
       "work_type": "bugfix"
     }
+  },
+  "defaults": {
+    "plan_format": "tick"
   }
 }
