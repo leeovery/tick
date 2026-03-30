@@ -38,10 +38,11 @@
           "finding_gate_mode": "gated",
           "review_cycle": 0,
           "phase": 1,
-          "task": "qualify-command-tree-leaks-to-note-1-2",
+          "task": "~",
           "task_map": {
             "qualify-command-tree-leaks-to-note-1-1": "tick-db3c7a",
-            "qualify-command-tree-leaks-to-note-1": "tick-31494c"
+            "qualify-command-tree-leaks-to-note-1": "tick-31494c",
+            "qualify-command-tree-leaks-to-note-1-2": "tick-77079d"
           },
           "external_id": "tick-0e8cc7"
         }
