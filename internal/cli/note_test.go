@@ -521,3 +521,74 @@ func TestNoteNoSubcommand(t *testing.T) {
 		}
 	})
 }
+
+func TestNoteTreeRejection(t *testing.T) {
+	t.Run("it rejects tree as unknown note sub-command", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		var stdoutBuf, stderrBuf bytes.Buffer
+		app := &App{
+			Stdout: &stdoutBuf,
+			Stderr: &stderrBuf,
+			Getwd:  func() (string, error) { return dir, nil },
+			IsTTY:  true,
+		}
+		exitCode := app.Run([]string{"tick", "note", "tree"})
+		if exitCode == 0 {
+			t.Fatal("expected non-zero exit code for tick note tree")
+		}
+		stderr := stderrBuf.String()
+		if !strings.Contains(stderr, "unknown note sub-command 'tree'") {
+			t.Errorf("stderr should contain \"unknown note sub-command 'tree'\", got %q", stderr)
+		}
+	})
+
+	t.Run("it does not reference note tree in flag error", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		var stdoutBuf, stderrBuf bytes.Buffer
+		app := &App{
+			Stdout: &stdoutBuf,
+			Stderr: &stderrBuf,
+			Getwd:  func() (string, error) { return dir, nil },
+			IsTTY:  true,
+		}
+		exitCode := app.Run([]string{"tick", "note", "tree", "--foo"})
+		if exitCode == 0 {
+			t.Fatal("expected non-zero exit code for tick note tree --foo")
+		}
+		stderr := stderrBuf.String()
+		if !strings.Contains(stderr, "note") {
+			t.Errorf("stderr should reference \"note\", got %q", stderr)
+		}
+		if strings.Contains(stderr, "note tree") {
+			t.Errorf("stderr must not reference \"note tree\", got %q", stderr)
+		}
+	})
+
+	t.Run("it preserves dep tree dispatch", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		var stdoutBuf, stderrBuf bytes.Buffer
+		app := &App{
+			Stdout: &stdoutBuf,
+			Stderr: &stderrBuf,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		exitCode := app.Run([]string{"tick", "--pretty", "dep", "tree"})
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0; stderr = %q", exitCode, stderrBuf.String())
+		}
+	})
+
+	t.Run("it preserves dep tree flag validation", func(t *testing.T) {
+		err := ValidateFlags("dep tree", []string{"--unknown"}, commandFlags)
+		if err == nil {
+			t.Fatal("expected error for --unknown on dep tree, got nil")
+		}
+		errMsg := err.Error()
+		if !strings.Contains(errMsg, "dep tree") {
+			t.Errorf("error should reference \"dep tree\", got %q", errMsg)
+		}
+	})
+}
