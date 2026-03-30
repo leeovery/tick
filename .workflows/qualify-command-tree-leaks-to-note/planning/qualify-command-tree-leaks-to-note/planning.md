@@ -1,7 +1,8 @@
 # Plan: Qualify Command Tree Leaks To Note
 
 ## Phase 1: Fix Tree Qualification Leak To Note
-status: draft
+status: approved
+approved_at: 2026-03-30
 
 **Goal**: Prevent `qualifyCommand` from qualifying `"tree"` as a subcommand of `"note"`, and add regression tests that would have caught this bug.
 
