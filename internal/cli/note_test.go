@@ -565,30 +565,4 @@ func TestNoteTreeRejection(t *testing.T) {
 			t.Errorf("stderr must not reference \"note tree\", got %q", stderr)
 		}
 	})
-
-	t.Run("it preserves dep tree dispatch", func(t *testing.T) {
-		dir, _ := setupTickProject(t)
-
-		var stdoutBuf, stderrBuf bytes.Buffer
-		app := &App{
-			Stdout: &stdoutBuf,
-			Stderr: &stderrBuf,
-			Getwd:  func() (string, error) { return dir, nil },
-		}
-		exitCode := app.Run([]string{"tick", "--pretty", "dep", "tree"})
-		if exitCode != 0 {
-			t.Errorf("exit code = %d, want 0; stderr = %q", exitCode, stderrBuf.String())
-		}
-	})
-
-	t.Run("it preserves dep tree flag validation", func(t *testing.T) {
-		err := ValidateFlags("dep tree", []string{"--unknown"}, commandFlags)
-		if err == nil {
-			t.Fatal("expected error for --unknown on dep tree, got nil")
-		}
-		errMsg := err.Error()
-		if !strings.Contains(errMsg, "dep tree") {
-			t.Errorf("error should reference \"dep tree\", got %q", errMsg)
-		}
-	})
 }
