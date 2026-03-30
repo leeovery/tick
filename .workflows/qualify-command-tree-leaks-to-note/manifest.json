@@ -42,7 +42,9 @@
           "task_map": {
             "qualify-command-tree-leaks-to-note-1-1": "tick-db3c7a",
             "qualify-command-tree-leaks-to-note-1": "tick-31494c",
-            "qualify-command-tree-leaks-to-note-1-2": "tick-77079d"
+            "qualify-command-tree-leaks-to-note-1-2": "tick-77079d",
+            "qualify-command-tree-leaks-to-note-2": "tick-a3db77",
+            "qualify-command-tree-leaks-to-note-2-1": "tick-30a977"
           },
           "external_id": "tick-0e8cc7"
         }
@@ -54,7 +56,7 @@
           "status": "in-progress",
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
-          "analysis_gate_mode": "gated",
+          "analysis_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle": 1,
           "linters": [

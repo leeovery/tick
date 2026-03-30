@@ -6,7 +6,8 @@ total_proposed: 1
 # Analysis Tasks: qualify-command-tree-leaks-to-note (Cycle 1)
 
 ## Task 1: Remove redundant dep-tree regression tests from note_test.go
-status: pending
+status: approved
+external_id: tick-30a977
 severity: medium
 sources: duplication
 
