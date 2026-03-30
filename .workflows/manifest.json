@@ -1,44 +1,7 @@
 {
   "work_units": {
-    "auto-cascade-parent-status": {
-      "work_type": "feature"
-    },
-    "cache-schema-versioning": {
+    "qualify-command-tree-leaks-to-note": {
       "work_type": "bugfix"
-    },
-    "cli-enhancements": {
-      "work_type": "feature"
-    },
-    "rule6-parent-reopen-auto-flag": {
-      "work_type": "bugfix"
-    },
-    "unknown-flags-silently-ignored": {
-      "work_type": "bugfix"
-    },
-    "v1": {
-      "work_type": "epic"
-    },
-    "cascade-unchanged-noise": {
-      "work_type": "bugfix"
-    },
-    "dep-tree-visualization": {
-      "work_type": "feature"
-    },
-  },
-  "defaults": {
-    "plan_format": "tick",
-    "project_skills": [
-      ".claude/skills/golang-pro/SKILL.md"
-    ],
-    "linters": [
-      {
-        "name": "go vet",
-        "command": "go vet ./..."
-      },
-      {
-        "name": "gofmt",
-        "command": "gofmt -l ./internal ./cmd"
-      }
-    ]
+    }
   }
 }
