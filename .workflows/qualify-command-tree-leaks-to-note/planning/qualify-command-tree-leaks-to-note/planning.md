@@ -16,3 +16,11 @@ approved_at: 2026-03-30
 - [ ] `tick note tree` produces `"unknown note sub-command 'tree'"` (no misleading "note tree" reference)
 - [ ] `tick note tree --foo` error references `"note"`, not `"note tree"`
 - [ ] All existing tests pass with no regressions
+
+#### Tasks
+status: draft
+
+| Internal ID | Name | Edge Cases |
+|-------------|------|------------|
+| qualify-command-tree-leaks-to-note-1-1 | Reproduce Bug and Fix qualifyCommand | qualifyCommand("note", ["tree"]) returns ("note", ["tree"]) not ("note tree", []), shared add/remove still qualify under both dep and note |
+| qualify-command-tree-leaks-to-note-1-2 | Integration Regression Test via App.Run | tick note tree --foo error references "note" not "note tree", tick note tree produces "unknown note sub-command 'tree'", tick dep tree behavior unchanged |
