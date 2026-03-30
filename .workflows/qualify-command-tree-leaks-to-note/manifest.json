@@ -1,7 +1,7 @@
 {
   "name": "qualify-command-tree-leaks-to-note",
   "work_type": "bugfix",
-  "status": "in-progress",
+  "status": "completed",
   "created": "2026-03-30",
   "description": "qualifyCommand shares tree case across dep and note parents, causing misleading error messages for tick note tree",
   "phases": {
