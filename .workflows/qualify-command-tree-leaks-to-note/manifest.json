@@ -52,15 +52,29 @@
       "items": {
         "qualify-command-tree-leaks-to-note": {
           "status": "in-progress",
-          "task_gate_mode": "gated",
+          "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
           "analysis_gate_mode": "gated",
           "fix_attempts": 0,
           "analysis_cycle": 0,
-          "linters": [],
-          "project_skills": [],
+          "linters": [
+            {
+              "name": "golangci-lint",
+              "command": "golangci-lint run ./..."
+            },
+            {
+              "name": "gofmt",
+              "command": "gofmt -l ./internal ./cmd"
+            }
+          ],
+          "project_skills": [
+            ".claude/skills/golang-pro"
+          ],
           "current_phase": 1,
-          "current_task": "~"
+          "current_task": "~",
+          "completed_tasks": [
+            "qualify-command-tree-leaks-to-note-1-1"
+          ]
         }
       }
     }

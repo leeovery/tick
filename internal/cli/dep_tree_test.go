@@ -73,6 +73,46 @@ func TestDepTreeWiring(t *testing.T) {
 		}
 	})
 
+	t.Run("it does not qualify tree under note", func(t *testing.T) {
+		cmd, rest := qualifyCommand("note", []string{"tree"})
+		if cmd != "note" {
+			t.Errorf("qualifyCommand returned cmd = %q, want %q", cmd, "note")
+		}
+		if len(rest) != 1 || rest[0] != "tree" {
+			t.Errorf("qualifyCommand returned rest = %v, want [tree]", rest)
+		}
+	})
+
+	t.Run("it preserves args when tree is not qualified under note", func(t *testing.T) {
+		cmd, rest := qualifyCommand("note", []string{"tree", "--foo"})
+		if cmd != "note" {
+			t.Errorf("qualifyCommand returned cmd = %q, want %q", cmd, "note")
+		}
+		if len(rest) != 2 || rest[0] != "tree" || rest[1] != "--foo" {
+			t.Errorf("qualifyCommand returned rest = %v, want [tree --foo]", rest)
+		}
+	})
+
+	t.Run("it still qualifies add under note", func(t *testing.T) {
+		cmd, rest := qualifyCommand("note", []string{"add", "tick-aaa", "hello"})
+		if cmd != "note add" {
+			t.Errorf("qualifyCommand returned cmd = %q, want %q", cmd, "note add")
+		}
+		if len(rest) != 2 || rest[0] != "tick-aaa" || rest[1] != "hello" {
+			t.Errorf("qualifyCommand returned rest = %v, want [tick-aaa hello]", rest)
+		}
+	})
+
+	t.Run("it still qualifies remove under note", func(t *testing.T) {
+		cmd, rest := qualifyCommand("note", []string{"remove", "tick-aaa", "1"})
+		if cmd != "note remove" {
+			t.Errorf("qualifyCommand returned cmd = %q, want %q", cmd, "note remove")
+		}
+		if len(rest) != 2 || rest[0] != "tick-aaa" || rest[1] != "1" {
+			t.Errorf("qualifyCommand returned rest = %v, want [tick-aaa 1]", rest)
+		}
+	})
+
 	t.Run("it does not break existing dep add/remove dispatch", func(t *testing.T) {
 		// Verify qualifyCommand still works for add and remove
 		cmd, rest := qualifyCommand("dep", []string{"add", "tick-aaa", "tick-bbb"})
