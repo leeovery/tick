@@ -97,12 +97,35 @@ The function was written when `"dep"` was the only two-level command, or `"add"`
 
 ## Fix Direction
 
-*To be filled after root cause validation and findings review*
+### Chosen Approach
+
+Split the switch case so `"tree"` only qualifies under `"dep"`. The shared `"add", "remove"` case remains for both parents, while `"tree"` gets a separate case guarded by `subcmd == "dep"`.
+
+**Deciding factor:** Minimal change, clear intent, no behavioral change for any valid command path.
+
+### Options Explored
+
+1. **Split "tree" into dep-guarded case** (chosen) — separate `"tree"` from the shared case, add `subcmd == "dep"` guard. Clear and explicit.
+2. **Fully split into parent-specific switches** — separate switch blocks for `dep` and `note` subcommands. More verbose but would prevent future leaks if new parent-specific subcommands are added. Not chosen because the current structure is simple enough and `"tree"` is the only dep-specific subcommand.
+
+### Discussion
+
+Straightforward bug with a single clear fix. No competing priorities or edge cases. The user confirmed findings and direction without feedback.
+
+### Testing Recommendations
+
+- Add test: `qualifyCommand("note", ["tree"])` returns `("note", ["tree"])` — tree not qualified under note
+- Add test: `qualifyCommand("note", ["tree", "--foo"])` returns `("note", ["tree", "--foo"])` — args preserved
+- Existing `qualifyCommand("dep", ["tree", ...])` tests remain unchanged
+
+### Risk Assessment
+
+- **Fix complexity:** Low
+- **Regression risk:** Low
+- **Recommended approach:** Regular release
 
 ---
 
 ## Notes
 
-- The fix is straightforward: scope `"tree"` to only qualify under `"dep"`, not `"note"`
-- Two approaches: (a) split the switch into parent-specific cases, or (b) add a parent check inside the `"tree"` case
-- Should add a test for `qualifyCommand("note", ["tree"])` to verify it falls through to default
+- Synthesis validation confirmed root cause with high confidence, no gaps found
