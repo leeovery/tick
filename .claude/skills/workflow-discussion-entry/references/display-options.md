@@ -8,7 +8,7 @@
 
 Present everything discovered to help the user make an informed choice.
 
-**Present the full state:**
+**Present the full state.** Condense each topic's summary from the analysis cache into a single line (~80 chars max) — just enough to identify the topic's scope. The full analysis remains in the cache file unchanged.
 
 > *Output the next fenced block as a code block:*
 
@@ -22,22 +22,44 @@ Present everything discovered to help the user make an informed choice.
 Research topics:
 
 1. {theme_name}
-   └─ Sources: {filename1}.md, {filename2}.md
-   └─ Discussion: @if(has_discussion) {work_unit}/{topic} ({status:[in-progress|completed]}) @else (no discussion) @endif
-   └─ "{summary}"
+   ├─ Status: @if(has_discussion) [{status:[in-progress|completed]}] @else [pending] @endif
+   ├─ Sources: {filename1}.md, {filename2}.md
+   @if(has_discussion) ├─ Discussion: {work_unit}/{topic}
+   @endif └─ {summary_condensed_to_one_line}
 
 2. ...
 ```
 
-If discussions exist that are NOT linked to a research topic, list them separately:
+If discussions exist that are NOT linked to a research topic, list them separately with continuing numbers:
 
 > *Output the next fenced block as a code block:*
 
 ```
 Existing discussions:
 
-  • {work_unit}/{topic} ({status:[in-progress|completed]}, {work_type:[epic|feature|bugfix]})
+{N+1}. {topic:(titlecase)}
+       ├─ Status: [{status:[in-progress|completed]}]
+       └─ {work_type:[epic|feature|bugfix]} — {work_unit}
+
+{N+2}. ...
 ```
+
+If `gap_topics` from discovery has entries, show suggested topics from gap analysis after the existing discussions (numbered sequentially):
+
+> *Output the next fenced block as a code block:*
+
+```
+Suggested topics (from gap analysis):
+
+{N+M+1}. {topic_name:(titlecase)}
+         ├─ Gap type: [{gap_type:[cross-discussion|elevated|emergent|integration|uncovered]}]
+         ├─ Source discussions: {discussion1}.md, {discussion2}.md
+         └─ {summary_condensed_to_one_line}
+
+{N+M+2}. ...
+```
+
+Read the gap details from `.workflows/{work_unit}/.state/discussion-gap-analysis.md`. Condense each topic's summary into a single line (~80 chars max).
 
 ### Key/Legend
 
@@ -48,14 +70,14 @@ No `---` separator before this section.
 ```
 Key:
 
-  Discussion status:
+  Status:
     in-progress — discussion is ongoing
     completed   — discussion is done
+    pending     — identified by research, not yet discussed
+    suggested   — identified by discussion gap analysis
 ```
 
-**Then present the options based on what exists:**
-
-#### If research and discussions exist
+**Then present the menu.** Numbered items match the overview (research topics first, then standalone discussions, then gap topics if any). Verb reflects status: pending → "Discuss", in-progress → "Continue", completed → "Reopen", suggested → "Discuss".
 
 > *Output the next fenced block as markdown (not a code block):*
 
@@ -63,45 +85,21 @@ Key:
 · · · · · · · · · · · ·
 How would you like to proceed?
 
-- **`r`/`refresh`** — Force fresh research analysis
-- From research — pick a topic number above (e.g., "1" or "research 1")
-- Continue discussion — name one above (e.g., "continue {topic}")
-- Fresh topic — describe what you want to discuss
-· · · · · · · · · · · ·
-```
+- **`1`** — Discuss "Peer Networking" [pending]
+- **`2`** — Continue "Auth Flow" [in-progress]
+- **`3`** — Reopen "Bluetooth Switching" [completed]
+@if(gap_topics exist)
+- **`4`** — Discuss "Integration Testing" [suggested]
+@endif
 
-**STOP.** Wait for user response.
+- **`f`/`fresh`** — Start a fresh topic not from research
 
-→ Proceed to **B. Handle Selection**.
-
-#### If only research exists
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-· · · · · · · · · · · ·
-How would you like to proceed?
-
-- **`r`/`refresh`** — Force fresh research analysis
-- From research — pick a topic number above (e.g., "1" or "research 1")
-- Fresh topic — describe what you want to discuss
-· · · · · · · · · · · ·
-```
-
-**STOP.** Wait for user response.
-
-→ Proceed to **B. Handle Selection**.
-
-#### If only discussions exist
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-· · · · · · · · · · · ·
-How would you like to proceed?
-
-- Continue discussion — name one above (e.g., "continue {topic}")
-- Fresh topic — describe what you want to discuss
+@if(has_research or gap_topics exist)
+- **`r`/`refresh`** — Force fresh analysis
+@endif
+@if(work_type == epic)
+- **`b`/`back`** — Return to epic menu
+@endif
 · · · · · · · · · · · ·
 ```
 
@@ -115,59 +113,28 @@ How would you like to proceed?
 
 Route based on the user's choice.
 
-#### If user chose `From research`
+#### If user chose a numbered topic or named a topic
 
-User chose to start from research (e.g., "research 1", "1", "from research", or a topic name).
-
-Set source="research".
-
-**If user specified a topic inline** (e.g., "research 2", "2", or topic name):
-- Identify the selected topic from the numbered list
+Identify the selected topic from the numbered list (by number or name). Determine source from its status:
+- pending → source="research"
+- suggested → source="gap-analysis"
+- in-progress or completed → source="continue"
 
 → Return to caller.
 
-**If user just said "from research" without specifying:**
+#### If user chose `fresh`
 
-> *Output the next fenced block as a code block:*
-
-```
-Which research topic would you like to discuss? (Enter a number or topic name)
-```
-
-**STOP.** Wait for user response.
-
-→ Return to caller.
-
-#### If user chose `Continue discussion`
-
-User chose to continue a discussion (e.g., "continue auth-flow" or "continue discussion").
-
-Set source="continue".
-
-**If user specified a discussion inline** (e.g., "continue auth-flow"):
-- Identify the selected discussion from the list
-
-→ Return to caller.
-
-**If user just said "continue discussion" without specifying:**
-
-> *Output the next fenced block as a code block:*
-
-```
-Which discussion would you like to continue?
-```
-
-**STOP.** Wait for user response.
-
-→ Return to caller.
-
-#### If user chose `Fresh topic`
-
-User wants to start a fresh discussion.
+User wants to start a fresh discussion not derived from research.
 
 Set source="fresh".
 
 → Return to caller.
+
+#### If user chose `back`
+
+Re-invoke the caller's entry-point skill to return to its menu. Invoke `/continue-epic {work_unit}`.
+
+**STOP.** Do not proceed — terminal condition.
 
 #### If user chose `refresh`
 
@@ -177,10 +144,18 @@ Set source="fresh".
 Refreshing analysis...
 ```
 
-Clear the cache metadata from the manifest and delete the cache file:
+Clear the cache metadata from the manifest and delete the cache files:
 ```bash
 node .claude/skills/workflow-manifest/scripts/manifest.cjs delete {work_unit}.research analysis_cache
+node .claude/skills/workflow-manifest/scripts/manifest.cjs delete {work_unit}.discussion gap_analysis_cache
 rm .workflows/{work_unit}/.state/research-analysis.md
+rm .workflows/{work_unit}/.state/discussion-gap-analysis.md
 ```
 
+**If research exists (`state.has_research` is true):**
+
 → Return to **[the skill](../SKILL.md)** for **Step 4**.
+
+**If no research exists (gap analysis only):**
+
+→ Return to **[the skill](../SKILL.md)** for **Step 5**.

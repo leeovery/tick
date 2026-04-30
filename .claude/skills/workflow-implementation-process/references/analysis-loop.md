@@ -32,14 +32,7 @@ Increment `analysis_cycle` via manifest CLI (`node .claude/skills/workflow-manif
 
 **Do NOT skip analysis autonomously.** This gate is an escape hatch for the user — not a signal to stop. The expected default is to continue running analysis until no issues are found. Present the choice and let the user decide.
 
-> *Output the next fenced block as a code block:*
-
-```
-Analysis cycle {N}
-
-Analysis has run {N-1} times so far. You can continue (recommended if issues
-were still found last cycle) or skip to completion.
-```
+→ Load **[convergence-analysis.md](../../workflow-shared/references/convergence-analysis.md)** with loop_type = `analysis`, work_unit = `{work_unit}`, topic = `{topic}`.
 
 > *Output the next fenced block as markdown (not a code block):*
 
@@ -62,7 +55,7 @@ You MUST NOT choose on the user's behalf.
 
 **If `skip`:**
 
-→ Return to **[the skill](../SKILL.md)** for **Step 8**.
+→ Return to **[the skill](../SKILL.md)** for **Step 9**.
 
 ---
 
@@ -146,7 +139,7 @@ impl({work_unit}): analysis cycle {N} — findings
 
 #### If all three agents returned `STATUS: clean`
 
-→ Return to **[the skill](../SKILL.md)** for **Step 8**.
+→ Return to **[the skill](../SKILL.md)** for **Step 9**.
 
 #### Otherwise
 
@@ -168,7 +161,7 @@ impl({work_unit}): analysis cycle {N} — synthesis
 
 #### If `STATUS` is `clean`
 
-→ Return to **[the skill](../SKILL.md)** for **Step 8**.
+→ Return to **[the skill](../SKILL.md)** for **Step 9**.
 
 #### If `STATUS` is `tasks_proposed`
 
@@ -230,7 +223,7 @@ Update `status: approved` in the staging file.
 > *Output the next fenced block as a code block:*
 
 ```
-Task {current} of {total}: {title} — approved (auto).
+Task {current} of {total}: {title} — approved [auto].
 ```
 
 → Return to **F. Process Task**.
@@ -296,7 +289,7 @@ Commit the staging file updates:
 impl({work_unit}): analysis cycle {N} — tasks skipped
 ```
 
-→ Return to **[the skill](../SKILL.md)** for **Step 8**.
+→ Return to **[the skill](../SKILL.md)** for **Step 9**.
 
 ---
 

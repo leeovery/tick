@@ -19,14 +19,14 @@ const VALID_PHASES = [
 ];
 
 const VALID_PHASE_STATUSES = {
-  research:       ['in-progress', 'completed'],
-  discussion:     ['in-progress', 'completed'],
-  investigation:  ['in-progress', 'completed'],
-  scoping:        ['in-progress', 'completed'],
-  specification:  ['in-progress', 'completed', 'superseded', 'promoted'],
-  planning:       ['in-progress', 'completed'],
-  implementation: ['in-progress', 'completed'],
-  review:         ['in-progress', 'completed'],
+  research:       ['in-progress', 'completed', 'cancelled'],
+  discussion:     ['in-progress', 'completed', 'cancelled'],
+  investigation:  ['in-progress', 'completed', 'cancelled'],
+  scoping:        ['in-progress', 'completed', 'cancelled'],
+  specification:  ['in-progress', 'completed', 'superseded', 'promoted', 'cancelled'],
+  planning:       ['in-progress', 'completed', 'cancelled'],
+  implementation: ['in-progress', 'completed', 'cancelled'],
+  review:         ['in-progress', 'completed', 'cancelled'],
 };
 
 const VALID_GATE_MODES = ['gated', 'auto'];
@@ -43,9 +43,14 @@ const LOCK_TIMEOUT_MS = 10000;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function die(msg) {
+// Exit-code convention:
+//   1 — unexpected error (corrupt JSON, bad args, I/O, validation failure)
+//   2 — expected miss (work unit / path / value not found) — callers that
+//       do best-effort lookups can distinguish this from real errors
+//       without pattern-matching the stderr text.
+function die(msg, code = 1) {
   process.stderr.write(`Error: ${msg}\n`);
-  process.exit(1);
+  process.exit(code);
 }
 
 function manifestDir(name) {
@@ -62,7 +67,7 @@ function lockPath(name) {
 
 function readManifest(name) {
   const p = manifestPath(name);
-  if (!fs.existsSync(p)) die(`Work unit "${name}" not found`);
+  if (!fs.existsSync(p)) die(`Work unit "${name}" not found`, 2);
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
@@ -140,10 +145,30 @@ function projectLockPath() {
 
 function readProjectManifest() {
   const p = projectManifestPath();
+  let raw;
   try {
-    return JSON.parse(fs.readFileSync(p, 'utf8'));
-  } catch (_) {
-    return {};
+    raw = fs.readFileSync(p, 'utf8');
+  } catch (e) {
+    // Missing file is a legitimate first-write state — callers can
+    // populate and write. Any other read error (permissions, I/O)
+    // must surface loudly rather than producing a fresh empty manifest
+    // that would then be written back, clobbering on-disk state.
+    if (e.code === 'ENOENT') return {};
+    die(`Failed to read project manifest at ${p}: ${e.message}`);
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    // Corrupt JSON in an existing manifest — abort instead of silently
+    // returning an empty object. Returning {} here and letting callers
+    // write would erase every registered work unit. Force the user to
+    // inspect and repair rather than destroying state.
+    die(
+      `Project manifest at ${p} is not valid JSON: ${e.message}\n` +
+      'Inspect the file and fix it by hand, then re-run the command. ' +
+      'Do not let another workflow command write to it first — a write ' +
+      'against a corrupt manifest would replace all registered work units.'
+    );
   }
 }
 
@@ -268,7 +293,7 @@ function resolveSegments(phase, topic, fieldSegments) {
 
 function requireWorkUnit(workUnit) {
   if (!fs.existsSync(manifestPath(workUnit))) {
-    die(`Work unit "${workUnit}" not found`);
+    die(`Work unit "${workUnit}" not found`, 2);
   }
 }
 
@@ -492,7 +517,7 @@ function cmdGet(args) {
     }
     const value = getByPath(manifest, proj.fieldSegments);
     if (value === undefined) {
-      die(`Path "${proj.fieldSegments.join('.')}" not found in project manifest`);
+      die(`Path "${proj.fieldSegments.join('.')}" not found in project manifest`, 2);
     }
     outputValue(value);
     return;
@@ -510,7 +535,7 @@ function cmdGet(args) {
     const segments = args[1].split('.');
     const value = getByPath(manifest, segments);
     if (value === undefined) {
-      die(`Path "${args[1]}" not found in "${workUnit}"`);
+      die(`Path "${args[1]}" not found in "${workUnit}"`, 2);
     }
     outputValue(value);
     return;
@@ -523,7 +548,7 @@ function cmdGet(args) {
   if (topic === '*') {
     const results = resolveWildcardTopic(manifest, phase, fieldSegments);
     if (results.length === 0) {
-      die(`No items found in phase "${phase}" of "${workUnit}"`);
+      die(`No items found in phase "${phase}" of "${workUnit}"`, 2);
     }
     process.stdout.write(JSON.stringify(results, null, 2) + '\n');
     return;
@@ -532,7 +557,7 @@ function cmdGet(args) {
   const segments = resolvePhaseSegments(phase, topic, fieldSegments);
   const value = getByPath(manifest, segments);
   if (value === undefined) {
-    die(`Path "${segments.join('.')}" not found in "${workUnit}"`);
+    die(`Path "${segments.join('.')}" not found in "${workUnit}"`, 2);
   }
   outputValue(value);
 }
@@ -584,7 +609,7 @@ function cmdDelete(args) {
     withProjectLock(() => {
       const manifest = readProjectManifest();
       if (!deleteByPath(manifest, proj.fieldSegments)) {
-        die(`Path "${proj.fieldSegments.join('.')}" not found in project manifest`);
+        die(`Path "${proj.fieldSegments.join('.')}" not found in project manifest`, 2);
       }
       writeProjectManifestAtomic(manifest);
     });
@@ -603,7 +628,7 @@ function cmdDelete(args) {
   withLock(workUnit, () => {
     const manifest = readManifest(workUnit);
     if (!deleteByPath(manifest, segments)) {
-      die(`Path "${segments.join('.')}" not found in "${workUnit}"`);
+      die(`Path "${segments.join('.')}" not found in "${workUnit}"`, 2);
     }
     writeManifestAtomic(workUnit, manifest);
   });
@@ -743,6 +768,47 @@ function cmdPush(args) {
   });
 }
 
+function cmdPull(args) {
+  // Project manifest routing: pull project.field.path <value>
+  const proj = parseProjectPath(args[0]);
+  if (proj.isProject) {
+    if (proj.fieldSegments.length === 0 || args.length < 2) {
+      die('Usage: pull project.<field.path> <value>');
+    }
+    const value = parseValue(args[1]);
+    withProjectLock(() => {
+      const manifest = readProjectManifest();
+      const current = getByPath(manifest, proj.fieldSegments);
+      if (!Array.isArray(current)) return; // no-op
+      const idx = current.indexOf(value);
+      if (idx === -1) return; // no-op
+      current.splice(idx, 1);
+      writeProjectManifestAtomic(manifest);
+    });
+    return;
+  }
+
+  if (args.length < 3) die('Usage: pull <path> <field> <value>');
+
+  const { workUnit, phase, topic } = parsePath(args[0]);
+  const fieldSegments = args[1].split('.');
+  const value = parseValue(args[2]);
+
+  requireWorkUnit(workUnit);
+
+  const segments = resolveSegments(phase, topic, fieldSegments);
+
+  withLock(workUnit, () => {
+    const manifest = readManifest(workUnit);
+    const current = getByPath(manifest, segments);
+    if (!Array.isArray(current)) return; // no-op
+    const idx = current.indexOf(value);
+    if (idx === -1) return; // no-op
+    current.splice(idx, 1);
+    writeManifestAtomic(workUnit, manifest);
+  });
+}
+
 function cmdExists(args) {
   if (args.length < 1) die('Usage: exists <path> [field.path]');
 
@@ -831,10 +897,10 @@ function cmdProject(args) {
     const name = args[1];
     if (!name) die('Usage: project get <name>');
     const projPath = path.join(WORKFLOWS_DIR, 'manifest.json');
-    if (!fs.existsSync(projPath)) die(`Project manifest not found`);
+    if (!fs.existsSync(projPath)) die(`Project manifest not found`, 2);
     const proj = JSON.parse(fs.readFileSync(projPath, 'utf8'));
     const entry = (proj.work_units || {})[name];
-    if (!entry) die(`Work unit "${name}" not found in project manifest`);
+    if (!entry) die(`Work unit "${name}" not found in project manifest`, 2);
     process.stdout.write(`work_type: ${entry.work_type}\n`);
     return;
   }
@@ -860,10 +926,77 @@ function cmdKeyOf(args) {
   const key = Object.keys(obj).find(k => String(obj[k]) === searchValue);
 
   if (key === undefined) {
-    die(`Value "${searchValue}" not found in "${segments.join('.')}"`);
+    die(`Value "${searchValue}" not found in "${segments.join('.')}"`, 2);
   }
 
   process.stdout.write(key + '\n');
+}
+
+// ---------------------------------------------------------------------------
+// Resolve — map work_unit.phase[.topic] to artifact file paths on disk.
+// Used by the knowledge CLI for artifact discovery.
+// ---------------------------------------------------------------------------
+
+const INDEXED_PHASES = ['research', 'discussion', 'investigation', 'specification'];
+
+function cmdResolve(args) {
+  if (!args[0]) {
+    die('Usage: manifest.cjs resolve <work_unit>.<phase>[.<topic>]\nResolves artifact file paths for indexed phases.');
+  }
+
+  const { workUnit, phase, topic } = parsePath(args[0]);
+
+  if (!phase) {
+    die('resolve requires at least 2 segments: <work_unit>.<phase>[.<topic>]');
+  }
+
+  if (!INDEXED_PHASES.includes(phase)) {
+    die(`Phase "${phase}" is not indexed by the knowledge base. Indexed phases: ${INDEXED_PHASES.join(', ')}`);
+  }
+
+  // Validate that the work unit exists by reading its manifest.
+  const manifest = readManifest(workUnit);
+  const wuDir = path.join(WORKFLOWS_DIR, workUnit);
+
+  if (phase === 'research') {
+    if (topic) {
+      // 3-segment: specific research item.
+      const filePath = path.join(wuDir, 'research', topic + '.md');
+      process.stdout.write(filePath + '\n');
+    } else {
+      // 2-segment: iterate phases.research.items from the manifest.
+      const items = manifest.phases && manifest.phases.research && manifest.phases.research.items;
+      if (!items || typeof items !== 'object') {
+        // No research items tracked — output nothing, exit 0.
+        return;
+      }
+      for (const itemName of Object.keys(items)) {
+        const filePath = path.join(wuDir, 'research', itemName + '.md');
+        process.stdout.write(filePath + '\n');
+      }
+    }
+    return;
+  }
+
+  // For non-research phases, topic is required (3 segments).
+  if (!topic) {
+    die(`resolve for ${phase} requires 3 segments: <work_unit>.${phase}.<topic>`);
+  }
+
+  if (phase === 'discussion') {
+    process.stdout.write(path.join(wuDir, 'discussion', topic + '.md') + '\n');
+    return;
+  }
+
+  if (phase === 'investigation') {
+    process.stdout.write(path.join(wuDir, 'investigation', topic + '.md') + '\n');
+    return;
+  }
+
+  if (phase === 'specification') {
+    process.stdout.write(path.join(wuDir, 'specification', topic, 'specification.md') + '\n');
+    return;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -873,7 +1006,7 @@ function cmdKeyOf(args) {
 const [command, ...args] = process.argv.slice(2);
 
 if (!command) {
-  die('Usage: manifest.cjs <command> [args]\nCommands: init, get, set, delete, list, init-phase, push, exists, key-of, project');
+  die('Usage: manifest.cjs <command> [args]\nCommands: init, get, set, delete, list, init-phase, push, pull, exists, key-of, project, resolve');
 }
 
 switch (command) {
@@ -884,8 +1017,10 @@ switch (command) {
   case 'list':     cmdList(args); break;
   case 'init-phase': cmdInitPhase(args); break;
   case 'push':     cmdPush(args); break;
+  case 'pull':     cmdPull(args); break;
   case 'exists':   cmdExists(args); break;
   case 'key-of':   cmdKeyOf(args); break;
   case 'project':  cmdProject(args); break;
+  case 'resolve':  cmdResolve(args); break;
   default:         die(`Unknown command "${command}"`);
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-const { loadActiveManifests, loadAllManifests, loadManifest, phaseItems, phaseData } = require('../../workflow-shared/scripts/discovery-utils.cjs');
+const { loadActiveManifests, loadAllManifests, loadManifest, phaseItems, phaseData, computePendingFromResearch, computePendingFromGaps } = require('../../workflow-shared/scripts/discovery-utils.cjs');
 
 const EPIC_PHASES = ['research', 'discussion', 'specification', 'planning', 'implementation', 'review'];
 
@@ -51,6 +51,7 @@ function buildEpicDetail(cwd, manifest) {
   const allSourcedDiscussions = new Set();
   const completedItems = [];
   const inProgressItems = [];
+  const cancelledItems = [];
   const nextPhaseReady = [];
 
   for (const phase of EPIC_PHASES) {
@@ -62,8 +63,11 @@ function buildEpicDetail(cwd, manifest) {
       const entry = { name: item.name, status: item.status || 'unknown' };
 
       if (phase === 'specification' && item.sources) {
-        entry.sources = item.sources;
-        for (const src of item.sources) {
+        const sourcesArr = Array.isArray(item.sources)
+          ? item.sources
+          : Object.entries(item.sources).map(([topic, data]) => ({ topic, ...data }));
+        entry.sources = sourcesArr;
+        for (const src of sourcesArr) {
           allSourcedDiscussions.add(src.topic || src.name);
         }
       }
@@ -91,6 +95,9 @@ function buildEpicDetail(cwd, manifest) {
       if (item.status === 'completed') {
         completedItems.push({ name: item.name, phase });
       }
+      if (item.status === 'cancelled') {
+        cancelledItems.push({ name: item.name, phase, previous_status: item.previous_status || null });
+      }
     }
 
     phases[phase] = phaseEntries;
@@ -116,14 +123,14 @@ function buildEpicDetail(cwd, manifest) {
   const planItems = phaseItems(manifest, 'planning');
   const implItems = phaseItems(manifest, 'implementation');
 
-  const planTopics = new Set(planItems.map(i => i.name));
+  const planTopics = new Set(planItems.filter(i => i.status !== 'cancelled').map(i => i.name));
   for (const s of specItems) {
     if (s.status === 'completed' && !planTopics.has(s.name)) {
       nextPhaseReady.push({ name: s.name, action: 'start_planning', label: 'spec completed' });
     }
   }
 
-  const implTopics = new Set(implItems.map(i => i.name));
+  const implTopics = new Set(implItems.filter(i => i.status !== 'cancelled').map(i => i.name));
   for (const p of planItems) {
     if (p.status === 'completed' && !implTopics.has(p.name)) {
       // Check deps before marking as ready for implementation
@@ -140,29 +147,39 @@ function buildEpicDetail(cwd, manifest) {
   }
 
   const reviewItems = phaseItems(manifest, 'review');
-  const reviewTopics = new Set(reviewItems.map(i => i.name));
+  const reviewTopics = new Set(reviewItems.filter(i => i.status !== 'cancelled').map(i => i.name));
   for (const i of implItems) {
     if (i.status === 'completed' && !reviewTopics.has(i.name)) {
       nextPhaseReady.push({ name: i.name, action: 'start_review', label: 'implementation completed' });
     }
   }
 
-  const hasResearch = researchItems.length > 0;
+  const hasResearch = researchItems.some(r => r.status !== 'cancelled');
   const hasCompletedResearch = researchItems.some(r => r.status === 'completed');
   const hasCompletedSpec = specItems.some(s => s.status === 'completed');
   const hasCompletedPlan = planItems.some(p => p.status === 'completed');
   const hasCompletedDiscussion = discussionItems.some(d => d.status === 'completed');
   const hasCompletedImpl = implItems.some(i => i.status === 'completed');
 
+  const pendingFromResearch = computePendingFromResearch(manifest);
+  const pendingFromGaps = computePendingFromGaps(manifest);
+  const hasPendingGaps = pendingFromGaps.length > 0;
+  const hasPendingDiscussions = pendingFromResearch.length > 0 || hasPendingGaps;
+
   return {
     phases,
     in_progress: inProgressItems,
     completed: completedItems,
+    cancelled: cancelledItems,
     next_phase_ready: nextPhaseReady,
     unaccounted_discussions: unaccountedDiscussions,
     reopened_discussions: reopenedDiscussions,
+    pending_from_research: pendingFromResearch.map(t => ({ name: t, phase: 'discussion' })),
+    pending_from_gaps: pendingFromGaps.map(t => ({ name: t, phase: 'discussion' })),
     gating: {
       has_research: hasResearch,
+      has_pending_discussions: hasPendingDiscussions,
+      has_pending_gaps: hasPendingGaps,
       can_start_discussion: hasCompletedResearch,
       can_start_specification: hasCompletedDiscussion,
       can_start_planning: hasCompletedSpec,
@@ -238,7 +255,10 @@ function format(result) {
       for (const item of items) {
         let line = `      - ${item.name} (${item.status})`;
         if (item.sources) {
-          const srcNames = item.sources.map(s => `${s.topic || s.name}:${s.status || '?'}`);
+          const sourcesArr = Array.isArray(item.sources)
+            ? item.sources
+            : Object.entries(item.sources).map(([topic, data]) => ({ topic, ...data }));
+          const srcNames = sourcesArr.map(s => `${s.topic || s.name}:${s.status || '?'}`);
           line += ` [sources: ${srcNames.join(', ')}]`;
         }
         if (item.format) line += ` [format: ${item.format}]`;
@@ -272,9 +292,19 @@ function format(result) {
     if (d.reopened_discussions.length > 0) {
       lines.push(`    reopened_discussions: ${d.reopened_discussions.join(', ')}`);
     }
+    if (d.pending_from_research.length > 0) {
+      lines.push(`    pending_from_research: ${d.pending_from_research.map(p => p.name).join(', ')}`);
+    }
+    if (d.pending_from_gaps.length > 0) {
+      lines.push(`    pending_from_gaps: ${d.pending_from_gaps.map(p => p.name).join(', ')}`);
+    }
     if (d.completed.length > 0) {
       lines.push('    completed:');
       for (const c of d.completed) lines.push(`      - ${c.name} (${c.phase})`);
+    }
+    if (d.cancelled.length > 0) {
+      lines.push('    cancelled:');
+      for (const c of d.cancelled) lines.push(`      - ${c.name} (${c.phase}, was: ${c.previous_status || 'unknown'})`);
     }
   }
 
