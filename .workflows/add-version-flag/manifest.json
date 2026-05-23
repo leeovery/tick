@@ -74,6 +74,17 @@
           ]
         }
       }
+    },
+    "review": {
+      "items": {
+        "add-version-flag": {
+          "status": "in-progress",
+          "reviewed_tasks": [
+            "add-version-flag-1-1",
+            "add-version-flag-2-1"
+          ]
+        }
+      }
     }
   }
 }
