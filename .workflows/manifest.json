@@ -26,6 +26,9 @@
     },
     "v1": {
       "work_type": "epic"
+    },
+    "add-version-flag": {
+      "work_type": "quick-fix"
     }
   },
   "defaults": {
