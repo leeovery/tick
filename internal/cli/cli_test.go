@@ -512,3 +512,81 @@ func TestTTYDetection(t *testing.T) {
 		}
 	})
 }
+
+func TestVersionFlag(t *testing.T) {
+	t.Run("it produces identical output to the version subcommand", func(t *testing.T) {
+		dir := t.TempDir()
+
+		var flagStdout, flagStderr bytes.Buffer
+		flagApp := &App{
+			Stdout: &flagStdout,
+			Stderr: &flagStderr,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		flagExit := flagApp.Run([]string{"tick", "--version"})
+
+		var subStdout, subStderr bytes.Buffer
+		subApp := &App{
+			Stdout: &subStdout,
+			Stderr: &subStderr,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		subExit := subApp.Run([]string{"tick", "version"})
+
+		if flagExit != 0 {
+			t.Errorf("--version exit code = %d, want 0", flagExit)
+		}
+		if subExit != 0 {
+			t.Errorf("version subcommand exit code = %d, want 0", subExit)
+		}
+		if !bytes.Equal(flagStdout.Bytes(), subStdout.Bytes()) {
+			t.Errorf("--version stdout = %q, want %q (matching version subcommand)", flagStdout.String(), subStdout.String())
+		}
+		if flagStderr.Len() != 0 {
+			t.Errorf("--version stderr should be empty, got %q", flagStderr.String())
+		}
+		expected := "tick version " + Version + "\n"
+		if flagStdout.String() != expected {
+			t.Errorf("--version stdout = %q, want %q", flagStdout.String(), expected)
+		}
+	})
+
+	t.Run("it short-circuits before subcommand dispatch when combined with other flags", func(t *testing.T) {
+		dir := t.TempDir()
+		var stdout, stderr bytes.Buffer
+		app := &App{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		exit := app.Run([]string{"tick", "--version", "--json"})
+		if exit != 0 {
+			t.Errorf("exit code = %d, want 0", exit)
+		}
+		expected := "tick version " + Version + "\n"
+		if stdout.String() != expected {
+			t.Errorf("stdout = %q, want %q", stdout.String(), expected)
+		}
+		if stderr.Len() != 0 {
+			t.Errorf("stderr should be empty, got %q", stderr.String())
+		}
+	})
+
+	t.Run("it prints version when no subcommand is given", func(t *testing.T) {
+		dir := t.TempDir()
+		var stdout, stderr bytes.Buffer
+		app := &App{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		exit := app.Run([]string{"tick", "--version"})
+		if exit != 0 {
+			t.Errorf("exit code = %d, want 0", exit)
+		}
+		expected := "tick version " + Version + "\n"
+		if stdout.String() != expected {
+			t.Errorf("stdout = %q, want %q (should not fall through to help)", stdout.String(), expected)
+		}
+	})
+}

@@ -33,6 +33,13 @@ func (a *App) Run(args []string) int {
 		return 1
 	}
 
+	// --version global flag short-circuits before help and subcommand dispatch,
+	// mirroring the existing version subcommand output byte-for-byte.
+	if flags.version {
+		fmt.Fprintf(a.Stdout, "tick version %s\n", Version)
+		return 0
+	}
+
 	if subcmd == "" {
 		printTopLevelHelp(a.Stdout)
 		return 0
@@ -326,6 +333,7 @@ type globalFlags struct {
 	pretty  bool
 	json    bool
 	help    bool
+	version bool
 }
 
 // parseArgs separates global flags from the subcommand and its arguments.
@@ -400,6 +408,8 @@ func applyGlobalFlag(flags *globalFlags, arg string) bool {
 		flags.json = true
 	case "--help", "-h":
 		flags.help = true
+	case "--version":
+		flags.version = true
 	default:
 		return false
 	}
