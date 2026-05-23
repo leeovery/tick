@@ -25,7 +25,9 @@
           "phase": 1,
           "task": "~",
           "task_map": {
-            "add-version-flag-1-1": "tick-9c68fe"
+            "add-version-flag-1-1": "tick-9c68fe",
+            "add-version-flag-2": "tick-a59f42",
+            "add-version-flag-2-1": "tick-d15179"
           },
           "external_id": "tick-4edd06"
         }
@@ -44,7 +46,7 @@
           "status": "in-progress",
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
-          "analysis_gate_mode": "gated",
+          "analysis_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle": 1,
           "linters": [

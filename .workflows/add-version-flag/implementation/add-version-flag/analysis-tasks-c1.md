@@ -6,7 +6,7 @@ total_proposed: 1
 # Analysis Tasks: add-version-flag (Cycle 1)
 
 ## Task 1: Extract printVersion helper to single-source version output
-status: pending
+status: approved
 severity: low
 sources: duplication, architecture
 
