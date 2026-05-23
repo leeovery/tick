@@ -112,6 +112,9 @@ Parse the discovery output to understand:
   - `next_phase_ready` - items ready for the next phase (name + action + label)
   - `unaccounted_discussions` - completed discussions not sourced in any spec
   - `reopened_discussions` - in-progress discussions that are sourced in a spec
+  - `discovery_map` - per-topic lifecycle for the inception/research/discussion span (tier-sorted; empty when no inception items exist)
+  - `convergence_state` - `'in-progress'` | `'settled'` | `null` (when no map)
+  - `map_summary` - count totals for the map (`total`, `decided`, `in_flight`, `ready`, `fresh`, `cancelled`)
   - `gating` - boolean flags for phase-forward gating
 
 **From top-level fields:**
@@ -204,7 +207,68 @@ Load **[validate-selection.md](references/validate-selection.md)** and follow it
 
 ---
 
-## Step 5: Display State and Menu
+## Step 5: Self-Healing
+
+> *Output the next fenced block as a code block:*
+
+```
+── Self-Healing ─────────────────────────────────
+```
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+> Checking analysis caches for the selected epic. Stale caches
+> trigger inline research-analysis or gap-analysis runs that add
+> any new themes directly to the discovery map.
+```
+
+Read `analysis_caches` from the selected epic's `detail` (parsed in Step 1):
+
+- `analysis_caches.research_analysis.status` — `valid` | `stale` | `absent`
+- `analysis_caches.gap_analysis.status` — same
+
+#### If both caches are `valid` or `absent`
+
+No analyses to run.
+
+→ Proceed to **Step 6**.
+
+#### If at least one cache is `stale`
+
+→ Load **[self-healing.md](../workflow-shared/references/self-healing.md)** with work_unit = `{work_unit}`.
+
+On return, store the orchestrator's `new_arrivals` tracker in conversation memory — Step 7 reads it to render the callout above the discovery map.
+
+Re-run discovery for the work unit so Step 6 (summary backfill) and Step 7 (display) have fresh state including auto-added items:
+
+```bash
+node .claude/skills/continue-epic/scripts/discovery.cjs {work_unit}
+```
+
+→ Proceed to **Step 6**.
+
+---
+
+## Step 6: Summary Backfill
+
+Read `discovery_map` from the selected epic's `detail`. Filter for items where either `summary` or `description` is null or missing — regardless of `source`. Migration-seeded items land without either field; absorption-registered items land without either field; pre-Phase-14 items backfilled only `summary` and re-enter this flow once for `description`. The filter is source-agnostic so any write path that lands an item with missing fields surfaces for review.
+
+#### If no items match
+
+→ Proceed to **Step 7**.
+
+#### If one or more items match
+
+Store the filtered list as `items_to_recover`. Each item carries `name`, `routing`, current `summary` (possibly null), and current `description` (possibly null) — the reference decides which fields to draft.
+
+Load **[summary-backfill.md](references/summary-backfill.md)** with work_unit = `{work_unit}`, items_to_recover = `{items_to_recover}`.
+
+→ Proceed to **Step 7**.
+
+---
+
+## Step 7: Display State and Menu
 
 > *Output the next fenced block as a code block:*
 
@@ -218,13 +282,13 @@ Load **[validate-selection.md](references/validate-selection.md)** and follow it
 > Showing the full phase-by-phase breakdown and available actions.
 ```
 
-Load **[epic-display-and-menu.md](references/epic-display-and-menu.md)** and follow its instructions as written.
+Load **[epic-display-and-menu.md](references/epic-display-and-menu.md)** with new_arrivals = `{new_arrivals}` (or empty when Step 5 did not load the orchestrator).
 
-→ Proceed to **Step 6**.
+→ Proceed to **Step 8**.
 
 ---
 
-## Step 6: Route Selection
+## Step 8: Route Selection
 
 > *Output the next fenced block as a code block:*
 
@@ -238,22 +302,25 @@ Load **[epic-display-and-menu.md](references/epic-display-and-menu.md)** and fol
 > Handing off to the selected phase for this epic.
 ```
 
-Invoke the appropriate skill based on the user's menu selection:
+Invoke the appropriate skill based on the user's menu selection. Match by **prefix** — labels may carry a trailing context segment (e.g., `— research completed`, `— spec completed`, `(Phase 2, Task 3)`) which doesn't change the routing target.
 
 | Menu option | Invoke |
 |-------------|--------|
+| Start research for {topic} | `/workflow-research-entry epic {work_unit} {topic}` |
+| Start discussion for {topic} | `/workflow-discussion-entry epic {work_unit} {topic}` |
 | Continue {topic} — discussion | `/workflow-discussion-entry epic {work_unit} {topic}` |
 | Continue {topic} — research | `/workflow-research-entry epic {work_unit} {topic}` |
 | Continue {topic} — specification | `/workflow-specification-entry epic {work_unit} {topic}` |
 | Continue {topic} — planning | `/workflow-planning-entry epic {work_unit} {topic}` |
 | Continue {topic} — implementation | `/workflow-implementation-entry epic {work_unit} {topic}` |
+| Continue {topic} — review | `/workflow-review-entry epic {work_unit} {topic}` |
 | Start planning for {topic} | `/workflow-planning-entry epic {work_unit} {topic}` |
 | Start implementation of {topic} | `/workflow-implementation-entry epic {work_unit} {topic}` |
 | Start review for {topic} | `/workflow-review-entry epic {work_unit} {topic}` |
 | Start specification | `/workflow-specification-entry epic {work_unit}` |
 | Start new discussion topic | `/workflow-discussion-entry epic {work_unit}` |
-| Discuss pending topic {topic} | `/workflow-discussion-entry epic {work_unit} {topic}` |
 | Start new research | `/workflow-research-entry epic {work_unit}` |
+| Refine map | `/workflow-inception-entry epic {work_unit}` |
 
 Skills receive positional arguments: `$0` = work_type (`epic`), `$1` = work_unit, `$2` = topic (when provided).
 

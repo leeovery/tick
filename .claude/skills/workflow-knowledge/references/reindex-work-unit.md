@@ -55,4 +55,55 @@ If any index command fails, display the error but do not block — the caller's 
 
 Process the remaining items in this phase, then move on to the next phase in the list.
 
-→ Return to caller once every indexed phase has been processed.
+→ Proceed to **B. Re-Index Imports**.
+
+## B. Re-Index Imports
+
+Imports live at the work-unit level (not under `phases`) so they need a separate pass. Probe before reading — `get` exits with code 2 when the field is absent, which would otherwise read as a hard failure:
+
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.cjs exists {work_unit} imports
+```
+
+#### If not exists (`false`)
+
+No imports to process.
+
+→ Proceed to **C. Re-Index Analysis Caches**.
+
+#### If exists (`true`)
+
+Read the imports list:
+
+```bash
+node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit} imports
+```
+
+The result is a JSON array. Each entry's `path` field is relative to the work-unit directory and must match the shape `imports/{filename}.md` (no subdirectories, no `..`, no leading dot on the filename). Skip any entry that doesn't match — these signal a tampered or malformed manifest entry, not a legitimate import.
+
+For each valid entry, run:
+
+```bash
+node .claude/skills/workflow-knowledge/scripts/knowledge.cjs index .workflows/{work_unit}/{entry.path}
+```
+
+Apply the same warning-but-do-not-block pattern from **A** when individual index calls fail.
+
+→ Proceed to **C. Re-Index Analysis Caches**.
+
+## C. Re-Index Analysis Caches
+
+Analysis caches live on disk at `.workflows/{work_unit}/.state/`, outside the manifest. Probe each known cache file and re-index any that exist. The `|| true` suffix prevents a missing-file probe from exiting non-zero (a fresh epic has neither cache yet):
+
+```bash
+if [ -f .workflows/{work_unit}/.state/research-analysis.md ]; then
+  node .claude/skills/workflow-knowledge/scripts/knowledge.cjs index .workflows/{work_unit}/.state/research-analysis.md
+fi
+if [ -f .workflows/{work_unit}/.state/discussion-gap-analysis.md ]; then
+  node .claude/skills/workflow-knowledge/scripts/knowledge.cjs index .workflows/{work_unit}/.state/discussion-gap-analysis.md
+fi
+```
+
+Apply the same warning-but-do-not-block pattern from **A** when individual index calls fail.
+
+→ Return to caller.
