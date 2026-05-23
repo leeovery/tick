@@ -12,6 +12,13 @@ import (
 //	go build -ldflags "-X github.com/leeovery/tick/internal/cli.Version=1.2.3"
 var Version = "dev"
 
+// printVersion writes the canonical "tick version <Version>" line to w.
+// Centralising the format string keeps the --version flag and the version
+// subcommand byte-for-byte identical by construction rather than by test.
+func printVersion(w io.Writer) {
+	fmt.Fprintf(w, "tick version %s\n", Version)
+}
+
 // App is the top-level CLI application, testable via injected writers and working directory.
 type App struct {
 	Stdout io.Writer
@@ -36,7 +43,7 @@ func (a *App) Run(args []string) int {
 	// --version global flag short-circuits before help and subcommand dispatch,
 	// mirroring the existing version subcommand output byte-for-byte.
 	if flags.version {
-		fmt.Fprintf(a.Stdout, "tick version %s\n", Version)
+		printVersion(a.Stdout)
 		return 0
 	}
 
@@ -47,7 +54,7 @@ func (a *App) Run(args []string) int {
 
 	// Version bypasses format/formatter machinery — always plain text.
 	if subcmd == "version" {
-		fmt.Fprintf(a.Stdout, "tick version %s\n", Version)
+		printVersion(a.Stdout)
 		return 0
 	}
 

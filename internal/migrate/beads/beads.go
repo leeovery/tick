@@ -26,18 +26,18 @@ var statusMap = map[string]task.Status{
 // beads issue line. Fields with no tick equivalent are parsed but discarded
 // during mapping.
 type beadsIssue struct {
-	ID           string        `json:"id"`
-	Title        string        `json:"title"`
-	Description  string        `json:"description"`
-	Status       string        `json:"status"`
-	Priority     *int          `json:"priority"`
-	IssueType    string        `json:"issue_type"`
-	CreatedAt    string        `json:"created_at"`
-	UpdatedAt    string        `json:"updated_at"`
-	ClosedAt     string        `json:"closed_at"`
-	CloseReason  string        `json:"close_reason"`
-	CreatedBy    string        `json:"created_by"`
-	Dependencies []any `json:"dependencies"`
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	Status       string `json:"status"`
+	Priority     *int   `json:"priority"`
+	IssueType    string `json:"issue_type"`
+	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
+	ClosedAt     string `json:"closed_at"`
+	CloseReason  string `json:"close_reason"`
+	CreatedBy    string `json:"created_by"`
+	Dependencies []any  `json:"dependencies"`
 }
 
 // BeadsProvider reads tasks from .beads/issues.jsonl in a given base directory.
