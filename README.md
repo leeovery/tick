@@ -340,10 +340,11 @@ tick rebuild
 
 ### `version`
 
-Print the tick version and exit.
+Print the tick version and exit. The `--version` global flag is equivalent.
 
 ```bash
 tick version
+tick --version
 ```
 
 ### `help`
@@ -564,6 +565,7 @@ Add to `.gitignore`:
 
 ```
 --help, -h        Show help (tick --help or tick <command> --help)
+--version         Print version and exit (equivalent to `tick version`)
 --quiet, -q       Minimal output (IDs only where applicable)
 --verbose, -v     Debug logging to stderr
 --toon            Force TOON format
