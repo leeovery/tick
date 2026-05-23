@@ -1,7 +1,7 @@
 {
   "name": "add-version-flag",
   "work_type": "quick-fix",
-  "status": "in-progress",
+  "status": "completed",
   "created": "2026-05-23",
   "description": "Add --version flag as alternative to the version subcommand",
   "phases": {
@@ -78,7 +78,7 @@
     "review": {
       "items": {
         "add-version-flag": {
-          "status": "in-progress",
+          "status": "completed",
           "reviewed_tasks": [
             "add-version-flag-1-1",
             "add-version-flag-2-1"
@@ -86,5 +86,6 @@
         }
       }
     }
-  }
+  },
+  "completed_at": "2026-05-23"
 }
