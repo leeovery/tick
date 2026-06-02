@@ -54,7 +54,6 @@
           "fix_gate_mode": "gated",
           "analysis_gate_mode": "gated",
           "fix_attempts": 0,
-          "analysis_cycle": 1,
           "current_phase": "1",
           "current_task": "~",
           "completed_tasks": [
@@ -64,7 +63,9 @@
           ],
           "completed_phases": [
             1
-          ]
+          ],
+          "analysis_cycle_total": 1,
+          "analysis_cycle_session": 0
         }
       }
     },

@@ -219,7 +219,6 @@
           "task_gate_mode": "gated",
           "fix_gate_mode": "gated",
           "fix_attempts": 0,
-          "analysis_cycle": 2,
           "current_phase": "2",
           "current_task": "~",
           "completed_tasks": [
@@ -230,7 +229,9 @@
           "completed_phases": [
             1,
             2
-          ]
+          ],
+          "analysis_cycle_total": 2,
+          "analysis_cycle_session": 0
         },
         "doctor-validation": {
           "status": "completed",
@@ -238,7 +239,6 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
           "fix_attempts": 0,
-          "analysis_cycle": 4,
           "current_phase": "6",
           "current_task": "~",
           "completed_tasks": [
@@ -272,7 +272,9 @@
             4,
             5,
             6
-          ]
+          ],
+          "analysis_cycle_total": 4,
+          "analysis_cycle_session": 0
         },
         "installation": {
           "status": "completed",
@@ -280,7 +282,6 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "auto",
           "fix_attempts": 0,
-          "analysis_cycle": 4,
           "current_phase": "5",
           "current_task": "~",
           "completed_tasks": [
@@ -306,7 +307,9 @@
             3,
             4,
             5
-          ]
+          ],
+          "analysis_cycle_total": 4,
+          "analysis_cycle_session": 0
         },
         "migration": {
           "status": "completed",
@@ -314,7 +317,6 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
           "fix_attempts": 0,
-          "analysis_cycle": 3,
           "current_phase": "4",
           "current_task": "~",
           "completed_tasks": [
@@ -339,7 +341,9 @@
             2,
             3,
             4
-          ]
+          ],
+          "analysis_cycle_total": 3,
+          "analysis_cycle_session": 0
         },
         "task-removal": {
           "status": "completed",
@@ -347,7 +351,6 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
           "fix_attempts": 0,
-          "analysis_cycle": 3,
           "current_phase": "5",
           "current_task": "~",
           "completed_tasks": [
@@ -372,7 +375,9 @@
             3,
             4,
             5
-          ]
+          ],
+          "analysis_cycle_total": 3,
+          "analysis_cycle_session": 0
         },
         "tick-core": {
           "status": "completed",
@@ -380,7 +385,6 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
           "fix_attempts": 0,
-          "analysis_cycle": 4,
           "current_phase": "8",
           "current_task": "~",
           "completed_tasks": [
@@ -432,7 +436,9 @@
             6,
             7,
             8
-          ]
+          ],
+          "analysis_cycle_total": 4,
+          "analysis_cycle_session": 0
         }
       }
     },
