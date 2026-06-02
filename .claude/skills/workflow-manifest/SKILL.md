@@ -100,7 +100,7 @@ $MANIFEST list [--status s] [--work-type t]
 ### Naming Constraints
 
 - **Work unit names must not contain dots** — dots are the path separator
-- **Work unit names must not match phase names** (`inception`, `research`, `discussion`, `investigation`, `specification`, `planning`, `implementation`, `review`)
+- **Work unit names must not match phase names** (`discovery`, `research`, `discussion`, `investigation`, `specification`, `planning`, `implementation`, `review`)
 - **Work unit names must not be reserved** — `project` is reserved for project-level manifest access
 
 ## Commands
@@ -163,9 +163,9 @@ Output is a JSON array of `{topic, value}` objects:
 ]
 ```
 
-For feature/bugfix, returns a single-element array (topic matches work unit name). Errors if the phase has no items.
+For feature/bugfix, returns a single-element array (topic matches work unit name). Empty stdout if the phase has no items.
 
-Errors to stderr with non-zero exit if the path does not exist.
+Missing paths return empty stdout with exit 0 — covers missing work units, missing fields, and wildcard with no matches. Use [`exists`](#exists) when you need to distinguish a missing path from a present-but-empty value.
 
 ### `set`
 
@@ -192,7 +192,7 @@ node .claude/skills/workflow-manifest/scripts/manifest.cjs set <name>.planning.a
 Values are parsed as JSON first (for arrays, objects, numbers, booleans), falling back to string. Validates structural fields:
 
 - **work_type**: `epic`, `feature`, `bugfix`, `quick-fix`, `cross-cutting`
-- **phase names**: `inception`, `research`, `discussion`, `investigation`, `scoping`, `specification`, `planning`, `implementation`, `review`
+- **phase names**: `discovery`, `research`, `discussion`, `investigation`, `scoping`, `specification`, `planning`, `implementation`, `review`
 - **phase statuses**: per-phase valid values (see Validation section)
 - **gate modes**: `gated`, `auto`
 - **work unit status**: `in-progress`, `completed`, `cancelled`
@@ -280,7 +280,7 @@ node .claude/skills/workflow-manifest/scripts/manifest.cjs pull <name> tags "v1"
 
 **Phase level** (2 segments):
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs pull <name>.inception dismissed "topic-name"
+node .claude/skills/workflow-manifest/scripts/manifest.cjs pull <name>.discovery dismissed "topic-name"
 ```
 
 **Topic level** (3 segments):
@@ -384,7 +384,7 @@ The CLI validates structural values to prevent invalid state:
 |--------------------------------|----------------------------------------------------|
 | `work_type`                    | `epic`, `feature`, `bugfix`, `quick-fix`, `cross-cutting` |
 | `status` (work unit)           | `in-progress`, `completed`, `cancelled`            |
-| Item `status` (inception)      | `in-progress`                                      |
+| Item `status` (discovery)      | `in-progress`                                      |
 | Item `status` (research)       | `in-progress`, `completed`                         |
 | Item `status` (discussion)     | `in-progress`, `completed`                         |
 | Item `status` (investigation)  | `in-progress`, `completed`                         |

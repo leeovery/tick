@@ -107,23 +107,23 @@ Set `topic` to the user's input.
 
 ## D. Research Check
 
-Check if the feature has research:
-
-```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs exists {selected.name}.research
-```
-
-#### If `true`
-
-Set `has_research` = true.
-
-Read the research items to get topic names and statuses:
+Read the feature's research items with their statuses:
 
 ```bash
 node .claude/skills/workflow-manifest/scripts/manifest.cjs get '{selected.name}.research.*' status
 ```
 
-Store as `research_items` (list of topic name + status pairs).
+#### If output is empty (no research)
+
+Set `has_research` = false.
+
+→ Proceed to **E. Imports Check**.
+
+#### Otherwise
+
+Set `has_research` = true.
+
+Store the result as `research_items` (list of topic name + status pairs).
 
 For each research item, check for collision in the target epic:
 
@@ -135,33 +135,27 @@ Collisions are resolved by appending `-{selected.name}` (e.g. `exploration` beco
 
 → Proceed to **E. Imports Check**.
 
-#### Otherwise
-
-Set `has_research` = false.
-
-→ Proceed to **E. Imports Check**.
-
 ---
 
 ## E. Imports Check
 
-Check if the feature has imports:
-
-```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs exists {selected.name} imports
-```
-
-#### If `true`
-
-Set `has_imports` = true.
-
-Read the imports list:
+Read the feature's imports list:
 
 ```bash
 node .claude/skills/workflow-manifest/scripts/manifest.cjs get {selected.name} imports
 ```
 
-Store as `imports_entries` (list of `{path, imported_at}` objects). Set `imports_count` to its length.
+#### If output is empty (no imports)
+
+Set `has_imports` = false. Set `imports_count` = 0.
+
+→ Proceed to **F. Confirm**.
+
+#### Otherwise
+
+Set `has_imports` = true.
+
+Store the result as `imports_entries` (list of `{path, imported_at}` objects). Set `imports_count` to its length.
 
 For each entry, derive the basename from `path` (the filename under `imports/`). Check for collision in the target epic's `imports/` directory:
 
@@ -170,12 +164,6 @@ test -e .workflows/{target_epic}/imports/<basename>
 ```
 
 Collisions are resolved by suffixing the stem with `-{selected.name}` before the `.md` extension (e.g. `seed-conversation.md` becomes `seed-conversation-{selected.name}.md`). Store the mapping of original filename → target filename as `imports_moves`, preserving each entry's original `imported_at` timestamp.
-
-→ Proceed to **F. Confirm**.
-
-#### Otherwise
-
-Set `has_imports` = false. Set `imports_count` = 0.
 
 → Proceed to **F. Confirm**.
 
@@ -372,27 +360,27 @@ If the index command fails, display the error but do not block — the file is a
   The artifact is saved. Indexing can be retried later.
 ```
 
-→ Proceed to **J. Register Inception Item**.
+→ Proceed to **J. Register Discovery Item**.
 
 #### Otherwise
 
-→ Proceed to **J. Register Inception Item**.
+→ Proceed to **J. Register Discovery Item**.
 
 ---
 
-## J. Register Inception Item
+## J. Register Discovery Item
 
-The absorbed topic must exist in the target epic's discovery map. The map is built from `phases.inception.items` — without an inception entry, the topic is invisible to refinement, the continue-epic display, map-summary counts, and the dismissed-list flow.
+The absorbed topic must exist in the target epic's discovery map. The map is built from `phases.discovery.items` — without an discovery entry, the topic is invisible to the continue-epic display, subsequent discovery sessions, map-summary counts, and the dismissed-list flow.
 
-Routing reflects the work already done on the feature. `summary` and `description` are left unset — `source` defaults to `inception` at render time, and the next `/continue-epic` entry will detect the missing fields and route to `summary-backfill.md` so the user can review derived values.
+Routing reflects the work already done on the feature. `summary` and `description` are left unset — `source` defaults to `discovery` at render time, and the next `/continue-epic` entry will detect the missing fields and route to `summary-backfill.md` so the user can review derived values.
 
 #### If `has_research` is `true`
 
 Set `routing` to `research`:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs init-phase {target_epic}.inception.{topic}
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {target_epic}.inception.{topic} routing research
+node .claude/skills/workflow-manifest/scripts/manifest.cjs init-phase {target_epic}.discovery.{topic}
+node .claude/skills/workflow-manifest/scripts/manifest.cjs set {target_epic}.discovery.{topic} routing research
 ```
 
 → Proceed to **K. Cleanup**.
@@ -402,8 +390,8 @@ node .claude/skills/workflow-manifest/scripts/manifest.cjs set {target_epic}.inc
 Set `routing` to `discussion`:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs init-phase {target_epic}.inception.{topic}
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {target_epic}.inception.{topic} routing discussion
+node .claude/skills/workflow-manifest/scripts/manifest.cjs init-phase {target_epic}.discovery.{topic}
+node .claude/skills/workflow-manifest/scripts/manifest.cjs set {target_epic}.discovery.{topic} routing discussion
 ```
 
 → Proceed to **K. Cleanup**.

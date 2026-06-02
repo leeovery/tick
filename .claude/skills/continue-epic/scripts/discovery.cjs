@@ -3,7 +3,7 @@
 const path = require('path');
 const { loadActiveManifests, loadAllManifests, loadManifest, phaseItems, phaseData, computeTopicLifecycle, computeNextAction, computeMapSummary, computeSourceProvenance, computeAnalysisCacheStatus, TIER_RANK } = require('../../workflow-shared/scripts/discovery-utils.cjs');
 
-const EPIC_PHASES = ['inception', 'research', 'discussion', 'specification', 'planning', 'implementation', 'review'];
+const EPIC_PHASES = ['discovery', 'research', 'discussion', 'specification', 'planning', 'implementation', 'review'];
 
 function lastCompletedPhaseEpic(manifest) {
   let last = null;
@@ -64,7 +64,7 @@ function buildEpicDetail(cwd, manifest) {
   const nextPhaseReady = [];
 
   for (const phase of EPIC_PHASES) {
-    if (phase === 'inception') continue;
+    if (phase === 'discovery') continue;
     const items = phaseItems(manifest, phase);
     if (items.length === 0) continue;
 
@@ -170,21 +170,24 @@ function buildEpicDetail(cwd, manifest) {
   const hasCompletedDiscussion = discussionItems.some(d => d.status === 'completed');
   const hasCompletedImpl = implItems.some(i => i.status === 'completed');
 
-  const inceptionItems = phaseItems(manifest, 'inception');
+  const discoveryItems = phaseItems(manifest, 'discovery');
   let discoveryMap = [];
   let convergenceState = null;
   let mapSummary = null;
-  if (inceptionItems.length > 0) {
-    discoveryMap = inceptionItems.map(item => {
+  if (discoveryItems.length > 0) {
+    discoveryMap = discoveryItems.map(item => {
       const { lifecycle, tier, current_phase } = computeTopicLifecycle(manifest, item.name);
       const next_action = computeNextAction(item.routing, lifecycle);
       const source_provenance = computeSourceProvenance(item.source);
+      const summaryText = typeof item.summary === 'string' && item.summary.trim() ? item.summary : null;
+      const descriptionText = typeof item.description === 'string' && item.description.trim() ? item.description : null;
       return {
         name: item.name,
-        summary: item.summary || null,
-        description: item.description || null,
+        summary_present: summaryText !== null,
+        summary: summaryText,
+        description_present: descriptionText !== null,
         routing: item.routing || null,
-        source: item.source || 'inception',
+        source: item.source || 'discovery',
         source_provenance,
         lifecycle,
         tier,
@@ -322,8 +325,12 @@ function format(result) {
       for (const t of d.discovery_map) {
         let line = `      - ${t.tier} ${t.name} [${t.lifecycle}]`;
         if (t.next_action) line += ` -> ${t.next_action}`;
+        line += ` [summary: ${t.summary_present ? 'present' : 'absent'}, description: ${t.description_present ? 'present' : 'absent'}]`;
         if (t.source_provenance) line += ` (${t.source_provenance})`;
         lines.push(line);
+        if (t.summary) {
+          lines.push(`             summary: ${t.summary}`);
+        }
       }
     }
     if (d.in_progress.length > 0) {
