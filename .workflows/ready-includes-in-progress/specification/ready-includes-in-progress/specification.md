@@ -123,4 +123,29 @@ Sectioning ("In progress" / "Ready to start" headers) is explicitly **rejected**
 
 ---
 
+## Affected Code Surface
+
+These are implementation shapes captured from the discussion — concrete enough to plan against, not prescriptive line-by-line.
+
+### `internal/cli/query_helpers.go` — the status gate
+
+The shared `t.status = 'open'` literal in **both** `ReadyConditions()` and `BlockedConditions()` becomes `t.status IN ('open','in_progress')`. The `negateNotExists` / inverse machinery that derives `BlockedConditions()` from the ready conditions is **untouched** — the symmetry is exactly why this is a one-line-per-side change. `ReadyWhereClause()` (consumed by `stats`) picks up the new gate automatically.
+
+### `internal/cli/list.go` — conditional `ORDER BY` in `buildListQuery`
+
+The `ORDER BY` becomes conditional on the ready filter. When `f.Ready`, prepend a status-priority term — e.g. `ORDER BY (t.status = 'in_progress') DESC, t.priority ASC, t.created ASC`; otherwise the current `t.priority ASC, t.created ASC` clause is unchanged. Keyed on `f.Ready`, so it applies to both `tick ready` and `tick list --ready` and to neither `tick list` nor `tick list --blocked`.
+
+### `internal/cli/stats.go` — blocked derivation + comment
+
+Change the blocked count from `Open − Ready` to `(Open + InProgress) − Ready`. Refresh the stale comment at `stats.go:78` to describe the new ready/blocked semantics.
+
+### No changes required
+
+- State machine — confirmed: `start` constrains only `from: open`, no blocker guard; blockers stay a query-time concept. No transition logic changes.
+- Flag registry / `commandFlags` — no new flags added; `--status` and `--count` already valid on `ready`.
+- Formatters — no presentation change in any format.
+- Cache schema — no schema change; queries only.
+
+---
+
 ## Working Notes
