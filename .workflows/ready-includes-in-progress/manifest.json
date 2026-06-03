@@ -88,7 +88,7 @@
     "review": {
       "items": {
         "ready-includes-in-progress": {
-          "status": "in-progress",
+          "status": "completed",
           "reviewed_tasks": [
             "ready-includes-in-progress-1-1",
             "ready-includes-in-progress-1-2",
