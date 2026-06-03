@@ -21,3 +21,12 @@ approved_at: 2026-06-03
 - [ ] `tick ready --status open` returns unstarted ready work; `tick ready --status in_progress` returns resumptions only; `--status done`/`--status cancelled` return empty.
 - [ ] `tick stats` blocked count equals `(Open + InProgress) − Ready` and is never negative; the ready count includes unblocked `in_progress` tasks.
 - [ ] An `in_progress` parent that exists only via the start-cascade does not appear in `tick ready`; only its leaf does.
+
+#### Tasks
+status: draft
+
+| Internal ID | Name | Edge Cases |
+|-------------|------|------------|
+| ready-includes-in-progress-1-1 | Widen the shared ready/blocked status gate to live tasks | force-started blocked in-progress appears only in blocked never ready; in_progress parent via start-cascade excluded from ready by leaf gate (only leaf surfaces); done/cancelled in neither; --status open → unstarted-only, --status in_progress → resumptions-only, --status done/cancelled → empty |
+| ready-includes-in-progress-1-2 | Float unblocked in-progress to the top of the ready view | in_progress with worse priority still sorts above better-priority open; zero in-progress rows → byte-identical ordering (no regression); float persists under narrowing filters; --count 1 returns top unblocked in-flight; plain list and list --blocked ordering unchanged |
+| ready-includes-in-progress-1-3 | Correct the stats blocked-count derivation to the live set | blocked count never negative; in_progress counted in both InProgress and Ready is correct; ready count includes unblocked in_progress via ReadyWhereClause |
