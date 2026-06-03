@@ -30,7 +30,7 @@
     "planning": {
       "items": {
         "ready-includes-in-progress": {
-          "status": "in-progress",
+          "status": "completed",
           "format": "tick",
           "spec_commit": "b79fb105596e2be26491176df186e5ebfbd0983f",
           "task_list_gate_mode": "auto",
