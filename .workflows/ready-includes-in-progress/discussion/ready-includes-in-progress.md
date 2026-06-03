@@ -83,7 +83,7 @@ The "aha": the multi-actor concern doesn't argue *against* this feature — it p
 **Include `in_progress` in `ready`.** Decide for the tool tick is today: single-actor, no ownership → `ready` = "everything actionable now" = unblocked `open` + `in_progress`.
 
 - **Deciding factor:** no assignee field exists, so the multi-actor exclusion argument can't be implemented correctly anyway; the single-actor resumption case is the real, present need.
-- **Trade-off accepted:** the "pull only new work" reading of `ready` is diluted; anyone wanting strictly unstarted work can use `tick list --status open`.
+- **Trade-off accepted:** the "pull only new work" reading of `ready` is diluted; anyone wanting strictly unstarted work can use `tick ready --status open` (see Edge Cases → decision 3; this supersedes the `tick list --status open` phrasing first floated here, which wouldn't apply the ready blocker/leaf/ancestor filtering).
 - **Future path (noted, out of scope):** if/when multi-actor claiming is pursued, add an assignee field and make `ready` exclude tasks assigned to *others* — revisit then, but do **not** solve it now by excluding all `in_progress`.
 - **Confidence:** high.
 
@@ -119,7 +119,7 @@ The user's verification question — "a blocked-in-progress task won't *also* sh
 - **Invariant:** `ready ⊎ blocked = all live tasks` (open + in_progress). Never both, never neither, for any live task. `done`/`cancelled` are in neither.
 - **Force-started blocked task:** shows in `tick blocked` only, never `tick ready`. Starting a task does not clear its block.
 - **Implementation shape (captured, not a plan):** the shared `t.status = 'open'` literal in *both* `ReadyConditions()` and `BlockedConditions()` becomes `t.status IN ('open','in_progress')`. The `negateNotExists` / inverse machinery is untouched — the symmetry is exactly why this is a one-line-per-side change. The fact that the gate is a single shared string is evidence A is the option the code "wants."
-- **To confirm in edge-cases subtopic:** that the state machine genuinely allows `open → in_progress` regardless of unclosed blockers (assumed true — blockers are a query concept, not a transition guard).
+- **Verified (state machine):** the `start` transition (`state_machine.go:21`) constrains only `from: StatusOpen` — there is no blocker check anywhere in the state machine. So an open task with unclosed blockers can be force-started into `in_progress` (becoming blocked-and-in-progress). Blockers are purely a query-time concept, not a transition guard. (Resolves the deferred confirmation; the "force-start a blocked task" scenario this subtopic relies on is real.)
 - **Confidence:** high.
 
 This resolves review F1 (De Morgan reconciliation) and F7 (in-progress + unclosed blocker → blocked).
