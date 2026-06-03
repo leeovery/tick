@@ -77,4 +77,24 @@ A user with several `in_progress` tasks sees a resumption-heavy `ready`. This is
 
 ---
 
+## Stats Counts
+
+### Blocked count derivation (required fix)
+
+`stats` currently computes `Blocked = Open − Ready`. This is only correct while `ready ⊆ open`. Once `ready` counts `in_progress`, `Ready` can exceed `Open` and the blocked count goes wrong (e.g. 5 open / 3 ready + 4 in_progress / 3 ready → `Ready = 6`, `Open = 5`, `Blocked = −1`).
+
+The derivation must move to the live set, following the partition invariant:
+
+```
+Blocked = (Open + InProgress) − Ready
+```
+
+The **arithmetic route is canonical** — it reuses counts `stats` already gathers and is exactly how blocked is derived today (`Open − Ready`); the partition invariant guarantees its correctness. A direct count via a new blocked WHERE clause is *not* adopted: it would add net-new query-helper surface (`query_helpers.go` exposes `ReadyWhereClause()` but no blocked counterpart) and is only more robust if the shared-gate invariant were ever broken. This fix is **not optional** — it's a correctness consequence of the feature.
+
+### Ready count tracks the new semantics (intended)
+
+The stats ready count uses `ReadyWhereClause`, so it includes `in_progress` automatically — correct, because the stats "ready" number must mean the same as `tick ready`. An `in_progress` task counted in both `InProgress` and `Ready` is fine — two lenses (status breakdown vs actionability), exactly as an open-ready task is already counted in both `Open` and `Ready`. The stale comment at `stats.go:78` should be refreshed to reflect the new semantics.
+
+---
+
 ## Working Notes
