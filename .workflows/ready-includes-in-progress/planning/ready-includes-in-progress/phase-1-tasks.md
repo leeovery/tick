@@ -44,6 +44,7 @@ total: 3
 - `"it excludes task with in_progress blocker"` (KEEP, ready_test.go) — blocker rule unchanged.
 - `"ReadyConditions returns status open plus all four conditions"` (updated literal) — asserts `conditions[0] == "t.status IN ('open', 'in_progress')"`.
 - `"BlockedConditions contains no SQL literals beyond status check"` (updated literal, KEEP `EXISTS`-count == 3) — gate literal updated, inverse machinery unchanged.
+- `"contradictory filters return empty result no error"` (KEEP assertion, list_filter_test.go) — `--status done --ready` still returns an empty result; only the stale inline comment is refreshed to explain the now-empty intersection (`status IN (open,in_progress) AND status = done` is always false). Confirm it stays green.
 
 **Edge Cases**:
 - **Force-started blocked task.** Starting is not gated by blockers (the `start` transition constrains only `from: open`; no blocker check). An `open` task with unclosed blockers can be force-started into `in_progress`, becoming blocked-and-in-progress. It must show in `tick blocked` only, NEVER `tick ready` — verified by the rewritten `blocked_test.go` subtest (option b).

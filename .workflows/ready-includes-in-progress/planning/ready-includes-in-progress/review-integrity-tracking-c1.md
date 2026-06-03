@@ -91,8 +91,8 @@ entry keeps the Tests section a complete index of the task's test impact.
 - `"contradictory filters return empty result no error"` (KEEP assertion, list_filter_test.go) — `--status done --ready` still returns an empty result; only the stale inline comment is refreshed to explain the now-empty intersection (`status IN (open,in_progress) AND status = done` is always false). Confirm it stays green.
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied to the Tests section of Task 1-1 in phase-1-tasks.md. The tick task (tick-fe7e70) Do section already instructs refreshing this comment; this completes the Tests index in the permanent record.
 
 ---
 
