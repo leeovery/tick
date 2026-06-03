@@ -219,7 +219,35 @@ Verifying the consequences of the ready/blocked definition change beyond the two
 
 **4 — `--count`.** No special handling — `LIMIT` applies after the resume-first `ORDER BY`, so `--count 1` returns top in-flight work. Resolves the `--count` portion.
 
-- **Confidence:** high. Resolves review F4 and F5.
+- **Confidence:** high. Resolves set-001 review F4 (stats) and F5 (status filter).
+
+### Test Impact (set-002 review F4)
+
+The SQL diff is small; the **test-update surface is the larger part of the work** and must be sized in the spec, not discovered at implementation. Concrete inventory (verified against the test files):
+
+**Tests that assert the OLD semantics and MUST change:**
+
+- `query_helpers_test.go` — `"ReadyConditions returns status open plus all four conditions"` and `"BlockedConditions contains no SQL literals beyond status check"` both assert `conditions[0] == "t.status = 'open'"`. The gate becomes `t.status IN ('open','in_progress')`; both assertions update.
+- `ready_test.go` — `"it excludes in_progress tasks"` (line ~204) **inverts**: an unblocked `in_progress` leaf must now *appear* in `ready`. Rewrite, don't delete.
+- `blocked_test.go` — `"it excludes in_progress tasks from output"` (line ~126, rationale "only open") is now misleading: a lone *unblocked* `in_progress` task is still absent from `blocked`, but because it's *ready*, not because `in_progress` is excluded. Update rationale; the assertion as written may still pass for the wrong reason.
+- `stats_test.go` — `"it counts ready and blocked tasks correctly"` (line ~74) explicitly encodes `in_progress => neither ready nor blocked (not open)` and fixes Ready=2/Blocked=2. Under the new semantics the unblocked `in_progress` task becomes ready, so the expected counts change, and this test is where the `Blocked = (Open + InProgress) − Ready` derivation gets exercised.
+
+**Tests that stay valid (KEEP, no change):**
+
+- `ready_test.go` — `"excludes task with in_progress blocker"`, `"excludes parent with in_progress children"` (leaf/blocker rules unchanged).
+- `blocked_test.go` — blocked-by-open/in_progress dep, parent with open/in_progress children, blocked-ancestor cases.
+- `list_filter_test.go` — `--status open/in_progress/done/cancelled` filter tests; `commandFlags` drift test (no new flags added).
+- `stats_test.go` formatting tests (run with `InProgress=0`, so semantics don't bite).
+
+**New tests to ADD:**
+
+- resume-first ordering on `ready` with mixed `in_progress`/`open` (float above open regardless of priority; within band `priority, created`).
+- an unblocked `in_progress` leaf appears in `ready`; a *blocked* `in_progress` task appears in `blocked`.
+- `stats` counts with `in_progress` ready/blocked tasks present (exercises the new derivation).
+- `tick ready --status open` (unstarted ready) and `--status in_progress` (resumptions only) composition.
+- `tick list --ready` floats `in_progress` identically to `tick ready` (locks the `f.Ready` scope decision / set-002 F1).
+
+Also non-test: refresh the stale `stats.go:78` comment.
 
 ---
 
