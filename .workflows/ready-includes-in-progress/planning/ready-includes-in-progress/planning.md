@@ -3,7 +3,8 @@
 ## Phases
 
 ### Phase 1: Ready Includes In-Progress
-status: draft
+status: approved
+approved_at: 2026-06-03
 
 **Goal**: Widen the `ready`/`blocked` partition to treat `in_progress` as live work, float unblocked in-progress tasks to the top of the ready view, and correct the `stats` blocked-count derivation — delivering the full "resume interrupted work" behaviour as one verifiable increment.
 
