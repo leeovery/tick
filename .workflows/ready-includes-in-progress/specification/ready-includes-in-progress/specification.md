@@ -97,4 +97,30 @@ The stats ready count uses `ReadyWhereClause`, so it includes `in_progress` auto
 
 ---
 
+## Filters, `--count`, and Presentation
+
+### `--status` composes cleanly (no new work)
+
+`--status` is already a valid `ready` flag (inherited from `list`). It intersects with the widened gate:
+
+- `tick ready --status open` → `status IN (open,in_progress) AND status = open` → **unstarted ready work**. This is the canonical "I only want new work" query and supersedes any earlier `tick list --status open` suggestion (which wouldn't apply the blocker/leaf/ancestor filtering).
+- `tick ready --status in_progress` → **resumptions only**.
+
+**Terminal statuses compose to empty (accepted).** `tick ready --status done` and `--status cancelled` become `status IN (open,in_progress) AND status = <terminal>` — always false, returning a silent empty list. Accepted as-is: consistent with filter semantics everywhere (an empty intersection returns empty; tick doesn't reject contradictory filter combinations). No special validation.
+
+### `--count`
+
+No special handling. `LIMIT` applies after the resume-first `ORDER BY`, so `--count 1` returns the top **unblocked** in-flight task (blocked-but-started work is in `tick blocked`, not `ready`).
+
+### Presentation — no change
+
+In-progress tasks are not visually distinguished beyond what already exists. The two signals that answer "which are resumptions?" — the `status` value and the top-of-list position — are already present in every format:
+
+- For an agent reading toon/JSON (the primary consumers), it's fully machine-distinguishable with zero change, keyed off the `status` field.
+- For a human on `pretty`, the existing Status column already reads `in_progress`.
+
+Sectioning ("In progress" / "Ready to start" headers) is explicitly **rejected** — it's noise and a parsing hazard for the machine formats. A pretty-only visual cue is a possible trivial future polish, out of scope now (see Out of Scope).
+
+---
+
 ## Working Notes
