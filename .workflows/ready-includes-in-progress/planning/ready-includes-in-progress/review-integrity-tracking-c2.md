@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-06-03
 cycle: 2
 phase: Plan Integrity Review
@@ -131,8 +131,8 @@ no `Tests:` section between `Edge Cases:` and `Context:`):
   Context: Governing invariant — ...
 ```
 
-**Resolution**: Pending
-**Notes**: Also apply the analogous insertion to Task 1-2 (tick-2f0d2a): add a
+**Resolution**: Fixed
+**Notes**: Tests sections inserted into both tick-fe7e70 (Task 1-1) and tick-2f0d2a (Task 1-2) between Edge Cases and Context, copied verbatim from phase-1-tasks.md, matching how Task 1-3's tick description renders its Tests section. Verified present via `tick show`. The detail file needed no change. Also apply the analogous insertion to Task 1-2 (tick-2f0d2a): add a
 `Tests:` section between its `Edge Cases:` and `Context:` sections, copied from
 the Tests section already in `phase-1-tasks.md` lines 93-99:
 
