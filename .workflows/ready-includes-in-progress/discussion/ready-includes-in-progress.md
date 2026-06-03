@@ -159,12 +159,14 @@ Admitting `in_progress` extends this symmetrically: the `in_progress` leaf surfa
 ### Options Considered
 
 1. **No special treatment** — `in_progress` sorts by priority alongside `open`. Simplest, but half-defeats the feature: a fresh P1 outranks your started P3, and `--count 1` could hand you new work while something sits half-done.
-2. **Resume-first** — `in_progress` floats to the top as a band, then `priority ASC, created ASC` within. `--count 1` always returns in-flight work if any exists. Risk: a trivial started task outranks an urgent fresh P1.
+2. **Resume-first** — `in_progress` floats to the top as a band, then `priority ASC, created ASC` within. `--count 1` returns *unblocked* in-flight work first if any exists. Risk: a trivial started task outranks an urgent fresh P1.
 3. **Priority-first, started as tiebreaker** — priority stays master key; within a priority band, started shows first. Urgent new work never buried, but a low-priority resumption won't surface as a prompt.
 
 ### Journey
 
 The user chose **2** and articulated why it loses nothing: "what's *next* to start" is simply the `open` tasks beneath the started band, still priority-ordered — so resume-first adds the resumption signal without sacrificing the priority view. `--count 1` returning the in-flight task is the desired behaviour, not a side effect.
+
+**Important qualifier (set-002 review F5):** "resume-first" applies only to *actionable* (unblocked) in-flight work. An `in_progress` task that is itself blocked — by a direct blocker or, more subtly, by a blocked *ancestor* (`ReadyNoBlockedAncestor` fails) — is **not** in `ready` at all; by the partition invariant it lives in `tick blocked`. This is correct, not a gap: blocked is blocked regardless of status (that was the explicit blocked-consistency decision). So the precise promise is "`--count 1` returns the top **unblocked** in-flight task," and blocked-but-started work surfaces in `tick blocked`. Force-starting a blocked task does not float it into `ready`.
 
 A scope fork surfaced from the code: the `ORDER BY` is shared across the whole list family, so resume-first forces a choice between **`ready`-only** and **all of `list`/`ready`/`blocked`**. The user chose `ready`-only decisively: `tick list` is a neutral browse view where silently floating started work would be surprising, and `tick blocked` gains nothing from it. The ordering is a property of `ready`'s "what now?" intent, not a global sort change.
 
@@ -217,7 +219,7 @@ Verifying the consequences of the ready/blocked definition change beyond the two
 **3 — `--status` composes cleanly (no work, and a better escape hatch).** `--status` is a valid `ready` flag (inherited from `list`). `tick ready --status open` → `status IN (open,in_progress) AND status = open` → **unstarted ready work**; `tick ready --status in_progress` → **resumptions only**. This is the canonical "I only want new work" query and *supersedes* the earlier `tick list --status open` suggestion (which wouldn't apply the blocker/leaf/ancestor filtering). Resolves F5.
   - *Terminal statuses compose to empty (accepted).* `tick ready --status done` and `--status cancelled` become `status IN (open,in_progress) AND status = <terminal>` — always false, so they return a silent empty list. Accepted as-is: consistent with filter semantics everywhere (an empty intersection returns empty; tick doesn't reject contradictory filter combinations). No special validation. Resolves review F2 (set 002).
 
-**4 — `--count`.** No special handling — `LIMIT` applies after the resume-first `ORDER BY`, so `--count 1` returns top in-flight work. Resolves the `--count` portion.
+**4 — `--count`.** No special handling — `LIMIT` applies after the resume-first `ORDER BY`, so `--count 1` returns the top *unblocked* in-flight task (blocked-but-started work is in `tick blocked`, not `ready` — see set-002 F5 qualifier). Resolves the `--count` portion.
 
 - **Confidence:** high. Resolves set-001 review F4 (stats) and F5 (status filter).
 
