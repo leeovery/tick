@@ -23,7 +23,8 @@ approved_at: 2026-06-03
 - [ ] An `in_progress` parent that exists only via the start-cascade does not appear in `tick ready`; only its leaf does.
 
 #### Tasks
-status: draft
+status: approved
+approved_at: 2026-06-03
 
 | Internal ID | Name | Edge Cases |
 |-------------|------|------------|
