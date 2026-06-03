@@ -39,13 +39,13 @@ A hard constraint: `blocked` is currently defined as the De Morgan inverse of `r
 
 ### Map
 
-  Discussion Map — Ready Includes In-Progress (6 subtopics — 3 decided · 1 exploring · 2 pending)
+  Discussion Map — Ready Includes In-Progress (6 subtopics — 4 decided · 1 exploring · 1 pending)
 
   ┌─ ✓ Ready semantics: does in-progress belong? [decided]
   ├─ ✓ Blocked consistency under the new definition [decided]
   ├─ ✓ Hierarchy & the leaf gate under in-progress [decided]
-  ├─ ○ Presentation of in-progress in ready output [pending]
-  ├─ ◐ Sort ordering (resume-first vs priority) [exploring]
+  ├─ ✓ Sort ordering (resume-first vs priority) [decided]
+  ├─ ◐ Presentation of in-progress in ready output [exploring]
   └─ ○ Edge cases & scope (filters, stats, --count) [pending]
 
 ---
@@ -150,6 +150,37 @@ Admitting `in_progress` extends this symmetrically: the `in_progress` leaf surfa
 
 ---
 
+## Sort Ordering (Resume-First Vs Priority)
+
+### Context
+
+`buildListQuery` applies one shared `ORDER BY priority ASC, created ASC` to `list`, `ready`, and `blocked`. Once `in_progress` joins the `ready` pool, where should it rank? The feature's premise — "a started task is the *most* ready thing" — argues started work should lead.
+
+### Options Considered
+
+1. **No special treatment** — `in_progress` sorts by priority alongside `open`. Simplest, but half-defeats the feature: a fresh P1 outranks your started P3, and `--count 1` could hand you new work while something sits half-done.
+2. **Resume-first** — `in_progress` floats to the top as a band, then `priority ASC, created ASC` within. `--count 1` always returns in-flight work if any exists. Risk: a trivial started task outranks an urgent fresh P1.
+3. **Priority-first, started as tiebreaker** — priority stays master key; within a priority band, started shows first. Urgent new work never buried, but a low-priority resumption won't surface as a prompt.
+
+### Journey
+
+The user chose **2** and articulated why it loses nothing: "what's *next* to start" is simply the `open` tasks beneath the started band, still priority-ordered — so resume-first adds the resumption signal without sacrificing the priority view. `--count 1` returning the in-flight task is the desired behaviour, not a side effect.
+
+A scope fork surfaced from the code: the `ORDER BY` is shared across the whole list family, so resume-first forces a choice between **`ready`-only** and **all of `list`/`ready`/`blocked`**. The user chose `ready`-only decisively: `tick list` is a neutral browse view where silently floating started work would be surprising, and `tick blocked` gains nothing from it. The ordering is a property of `ready`'s "what now?" intent, not a global sort change.
+
+### Decision
+
+**Option 2, `ready`-only.** In the `ready` query, `in_progress` floats to the top as a band; within the band (and within the `open` tasks beneath it) the existing `priority ASC, created ASC` holds. `list` and `blocked` keep the current ordering unchanged.
+
+- **Implementation shape (captured, not a plan):** the `ORDER BY` in `buildListQuery` (`list.go`) becomes conditional — when `f.Ready`, prepend a status-priority term (e.g. `ORDER BY (t.status = 'in_progress') DESC, t.priority ASC, t.created ASC`); otherwise the current clause. `--count` then naturally yields in-flight work first.
+- **Within-band tiebreak:** `priority ASC, created ASC` — simple and consistent. A "most-recently-started first" variant via transition history is possible but is gold-plating; not adopted.
+- **Accepted consequence:** users with several `in_progress` tasks see a resumption-heavy `ready`. Treated as desirable (nudges finishing WIP), not a defect.
+- **Confidence:** high.
+
+Resolves the sort-ordering portion of review F3.
+
+---
+
 ## Summary
 
 ### Key Insights
@@ -162,5 +193,6 @@ Admitting `in_progress` extends this symmetrically: the `in_progress` leaf surfa
 - **Decided:** `ready` includes `in_progress` (single-actor model; multi-actor handled later via an assignee field + "ready excludes tasks assigned to others").
 - **Decided:** `blocked` stays the strict De Morgan complement — both gate on `(open OR in_progress)`; `ready ⊎ blocked = all live tasks`; a task is never in both.
 - **Decided:** leaf-only rule unchanged — `in_progress` parents stay gated out of `ready`; only leaves surface; parent/child never co-occur in `ready`.
-- **Exploring:** sort ordering — should `in_progress` rank ahead of `open` ("resume first"), and how `--count` interacts.
-- **Pending:** presentation, edge cases/scope (filters, stats count).
+- **Decided:** sort = resume-first, `ready`-only — `in_progress` floats to the top of `ready`, then `priority ASC, created ASC`; `list`/`blocked` ordering unchanged.
+- **Exploring:** presentation — whether `in_progress` rows need visual distinction beyond the existing Status column.
+- **Pending:** edge cases/scope (stats count, status-filter interaction).
