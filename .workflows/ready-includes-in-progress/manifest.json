@@ -84,6 +84,18 @@
           ]
         }
       }
+    },
+    "review": {
+      "items": {
+        "ready-includes-in-progress": {
+          "status": "in-progress",
+          "reviewed_tasks": [
+            "ready-includes-in-progress-1-1",
+            "ready-includes-in-progress-1-2",
+            "ready-includes-in-progress-1-3"
+          ]
+        }
+      }
     }
   },
   "seeds": [
