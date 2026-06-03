@@ -39,12 +39,13 @@ A hard constraint: `blocked` is currently defined as the De Morgan inverse of `r
 
 ### Map
 
-  Discussion Map — Ready Includes In-Progress (5 subtopics — 2 decided · 3 pending)
+  Discussion Map — Ready Includes In-Progress (6 subtopics — 3 decided · 1 exploring · 2 pending)
 
   ┌─ ✓ Ready semantics: does in-progress belong? [decided]
   ├─ ✓ Blocked consistency under the new definition [decided]
+  ├─ ✓ Hierarchy & the leaf gate under in-progress [decided]
   ├─ ○ Presentation of in-progress in ready output [pending]
-  ├─ ○ Sort ordering (resume-first vs priority) [pending]
+  ├─ ◐ Sort ordering (resume-first vs priority) [exploring]
   └─ ○ Edge cases & scope (filters, stats, --count) [pending]
 
 ---
@@ -125,6 +126,30 @@ This resolves review F1 (De Morgan reconciliation) and F7 (in-progress + unclose
 
 ---
 
+## Hierarchy & The Leaf Gate Under In-Progress
+
+### Context
+
+Raised by review F2/F6. Does admitting `in_progress` into `ready` disturb how the parent/child hierarchy surfaces — in particular, does an `in_progress` parent (created by the start-cascade) show alongside its `in_progress` leaf?
+
+### Journey
+
+The user initially framed it as "if a child is ready, the parent's ready," then doubted it ("my feeling is it wouldn't show"). The doubt was correct — it's the *inverse*. The leaf-only rule (`ReadyNoOpenChildren`) excludes any task with a child in `('open','in_progress')`:
+
+- A parent with a *ready* (open, unblocked) child does **not** appear in `ready`; the ready child is precisely why the parent is held back. The parent instead appears in `blocked` (it "has an open child" → a blocked condition).
+- Parent and child therefore **never co-occur in `ready`**. Only the leaf is ready; the parent surfaces later, once all children go terminal.
+- `--count 1` can only return a leaf, because the parent is never a `ready` *candidate* to begin with — it can't win the slot.
+
+Admitting `in_progress` extends this symmetrically: the `in_progress` leaf surfaces (the live work); its cascaded `in_progress` parent is gated out by the same rule and shows in `blocked`. Nothing about the existing child/ancestor `NOT EXISTS` conditions needs to change — they already express "exclude non-leaf candidates" regardless of whether the candidate row is `open` or `in_progress`.
+
+### Decision
+
+**Keep the leaf-only rule unchanged.** `in_progress` is a symmetric extension; `ReadyNoOpenChildren` and the ancestor condition are untouched. An `in_progress` parent that exists only because of an `in_progress` child does *not* surface in `ready` — only the leaf does. Resolves F2/F6.
+
+- **Confidence:** high (confirms existing, tested behaviour). Provisional only in that it assumes the user does *not* want `in_progress` parents surfaced — they leaned that way; reopen if that changes.
+
+---
+
 ## Summary
 
 ### Key Insights
@@ -136,4 +161,6 @@ This resolves review F1 (De Morgan reconciliation) and F7 (in-progress + unclose
 ### Current State
 - **Decided:** `ready` includes `in_progress` (single-actor model; multi-actor handled later via an assignee field + "ready excludes tasks assigned to others").
 - **Decided:** `blocked` stays the strict De Morgan complement — both gate on `(open OR in_progress)`; `ready ⊎ blocked = all live tasks`; a task is never in both.
-- **Pending:** presentation, sort ordering, and edge cases/scope (filters, stats count, `--count`).
+- **Decided:** leaf-only rule unchanged — `in_progress` parents stay gated out of `ready`; only leaves surface; parent/child never co-occur in `ready`.
+- **Exploring:** sort ordering — should `in_progress` rank ahead of `open` ("resume first"), and how `--count` interacts.
+- **Pending:** presentation, edge cases/scope (filters, stats count).
