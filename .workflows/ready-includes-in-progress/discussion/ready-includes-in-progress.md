@@ -39,10 +39,10 @@ A hard constraint: `blocked` is currently defined as the De Morgan inverse of `r
 
 ### Map
 
-  Discussion Map — Ready Includes In-Progress (5 subtopics · 5 pending)
+  Discussion Map — Ready Includes In-Progress (5 subtopics — 1 decided · 1 exploring · 3 pending)
 
-  ┌─ ○ Ready semantics: does in-progress belong? [pending]
-  ├─ ○ Blocked consistency under the new definition [pending]
+  ┌─ ✓ Ready semantics: does in-progress belong? [decided]
+  ├─ ◐ Blocked consistency under the new definition [exploring]
   ├─ ○ Presentation of in-progress in ready output [pending]
   ├─ ○ Sort ordering (resume-first vs priority) [pending]
   └─ ○ Edge cases & scope (filters, stats, --count) [pending]
@@ -50,6 +50,41 @@ A hard constraint: `blocked` is currently defined as the De Morgan inverse of `r
 ---
 
 *Subtopics are documented below as they reach `decided` or accumulate enough exploration to capture.*
+
+---
+
+## Ready Semantics: Does In-Progress Belong?
+
+### Context
+
+`tick ready` answers "what should I act on right now?". Today both `ready` and `blocked` gate on `status = 'open'`, so an `in_progress` task is in *neither* view — invisible to the very command you'd use to resume interrupted work. That invisibility is the gap. The question is whether `in_progress` belongs in `ready` at all, and the answer turns out to hinge on tick's actor model.
+
+### Options Considered
+
+**Option A — Single-actor / resumption model.** `in_progress` = "the task *I* started and got pulled off." Surfacing it in `ready` means "resume this." `ready` becomes "everything actionable right now" = unblocked `open` **+** `in_progress`.
+- Pros: closes the resumption gap directly; matches the everyday use of `ready` ("where was I / what's next").
+- Cons: dilutes the secondary "what *new* work can I pull?" reading of `ready` (started work mixes with fresh-start candidates).
+
+**Option B — Multi-actor / claim model.** `in_progress` = "someone already took it, hands off." Then it's *not* ready for me, and showing it risks two actors colliding on one task. `in_progress` would be *excluded* from `ready` (a soft lock) — stronger than today.
+- Pros: prevents collision in a concurrent team setting.
+- Cons: tick has **no assignee field** — `in_progress` cannot distinguish *my* interrupted work from *someone else's* claimed work. So exclusion also kills my own resumptions; it's a crude proxy for ownership.
+
+### Journey
+
+Initial lean was Option A (the seed's framing). The user raised the sharp counter: if a task is "taken by another developer," it's being handled — not ready — so it shouldn't appear. That's a genuinely different worldview, and it gives the *opposite* answer.
+
+The resolver: tick has no ownership concept. Task carries Title/Status/Priority/Parent/Deps/Type/Tags/Refs/Notes/Transitions — nothing about *who*. The whole design reads single-actor: cascades assume one will (starting one task drives the whole ancestor chain to `in_progress`), and there's no claim/lease/lock-by-owner machinery. The multi-actor collision problem is real, but its correct fix is an **assignee + claim** mechanism, not "exclude all `in_progress`." Excluding `in_progress` to dodge collisions can't tell *my* work from *theirs*, so it breaks the single-actor case to half-serve a model tick doesn't yet implement.
+
+The "aha": the multi-actor concern doesn't argue *against* this feature — it points at a *future* feature. Once an assignee field exists, the right rule is **"`ready` excludes tasks assigned to others"** — precise, collision-safe, and it preserves resumption of your own work. That reframing satisfied the user's concern without compromising the decision here.
+
+### Decision
+
+**Include `in_progress` in `ready`.** Decide for the tool tick is today: single-actor, no ownership → `ready` = "everything actionable now" = unblocked `open` + `in_progress`.
+
+- **Deciding factor:** no assignee field exists, so the multi-actor exclusion argument can't be implemented correctly anyway; the single-actor resumption case is the real, present need.
+- **Trade-off accepted:** the "pull only new work" reading of `ready` is diluted; anyone wanting strictly unstarted work can use `tick list --status open`.
+- **Future path (noted, out of scope):** if/when multi-actor claiming is pursued, add an assignee field and make `ready` exclude tasks assigned to *others* — revisit then, but do **not** solve it now by excluding all `in_progress`.
+- **Confidence:** high.
 
 ---
 
@@ -62,4 +97,5 @@ A hard constraint: `blocked` is currently defined as the De Morgan inverse of `r
 *(to be captured)*
 
 ### Current State
-- Discussion just initialized; no subtopics decided yet.
+- **Decided:** `ready` includes `in_progress` (single-actor model; multi-actor handled later via an assignee field + "ready excludes tasks assigned to others").
+- **Exploring:** how `blocked` reconciles with the new `ready` definition.
