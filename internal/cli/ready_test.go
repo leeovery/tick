@@ -338,6 +338,111 @@ func TestReady(t *testing.T) {
 		}
 	})
 
+	t.Run("it floats unblocked in_progress to the top of ready", func(t *testing.T) {
+		// Resume-first: in_progress floats to the top of ready as a band; within
+		// each band priority ASC, created ASC holds. The in_progress task is given
+		// a WORSE priority (3) than an open task (0) so the test proves the band
+		// term sorts it first, not the priority term passing incidentally (Spec AC #5).
+		tasks := []task.Task{
+			{ID: "tick-prog01", Title: "In progress worse priority", Status: task.StatusInProgress, Priority: 3, Created: now, Updated: now},
+			{ID: "tick-prog02", Title: "In progress better priority", Status: task.StatusInProgress, Priority: 1, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-open01", Title: "Open best priority", Status: task.StatusOpen, Priority: 0, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-open02", Title: "Open worse priority", Status: task.StatusOpen, Priority: 2, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+		if len(lines) != 5 {
+			t.Fatalf("expected 5 lines (header + 4 tasks), got %d: %q", len(lines), stdout)
+		}
+
+		// in_progress band first, ordered priority ASC within band: prog02 (1) before prog01 (3).
+		if !strings.HasPrefix(lines[1], "tick-prog02") {
+			t.Errorf("row 1 should start with tick-prog02 (in_progress, priority 1), got %q", lines[1])
+		}
+		if !strings.HasPrefix(lines[2], "tick-prog01") {
+			t.Errorf("row 2 should start with tick-prog01 (in_progress, priority 3), got %q", lines[2])
+		}
+		// open band beneath, ordered priority ASC: open01 (0) before open02 (2),
+		// even though open01's priority (0) beats every in_progress task.
+		if !strings.HasPrefix(lines[3], "tick-open01") {
+			t.Errorf("row 3 should start with tick-open01 (open, priority 0), got %q", lines[3])
+		}
+		if !strings.HasPrefix(lines[4], "tick-open02") {
+			t.Errorf("row 4 should start with tick-open02 (open, priority 2), got %q", lines[4])
+		}
+	})
+
+	t.Run("it floats in_progress identically for list --ready", func(t *testing.T) {
+		// tick list --ready sets f.Ready identically to tick ready, so it floats
+		// in_progress the same way. Locks the f.Ready scope decision (Spec AC #5, scope).
+		tasks := []task.Task{
+			{ID: "tick-prog01", Title: "In progress worse priority", Status: task.StatusInProgress, Priority: 3, Created: now, Updated: now},
+			{ID: "tick-open01", Title: "Open best priority", Status: task.StatusOpen, Priority: 0, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runList(t, dir, "--ready")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+		if len(lines) != 3 {
+			t.Fatalf("expected 3 lines (header + 2 tasks), got %d: %q", len(lines), stdout)
+		}
+		// in_progress floats to top despite worse priority, same as tick ready.
+		if !strings.HasPrefix(lines[1], "tick-prog01") {
+			t.Errorf("row 1 should start with tick-prog01 (in_progress floated), got %q", lines[1])
+		}
+		if !strings.HasPrefix(lines[2], "tick-open01") {
+			t.Errorf("row 2 should start with tick-open01, got %q", lines[2])
+		}
+	})
+
+	t.Run("it returns the top unblocked in-flight task with --count 1", func(t *testing.T) {
+		// LIMIT applies after the resume-first ORDER BY, so --count 1 returns the
+		// top unblocked in-flight task when one exists (Spec AC #7).
+		tasks := []task.Task{
+			{ID: "tick-prog01", Title: "In progress worse priority", Status: task.StatusInProgress, Priority: 3, Created: now, Updated: now},
+			{ID: "tick-open01", Title: "Open best priority", Status: task.StatusOpen, Priority: 0, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir, "--count", "1", "--quiet")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+		ids := parseQuietIDs(stdout)
+		if len(ids) != 1 || ids[0] != "tick-prog01" {
+			t.Errorf("--count 1 should return only tick-prog01 (top in-flight), got %v", ids)
+		}
+	})
+
+	t.Run("it returns the top unblocked open task with --count 1 when no in_progress", func(t *testing.T) {
+		// With zero in_progress rows the band term is uniformly false; --count 1
+		// returns the top unblocked open task by priority ASC, created ASC (Spec AC #7).
+		tasks := []task.Task{
+			{ID: "tick-open01", Title: "Open best priority", Status: task.StatusOpen, Priority: 0, Created: now, Updated: now},
+			{ID: "tick-open02", Title: "Open worse priority", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir, "--count", "1", "--quiet")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+		ids := parseQuietIDs(stdout)
+		if len(ids) != 1 || ids[0] != "tick-open01" {
+			t.Errorf("--count 1 should return only tick-open01 (top open), got %v", ids)
+		}
+	})
+
 	t.Run("it outputs aligned columns via tick ready", func(t *testing.T) {
 		tasks := []task.Task{
 			{ID: "tick-aaa111", Title: "Setup Sanctum", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
