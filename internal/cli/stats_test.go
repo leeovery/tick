@@ -72,10 +72,10 @@ func TestStats(t *testing.T) {
 	})
 
 	t.Run("it counts ready and blocked tasks correctly", func(t *testing.T) {
-		// Setup:
+		// Setup (live = open or in_progress):
 		// tick-aaa111: open, no blockers, no children => READY
-		// tick-aaa222: open, blocked by tick-bbb111 (in_progress) => BLOCKED
-		// tick-bbb111: in_progress => neither ready nor blocked (not open)
+		// tick-aaa222: open, blocked by tick-bbb111 (in_progress, unclosed) => BLOCKED
+		// tick-bbb111: in_progress, no blockers, no children => READY leaf (widened gate)
 		// tick-ccc111: open, has open child tick-ccc222 => BLOCKED (has open children)
 		// tick-ccc222: open, child of tick-ccc111, no blockers => READY
 		// tick-ddd111: done => neither
@@ -100,13 +100,71 @@ func TestStats(t *testing.T) {
 		}
 
 		workflow := parsed["workflow"].(map[string]any)
-		// Ready: tick-aaa111 (open, unblocked, no children) + tick-ccc222 (open, unblocked, no children) = 2
-		if workflow["ready"] != float64(2) {
-			t.Errorf("ready = %v, want 2", workflow["ready"])
+		// Ready: tick-aaa111 (open ready leaf) + tick-ccc222 (open ready child leaf)
+		//   + tick-bbb111 (in_progress ready leaf) = 3
+		if workflow["ready"] != float64(3) {
+			t.Errorf("ready = %v, want 3", workflow["ready"])
 		}
-		// Blocked: tick-aaa222 (blocked by dep) + tick-ccc111 (has open child) = 2
+		// Blocked: tick-aaa222 (blocked by its in_progress, still-unclosed blocker tick-bbb111)
+		//   + tick-ccc111 (has open child) = 2, derived as (Open 4 + InProgress 1) - Ready 3 = 2.
 		if workflow["blocked"] != float64(2) {
 			t.Errorf("blocked = %v, want 2", workflow["blocked"])
+		}
+	})
+
+	t.Run("it derives a non-negative blocked count when ready exceeds open", func(t *testing.T) {
+		// Several unblocked in_progress leaves (no blockers, no children) are all READY,
+		// so Ready can exceed Open. Fixture:
+		// tick-open01: open, unblocked leaf => READY (Open = 1)
+		// tick-prog01/02/03: in_progress, unblocked leaves => READY (InProgress = 3)
+		// Ready = 4 > Open = 1. Blocked = (Open 1 + InProgress 3) - Ready 4 = 0.
+		// The old Open - Ready route would have gone negative (1 - 4 = -3).
+		tasks := []task.Task{
+			{ID: "tick-open01", Title: "Open ready leaf", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-prog01", Title: "In progress ready leaf 1", Status: task.StatusInProgress, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-prog02", Title: "In progress ready leaf 2", Status: task.StatusInProgress, Priority: 2, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+			{ID: "tick-prog03", Title: "In progress ready leaf 3", Status: task.StatusInProgress, Priority: 2, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runStats(t, dir, "--json")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		var parsed map[string]any
+		if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nstdout: %s", err, stdout)
+		}
+
+		byStatus := parsed["by_status"].(map[string]any)
+		openCount := int(byStatus["open"].(float64))
+		inProgressCount := int(byStatus["in_progress"].(float64))
+
+		workflow := parsed["workflow"].(map[string]any)
+		ready := int(workflow["ready"].(float64))
+		blocked := int(workflow["blocked"].(float64))
+
+		if openCount != 1 {
+			t.Errorf("open = %d, want 1", openCount)
+		}
+		if inProgressCount != 3 {
+			t.Errorf("in_progress = %d, want 3", inProgressCount)
+		}
+		if ready != 4 {
+			t.Errorf("ready = %d, want 4 (Ready must exceed Open=1)", ready)
+		}
+		if ready <= openCount {
+			t.Errorf("ready(%d) should exceed open(%d) to exercise the regression", ready, openCount)
+		}
+		// Blocked = (Open + InProgress) - Ready, and never negative.
+		wantBlocked := (openCount + inProgressCount) - ready
+		if blocked != wantBlocked {
+			t.Errorf("blocked = %d, want %d ((Open %d + InProgress %d) - Ready %d)",
+				blocked, wantBlocked, openCount, inProgressCount, ready)
+		}
+		if blocked < 0 {
+			t.Errorf("blocked = %d, must never be negative", blocked)
 		}
 	})
 

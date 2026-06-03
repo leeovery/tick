@@ -75,14 +75,14 @@ func RunStats(dir string, fc FormatConfig, fmtr Formatter, stdout io.Writer) err
 			return fmt.Errorf("failed to iterate priority counts: %w", err)
 		}
 
-		// Ready count: open, no unclosed blockers, no open children.
+		// Ready count: open or in_progress, no unclosed blockers, no open/in-progress children, no blocked ancestor.
 		readyQuery := "\n\t\t\tSELECT COUNT(*) FROM tasks t\n\t\t\tWHERE " + ReadyWhereClause()
 		if err := db.QueryRow(readyQuery).Scan(&stats.Ready); err != nil {
 			return fmt.Errorf("failed to query ready count: %w", err)
 		}
 
-		// Blocked count: open AND NOT ready (derived from ready).
-		stats.Blocked = stats.Open - stats.Ready
+		// Blocked count: live (open or in_progress) AND NOT ready, derived as (Open + InProgress) − Ready.
+		stats.Blocked = (stats.Open + stats.InProgress) - stats.Ready
 
 		return nil
 	})

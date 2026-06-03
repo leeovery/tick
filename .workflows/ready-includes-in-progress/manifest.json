@@ -73,10 +73,14 @@
             ".claude/skills/golang-pro"
           ],
           "current_phase": 1,
-          "current_task": "ready-includes-in-progress-1-3",
+          "current_task": "~",
           "completed_tasks": [
             "ready-includes-in-progress-1-1",
-            "ready-includes-in-progress-1-2"
+            "ready-includes-in-progress-1-2",
+            "ready-includes-in-progress-1-3"
+          ],
+          "completed_phases": [
+            1
           ]
         }
       }
