@@ -39,10 +39,10 @@ A hard constraint: `blocked` is currently defined as the De Morgan inverse of `r
 
 ### Map
 
-  Discussion Map — Ready Includes In-Progress (5 subtopics — 1 decided · 1 exploring · 3 pending)
+  Discussion Map — Ready Includes In-Progress (5 subtopics — 2 decided · 3 pending)
 
   ┌─ ✓ Ready semantics: does in-progress belong? [decided]
-  ├─ ◐ Blocked consistency under the new definition [exploring]
+  ├─ ✓ Blocked consistency under the new definition [decided]
   ├─ ○ Presentation of in-progress in ready output [pending]
   ├─ ○ Sort ordering (resume-first vs priority) [pending]
   └─ ○ Edge cases & scope (filters, stats, --count) [pending]
@@ -88,6 +88,43 @@ The "aha": the multi-actor concern doesn't argue *against* this feature — it p
 
 ---
 
+## Blocked Consistency Under The New Definition
+
+### Context
+
+`blocked` is the De Morgan inverse of `ready` in the code: `BlockedConditions()` negates each `ReadyNo*()` helper and ORs them, sharing the *same* `t.status = 'open'` literal as the gate. Today that means `ready` and `blocked` partition the `open` set, and `in_progress`/`done`/`cancelled` are in neither. Now that `ready` admits `in_progress`, we must decide what `blocked`'s status gate does — and whether the partition survives. (This is the discussion's stated hard constraint, and the load-bearing gap flagged by the first review's F1/F7.)
+
+### Options Considered
+
+**Option A — Symmetric.** `blocked` gates on `(open OR in_progress)`, identical to `ready`. The two stay strict De Morgan complements, now over the *live* (non-terminal) set instead of just `open`.
+- Pros: closes the invisibility hole completely (a started-but-stuck task lands in `blocked` instead of vanishing); preserves the clean inverse; minimal code change (flip one shared literal).
+- Cons: an `in_progress` task can be labeled "blocked" — semantically loose for a started task, but defensible (it genuinely can't proceed).
+
+**Option B — Asymmetric.** `ready` admits `in_progress`; `blocked` stays `open`-only.
+- Cons: breaks the complement (no longer a partition; code needs special-casing) and **reopens the exact hole** — an `in_progress` task with an open child or an unclosed blocker would be in *neither* view. Common case (start a parent, then add subtasks) goes invisible.
+
+**Option C — "blocked = can't even start."** Once started, a task is past "blocked," so `in_progress` is never blocked. Same invisibility problem as B for started-but-stuck work.
+
+### Journey
+
+The user chose A immediately and articulated the governing semantic crisply: a task that's blocked *stays* blocked even if you force-start it. You can always look a task up and start it directly (starting isn't gated by blockers) — but ignoring the fact that `ready` never offered it doesn't change its nature. It was blocked; now it's blocked-and-in-progress; it still reports as blocked.
+
+The user's verification question — "a blocked-in-progress task won't *also* show as ready, will it?" — is the crux of why A is clean. Answer: **no, never.** Because A keeps `ready` and `blocked` sharing one identical status gate, `blocked` is the exact logical negation of `ready`'s three `NOT EXISTS` conditions. Over the live set, every task is *exactly one* of ready/blocked — mutual exclusivity and exhaustiveness both hold. The blocked-in-progress task fails the ready test and surfaces only in `tick blocked`.
+
+### Decision
+
+**Option A — keep `ready` and `blocked` as strict complements.** Both gate on `status IN ('open','in_progress')`; `blocked` remains the De Morgan inverse.
+
+- **Invariant:** `ready ⊎ blocked = all live tasks` (open + in_progress). Never both, never neither, for any live task. `done`/`cancelled` are in neither.
+- **Force-started blocked task:** shows in `tick blocked` only, never `tick ready`. Starting a task does not clear its block.
+- **Implementation shape (captured, not a plan):** the shared `t.status = 'open'` literal in *both* `ReadyConditions()` and `BlockedConditions()` becomes `t.status IN ('open','in_progress')`. The `negateNotExists` / inverse machinery is untouched — the symmetry is exactly why this is a one-line-per-side change. The fact that the gate is a single shared string is evidence A is the option the code "wants."
+- **To confirm in edge-cases subtopic:** that the state machine genuinely allows `open → in_progress` regardless of unclosed blockers (assumed true — blockers are a query concept, not a transition guard).
+- **Confidence:** high.
+
+This resolves review F1 (De Morgan reconciliation) and F7 (in-progress + unclosed blocker → blocked).
+
+---
+
 ## Summary
 
 ### Key Insights
@@ -98,4 +135,5 @@ The "aha": the multi-actor concern doesn't argue *against* this feature — it p
 
 ### Current State
 - **Decided:** `ready` includes `in_progress` (single-actor model; multi-actor handled later via an assignee field + "ready excludes tasks assigned to others").
-- **Exploring:** how `blocked` reconciles with the new `ready` definition.
+- **Decided:** `blocked` stays the strict De Morgan complement — both gate on `(open OR in_progress)`; `ready ⊎ blocked = all live tasks`; a task is never in both.
+- **Pending:** presentation, sort ordering, and edge cases/scope (filters, stats count, `--count`).
