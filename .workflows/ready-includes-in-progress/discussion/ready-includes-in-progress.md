@@ -39,14 +39,14 @@ A hard constraint: `blocked` is currently defined as the De Morgan inverse of `r
 
 ### Map
 
-  Discussion Map — Ready Includes In-Progress (6 subtopics — 4 decided · 1 exploring · 1 pending)
+  Discussion Map — Ready Includes In-Progress (6 subtopics — 5 decided · 1 exploring)
 
   ┌─ ✓ Ready semantics: does in-progress belong? [decided]
   ├─ ✓ Blocked consistency under the new definition [decided]
   ├─ ✓ Hierarchy & the leaf gate under in-progress [decided]
   ├─ ✓ Sort ordering (resume-first vs priority) [decided]
-  ├─ ◐ Presentation of in-progress in ready output [exploring]
-  └─ ○ Edge cases & scope (filters, stats, --count) [pending]
+  ├─ ✓ Presentation of in-progress in ready output [decided]
+  └─ ◐ Edge cases & scope (filters, stats, --count) [exploring]
 
 ---
 
@@ -178,6 +178,26 @@ A scope fork surfaced from the code: the `ORDER BY` is shared across the whole l
 - **Confidence:** high.
 
 Resolves the sort-ordering portion of review F3.
+
+---
+
+## Presentation Of In-Progress In Ready Output
+
+### Context
+
+The seed flagged presentation as a thing to settle: should `in_progress` items appear inline, sorted to the top, or be *visually distinguished* as resumptions vs fresh starts? The sort decision already settled "sorted to the top"; this subtopic is the remaining "visually distinguished?" question.
+
+### Options Considered
+
+- **A — Nothing extra.** Rely on the existing **Status column** (`ready` output is ID, Status, Priority, Type, Title) plus the top-sort. Distinction exists for free in toon, pretty, and JSON.
+- **B — Pretty-only cue.** A marker/styling on `in_progress` rows in the human `pretty` format; toon/JSON untouched.
+- **C — Sectioning** ("In progress" / "Ready to start" headers). Argued *against*: harmful for the machine formats — toon is the agent default, JSON is consumed programmatically, both keyed off the `status` field. Headers are noise/parsing-hazard there.
+
+### Decision
+
+**Option A — no presentation change.** The two signals that answer "which are resumptions?" — the `status` value and the top-of-list position — are already present in every format. For the primary consumer (an agent reading toon/JSON) it's fully machine-distinguishable with zero change; for a human on `pretty`, the Status column already reads `in_progress`. Anything more is polish in search of a problem for this feature. C is explicitly rejected (breaks machine formats).
+
+- **Confidence:** high. (B remains a trivial future polish if a human-ergonomics need ever appears; out of scope now.)
 
 ---
 
