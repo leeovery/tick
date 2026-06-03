@@ -176,4 +176,25 @@ The SQL diff is small; the **test-update surface is the larger part of the work*
 
 ---
 
+## Acceptance Criteria
+
+1. An unblocked `in_progress` leaf task appears in `tick ready`.
+2. An unblocked `open` leaf task still appears in `tick ready` (no regression).
+3. A `blocked` `in_progress` task (unclosed blocker, or blocked ancestor) appears in `tick blocked` and **never** in `tick ready`.
+4. Every live task (`open` or `in_progress`) appears in exactly one of `tick ready` / `tick blocked`; `done`/`cancelled` appear in neither.
+5. In `tick ready` (and `tick list --ready`), `in_progress` tasks sort above all `open` tasks; within each band, `priority ASC, created ASC` holds.
+6. `tick list` and `tick list --blocked` retain the existing `priority ASC, created ASC` ordering, unchanged.
+7. `tick ready --count 1` returns the top unblocked in-flight task when one exists, otherwise the top unblocked open task.
+8. `tick ready --status open` returns unstarted ready work; `tick ready --status in_progress` returns resumptions only; `--status done`/`--status cancelled` return empty.
+9. `tick stats` blocked count equals `(Open + InProgress) − Ready` and is never negative; the ready count includes unblocked `in_progress` tasks.
+10. An `in_progress` parent that exists only via the start-cascade does not appear in `tick ready`; only its leaf does.
+
+## Out of Scope (Future Work)
+
+- **Multi-actor / assignee model.** Add an assignee field and make `ready` exclude tasks assigned to *others* — the precise, collision-safe rule. Revisit only when multi-actor claiming is pursued; do **not** approximate it now by excluding all `in_progress`.
+- **Pretty-only visual cue** for `in_progress` rows. Trivial future polish if a human-ergonomics need appears; the machine formats must stay untouched.
+- **"Most-recently-started first"** ordering within the `in_progress` band via transition history. A possible refinement, deliberately not adopted (gold-plating).
+
+---
+
 ## Working Notes
