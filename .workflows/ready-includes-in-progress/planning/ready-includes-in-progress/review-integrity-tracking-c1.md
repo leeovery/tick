@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: complete
 created: 2026-06-03
 cycle: 1
 phase: Plan Integrity Review
@@ -126,7 +126,7 @@ assertion block / fixture comment instead, since exact line numbers drift.
 - Update `internal/cli/stats_test.go` subtest `"it counts ready and blocked tasks correctly"` (the `workflow["ready"]`/`workflow["blocked"]` assertion block and the fixture-setup comments at the top of the subtest): under the new semantics `tick-bbb111` (in_progress, no blockers, no children) becomes a READY leaf. Re-derive expected counts against the fixture: Ready = 3 (`tick-aaa111` open ready leaf, `tick-ccc222` open ready child leaf, `tick-bbb111` in_progress ready leaf); Blocked = 2 (`tick-aaa222` blocked by its in_progress blocker `tick-bbb111`, which is unclosed; `tick-ccc111` has open child) = `(Open 4 + InProgress 1) − Ready 3`. Change `workflow["ready"]` expected from `2` to `3`; `workflow["blocked"]` stays `2` but update its inline derivation comment. Correct the inline fixture comment for `tick-bbb111` (it is now a ready leaf, not "neither ready nor blocked"). Note: `tick-aaa222` stays blocked because its blocker `tick-bbb111` is in_progress (not done/cancelled), so widening the gate does not unblock it.
 ```
 
-**Resolution**: Pending
-**Notes**: The Proposed text also makes explicit *why* `tick-aaa222` stays blocked after the gate widens (its blocker is in_progress, hence still unclosed) — the original wording leaves the reader to confirm this themselves, and it is the one re-derivation step a careless implementer could get wrong.
+**Resolution**: Fixed
+**Notes**: Applied to both the tick task (tick-6e6a9c, the implementer-facing plan-of-record) and phase-1-tasks.md. The Proposed text also makes explicit *why* `tick-aaa222` stays blocked after the gate widens (its blocker is in_progress, hence still unclosed) — the original wording leaves the reader to confirm this themselves, and it is the one re-derivation step a careless implementer could get wrong.
 
 ---
