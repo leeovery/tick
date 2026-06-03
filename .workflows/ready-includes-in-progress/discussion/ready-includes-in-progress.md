@@ -39,14 +39,14 @@ A hard constraint: `blocked` is currently defined as the De Morgan inverse of `r
 
 ### Map
 
-  Discussion Map — Ready Includes In-Progress (6 subtopics — 5 decided · 1 exploring)
+  Discussion Map — Ready Includes In-Progress (6 subtopics — 6 decided)
 
   ┌─ ✓ Ready semantics: does in-progress belong? [decided]
   ├─ ✓ Blocked consistency under the new definition [decided]
   ├─ ✓ Hierarchy & the leaf gate under in-progress [decided]
   ├─ ✓ Sort ordering (resume-first vs priority) [decided]
   ├─ ✓ Presentation of in-progress in ready output [decided]
-  └─ ◐ Edge cases & scope (filters, stats, --count) [exploring]
+  └─ ✓ Edge cases & scope (filters, stats, --count) [decided]
 
 ---
 
@@ -201,18 +201,48 @@ The seed flagged presentation as a thing to settle: should `in_progress` items a
 
 ---
 
+## Edge Cases & Scope (Filters, Stats, --count)
+
+### Context
+
+Verifying the consequences of the ready/blocked definition change beyond the two query helpers themselves. Raised partly by review F4 (stats count) and F5 (status-filter interaction); `--count` folded in.
+
+### Decisions
+
+**1 — `stats` blocked count derivation (required fix).** `stats.go:85` computes `Blocked = Open − Ready`. This is only correct while `ready ⊆ open`. Once `ready` counts `in_progress`, `Ready` can exceed `Open` and the blocked count goes wrong (e.g. 5 open/3 ready + 4 in_progress/3 ready → `Ready = 6`, `Open = 5`, `Blocked = −1`). The derivation must move to the live set, following the partition invariant: **`Blocked = (Open + InProgress) − Ready`** (or count blocked directly via a `BlockedWhereClause`). Not optional — a correctness consequence of the feature.
+
+**2 — `stats` ready count tracks the new semantics (intended).** It uses `ReadyWhereClause`, so it includes `in_progress` automatically — which is correct: the stats "ready" number must mean the same as `tick ready`. An `in_progress` task counted in both `InProgress` and `Ready` is fine — two lenses (status breakdown vs actionability), exactly as an open-ready task is already counted in both `Open` and `Ready`. The stale comment at `stats.go:78` should be refreshed.
+
+**3 — `--status` composes cleanly (no work, and a better escape hatch).** `--status` is a valid `ready` flag (inherited from `list`). `tick ready --status open` → `status IN (open,in_progress) AND status = open` → **unstarted ready work**; `tick ready --status in_progress` → **resumptions only**. This is the canonical "I only want new work" query and *supersedes* the earlier `tick list --status open` suggestion (which wouldn't apply the blocker/leaf/ancestor filtering). Resolves F5.
+
+**4 — `--count`.** No special handling — `LIMIT` applies after the resume-first `ORDER BY`, so `--count 1` returns top in-flight work. Resolves the `--count` portion.
+
+- **Confidence:** high. Resolves review F4 and F5.
+
+---
+
 ## Summary
 
 ### Key Insights
-*(to be captured)*
+
+1. **The real gap was double invisibility.** Because both `ready` and `blocked` gated on `status = 'open'`, an `in_progress` task was in *neither* view. The feature isn't "add in-progress to ready" so much as "stop dropping in-progress work on the floor."
+2. **Ready and blocked are one partition, not two queries.** They must share an identical status gate; `blocked` is the literal De Morgan inverse of `ready`. The governing invariant — `ready ⊎ blocked = all live (non-terminal) tasks` — is what makes the change small (flip one shared literal) and guarantees no task is ever in both or neither.
+3. **"Resume-first" is a property of `ready`'s intent, not a global sort.** Only `ready` answers "what now?", so only `ready` floats `in_progress`; `list`/`blocked` keep priority order.
+4. **Multi-actor is a different feature.** The "someone else took it" concern is real but needs an *assignee* field; the right future rule is "`ready` excludes tasks assigned to others," never "exclude all `in_progress`."
+5. **Derived counts are the hidden hazard.** `stats.Blocked = Open − Ready` silently breaks once `ready` spans two statuses — the kind of consequence that hides one layer below the headline change.
 
 ### Open Threads
-*(to be captured)*
+
+- **Multi-actor / assignee model** (future, out of scope): add an assignee field; make `ready` exclude tasks assigned to others.
+- **Pretty-only visual cue** for `in_progress` rows (presentation Option B): trivial future polish if a human-ergonomics need appears.
+- **"Most-recently-started first"** within the `in_progress` band via transition history: possible refinement, deliberately not adopted (gold-plating).
 
 ### Current State
 - **Decided:** `ready` includes `in_progress` (single-actor model; multi-actor handled later via an assignee field + "ready excludes tasks assigned to others").
 - **Decided:** `blocked` stays the strict De Morgan complement — both gate on `(open OR in_progress)`; `ready ⊎ blocked = all live tasks`; a task is never in both.
 - **Decided:** leaf-only rule unchanged — `in_progress` parents stay gated out of `ready`; only leaves surface; parent/child never co-occur in `ready`.
 - **Decided:** sort = resume-first, `ready`-only — `in_progress` floats to the top of `ready`, then `priority ASC, created ASC`; `list`/`blocked` ordering unchanged.
-- **Exploring:** presentation — whether `in_progress` rows need visual distinction beyond the existing Status column.
-- **Pending:** edge cases/scope (stats count, status-filter interaction).
+- **Decided:** no presentation change — Status column + top-sort already distinguish `in_progress`; sectioning rejected (breaks machine formats).
+- **Decided:** edge cases — `stats` blocked count moves to `(Open + InProgress) − Ready` (required); `stats` ready count tracks new semantics; `--status` composes for free (`tick ready --status open` = unstarted ready work); `--count` needs nothing.
+
+**All six subtopics decided. Discussion converged.** Net behaviour: `ready` and `blocked` both gate on `(open OR in_progress)`; `ready` floats `in_progress` to the top (ready-only sort); `stats` blocked derivation fixed; no presentation or flag changes required.
