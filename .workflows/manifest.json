@@ -29,6 +29,9 @@
     },
     "add-version-flag": {
       "work_type": "quick-fix"
+    },
+    "ready-includes-in-progress": {
+      "work_type": "feature"
     }
   },
   "defaults": {

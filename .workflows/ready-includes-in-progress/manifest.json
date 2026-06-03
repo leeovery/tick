@@ -4,7 +4,15 @@
   "status": "in-progress",
   "created": "2026-06-03",
   "description": "Include in-progress tasks in `tick ready` output, keeping `blocked` consistent as its inverse; semantics and presentation to be settled in discussion.",
-  "phases": {},
+  "phases": {
+    "discussion": {
+      "items": {
+        "ready-includes-in-progress": {
+          "status": "in-progress"
+        }
+      }
+    }
+  },
   "seeds": [
     {
       "path": "seeds/2026-06-02-ready-includes-in-progress.md",
