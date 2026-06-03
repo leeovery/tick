@@ -1,0 +1,15 @@
+{
+  "name": "ready-includes-in-progress",
+  "work_type": "feature",
+  "status": "in-progress",
+  "created": "2026-06-03",
+  "description": "Include in-progress tasks in `tick ready` output, keeping `blocked` consistent as its inverse; semantics and presentation to be settled in discussion.",
+  "phases": {},
+  "seeds": [
+    {
+      "path": "seeds/2026-06-02-ready-includes-in-progress.md",
+      "source": "inbox:idea",
+      "seeded_at": "2026-06-03T07:38:35Z"
+    }
+  ]
+}
