@@ -17,7 +17,7 @@
         "ready-includes-in-progress": {
           "status": "in-progress",
           "review_cycle": 1,
-          "finding_gate_mode": "gated",
+          "finding_gate_mode": "auto",
           "date": "2026-06-03",
           "sources": {
             "ready-includes-in-progress": {

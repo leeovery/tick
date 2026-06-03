@@ -61,6 +61,8 @@ A task is **blocked** when it is live (`status IN ('open','in_progress')`) **and
 
 The float applies whenever the ready filter is active — set identically by `tick ready` (a literal alias dispatching as `--ready` into the same `RunList`) and `tick list --ready`. Both are the same ready view, so both float. Plain `tick list` and `tick list --blocked` never set the ready filter and keep the current neutral `priority ASC, created ASC` ordering, unchanged. "Ready-only" means *ready-view-only*, keyed on `f.Ready`.
 
+Any query with `f.Ready` set floats `in_progress` regardless of additional narrowing filters (`--parent`, `--tag`, `--type`, `--priority`, `--status`) — the float is keyed solely on `f.Ready`, with no special-case guard for narrowed browses.
+
 Rationale: resume-first is a property of `ready`'s "what now?" intent. `tick list` is a neutral browse view where silently floating started work would be surprising; `tick blocked` gains nothing from it.
 
 ### Precise promise: "top **unblocked** in-flight work"
@@ -93,7 +95,7 @@ The **arithmetic route is canonical** — it reuses counts `stats` already gathe
 
 ### Ready count tracks the new semantics (intended)
 
-The stats ready count uses `ReadyWhereClause`, so it includes `in_progress` automatically — correct, because the stats "ready" number must mean the same as `tick ready`. An `in_progress` task counted in both `InProgress` and `Ready` is fine — two lenses (status breakdown vs actionability), exactly as an open-ready task is already counted in both `Open` and `Ready`. The stale comment at `stats.go:78` should be refreshed to reflect the new semantics.
+The stats ready count uses `ReadyWhereClause`, so it includes `in_progress` automatically — correct, because the stats "ready" number must mean the same as `tick ready`. An `in_progress` task counted in both `InProgress` and `Ready` is fine — two lenses (status breakdown vs actionability), exactly as an open-ready task is already counted in both `Open` and `Ready`. The stale ready-count comment (currently `// Ready count: open, no unclosed blockers, no open children.`) should be refreshed — e.g. `// Ready count: open or in_progress, no unclosed blockers, no open/in-progress children, no blocked ancestor.` (it was already incomplete pre-feature, omitting the ancestor condition).
 
 ---
 
@@ -121,6 +123,8 @@ In-progress tasks are not visually distinguished beyond what already exists. The
 
 Sectioning ("In progress" / "Ready to start" headers) is explicitly **rejected** — it's noise and a parsing hazard for the machine formats. A pretty-only visual cue is a possible trivial future polish, out of scope now (see Out of Scope).
 
+**Quiet mode and empty results — pre-existing paths, no new work.** `--quiet` (bare ID output) and the empty-list rendering both use existing, untouched code paths. The only effect of the widened gate: an unblocked `in_progress` task now appears in `tick ready --quiet` ID output where it previously did not (intended — agents piping `tick ready -q` are a primary consumer). Empty results (e.g. `tick ready --status done`) render via the existing `FormatTaskList` empty path, unchanged.
+
 ---
 
 ## Affected Code Surface
@@ -135,9 +139,11 @@ The shared `t.status = 'open'` literal in **both** `ReadyConditions()` and `Bloc
 
 The `ORDER BY` becomes conditional on the ready filter. When `f.Ready`, prepend a status-priority term — e.g. `ORDER BY (t.status = 'in_progress') DESC, t.priority ASC, t.created ASC`; otherwise the current `t.priority ASC, t.created ASC` clause is unchanged. Keyed on `f.Ready`, so it applies to both `tick ready` and `tick list --ready` and to neither `tick list` nor `tick list --blocked`.
 
+When the result set contains zero `in_progress` rows, the `(t.status = 'in_progress') DESC` term is uniformly false and a no-op, so the ordering is byte-identical to the current `priority ASC, created ASC`. This is the basis for the no-regression criteria (AC #2, #6) — a ready list with no in-flight work is unchanged.
+
 ### `internal/cli/stats.go` — blocked derivation + comment
 
-Change the blocked count from `Open − Ready` to `(Open + InProgress) − Ready`. Refresh the stale comment at `stats.go:78` to describe the new ready/blocked semantics.
+Change the blocked count from `Open − Ready` to `(Open + InProgress) − Ready`. Two comments need refreshing (reference by content, not line number — numbers drift): the **ready-count** comment (`// Ready count: open, no unclosed blockers, no open children.`) → `// Ready count: open or in_progress, no unclosed blockers, no open/in-progress children, no blocked ancestor.`; and the **blocked-count** comment (`// Blocked count: open AND NOT ready (derived from ready).`) → `// Blocked count: live (open or in_progress) AND NOT ready, derived as (Open + InProgress) − Ready.`
 
 ### No changes required
 
@@ -156,8 +162,8 @@ The SQL diff is small; the **test-update surface is the larger part of the work*
 
 - **`query_helpers_test.go`** — `"ReadyConditions returns status open plus all four conditions"` and `"BlockedConditions contains no SQL literals beyond status check"` both assert `conditions[0] == "t.status = 'open'"`. The gate becomes `t.status IN ('open','in_progress')`; both assertions update.
 - **`ready_test.go`** — `"it excludes in_progress tasks"` (line ~204) **inverts**: an unblocked `in_progress` leaf must now *appear* in `ready`. Rewrite, don't delete.
-- **`blocked_test.go`** — `"it excludes in_progress tasks from output"` (line ~126, rationale "only open") is now misleading: a lone *unblocked* `in_progress` task is still absent from `blocked`, but because it's *ready*, not because `in_progress` is excluded. Update the rationale; the assertion as written may still pass for the wrong reason.
-- **`stats_test.go`** — `"it counts ready and blocked tasks correctly"` (line ~74) encodes `in_progress => neither ready nor blocked (not open)` with Ready=2/Blocked=2. Under the new semantics the unblocked `in_progress` task becomes ready, so expected counts change; this test exercises the `Blocked = (Open + InProgress) − Ready` derivation.
+- **`blocked_test.go`** — `"it excludes in_progress tasks from output"` (line ~126, rationale "only open") is now misleading: a lone *unblocked* `in_progress` task is absent from `blocked` because it's *ready*, not because `in_progress` is excluded — so the bare absence assertion passes for the wrong reason. **Rewrite it into a real assertion** rather than just rewording the comment: either (a) assert the unblocked `in_progress` task is absent from `blocked` **and** present in `ready` (a partition assertion), or (b) give it an unclosed blocker so it is genuinely blocked and assert it **appears** in `blocked` (proving "blocked is blocked regardless of status"). Option (a) overlaps the new partition test in "tests to ADD" below; if (a) is chosen, consolidate the two so they don't drift — prefer (b) here to keep this test focused on the blocked side.
+- **`stats_test.go`** — `"it counts ready and blocked tasks correctly"` (line ~74) encodes `in_progress => neither ready nor blocked (not open)` with Ready=2/Blocked=2. Under the new semantics `tick-bbb111` (in_progress, no blockers, no children) becomes a **ready leaf**, so expected counts become **Ready = 3** (adds bbb111) and **Blocked = 2** (aaa222, ccc111) — now derived as `(Open 4 + InProgress 1) − Ready 3 = 2`, exercising the `Blocked = (Open + InProgress) − Ready` derivation. The inline fixture comment for `tick-bbb111` must also be corrected (it is now a ready leaf, not "neither").
 
 ### Tests that stay valid — KEEP, no change
 
@@ -168,7 +174,7 @@ The SQL diff is small; the **test-update surface is the larger part of the work*
 
 ### New tests to ADD
 
-- Resume-first ordering on `ready` with mixed `in_progress`/`open` (float above open regardless of priority; within band `priority, created`).
+- Resume-first ordering on `ready` with mixed `in_progress`/`open` (float above open regardless of priority; within band `priority, created`). The fixture **must discriminate the band term from the priority term** — give the `in_progress` task a *worse* priority than an `open` task (e.g. in_progress priority 3 above open priority 0) so the test proves the in_progress row still sorts first, rather than passing incidentally because it also had the better priority.
 - An unblocked `in_progress` leaf appears in `ready`; a *blocked* `in_progress` task appears in `blocked`.
 - `stats` counts with `in_progress` ready/blocked tasks present (exercises the new derivation).
 - `tick ready --status open` (unstarted ready) and `--status in_progress` (resumptions only) composition.
