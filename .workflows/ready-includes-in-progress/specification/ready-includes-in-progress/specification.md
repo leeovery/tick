@@ -53,4 +53,28 @@ A task is **blocked** when it is live (`status IN ('open','in_progress')`) **and
 
 ---
 
+## Sort Ordering — Resume-First, Ready-View-Only
+
+`in_progress` tasks float to the top of `ready` as a band; within the band — and within the `open` tasks beneath it — the existing `priority ASC, created ASC` ordering holds. This makes resumption the default: `--count 1` naturally returns in-flight work first.
+
+### Scope: the ready *filter* (`f.Ready`), not a literal command
+
+The float applies whenever the ready filter is active — set identically by `tick ready` (a literal alias dispatching as `--ready` into the same `RunList`) and `tick list --ready`. Both are the same ready view, so both float. Plain `tick list` and `tick list --blocked` never set the ready filter and keep the current neutral `priority ASC, created ASC` ordering, unchanged. "Ready-only" means *ready-view-only*, keyed on `f.Ready`.
+
+Rationale: resume-first is a property of `ready`'s "what now?" intent. `tick list` is a neutral browse view where silently floating started work would be surprising; `tick blocked` gains nothing from it.
+
+### Precise promise: "top **unblocked** in-flight work"
+
+Resume-first applies only to *actionable* (unblocked) in-flight tasks. An `in_progress` task that is itself blocked — by a direct blocker or by a blocked ancestor — is not in `ready` at all; by the partition invariant it lives in `tick blocked`. So `--count 1` returns the top **unblocked** in-flight task; force-starting a blocked task does not float it into `ready`.
+
+### Within-band tiebreak
+
+`priority ASC, created ASC` — the existing clause, applied within the in-progress band and within the open tasks beneath it. A "most-recently-started first" variant via transition history is deliberately not adopted (gold-plating — see Out of Scope).
+
+### Accepted consequence
+
+A user with several `in_progress` tasks sees a resumption-heavy `ready`. This is treated as desirable (nudges finishing work-in-progress before pulling new work), not a defect.
+
+---
+
 ## Working Notes
