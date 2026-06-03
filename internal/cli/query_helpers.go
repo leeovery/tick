@@ -46,11 +46,11 @@ func ReadyNoBlockedAncestor() string {
 }
 
 // ReadyConditions returns the complete set of SQL WHERE conditions that
-// define a "ready" task: open status, no unclosed blockers, no open children,
-// no dependency-blocked ancestor.
+// define a "ready" task: live status (open or in_progress), no unclosed
+// blockers, no open/in-progress children, no dependency-blocked ancestor.
 func ReadyConditions() []string {
 	return []string{
-		`t.status = 'open'`,
+		`t.status IN ('open', 'in_progress')`,
 		ReadyNoUnclosedBlockers(),
 		ReadyNoOpenChildren(),
 		ReadyNoBlockedAncestor(),
@@ -64,9 +64,10 @@ func negateNotExists(s string) string {
 }
 
 // BlockedConditions returns the SQL WHERE conditions that define a "blocked"
-// task: open status AND (has unclosed blockers OR has open children OR has
-// dependency-blocked ancestor). This is the De Morgan inverse of the ready
-// NOT EXISTS conditions, derived from the ReadyNo*() helpers.
+// task: live status (open or in_progress) AND (has unclosed blockers OR has
+// open/in-progress children OR has dependency-blocked ancestor). This is the
+// De Morgan inverse of the ready NOT EXISTS conditions, derived from the
+// ReadyNo*() helpers over the same status gate.
 func BlockedConditions() []string {
 	parts := []string{
 		negateNotExists(ReadyNoUnclosedBlockers()),
@@ -74,7 +75,7 @@ func BlockedConditions() []string {
 		negateNotExists(ReadyNoBlockedAncestor()),
 	}
 	return []string{
-		`t.status = 'open'`,
+		`t.status IN ('open', 'in_progress')`,
 		"(" + strings.Join(parts, "\n\t\t\t\tOR ") + ")",
 	}
 }

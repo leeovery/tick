@@ -201,7 +201,9 @@ func TestReady(t *testing.T) {
 		}
 	})
 
-	t.Run("it excludes in_progress tasks", func(t *testing.T) {
+	t.Run("it includes unblocked in_progress leaf", func(t *testing.T) {
+		// An unblocked in_progress leaf is the most-ready thing there is:
+		// resuming interrupted work is the natural default (Spec AC #1).
 		tasks := []task.Task{
 			{ID: "tick-aaa111", Title: "In progress", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
 		}
@@ -212,8 +214,8 @@ func TestReady(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
 
-		if strings.Contains(stdout, "tick-aaa111") {
-			t.Error("in_progress task should not appear in ready")
+		if !strings.Contains(stdout, "tick-aaa111") {
+			t.Error("unblocked in_progress leaf should appear in ready")
 		}
 	})
 
@@ -513,6 +515,87 @@ func TestReady(t *testing.T) {
 
 		if !strings.Contains(stdout, "tick-root01") {
 			t.Error("root task with no parent should appear in ready")
+		}
+	})
+
+	t.Run("it partitions an in_progress task into exactly one of ready/blocked", func(t *testing.T) {
+		// An unblocked in_progress leaf is ready (not blocked); a blocked
+		// in_progress task (unclosed blocker) is blocked (not ready). Together
+		// they prove the partition invariant: ready ⊎ blocked over live tasks
+		// (Spec AC #3, #4).
+		tasks := []task.Task{
+			// Unblocked in_progress leaf → ready, absent from blocked.
+			{ID: "tick-free01", Title: "Free in progress", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			// Blocker (open) and a blocked in_progress dependent → blocked, absent from ready.
+			{ID: "tick-blk111", Title: "Blocker", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-stuk01", Title: "Stuck in progress", Status: task.StatusInProgress, Priority: 2, BlockedBy: []string{"tick-blk111"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		readyOut, _, exitCode := runReady(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("ready exit code = %d, want 0", exitCode)
+		}
+		blockedOut, _, exitCode := runBlocked(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("blocked exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(readyOut, "tick-free01") {
+			t.Error("unblocked in_progress leaf should appear in ready")
+		}
+		if strings.Contains(blockedOut, "tick-free01") {
+			t.Error("unblocked in_progress leaf should not appear in blocked")
+		}
+		if !strings.Contains(blockedOut, "tick-stuk01") {
+			t.Error("blocked in_progress task should appear in blocked")
+		}
+		if strings.Contains(readyOut, "tick-stuk01") {
+			t.Error("blocked in_progress task should not appear in ready")
+		}
+	})
+
+	t.Run("it returns only unstarted work for ready --status open", func(t *testing.T) {
+		// tick ready --status open intersects the widened gate down to open:
+		// unstarted ready work only, excluding the in_progress leaf (Spec AC #8).
+		tasks := []task.Task{
+			{ID: "tick-open01", Title: "Open leaf", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-prog01", Title: "In progress leaf", Status: task.StatusInProgress, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir, "--status", "open")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "tick-open01") {
+			t.Error("open leaf should appear in ready --status open")
+		}
+		if strings.Contains(stdout, "tick-prog01") {
+			t.Error("in_progress leaf should not appear in ready --status open")
+		}
+	})
+
+	t.Run("it returns only resumptions for ready --status in_progress", func(t *testing.T) {
+		// tick ready --status in_progress intersects the widened gate down to
+		// in_progress: resumptions only, excluding the open leaf (Spec AC #8).
+		tasks := []task.Task{
+			{ID: "tick-open01", Title: "Open leaf", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-prog01", Title: "In progress leaf", Status: task.StatusInProgress, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, _, exitCode := runReady(t, dir, "--status", "in_progress")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		if !strings.Contains(stdout, "tick-prog01") {
+			t.Error("in_progress leaf should appear in ready --status in_progress")
+		}
+		if strings.Contains(stdout, "tick-open01") {
+			t.Error("open leaf should not appear in ready --status in_progress")
 		}
 	})
 }

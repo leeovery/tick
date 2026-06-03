@@ -382,7 +382,9 @@ func TestListFilter(t *testing.T) {
 	})
 
 	t.Run("contradictory filters return empty result no error", func(t *testing.T) {
-		// --status done + --ready is contradictory (ready only applies to open tasks)
+		// --status done + --ready is an empty intersection: the ready gate is
+		// status IN ('open','in_progress'), and AND-ing it with status = done is
+		// always false, so no live task can satisfy both — silent empty result.
 		closedTime := now.Add(time.Hour)
 		tasks := []task.Task{
 			{ID: "tick-open11", Title: "Open ready", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},

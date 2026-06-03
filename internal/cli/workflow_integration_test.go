@@ -71,13 +71,15 @@ func TestWorkflowIntegration(t *testing.T) {
 		t.Fatalf("start child A failed: exit=%d stderr=%q", exitCode, stderr)
 	}
 
-	// While child A is in_progress, child B should still be blocked.
+	// While child A is in_progress, it is an unblocked leaf, so under live-ready
+	// semantics it IS ready ("resume this"). Child B remains blocked because its
+	// blocker A is not yet done — an in_progress blocker does not unblock dependents.
 	stdout, stderr, exitCode = runReady(t, dir, "--quiet")
 	if exitCode != 0 {
 		t.Fatalf("ready (A in_progress) failed: exit=%d stderr=%q", exitCode, stderr)
 	}
 	readyIDs = parseQuietIDs(stdout)
-	assertNotContains(t, readyIDs, childA, "child A should NOT be ready (in_progress)")
+	assertContains(t, readyIDs, childA, "child A SHOULD be ready (in_progress, unblocked)")
 	assertNotContains(t, readyIDs, childB, "child B should NOT be ready (A still in_progress)")
 
 	// Complete child A.

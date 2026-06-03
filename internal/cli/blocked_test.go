@@ -123,9 +123,13 @@ func TestBlocked(t *testing.T) {
 		}
 	})
 
-	t.Run("it excludes in_progress tasks from output", func(t *testing.T) {
+	t.Run("it includes blocked in_progress task", func(t *testing.T) {
+		// Starting is not gated by blockers (start constrains only from: open),
+		// so an in_progress task can have an unclosed blocker. Blocked is blocked
+		// regardless of status — it appears in blocked, never ready (Spec AC #3).
 		tasks := []task.Task{
-			{ID: "tick-aaa111", Title: "In progress", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-blk111", Title: "Blocker open", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-aaa111", Title: "In progress blocked", Status: task.StatusInProgress, Priority: 2, BlockedBy: []string{"tick-blk111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
 		}
 		dir, _ := setupTickProjectWithTasks(t, tasks)
 
@@ -134,8 +138,8 @@ func TestBlocked(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
 
-		if strings.Contains(stdout, "tick-aaa111") {
-			t.Error("in_progress task should not appear in blocked (only open)")
+		if !strings.Contains(stdout, "tick-aaa111") {
+			t.Error("in_progress task with unclosed blocker should appear in blocked")
 		}
 	})
 

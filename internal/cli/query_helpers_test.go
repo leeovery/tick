@@ -38,8 +38,8 @@ func TestReadyConditions(t *testing.T) {
 		if len(conditions) != 4 {
 			t.Fatalf("ReadyConditions() returned %d conditions, want 4", len(conditions))
 		}
-		if conditions[0] != `t.status = 'open'` {
-			t.Errorf("conditions[0] = %q, want %q", conditions[0], `t.status = 'open'`)
+		if conditions[0] != `t.status IN ('open', 'in_progress')` {
+			t.Errorf("conditions[0] = %q, want %q", conditions[0], `t.status IN ('open', 'in_progress')`)
 		}
 		if conditions[1] != ReadyNoUnclosedBlockers() {
 			t.Errorf("conditions[1] does not match ReadyNoUnclosedBlockers()")
@@ -57,8 +57,8 @@ func TestReadyConditions(t *testing.T) {
 		if len(conditions) != 2 {
 			t.Fatalf("BlockedConditions() returned %d conditions, want 2", len(conditions))
 		}
-		if conditions[0] != `t.status = 'open'` {
-			t.Errorf("conditions[0] = %q, want %q", conditions[0], `t.status = 'open'`)
+		if conditions[0] != `t.status IN ('open', 'in_progress')` {
+			t.Errorf("conditions[0] = %q, want %q", conditions[0], `t.status IN ('open', 'in_progress')`)
 		}
 		// The second condition should be the disjunction (EXISTS blockers OR EXISTS open children)
 		if conditions[1] == "" {
@@ -112,8 +112,8 @@ func TestReadyConditions(t *testing.T) {
 			t.Fatalf("BlockedConditions() returned %d conditions, want 2", len(conditions))
 		}
 		// The status condition is the only SQL literal allowed
-		if conditions[0] != `t.status = 'open'` {
-			t.Errorf("conditions[0] = %q, want %q", conditions[0], `t.status = 'open'`)
+		if conditions[0] != `t.status IN ('open', 'in_progress')` {
+			t.Errorf("conditions[0] = %q, want %q", conditions[0], `t.status IN ('open', 'in_progress')`)
 		}
 		// The OR clause must not contain SELECT directly — it should be
 		// composed from the ReadyNo*() helpers, not hand-written SQL.
