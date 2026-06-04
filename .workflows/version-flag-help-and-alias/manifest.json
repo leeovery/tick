@@ -1,7 +1,7 @@
 {
   "name": "version-flag-help-and-alias",
   "work_type": "quick-fix",
-  "status": "in-progress",
+  "status": "completed",
   "created": "2026-06-04",
   "description": "List --version in top-level help and add a -V short alias",
   "phases": {
@@ -91,5 +91,6 @@
       "source": "inbox:idea",
       "seeded_at": "2026-06-04T13:15:34Z"
     }
-  ]
+  ],
+  "completed_at": "2026-06-04"
 }
