@@ -26,7 +26,9 @@
           "task": "~",
           "task_map": {
             "version-flag-help-and-alias-1-1": "tick-455f98",
-            "version-flag-help-and-alias-1-2": "tick-d27df6"
+            "version-flag-help-and-alias-1-2": "tick-d27df6",
+            "version-flag-help-and-alias-2-1": "tick-285839",
+            "version-flag-help-and-alias-2-2": "tick-6f28e2"
           },
           "external_id": "tick-9fb257"
         }
@@ -45,7 +47,7 @@
           "status": "in-progress",
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
-          "analysis_gate_mode": "gated",
+          "analysis_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle_total": 1,
           "analysis_cycle_session": 1,

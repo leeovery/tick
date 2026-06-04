@@ -6,7 +6,7 @@ total_proposed: 2
 # Analysis Tasks: Version Flag Help And Alias (Cycle 1)
 
 ## Task 1: Add --version and -V to globalFlagSet
-status: pending
+status: approved
 severity: low
 sources: architecture, standards
 
@@ -30,7 +30,7 @@ sources: architecture, standards
 - If a drift-detection test or table covers `globalFlagSet` membership, extend it to assert `--version` and `-V` are present. Otherwise no new test is strictly required — existing CLI tests must continue to pass.
 
 ## Task 2: Collapse duplicated version-flag tests into a table-driven case
-status: pending
+status: approved
 severity: low
 sources: duplication
 
