@@ -43,9 +43,21 @@ func TestHelp(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("exit code = %d, want 0", code)
 		}
-		for _, flag := range []string{"--quiet", "--verbose", "--toon", "--pretty", "--json"} {
+		for _, flag := range []string{"--help", "--quiet", "--verbose", "--toon", "--pretty", "--json", "--version"} {
 			if !strings.Contains(stdout, flag) {
 				t.Errorf("stdout missing global flag %q", flag)
+			}
+		}
+	})
+
+	t.Run("tick --help lists --help and --version global flags", func(t *testing.T) {
+		stdout, _, code := runHelp(t, "--help")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0", code)
+		}
+		for _, flag := range []string{"--help", "--version"} {
+			if !strings.Contains(stdout, flag) {
+				t.Errorf("--help output missing global flag %q", flag)
 			}
 		}
 	})
@@ -211,7 +223,7 @@ func TestHelp(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("exit code = %d, want 0", code)
 		}
-		for _, flag := range []string{"--quiet", "--verbose", "--toon", "--pretty", "--json", "--help"} {
+		for _, flag := range []string{"--quiet", "--verbose", "--toon", "--pretty", "--json", "--help", "--version"} {
 			if !strings.Contains(stdout, flag) {
 				t.Errorf("--all output missing global flag %q", flag)
 			}

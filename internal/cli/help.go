@@ -255,11 +255,13 @@ func printTopLevelHelp(w io.Writer) {
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Global flags:")
+	fmt.Fprintln(w, "  --help, -h      Show help")
 	fmt.Fprintln(w, "  --quiet, -q     Suppress output")
 	fmt.Fprintln(w, "  --verbose, -v   Show debug information")
 	fmt.Fprintln(w, "  --toon          Force TOON output format")
 	fmt.Fprintln(w, "  --pretty        Force pretty output format")
 	fmt.Fprintln(w, "  --json          Force JSON output format")
+	fmt.Fprintln(w, "  --version, -V   Show tick version")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run 'tick help <command>' for detailed help on a command.")
 	fmt.Fprintln(w, "Run 'tick help --all' for complete reference of all commands and flags.")
@@ -268,7 +270,7 @@ func printTopLevelHelp(w io.Writer) {
 // printAllHelp writes compact, concatenated help for every command to w.
 // Designed for AI agents to discover the full CLI surface in one call.
 func printAllHelp(w io.Writer) {
-	fmt.Fprintln(w, "Global flags: --help/-h --quiet/-q --verbose/-v --toon --pretty --json")
+	fmt.Fprintln(w, "Global flags: --help/-h --quiet/-q --verbose/-v --toon --pretty --json --version/-V")
 	fmt.Fprintln(w)
 	for i, cmd := range commands {
 		fmt.Fprintln(w, cmd.Usage)
