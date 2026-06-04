@@ -187,7 +187,7 @@ func TestBlockedRejectsBlocked(t *testing.T) {
 }
 
 func TestGlobalFlagsAcceptedOnAnyCommand(t *testing.T) {
-	globalFlags := []string{"--quiet", "-q", "--verbose", "-v", "--toon", "--pretty", "--json", "--help", "-h"}
+	globalFlags := []string{"--quiet", "-q", "--verbose", "-v", "--toon", "--pretty", "--json", "--help", "-h", "--version", "-V"}
 	commands := []string{"create", "list", "show", "dep add", "dep remove", "dep tree", "update", "remove", "ready", "blocked", "migrate", "start", "done", "cancel", "reopen", "init", "stats", "doctor", "rebuild", "note add", "note remove"}
 
 	for _, cmd := range commands {

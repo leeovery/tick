@@ -27,6 +27,8 @@ var globalFlagSet = map[string]bool{
 	"--json":    true,
 	"--help":    true,
 	"-h":        true,
+	"--version": true,
+	"-V":        true,
 }
 
 // commandFlags is the central registry of valid per-command flags.
