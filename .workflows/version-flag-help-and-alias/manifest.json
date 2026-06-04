@@ -4,7 +4,15 @@
   "status": "in-progress",
   "created": "2026-06-04",
   "description": "List --version in top-level help and add a -V short alias",
-  "phases": {},
+  "phases": {
+    "specification": {
+      "items": {
+        "version-flag-help-and-alias": {
+          "status": "completed"
+        }
+      }
+    }
+  },
   "seeds": [
     {
       "path": "seeds/2026-05-23-list-version-in-help.md",

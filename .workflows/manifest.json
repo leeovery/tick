@@ -32,6 +32,9 @@
     },
     "ready-includes-in-progress": {
       "work_type": "feature"
+    },
+    "version-flag-help-and-alias": {
+      "work_type": "quick-fix"
     }
   },
   "defaults": {
