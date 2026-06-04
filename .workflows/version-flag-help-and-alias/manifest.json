@@ -1,0 +1,20 @@
+{
+  "name": "version-flag-help-and-alias",
+  "work_type": "quick-fix",
+  "status": "in-progress",
+  "created": "2026-06-04",
+  "description": "List --version in top-level help and add a -V short alias",
+  "phases": {},
+  "seeds": [
+    {
+      "path": "seeds/2026-05-23-list-version-in-help.md",
+      "source": "inbox:idea",
+      "seeded_at": "2026-06-04T13:15:34Z"
+    },
+    {
+      "path": "seeds/2026-05-23-version-short-alias.md",
+      "source": "inbox:idea",
+      "seeded_at": "2026-06-04T13:15:34Z"
+    }
+  ]
+}
