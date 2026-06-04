@@ -1,8 +1,8 @@
 {
   "leeovery/agentic-workflows": {
-    "ref": "v0.4.14",
-    "commit": "9e8997a9aa5f996352599a75ffb3640d2d9f0682",
-    "installedAt": "2026-06-03T07:14:04.404Z",
+    "ref": "v0.4.22",
+    "commit": "dc9338536a7d9147331016c1614899a513932365",
+    "installedAt": "2026-06-04T10:43:04.639Z",
     "agents": [
       "claude"
     ],
@@ -233,6 +233,7 @@
       ".claude/skills/workflow-migrate/scripts/migrations/039-move-gap-analysis-cache.sh",
       ".claude/skills/workflow-migrate/scripts/migrations/040-rename-inception-to-discovery.sh",
       ".claude/skills/workflow-migrate/scripts/migrations/041-split-analysis-cycle-counter.sh",
+      ".claude/skills/workflow-migrate/scripts/migrations/042-allow-workflows-writes.sh",
       ".claude/skills/workflow-planning-entry/",
       ".claude/skills/workflow-planning-entry/SKILL.md",
       ".claude/skills/workflow-planning-entry/references/",
@@ -362,6 +363,7 @@
       ".claude/skills/workflow-shared/references/research-analysis.md",
       ".claude/skills/workflow-shared/references/routing-decision.md",
       ".claude/skills/workflow-shared/references/seed-context.md",
+      ".claude/skills/workflow-shared/references/sequence-discovery-map.md",
       ".claude/skills/workflow-shared/references/topic-discovery-dispatch.md",
       ".claude/skills/workflow-shared/references/topic-discovery.md",
       ".claude/skills/workflow-shared/references/topic-granularity.md",
@@ -421,6 +423,8 @@
       ".claude/skills/workflow-start/references/absorb-into-epic.md",
       ".claude/skills/workflow-start/references/active-work.md",
       ".claude/skills/workflow-start/references/empty-state.md",
+      ".claude/skills/workflow-start/references/inbox-archived.md",
+      ".claude/skills/workflow-start/references/inbox-working-set.md",
       ".claude/skills/workflow-start/references/manage-work-unit.md",
       ".claude/skills/workflow-start/references/route-to-discovery.md",
       ".claude/skills/workflow-start/references/start-from-inbox.md",
