@@ -63,9 +63,13 @@
             ".claude/skills/golang-pro"
           ],
           "current_phase": 1,
-          "current_task": "version-flag-help-and-alias-1-2",
+          "current_task": "~",
           "completed_tasks": [
-            "version-flag-help-and-alias-1-1"
+            "version-flag-help-and-alias-1-1",
+            "version-flag-help-and-alias-1-2"
+          ],
+          "completed_phases": [
+            1
           ]
         }
       }

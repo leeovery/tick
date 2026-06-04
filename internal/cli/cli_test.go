@@ -551,6 +551,43 @@ func TestVersionFlag(t *testing.T) {
 		}
 	})
 
+	t.Run("the -V short alias produces identical output to the version subcommand", func(t *testing.T) {
+		dir := t.TempDir()
+
+		var aliasStdout, aliasStderr bytes.Buffer
+		aliasApp := &App{
+			Stdout: &aliasStdout,
+			Stderr: &aliasStderr,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		aliasExit := aliasApp.Run([]string{"tick", "-V"})
+
+		var subStdout, subStderr bytes.Buffer
+		subApp := &App{
+			Stdout: &subStdout,
+			Stderr: &subStderr,
+			Getwd:  func() (string, error) { return dir, nil },
+		}
+		subExit := subApp.Run([]string{"tick", "version"})
+
+		if aliasExit != 0 {
+			t.Errorf("-V exit code = %d, want 0", aliasExit)
+		}
+		if subExit != 0 {
+			t.Errorf("version subcommand exit code = %d, want 0", subExit)
+		}
+		if !bytes.Equal(aliasStdout.Bytes(), subStdout.Bytes()) {
+			t.Errorf("-V stdout = %q, want %q (matching version subcommand)", aliasStdout.String(), subStdout.String())
+		}
+		if aliasStderr.Len() != 0 {
+			t.Errorf("-V stderr should be empty, got %q", aliasStderr.String())
+		}
+		expected := "tick version " + Version + "\n"
+		if aliasStdout.String() != expected {
+			t.Errorf("-V stdout = %q, want %q", aliasStdout.String(), expected)
+		}
+	})
+
 	t.Run("it short-circuits before subcommand dispatch when combined with other flags", func(t *testing.T) {
 		dir := t.TempDir()
 		var stdout, stderr bytes.Buffer

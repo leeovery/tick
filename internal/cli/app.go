@@ -415,7 +415,7 @@ func applyGlobalFlag(flags *globalFlags, arg string) bool {
 		flags.json = true
 	case "--help", "-h":
 		flags.help = true
-	case "--version":
+	case "--version", "-V":
 		flags.version = true
 	default:
 		return false
