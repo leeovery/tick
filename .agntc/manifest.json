@@ -1,8 +1,7 @@
 {
   "leeovery/agentic-workflows": {
-    "ref": "v0.4.22",
-    "commit": "dc9338536a7d9147331016c1614899a513932365",
-    "installedAt": "2026-06-04T10:43:04.639Z",
+    "ref": "v0.5.10",
+    "commit": "1c2e89650ff8234bc5550bd36f24ef41f20d25f9",
     "agents": [
       "claude"
     ],
@@ -234,6 +233,8 @@
       ".claude/skills/workflow-migrate/scripts/migrations/040-rename-inception-to-discovery.sh",
       ".claude/skills/workflow-migrate/scripts/migrations/041-split-analysis-cycle-counter.sh",
       ".claude/skills/workflow-migrate/scripts/migrations/042-allow-workflows-writes.sh",
+      ".claude/skills/workflow-migrate/scripts/migrations/043-handled-umbrellas-and-restamp-caches.sh",
+      ".claude/skills/workflow-migrate/scripts/migrations/044-allow-workflows-mv.sh",
       ".claude/skills/workflow-planning-entry/",
       ".claude/skills/workflow-planning-entry/SKILL.md",
       ".claude/skills/workflow-planning-entry/references/",
@@ -352,15 +353,20 @@
       ".claude/skills/workflow-scoping-process/references/write-tasks.md",
       ".claude/skills/workflow-shared/",
       ".claude/skills/workflow-shared/references/",
+      ".claude/skills/workflow-shared/references/analysis-approval-gate.md",
       ".claude/skills/workflow-shared/references/background-agent-surfacing.md",
       ".claude/skills/workflow-shared/references/casing-conventions.md",
       ".claude/skills/workflow-shared/references/compliance-check.md",
       ".claude/skills/workflow-shared/references/convergence-analysis.md",
+      ".claude/skills/workflow-shared/references/create-discovery-topic.md",
       ".claude/skills/workflow-shared/references/discovery-gap-analysis.md",
+      ".claude/skills/workflow-shared/references/drain-triage.md",
       ".claude/skills/workflow-shared/references/ensure-discovery-item.md",
       ".claude/skills/workflow-shared/references/final-review-menu.md",
       ".claude/skills/workflow-shared/references/natural-breaks.md",
+      ".claude/skills/workflow-shared/references/pivot-to-epic.md",
       ".claude/skills/workflow-shared/references/research-analysis.md",
+      ".claude/skills/workflow-shared/references/resume-detection.md",
       ".claude/skills/workflow-shared/references/routing-decision.md",
       ".claude/skills/workflow-shared/references/seed-context.md",
       ".claude/skills/workflow-shared/references/sequence-discovery-map.md",
@@ -368,6 +374,7 @@
       ".claude/skills/workflow-shared/references/topic-discovery.md",
       ".claude/skills/workflow-shared/references/topic-granularity.md",
       ".claude/skills/workflow-shared/references/topic-name-validation.md",
+      ".claude/skills/workflow-shared/references/triage-landing.md",
       ".claude/skills/workflow-shared/scripts/",
       ".claude/skills/workflow-shared/scripts/discovery-utils.cjs",
       ".claude/skills/workflow-specification-entry/",
@@ -382,6 +389,7 @@
       ".claude/skills/workflow-specification-entry/references/confirm-unify.md",
       ".claude/skills/workflow-specification-entry/references/display-analyze.md",
       ".claude/skills/workflow-specification-entry/references/display-blocks.md",
+      ".claude/skills/workflow-specification-entry/references/display-completed-specs.md",
       ".claude/skills/workflow-specification-entry/references/display-groupings.md",
       ".claude/skills/workflow-specification-entry/references/display-single-grouped.md",
       ".claude/skills/workflow-specification-entry/references/display-single-has-spec.md",
@@ -456,9 +464,10 @@
       ".claude/agents/workflow-specification-review-gap-analysis.md",
       ".claude/agents/workflow-specification-review-input.md"
     ],
+    "type": "plugin",
     "cloneUrl": "https://github.com/leeovery/agentic-workflows.git",
-    "constraint": "^0.4.14",
-    "type": "plugin"
+    "installedAt": "2026-06-14T17:42:14.547Z",
+    "constraint": "^0.5.10"
   },
   "samber/cc-skills-golang": {
     "ref": "v1.5.1",
