@@ -469,6 +469,38 @@
         "exploration": {
           "status": "completed"
         }
+      },
+      "analysis_cache": {
+        "checksum": "df242d3afab27dc11f98b42a4ec51352",
+        "generated": "2026-06-14T17:42:49.023Z",
+        "files": [
+          "exploration.md"
+        ]
+      }
+    },
+    "discovery": {
+      "gap_analysis_cache": {
+        "checksum": "e23e78fd8672fe94fff23920da666f93",
+        "generated": "2026-06-14T17:42:49.023Z",
+        "input_files": [
+          "archive-strategy-implementation.md",
+          "blocked-ancestor-ready.md",
+          "cli-command-structure-ux.md",
+          "config-file-design.md",
+          "data-schema-design.md",
+          "doctor-command-validation.md",
+          "exploration.md",
+          "freshness-dual-write.md",
+          "hierarchy-dependency-model.md",
+          "id-format-implementation.md",
+          "installation-options.md",
+          "migration-subcommand.md",
+          "project-fundamentals.md",
+          "task-removal.md",
+          "task-scoping-by-plan.md",
+          "toon-output-format.md",
+          "tui.md"
+        ]
       }
     }
   },
