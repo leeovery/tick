@@ -11,6 +11,32 @@
           "status": "completed"
         }
       }
+    },
+    "planning": {
+      "items": {
+        "increase-note-char-limit": {
+          "status": "completed",
+          "format": "tick",
+          "spec_commit": "20fed6027b2eb9f493e21328e21466b0de2c9d52",
+          "task_list_gate_mode": "auto",
+          "author_gate_mode": "auto",
+          "finding_gate_mode": "auto",
+          "review_cycle": 0,
+          "phase": 1,
+          "task": "~",
+          "task_map": {
+            "increase-note-char-limit-1-1": "tick-78ed02"
+          },
+          "external_id": "tick-eb9595"
+        }
+      }
+    },
+    "scoping": {
+      "items": {
+        "increase-note-char-limit": {
+          "status": "completed"
+        }
+      }
     }
   }
 }
