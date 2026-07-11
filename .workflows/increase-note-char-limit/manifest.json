@@ -4,5 +4,13 @@
   "status": "in-progress",
   "created": "2026-07-11",
   "description": "Increase note text character limit from 500 to 2000",
-  "phases": {}
+  "phases": {
+    "specification": {
+      "items": {
+        "increase-note-char-limit": {
+          "status": "completed"
+        }
+      }
+    }
+  }
 }

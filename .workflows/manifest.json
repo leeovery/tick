@@ -35,6 +35,9 @@
     },
     "version-flag-help-and-alias": {
       "work_type": "quick-fix"
+    },
+    "increase-note-char-limit": {
+      "work_type": "quick-fix"
     }
   },
   "defaults": {
