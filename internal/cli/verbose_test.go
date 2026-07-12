@@ -91,7 +91,7 @@ func TestVerboseLogger(t *testing.T) {
 		if stderrStr == "" {
 			t.Error("stderr should contain verbose output when --verbose is set")
 		}
-		for _, line := range strings.Split(strings.TrimSpace(stderrStr), "\n") {
+		for line := range strings.SplitSeq(strings.TrimSpace(stderrStr), "\n") {
 			if !strings.HasPrefix(line, "verbose: ") {
 				t.Errorf("verbose line %q does not have 'verbose: ' prefix", line)
 			}
@@ -129,7 +129,7 @@ func TestVerboseLogger(t *testing.T) {
 				if stderrStr == "" {
 					t.Errorf("stderr should contain verbose output with %s flag", flag)
 				}
-				for _, line := range strings.Split(strings.TrimSpace(stderrStr), "\n") {
+				for line := range strings.SplitSeq(strings.TrimSpace(stderrStr), "\n") {
 					if !strings.HasPrefix(line, "verbose: ") {
 						t.Errorf("verbose line %q does not have 'verbose: ' prefix", line)
 					}
@@ -209,7 +209,7 @@ func TestVerboseLogger(t *testing.T) {
 		vl.Log("test message 2")
 		vl.Log("test message 3")
 
-		for _, line := range strings.Split(strings.TrimSpace(stderr.String()), "\n") {
+		for line := range strings.SplitSeq(strings.TrimSpace(stderr.String()), "\n") {
 			if !strings.HasPrefix(line, "verbose: ") {
 				t.Errorf("line %q missing 'verbose: ' prefix", line)
 			}

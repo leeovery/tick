@@ -75,9 +75,8 @@ func parseListFlags(args []string) (ListFilter, error) {
 				return f, fmt.Errorf("--tag requires a value")
 			}
 			i++
-			parts := strings.Split(args[i], ",")
 			var group []string
-			for _, p := range parts {
+			for p := range strings.SplitSeq(args[i], ",") {
 				normalized := task.NormalizeTag(p)
 				if normalized == "" {
 					continue

@@ -445,7 +445,7 @@ func TestJSONFormatter(t *testing.T) {
 		if len(byPriority) != 5 {
 			t.Fatalf("by_priority length = %d, want 5", len(byPriority))
 		}
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			entry := byPriority[i].(map[string]any)
 			if entry["priority"] != float64(i) {
 				t.Errorf("by_priority[%d].priority = %v, want %v", i, entry["priority"], i)

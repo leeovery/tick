@@ -194,7 +194,7 @@ type jsonStats struct {
 // by_priority always contains 5 entries (P0-P4), even when counts are zero.
 func (f *JSONFormatter) FormatStats(stats Stats) string {
 	priorities := make([]jsonPriorityEntry, 5)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		priorities[i] = jsonPriorityEntry{
 			Priority: i,
 			Count:    stats.ByPriority[i],

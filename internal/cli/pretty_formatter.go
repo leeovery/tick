@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"fmt"
 	"io"
 	"strings"
@@ -173,8 +174,8 @@ func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
 
 	if t.Description != "" {
 		b.WriteString("\n\nDescription:")
-		lines := strings.Split(t.Description, "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(t.Description, "\n")
+		for line := range lines {
 			fmt.Fprintf(&b, "\n  %s", line)
 		}
 	}
@@ -392,10 +393,7 @@ func truncateDepTreeTitle(title string, depth int) string {
 	// Overhead: prefix (depth*4) + ID (~11 chars "tick-XXXXXX") + 2 spaces + " (" + status (~11 chars max "in_progress") + ")"
 	// = depth*4 + 11 + 2 + 2 + 11 + 1 = depth*4 + 27
 	overhead := depth*4 + 27
-	available := depTreeLineWidth - overhead
-	if available < depTreeMinTitle {
-		available = depTreeMinTitle
-	}
+	available := max(depTreeLineWidth-overhead, depTreeMinTitle)
 	if len(title) <= available {
 		return title
 	}
@@ -407,10 +405,7 @@ func truncateDepTreeTitle(title string, depth int) string {
 
 // typeOrDash returns the type string or "-" if empty, for Pretty formatter display.
 func typeOrDash(typ string) string {
-	if typ == "" {
-		return "-"
-	}
-	return typ
+	return cmp.Or(typ, "-")
 }
 
 // truncateTitle truncates a title to maxListTitleLen characters, appending "..." if truncated.

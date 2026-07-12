@@ -239,7 +239,7 @@ func TestStats(t *testing.T) {
 		if len(byPriority) != 5 {
 			t.Fatalf("by_priority length = %d, want 5", len(byPriority))
 		}
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			entry := byPriority[i].(map[string]any)
 			if entry["count"] != float64(0) {
 				t.Errorf("by_priority[%d].count = %v, want 0", i, entry["count"])

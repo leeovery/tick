@@ -3,6 +3,7 @@ package doctor
 import (
 	"context"
 	"fmt"
+	"slices"
 )
 
 // ChildBlockedByParentCheck validates that no child task has its direct parent
@@ -30,13 +31,7 @@ func (c *ChildBlockedByParentCheck) Run(ctx context.Context, tickDir string) []C
 			continue
 		}
 
-		found := false
-		for _, depID := range task.BlockedBy {
-			if depID == task.Parent {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(task.BlockedBy, task.Parent)
 		if found {
 			failures = append(failures, CheckResult{
 				Name:       "Child blocked by parent",

@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/leeovery/tick/internal/migrate"
@@ -30,9 +30,8 @@ func newMigrateProvider(name string, baseDir string) (migrate.Provider, error) {
 
 // availableProviders returns a sorted list of registered provider names.
 func availableProviders() []string {
-	sorted := make([]string, len(providerNames))
-	copy(sorted, providerNames)
-	sort.Strings(sorted)
+	sorted := slices.Clone(providerNames)
+	slices.Sort(sorted)
 	return sorted
 }
 
@@ -47,16 +46,16 @@ type migrateFlags struct {
 func parseMigrateArgs(args []string) (migrateFlags, error) {
 	var flags migrateFlags
 	for i := 0; i < len(args); i++ {
-		switch {
-		case args[i] == "--from":
+		switch args[i] {
+		case "--from":
 			i++
 			if i >= len(args) {
 				return flags, fmt.Errorf("--from requires a value")
 			}
 			flags.from = args[i]
-		case args[i] == "--dry-run":
+		case "--dry-run":
 			flags.dryRun = true
-		case args[i] == "--pending-only":
+		case "--pending-only":
 			flags.pendingOnly = true
 		}
 	}

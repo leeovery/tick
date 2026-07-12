@@ -2,6 +2,7 @@ package scripts_test
 
 import (
 	"bytes"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,9 +46,9 @@ func runScript(t *testing.T, env map[string]string) (string, error) {
 // the path. Fatals if not found.
 func extractTmpDir(t *testing.T, output string) string {
 	t.Helper()
-	for _, line := range strings.Split(output, "\n") {
-		if strings.HasPrefix(line, "TICK_TMPDIR=") {
-			return strings.TrimPrefix(line, "TICK_TMPDIR=")
+	for line := range strings.SplitSeq(output, "\n") {
+		if after, ok := strings.CutPrefix(line, "TICK_TMPDIR="); ok {
+			return after
 		}
 	}
 	t.Fatal("could not find TICK_TMPDIR in output")
@@ -471,7 +472,7 @@ exit 0
 }
 
 // runScriptWithFakeBrew runs install.sh with a fake brew on PATH and Darwin uname.
-func runScriptWithFakeBrew(t *testing.T, brewBehavior string, extraEnv map[string]string) (string, error, string) {
+func runScriptWithFakeBrew(t *testing.T, brewBehavior string, extraEnv map[string]string) (string, string, error) {
 	t.Helper()
 	brewDir, logFile := createFakeBrew(t, brewBehavior)
 
@@ -480,12 +481,10 @@ func runScriptWithFakeBrew(t *testing.T, brewBehavior string, extraEnv map[strin
 		"TICK_TEST_MODE":    "install_macos",
 		"PATH":              brewDir + ":/usr/bin:/bin",
 	}
-	for k, v := range extraEnv {
-		env[k] = v
-	}
+	maps.Copy(env, extraEnv)
 
 	out, err := runScript(t, env)
-	return out, err, logFile
+	return out, logFile, err
 }
 
 // createFakeTarball creates a tar.gz containing a fake tick binary with the
@@ -643,7 +642,7 @@ func TestFullInstallFlow(t *testing.T) {
 
 func TestMacOSInstall(t *testing.T) {
 	t.Run("it runs brew install leeovery/tools/tick when brew is available on macOS", func(t *testing.T) {
-		out, err, logFile := runScriptWithFakeBrew(t, "success", nil)
+		out, logFile, err := runScriptWithFakeBrew(t, "success", nil)
 		if err != nil {
 			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
 		}
@@ -659,14 +658,14 @@ func TestMacOSInstall(t *testing.T) {
 	})
 
 	t.Run("it exits 0 on successful Homebrew install", func(t *testing.T) {
-		_, err, _ := runScriptWithFakeBrew(t, "success", nil)
+		_, _, err := runScriptWithFakeBrew(t, "success", nil)
 		if err != nil {
 			t.Fatalf("expected exit 0 on successful brew install, got error: %v", err)
 		}
 	})
 
 	t.Run("it prints a success message after Homebrew install", func(t *testing.T) {
-		out, err, _ := runScriptWithFakeBrew(t, "success", nil)
+		out, _, err := runScriptWithFakeBrew(t, "success", nil)
 		if err != nil {
 			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
 		}
@@ -676,7 +675,7 @@ func TestMacOSInstall(t *testing.T) {
 	})
 
 	t.Run("it propagates exit code when brew install fails", func(t *testing.T) {
-		out, err, _ := runScriptWithFakeBrew(t, "install-fail", nil)
+		out, _, err := runScriptWithFakeBrew(t, "install-fail", nil)
 		if err == nil {
 			t.Fatal("expected non-zero exit when brew install fails, got success")
 		}
@@ -686,7 +685,7 @@ func TestMacOSInstall(t *testing.T) {
 	})
 
 	t.Run("it does not run Linux download logic on macOS", func(t *testing.T) {
-		out, err, _ := runScriptWithFakeBrew(t, "success", nil)
+		out, _, err := runScriptWithFakeBrew(t, "success", nil)
 		if err != nil {
 			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
 		}
@@ -697,7 +696,7 @@ func TestMacOSInstall(t *testing.T) {
 	})
 
 	t.Run("it does not suppress brew output", func(t *testing.T) {
-		out, err, _ := runScriptWithFakeBrew(t, "success", nil)
+		out, _, err := runScriptWithFakeBrew(t, "success", nil)
 		if err != nil {
 			t.Fatalf("expected success, got error: %v\noutput: %s", err, out)
 		}
@@ -707,7 +706,7 @@ func TestMacOSInstall(t *testing.T) {
 	})
 
 	t.Run("it handles tick already installed via Homebrew (idempotent)", func(t *testing.T) {
-		out, err, _ := runScriptWithFakeBrew(t, "already-installed", nil)
+		out, _, err := runScriptWithFakeBrew(t, "already-installed", nil)
 		if err != nil {
 			t.Fatalf("expected success when tick already installed, got error: %v\noutput: %s", err, out)
 		}
@@ -839,8 +838,8 @@ func TestErrorHandlingHardening(t *testing.T) {
 	t.Run("curl uses -f flag for version resolution API call", func(t *testing.T) {
 		content := loadScript(t)
 		// Find the curl call in resolve_version
-		lines := strings.Split(content, "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(content, "\n")
+		for line := range lines {
 			if strings.Contains(line, "curl") && strings.Contains(line, "GITHUB_API") {
 				if !strings.Contains(line, "-f") {
 					t.Errorf("curl call for version resolution must use -f flag: %q", line)
@@ -853,8 +852,8 @@ func TestErrorHandlingHardening(t *testing.T) {
 
 	t.Run("curl uses -f flag for archive download", func(t *testing.T) {
 		content := loadScript(t)
-		lines := strings.Split(content, "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(content, "\n")
+		for line := range lines {
 			if strings.Contains(line, "curl") && strings.Contains(line, "BINARY_NAME") && strings.Contains(line, "tar.gz") {
 				if !strings.Contains(line, "-f") {
 					t.Errorf("curl call for archive download must use -f flag: %q", line)

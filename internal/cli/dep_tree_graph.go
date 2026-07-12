@@ -104,17 +104,11 @@ func walkUpstream(id string, taskIdx map[string]task.Task, ancestors map[string]
 
 // longestPath computes the longest path (in edges) from a root node downward.
 func longestPath(node DepTreeNode) int {
-	if len(node.Children) == 0 {
-		return 0
-	}
-	max := 0
+	deepest := 0
 	for _, child := range node.Children {
-		depth := 1 + longestPath(child)
-		if depth > max {
-			max = depth
-		}
+		deepest = max(deepest, 1+longestPath(child))
 	}
-	return max
+	return deepest
 }
 
 // BuildFullDepTree builds a dependency tree for all tasks that participate in dependencies.
@@ -168,10 +162,7 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 	// Compute longest path across all roots
 	longest := 0
 	for _, root := range roots {
-		depth := longestPath(root)
-		if depth > longest {
-			longest = depth
-		}
+		longest = max(longest, longestPath(root))
 	}
 
 	// Build summary

@@ -1,9 +1,6 @@
 package doctor
 
-import (
-	"context"
-	"testing"
-)
+import "testing"
 
 func TestParentDoneWithOpenChildrenCheck(t *testing.T) {
 	t.Run("it returns passing result when no parent is done with open children", func(t *testing.T) {
@@ -478,7 +475,7 @@ func TestParentDoneWithOpenChildrenCheck(t *testing.T) {
 		runner := NewDiagnosticRunner()
 		runner.Register(&ParentDoneWithOpenChildrenCheck{})
 
-		report := runner.RunAll(context.Background(), tickDir)
+		report := runner.RunAll(t.Context(), tickDir)
 
 		if report.HasErrors() {
 			t.Error("expected HasErrors false for warnings-only report")

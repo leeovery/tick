@@ -1,6 +1,6 @@
 module github.com/leeovery/tick
 
-go 1.25.7
+go 1.26
 
 require (
 	github.com/gofrs/flock v0.13.0

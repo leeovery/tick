@@ -578,8 +578,8 @@ func TestRunMigrateFailureDetail(t *testing.T) {
 			name: "test",
 			tasks: []migrate.MigratedTask{
 				{Title: "Good task", Status: task.StatusOpen},
-				{Title: "", Status: task.StatusOpen},                                   // empty title — will fail validation
-				{Title: "Bad priority", Status: task.StatusOpen, Priority: intPtr(99)}, // invalid priority
+				{Title: "", Status: task.StatusOpen},                                // empty title — will fail validation
+				{Title: "Bad priority", Status: task.StatusOpen, Priority: new(99)}, // invalid priority
 			},
 		}
 
@@ -642,8 +642,6 @@ func TestRunMigrateFailureDetail(t *testing.T) {
 		}
 	})
 }
-
-func intPtr(v int) *int { return &v }
 
 // setupBeadsFixture creates a .beads/issues.jsonl file in the given directory.
 func setupBeadsFixture(t *testing.T, dir string, content string) {

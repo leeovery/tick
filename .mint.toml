@@ -12,5 +12,5 @@
 diff_exclude = [".tick", ".workflows", ".claude", ".agntc", "CLAUDE.md", "go.sum", "analysis"]
 
 [release.hooks]
-# Gate the tag on a clean vet + test run; failure aborts before the point of no return.
-pre_tag = ["go vet ./...", "go test ./..."]
+# Gate the tag on a clean vet + lint + test run; failure aborts before the point of no return.
+pre_tag = ["go vet ./...", "golangci-lint run ./...", "go test ./..."]

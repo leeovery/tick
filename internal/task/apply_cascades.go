@@ -1,6 +1,9 @@
 package task
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // ApplyUserTransition applies a user-initiated transition to target and processes all
 // resulting cascades. The primary target's TransitionRecord is recorded with Auto: false
@@ -67,8 +70,7 @@ func (sm StateMachine) applyWithCascades(tasks []Task, target *Task, action stri
 	initialCascades := sm.Cascades(tasks, targetInSlice, action)
 
 	// Step 4: Initialize queue, seen-map, and results.
-	queue := make([]CascadeChange, len(initialCascades))
-	copy(queue, initialCascades)
+	queue := slices.Clone(initialCascades)
 
 	seen := make(map[string]bool)
 	seen[NormalizeID(target.ID)] = true

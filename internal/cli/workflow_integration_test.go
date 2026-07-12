@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -199,10 +200,8 @@ func parseQuietIDs(stdout string) []string {
 // assertContains checks that the ID appears in the list.
 func assertContains(t *testing.T, ids []string, id string, msg string) {
 	t.Helper()
-	for _, v := range ids {
-		if v == id {
-			return
-		}
+	if slices.Contains(ids, id) {
+		return
 	}
 	t.Errorf("%s: %s not found in %v", msg, id, ids)
 }
@@ -210,10 +209,8 @@ func assertContains(t *testing.T, ids []string, id string, msg string) {
 // assertNotContains checks that the ID does NOT appear in the list.
 func assertNotContains(t *testing.T, ids []string, id string, msg string) {
 	t.Helper()
-	for _, v := range ids {
-		if v == id {
-			t.Errorf("%s: %s should not be in %v", msg, id, ids)
-			return
-		}
+	if slices.Contains(ids, id) {
+		t.Errorf("%s: %s should not be in %v", msg, id, ids)
+		return
 	}
 }

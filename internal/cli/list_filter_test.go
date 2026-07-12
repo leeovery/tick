@@ -49,8 +49,8 @@ func TestListFilter(t *testing.T) {
 			t.Error("blocked task should appear with --blocked flag")
 		}
 		// The blocker itself is NOT blocked
-		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(strings.TrimRight(stdout, "\n"), "\n")
+		for line := range lines {
 			if strings.HasPrefix(line, "tick-blk111") {
 				t.Error("unblocked task should not appear with --blocked flag")
 			}

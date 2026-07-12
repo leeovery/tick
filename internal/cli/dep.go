@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"slices"
 	"time"
 
 	"github.com/leeovery/tick/internal/task"
@@ -98,10 +99,8 @@ func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		}
 
 		// Check duplicate.
-		for _, dep := range tasks[taskIdx].BlockedBy {
-			if dep == blockedByID {
-				return nil, fmt.Errorf("dependency already exists: %s is already blocked by %s", taskID, blockedByID)
-			}
+		if slices.Contains(tasks[taskIdx].BlockedBy, blockedByID) {
+			return nil, fmt.Errorf("dependency already exists: %s is already blocked by %s", taskID, blockedByID)
 		}
 
 		// Validate dependency (self-ref, cycle, child-blocked-by-parent, cancelled blocker).

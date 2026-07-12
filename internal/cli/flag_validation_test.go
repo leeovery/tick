@@ -336,8 +336,8 @@ func TestCommandFlagsMatchHelp(t *testing.T) {
 		// Name field may be "--force, -f" — split on ", " and keep long forms.
 		flagsFromHelp := make(map[string]bool)
 		for _, fi := range info.Flags {
-			parts := strings.Split(fi.Name, ", ")
-			for _, p := range parts {
+			parts := strings.SplitSeq(fi.Name, ", ")
+			for p := range parts {
 				if strings.HasPrefix(p, "--") {
 					flagsFromHelp[p] = true
 				}

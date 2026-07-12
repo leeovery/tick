@@ -3,6 +3,7 @@ package doctor
 import (
 	"context"
 	"fmt"
+	"slices"
 )
 
 // SelfReferentialDepCheck validates that no task's blocked_by list contains the
@@ -22,13 +23,7 @@ func (c *SelfReferentialDepCheck) Run(ctx context.Context, tickDir string) []Che
 
 	var failures []CheckResult
 	for _, task := range tasks {
-		selfRef := false
-		for _, depID := range task.BlockedBy {
-			if depID == task.ID {
-				selfRef = true
-				break
-			}
-		}
+		selfRef := slices.Contains(task.BlockedBy, task.ID)
 		if selfRef {
 			failures = append(failures, CheckResult{
 				Name:       "Self-referential dependencies",

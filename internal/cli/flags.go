@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 )
 
@@ -100,9 +101,7 @@ func init() {
 // copyFlagsExcept returns a shallow copy of source with the excluded keys removed.
 func copyFlagsExcept(source map[string]FlagDef, exclude ...string) map[string]FlagDef {
 	result := make(map[string]FlagDef, len(source))
-	for k, v := range source {
-		result[k] = v
-	}
+	maps.Copy(result, source)
 	for _, e := range exclude {
 		delete(result, e)
 	}
@@ -152,8 +151,8 @@ func ValidateFlags(command string, args []string, flags CommandFlags) error {
 // For two-level commands (containing a space), it returns the parent command.
 // For single-level commands, it returns the command itself.
 func helpCommand(command string) string {
-	if idx := strings.Index(command, " "); idx >= 0 {
-		return command[:idx]
+	if before, _, ok := strings.Cut(command, " "); ok {
+		return before
 	}
 	return command
 }

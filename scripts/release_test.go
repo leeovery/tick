@@ -74,8 +74,8 @@ func matchesGitHubActionsPattern(pattern, tag string) bool {
 
 func matchPattern(pattern, text string, pi, ti int) bool {
 	for pi < len(pattern) && ti < len(text) {
-		switch {
-		case pattern[pi] == '*':
+		switch pattern[pi] {
+		case '*':
 			if pi+1 < len(pattern) && pattern[pi+1] == '*' {
 				// ** matches everything including /
 				pi += 2
@@ -98,13 +98,13 @@ func matchPattern(pattern, text string, pi, ti int) bool {
 				}
 			}
 			return false
-		case pattern[pi] == '?':
+		case '?':
 			if text[ti] == '/' {
 				return false
 			}
 			pi++
 			ti++
-		case pattern[pi] == '[':
+		case '[':
 			// Character class.
 			pi++ // skip [
 			negate := false

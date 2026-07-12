@@ -474,7 +474,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 
 	t.Run("it returns failing result when tick directory is empty string", func(t *testing.T) {
 		check := &CacheStalenessCheck{}
-		results := check.Run(context.Background(), "")
+		results := check.Run(t.Context(), "")
 
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result, got %d", len(results))

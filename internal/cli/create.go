@@ -34,8 +34,8 @@ func parseCreateArgs(args []string) (createOpts, error) {
 	i := 0
 	for i < len(args) {
 		arg := args[i]
-		switch {
-		case arg == "--priority":
+		switch arg {
+		case "--priority":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--priority requires a value")
@@ -45,45 +45,45 @@ func parseCreateArgs(args []string) (createOpts, error) {
 				return opts, fmt.Errorf("--priority must be an integer, got %q", args[i])
 			}
 			opts.priority = p
-		case arg == "--description":
+		case "--description":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--description requires a value")
 			}
 			opts.description = args[i]
-		case arg == "--blocked-by":
+		case "--blocked-by":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--blocked-by requires a value")
 			}
 			opts.blockedBy = parseCommaSeparatedIDs(args[i])
-		case arg == "--blocks":
+		case "--blocks":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--blocks requires a value")
 			}
 			opts.blocks = parseCommaSeparatedIDs(args[i])
-		case arg == "--parent":
+		case "--parent":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--parent requires a value")
 			}
 			opts.parent = strings.ToLower(strings.TrimSpace(args[i]))
-		case arg == "--type":
+		case "--type":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--type requires a value")
 			}
 			opts.taskType = args[i]
 			opts.hasType = true
-		case arg == "--tags":
+		case "--tags":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--tags requires a value")
 			}
 			opts.tags = strings.Split(args[i], ",")
 			opts.hasTags = true
-		case arg == "--refs":
+		case "--refs":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--refs requires a value")

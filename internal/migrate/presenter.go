@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"cmp"
 	"fmt"
 	"io"
 )
@@ -23,10 +24,7 @@ func WriteResult(w io.Writer, r Result) {
 		fmt.Fprintf(w, "  \u2713 Task: %s\n", r.Title)
 		return
 	}
-	title := r.Title
-	if title == "" {
-		title = FallbackTitle
-	}
+	title := cmp.Or(r.Title, FallbackTitle)
 	fmt.Fprintf(w, "  \u2717 Task: %s (skipped: %s)\n", title, r.Err.Error())
 }
 
@@ -60,10 +58,7 @@ func WriteFailures(w io.Writer, results []Result) {
 	}
 	fmt.Fprintf(w, "\nFailures:\n")
 	for _, r := range failures {
-		title := r.Title
-		if title == "" {
-			title = FallbackTitle
-		}
+		title := cmp.Or(r.Title, FallbackTitle)
 		fmt.Fprintf(w, "- Task %q: %s\n", title, r.Err.Error())
 	}
 }

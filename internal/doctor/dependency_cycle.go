@@ -1,9 +1,11 @@
 package doctor
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -61,7 +63,8 @@ func (c *DependencyCycleCheck) Run(ctx context.Context, tickDir string) []CheckR
 		path = append(path, node)
 
 		for _, neighbor := range adj[node] {
-			if color[neighbor] == gray {
+			switch color[neighbor] {
+			case gray:
 				// Found a cycle. Extract it from the path.
 				cycle := extractCycle(path, neighbor)
 				normalized := normalizeCycle(cycle)
@@ -70,7 +73,7 @@ func (c *DependencyCycleCheck) Run(ctx context.Context, tickDir string) []CheckR
 					seen[key] = struct{}{}
 					cycles = append(cycles, normalized)
 				}
-			} else if color[neighbor] == white {
+			case white:
 				dfs(neighbor)
 			}
 		}
@@ -80,11 +83,7 @@ func (c *DependencyCycleCheck) Run(ctx context.Context, tickDir string) []CheckR
 	}
 
 	// Iterate in sorted order for determinism.
-	sortedIDs := make([]string, 0, len(knownIDs))
-	for id := range knownIDs {
-		sortedIDs = append(sortedIDs, id)
-	}
-	sort.Strings(sortedIDs)
+	sortedIDs := slices.Sorted(maps.Keys(knownIDs))
 
 	for _, id := range sortedIDs {
 		if color[id] == white {
@@ -100,8 +99,8 @@ func (c *DependencyCycleCheck) Run(ctx context.Context, tickDir string) []CheckR
 	}
 
 	// Sort cycles for deterministic output.
-	sort.Slice(cycles, func(i, j int) bool {
-		return strings.Join(cycles[i], ",") < strings.Join(cycles[j], ",")
+	slices.SortFunc(cycles, func(a, b []string) int {
+		return cmp.Compare(strings.Join(a, ","), strings.Join(b, ","))
 	})
 
 	var results []CheckResult

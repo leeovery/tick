@@ -2,6 +2,7 @@ package cli
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -74,7 +75,7 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 			`SELECT id, title, status, priority, type, description, parent, created, updated, closed FROM tasks WHERE id = ?`,
 			id,
 		).Scan(&data.id, &data.title, &data.status, &data.priority, &typePtr, &descPtr, &parentPtr, &data.created, &data.updated, &closedPtr)
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("task '%s' not found", id)
 		}
 		if err != nil {

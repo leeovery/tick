@@ -1,5 +1,7 @@
 package task
 
+import "slices"
+
 // TransitionResult holds the old and new status after a successful transition,
 // enabling the caller to format output like "tick-a3f2b7: open -> in_progress".
 type TransitionResult struct {
@@ -24,10 +26,5 @@ func Transition(t *Task, command string) (TransitionResult, error) {
 
 // statusIn checks whether s is contained in the given slice of statuses.
 func statusIn(s Status, statuses []Status) bool {
-	for _, v := range statuses {
-		if s == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(statuses, s)
 }

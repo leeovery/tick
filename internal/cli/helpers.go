@@ -43,9 +43,8 @@ func openStore(dir string, fc FormatConfig) (*storage.Store, error) {
 // trims whitespace, lowercases, and filters empty values.
 // Does not normalize to full IDs — callers resolve via store.ResolveID.
 func parseCommaSeparatedIDs(s string) []string {
-	parts := strings.Split(s, ",")
 	var ids []string
-	for _, part := range parts {
+	for part := range strings.SplitSeq(s, ",") {
 		trimmed := strings.ToLower(strings.TrimSpace(part))
 		if trimmed != "" {
 			ids = append(ids, trimmed)

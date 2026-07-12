@@ -21,6 +21,7 @@ go test ./internal/storage -count=1    # no cache
 # Lint
 go vet ./...
 gofmt -w ./internal ./cmd
+golangci-lint run ./...   # config in .golangci.yml (standard set + modernize)
 ```
 
 ## Architecture

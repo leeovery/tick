@@ -130,8 +130,7 @@ func mapToMigratedTask(issue beadsIssue) migrate.MigratedTask {
 	}
 
 	if issue.Priority != nil {
-		p := *issue.Priority
-		mt.Priority = &p
+		mt.Priority = new(*issue.Priority)
 	}
 
 	return mt

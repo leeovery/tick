@@ -58,8 +58,8 @@ func writeAtomic(path string, data []byte) error {
 	success := false
 	defer func() {
 		if !success {
-			tmp.Close()
-			os.Remove(tmpPath)
+			_ = tmp.Close()
+			_ = os.Remove(tmpPath)
 		}
 	}()
 

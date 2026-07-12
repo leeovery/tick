@@ -493,8 +493,6 @@ not valid json
 	})
 }
 
-func intPtr(v int) *int { return &v }
-
 func TestMapToMigratedTask(t *testing.T) {
 	t.Run("mapToMigratedTask produces valid MigratedTask from fully populated beadsIssue", func(t *testing.T) {
 		issue := beadsIssue{
@@ -502,7 +500,7 @@ func TestMapToMigratedTask(t *testing.T) {
 			Title:        "Implement login flow",
 			Description:  "Full markdown description",
 			Status:       "closed",
-			Priority:     intPtr(3),
+			Priority:     new(3),
 			IssueType:    "epic",
 			CreatedAt:    "2026-01-10T09:00:00Z",
 			UpdatedAt:    "2026-01-12T14:00:00Z",
@@ -551,7 +549,7 @@ func TestMapToMigratedTask(t *testing.T) {
 			ID:       "b-001",
 			Title:    "",
 			Status:   "pending",
-			Priority: intPtr(0),
+			Priority: new(0),
 		}
 
 		tk := mapToMigratedTask(issue)

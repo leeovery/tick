@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"cmp"
 	"time"
 
 	"github.com/leeovery/tick/internal/task"
@@ -49,10 +50,7 @@ func (c *StoreTaskCreator) CreateTask(mt MigratedTask) (string, error) {
 		generatedID = id
 
 		// Apply defaults.
-		status := mt.Status
-		if mt.Status == "" {
-			status = task.StatusOpen
-		}
+		status := cmp.Or(mt.Status, task.StatusOpen)
 
 		priority := 2
 		if mt.Priority != nil {

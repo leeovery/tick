@@ -127,7 +127,7 @@ func (f *ToonFormatter) FormatStats(stats Stats) string {
 
 	// Section 2: by_priority (always 5 rows, 0-4)
 	rows := make([]toonPriorityRow, 5)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		rows[i] = toonPriorityRow{Priority: i, Count: stats.ByPriority[i]}
 	}
 	sections = append(sections, encodeToonSection("by_priority", rows))
@@ -346,8 +346,8 @@ func buildNotesSection(notes []task.Note) string {
 func buildDescriptionSection(desc string) string {
 	var b strings.Builder
 	b.WriteString("description:")
-	lines := strings.Split(desc, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(desc, "\n")
+	for line := range lines {
 		b.WriteString("\n  ")
 		b.WriteString(line)
 	}

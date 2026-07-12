@@ -1,0 +1,8 @@
+# Ignored modernization suggestions
+# Format: <date> <category> <description>
+2026-07-12 ci-pipeline Not interested in CI/workflows for now (test/lint workflow, govulncheck in CI, Dependabot/Renovate, checkout@v5 bump)
+2026-07-12 slog-migration Keep log.Printf warnings in storage/store.go — plain stderr output is intentional for a CLI
+2026-07-12 t-context-helper ctxWithTickDir left returning context.Background() — ~250 call sites, checks ignore ctx; churn not worth it
+2026-07-12 t-parallel t.Parallel() adoption deferred; tests are parallel-safe candidates if suite gets slow
+2026-07-12 crypto-rand-err Kept err check on crypto/rand.Read (never errors since Go 1.24) — defensive and errcheck-friendly
+2026-07-12 context-timeout-cause WithTimeoutCause skipped — lock errors replaced with static message, context.Cause never read

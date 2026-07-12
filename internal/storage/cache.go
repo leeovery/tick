@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -270,7 +271,7 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 func (c *Cache) IsFresh(rawJSONL []byte) (bool, error) {
 	var storedHash string
 	err := c.db.QueryRow("SELECT value FROM metadata WHERE key = 'jsonl_hash'").Scan(&storedHash)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
@@ -286,7 +287,7 @@ func (c *Cache) IsFresh(rawJSONL []byte) (bool, error) {
 func (c *Cache) SchemaVersion() (int, error) {
 	var value string
 	err := c.db.QueryRow("SELECT value FROM metadata WHERE key = 'schema_version'").Scan(&value)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}
 	if err != nil {

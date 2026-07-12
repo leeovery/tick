@@ -23,8 +23,8 @@ func parseRemoveArgs(args []string) ([]string, bool) {
 	seen := map[string]bool{}
 
 	for _, arg := range args {
-		switch {
-		case arg == "--force" || arg == "-f":
+		switch arg {
+		case "--force", "-f":
 			force = true
 		default:
 			lower := strings.ToLower(arg)

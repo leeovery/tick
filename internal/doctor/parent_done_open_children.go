@@ -3,7 +3,8 @@ package doctor
 import (
 	"context"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 )
 
 // ParentDoneWithOpenChildrenCheck validates that no parent task marked "done"
@@ -34,11 +35,7 @@ func (c *ParentDoneWithOpenChildrenCheck) Run(ctx context.Context, tickDir strin
 	}
 
 	// Sort parent IDs for deterministic output.
-	parentIDs := make([]string, 0, len(childrenMap))
-	for parentID := range childrenMap {
-		parentIDs = append(parentIDs, parentID)
-	}
-	sort.Strings(parentIDs)
+	parentIDs := slices.Sorted(maps.Keys(childrenMap))
 
 	var failures []CheckResult
 	for _, parentID := range parentIDs {
@@ -51,7 +48,7 @@ func (c *ParentDoneWithOpenChildrenCheck) Run(ctx context.Context, tickDir strin
 		}
 
 		children := childrenMap[parentID]
-		sort.Strings(children)
+		slices.Sort(children)
 
 		for _, childID := range children {
 			childStatus := statusMap[childID]

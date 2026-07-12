@@ -2,7 +2,7 @@ package migrate
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -22,9 +22,8 @@ type UnknownProviderError struct {
 //	  - <provider1>
 //	  - <provider2>
 func (e *UnknownProviderError) Error() string {
-	sorted := make([]string, len(e.Available))
-	copy(sorted, e.Available)
-	sort.Strings(sorted)
+	sorted := slices.Clone(e.Available)
+	slices.Sort(sorted)
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "Unknown provider %q", e.Name)

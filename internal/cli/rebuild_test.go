@@ -278,7 +278,7 @@ func TestRebuild(t *testing.T) {
 		}
 
 		// All verbose lines should be prefixed.
-		for _, line := range strings.Split(strings.TrimSpace(stderr), "\n") {
+		for line := range strings.SplitSeq(strings.TrimSpace(stderr), "\n") {
 			if !strings.HasPrefix(line, "verbose: ") {
 				t.Errorf("verbose line %q does not have 'verbose: ' prefix", line)
 			}

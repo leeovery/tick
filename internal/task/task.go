@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -146,7 +147,7 @@ func (t *Task) UnmarshalJSON(data []byte) error {
 // GenerateID creates a new task ID in the format tick-{6 hex chars} using crypto/rand.
 // The exists function is called to check for collisions; up to 5 retries are attempted.
 func GenerateID(exists func(id string) bool) (string, error) {
-	for attempt := 0; attempt < maxIDRetries; attempt++ {
+	for range maxIDRetries {
 		b := make([]byte, idByteLength)
 		if _, err := rand.Read(b); err != nil {
 			return "", fmt.Errorf("failed to generate random bytes: %w", err)
@@ -239,10 +240,8 @@ func ValidateType(typ string) error {
 	if typ == "" {
 		return nil
 	}
-	for _, a := range allowedTypes {
-		if typ == a {
-			return nil
-		}
+	if slices.Contains(allowedTypes, typ) {
+		return nil
 	}
 	return fmt.Errorf("invalid type %q: must be one of bug, feature, task, chore", typ)
 }

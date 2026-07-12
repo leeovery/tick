@@ -41,22 +41,20 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 	i := 0
 	for i < len(args) {
 		arg := args[i]
-		switch {
-		case arg == "--title":
+		switch arg {
+		case "--title":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--title requires a value")
 			}
-			v := args[i]
-			opts.title = &v
-		case arg == "--description":
+			opts.title = new(args[i])
+		case "--description":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--description requires a value")
 			}
-			v := args[i]
-			opts.description = &v
-		case arg == "--priority":
+			opts.description = new(args[i])
+		case "--priority":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--priority requires a value")
@@ -66,43 +64,39 @@ func parseUpdateArgs(args []string) (updateOpts, error) {
 				return opts, fmt.Errorf("--priority must be an integer, got %q", args[i])
 			}
 			opts.priority = &p
-		case arg == "--parent":
+		case "--parent":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--parent requires a value")
 			}
-			v := strings.ToLower(strings.TrimSpace(args[i]))
-			opts.parent = &v
-		case arg == "--clear-description":
+			opts.parent = new(strings.ToLower(strings.TrimSpace(args[i])))
+		case "--clear-description":
 			opts.clearDescription = true
-		case arg == "--type":
+		case "--type":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--type requires a value")
 			}
-			v := args[i]
-			opts.taskType = &v
-		case arg == "--clear-type":
+			opts.taskType = new(args[i])
+		case "--clear-type":
 			opts.clearType = true
-		case arg == "--tags":
+		case "--tags":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--tags requires a value")
 			}
-			v := strings.Split(args[i], ",")
-			opts.tags = &v
-		case arg == "--clear-tags":
+			opts.tags = new(strings.Split(args[i], ","))
+		case "--clear-tags":
 			opts.clearTags = true
-		case arg == "--refs":
+		case "--refs":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--refs requires a value")
 			}
-			v := strings.Split(args[i], ",")
-			opts.refs = &v
-		case arg == "--clear-refs":
+			opts.refs = new(strings.Split(args[i], ","))
+		case "--clear-refs":
 			opts.clearRefs = true
-		case arg == "--blocks":
+		case "--blocks":
 			i++
 			if i >= len(args) {
 				return opts, fmt.Errorf("--blocks requires a value")

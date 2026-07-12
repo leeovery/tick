@@ -73,8 +73,8 @@ func TestParentScope(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(strings.TrimRight(stdout, "\n"), "\n")
+		for line := range lines {
 			if strings.HasPrefix(line, "tick-parent") {
 				t.Error("parent task itself should not appear in parent-scoped results")
 			}
