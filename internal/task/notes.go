@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 )
 
-const maxNoteTextLen = 500
+const maxNoteTextLen = 2000
 
 // Note represents a timestamped text annotation on a task.
 type Note struct {
@@ -48,7 +48,7 @@ func (n *Note) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ValidateNoteText checks that note text is non-empty after trimming and at most 500 characters.
+// ValidateNoteText checks that note text is non-empty after trimming and at most 2000 characters.
 func ValidateNoteText(text string) error {
 	trimmed := strings.TrimSpace(text)
 	if trimmed == "" {

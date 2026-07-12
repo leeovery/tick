@@ -112,14 +112,14 @@ func TestNoteAdd(t *testing.T) {
 		}
 	})
 
-	t.Run("it errors when text exceeds 500 chars", func(t *testing.T) {
+	t.Run("it errors when text exceeds 2000 chars", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
 			Priority: 2, Created: now, Updated: now,
 		}
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
 
-		longText := strings.Repeat("a", 501)
+		longText := strings.Repeat("a", 2001)
 		_, stderr, exitCode := runNote(t, dir, "add", "tick-aaa111", longText)
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)

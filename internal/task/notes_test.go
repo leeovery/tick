@@ -29,19 +29,19 @@ func TestValidateNoteText(t *testing.T) {
 		}
 	})
 
-	t.Run("it accepts note text exactly 500 chars", func(t *testing.T) {
-		text := strings.Repeat("a", 500)
+	t.Run("it accepts note text exactly 2000 chars", func(t *testing.T) {
+		text := strings.Repeat("a", 2000)
 		err := ValidateNoteText(text)
 		if err != nil {
-			t.Errorf("expected no error for 500-char note text, got: %v", err)
+			t.Errorf("expected no error for 2000-char note text, got: %v", err)
 		}
 	})
 
-	t.Run("it rejects note text of 501 chars", func(t *testing.T) {
-		text := strings.Repeat("a", 501)
+	t.Run("it rejects note text of 2001 chars", func(t *testing.T) {
+		text := strings.Repeat("a", 2001)
 		err := ValidateNoteText(text)
 		if err == nil {
-			t.Fatal("expected error for 501-char note text, got nil")
+			t.Fatal("expected error for 2001-char note text, got nil")
 		}
 	})
 
