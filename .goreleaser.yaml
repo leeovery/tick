@@ -30,3 +30,6 @@ changelog:
 
 release:
   draft: false
+  # mint publishes the release (with AI notes body) before CI runs;
+  # keep-existing makes goreleaser attach binaries without replacing it.
+  mode: keep-existing

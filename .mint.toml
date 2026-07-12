@@ -1,0 +1,14 @@
+# .mint.toml — mint configuration. This file is fully OPTIONAL: every default is
+# compiled into mint, so an empty file is valid and changes nothing. Add a key only
+# to set a value that differs from the default.
+#
+# Config reference (every key, level, and default): https://github.com/leeovery/mint
+# AI-assisted setup (inspects your project and proposes config): run `mint setup`
+
+# Tracked churn that is never user-facing release content: dogfooded task data,
+# agent/workflow directories, and lockfile noise (go.mod stays in the diff).
+diff_exclude = [".tick", ".workflows", ".claude", ".agntc", "CLAUDE.md", "go.sum"]
+
+[release.hooks]
+# Gate the tag on a clean vet + test run; failure aborts before the point of no return.
+pre_tag = ["go vet ./...", "go test ./..."]
