@@ -5,12 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.1] - 2026-03-22
-
-🗑️ Removed — Deleted the internal `IDEAS.md` and `bugs.md` planning notes from the repo.
-
-🐛 Fixed — Status-change output no longer lists sibling/descendant tasks that were already done or cancelled and didn't change.
-
 ## [0.2.8] - 2026-07-12
 
 🔧 Changed
@@ -55,6 +49,12 @@ Maintenance release — no notable source changes
 
 🔧 Changed
 - `tick dep tree` output now renders as a box-drawing tree in Pretty mode and a flat edge list in TOON/JSON mode, with cycle protection against corrupted circular dependency data.
+
+## [0.2.1] - 2026-03-22
+
+🗑️ Removed — Deleted the internal `IDEAS.md` and `bugs.md` planning notes from the repo.
+
+🐛 Fixed — Status-change output no longer lists sibling/descendant tasks that were already done or cancelled and didn't change.
 
 ## [0.2.0] - 2026-03-14
 
