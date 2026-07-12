@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.9] - 2026-07-12
+
+✨ Added
+- Modernize lint pass adds `golangci-lint` (standard set + `modernize` linter) and updates release-notes tooling to `mint` (`release` script now delegates to `mint release`, and `.mint.toml` configures release diff exclusions and pre-tag gating).
+
+🔧 Changed
+- Bumped the Go toolchain to 1.26 and modernized code throughout to idiomatic Go 1.24+ patterns (`slices`/`maps`/`cmp` helpers, `range N`, `strings.SplitSeq`, `errors.Is`, `t.Context()`) with no behavior change.
+- goreleaser now runs in `keep-existing` mode so mint's AI-generated release body isn't overwritten when CI attaches binaries.
+
 ## [0.2.8] - 2026-07-12
 
 🔧 Changed
