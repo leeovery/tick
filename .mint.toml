@@ -7,7 +7,9 @@
 
 # Tracked churn that is never user-facing release content: dogfooded task data,
 # agent/workflow directories, and lockfile noise (go.mod stays in the diff).
-diff_exclude = [".tick", ".workflows", ".claude", ".agntc", "CLAUDE.md", "go.sum"]
+# "analysis" is historical: a 47k-line agent-report dir deleted in v0.2.1 that
+# otherwise swamps that version's diff on regenerate.
+diff_exclude = [".tick", ".workflows", ".claude", ".agntc", "CLAUDE.md", "go.sum", "analysis"]
 
 [release.hooks]
 # Gate the tag on a clean vet + test run; failure aborts before the point of no return.
