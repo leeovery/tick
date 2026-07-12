@@ -1,0 +1,3 @@
+AGENT: architecture
+FINDINGS: none
+SUMMARY: Implementation architecture is sound. The change is a well-scoped single-constant threshold change (maxNoteTextLen 500 -> 2000) where the constant is the single source of truth: the error message interpolates it via %d so limit and message cannot drift, ValidateNoteText is the sole reader, and internal/cli/note.go:52 is the sole caller. No help text, docs, or sibling validators reference the note limit; maxTitleLen correctly stays a separate constant (semantically distinct limit that only coincidentally shared the value). Boundary coverage was updated at both the task unit layer (accept-2000 / reject-2001) and the CLI integration seam (reject-2001), so cross-layer behaviour is verified end-to-end.

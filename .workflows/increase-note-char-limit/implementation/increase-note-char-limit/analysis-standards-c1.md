@@ -1,0 +1,3 @@
+AGENT: standards
+FINDINGS: none
+SUMMARY: Implementation conforms to specification and project conventions. The constant change (maxNoteTextLen 500->2000), the ValidateNoteText doc comment ("at most 2000 characters"), and all three test baselines (notes_test.go accept-boundary 2000 and reject-boundary 2001; note_test.go CLI reject-boundary 2001) match the spec exactly. The error message reports the maximum as 2000. The excluded title-boundary tests (maxTitleLen 500/501 in task_test.go and update_test.go) were correctly left untouched. go vet clean, gofmt clean, note tests pass. Go conventions (stdlib testing, t.Run subtests, "it does X" naming, camelCase unexported const, fmt.Errorf) are all honoured.
