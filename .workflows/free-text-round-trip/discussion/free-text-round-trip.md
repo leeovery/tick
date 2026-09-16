@@ -118,9 +118,29 @@ The fork put to the user was whether to fix free text now and log the rest as a 
 
 This brings three areas in that were previously out of scope: the single-object section headers (`tick show`'s task header, `tick stats`), the plain string-list sections (tags and refs), and whatever verification keeps the output conformant afterwards.
 
-### Open — which outputs this covers
+### Decision — which outputs this covers
 
-Not every command returns structured data. Status changes, dependency changes and removals currently answer in prose shared with the human-readable formatter (`internal/cli/format.go:211-241`) — e.g. `Dependency added: X blocked by Y`, `Removed tick-abc "Title"`. Whether those become structured output too is unsettled.
+Not every command returns data. Dependency changes and removals answer in prose shared with the human-readable formatter (`internal/cli/format.go:211-241`) — `Dependency added: X blocked by Y`, `Removed tick-abc "Title"`. There is nothing to parse there: the agent knows what it asked for and the exit code says whether it worked.
+
+Status changes are the opposite case. `tick done <id>` reports the change plus a line per task that changed as a knock-on effect, and an agent acts on that — it needs to know what else just closed.
+
+**Structured output that must parse:**
+
+| Output | Commands |
+|---|---|
+| Task detail | `show`, `create`, `update`, `note add`, `note remove` (all via `outputMutationResult`, `internal/cli/helpers.go:16-30`) |
+| Task list | `list`, `ready`, `blocked` |
+| Stats | `stats` |
+| Dependency graph | `dep tree` |
+| Transition / cascade | `start`, `done`, `cancel`, `reopen` |
+
+**Prose, unchanged:** `dep add`, `dep remove`, `remove`, `init`, and the general-purpose messages.
+
+Trade-off accepted: wrapping a one-line confirmation in a data format costs tokens to restate what the caller already knows, and introduces a new way to fail. Left as prose deliberately.
+
+### A structural consequence found while inventorying
+
+`create` and `update` do not emit one document. They print the full task detail and then, when a parent's status cascaded, append transition lines after it (`internal/cli/create.go:277-283`, `internal/cli/update.go:409-420`). A reader handed that whole stream sees a task-detail document with foreign lines stuck on the end. Making each section valid is not enough on its own — the stream has to be one document, or two clearly separated ones. This belongs to the conformance subtopics rather than to free text.
 
 ---
 
