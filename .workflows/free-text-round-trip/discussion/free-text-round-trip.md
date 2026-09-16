@@ -126,6 +126,19 @@ This brings three areas in that were previously out of scope: the single-object 
 
 ### Decision — which outputs this covers
 
+#### 2026-09-16 — revised
+*Trigger: review finding — `tick dep tree` answers in prose on its empty branches, inside a command the inventory below lists as output that must parse.*
+
+**Settled by derivation** — not discussed. Determined by this block's own inventory, which places `dep tree` under output that must parse, together with the formatter's existing treatment of empty results (review-001 F2).
+
+**A command in the must-parse table emits its structured form on every branch, the empty one included.** `tick dep tree` currently answers `No dependencies found.` when nothing in the project is blocked, and a title line plus `No dependencies.` when a named task has no dependencies either way — prose on the one branch an agent could not predict, from the formatter whose purpose is machine-readable output. Both go.
+
+This is not an exception to the prose rule below, it is the rule's boundary. The prose exemption covers confirmations of a command the caller issued: the caller already knows what it asked for and the exit code says whether it worked. "No dependencies" is not a confirmation — it is the answer to a query, and it is the answer the caller ran the command to find out.
+
+The formatter already has the shape: an empty task list comes back as a structured empty section, and so does an empty edge set. The two prose branches are the exception, not the pattern.
+
+#### Initial
+
 Not every command returns data. Dependency changes and removals answer in prose shared with the human-readable formatter (`internal/cli/format.go:211-241`) — `Dependency added: X blocked by Y`, `Removed tick-abc "Title"`. There is nothing to parse there: the agent knows what it asked for and the exit code says whether it worked.
 
 Status changes are the opposite case. `tick done <id>` reports the change plus a line per task that changed as a knock-on effect, and an agent acts on that — it needs to know what else just closed.
