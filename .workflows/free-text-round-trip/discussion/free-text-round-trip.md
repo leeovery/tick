@@ -209,6 +209,61 @@ The user's deciding factor was clarity on reading the output.
 
 ---
 
+## String List Sections
+
+### Context
+
+Tags and refs are lists of plain strings, emitted today as a header followed by one raw item per indented line:
+
+```
+tags[2]:
+  has space
+  plain
+```
+
+A TOON reader rejects this — an item written on its own line carries a leading `- ` marker, and without it the decoder reports a length mismatch. The items are also written raw, so a ref containing a comma comes back as two values rather than one, and a URL's colon goes unquoted where the format's own rules would quote it (`buildStringListSection`, `internal/cli/toon_formatter.go:320-328`).
+
+### The pattern underneath
+
+Checked across the whole of `tick show`, `tick stats` and `tick dep tree`: **every section tick assembles by hand is malformed, and every section it hands to the TOON library is correct.**
+
+| Written by | Sections | Parses |
+|---|---|---|
+| The library (`encodeToonSection`) | blockers, children, notes, priority breakdown, dep-tree edges | yes |
+| Hand-assembled string building | task header, stats summary, dep-tree summary, tags, refs, description | no |
+
+The hand-written sections exist because each one wanted a shape the library does not produce directly — a singular object header, a list down the page, an unstructured text block. In every case the hand-rolled shape turned out to be invalid.
+
+### Options Considered
+
+**Inline** — the library's own output for a list of strings:
+
+```
+tags[2]: has space,plain
+```
+
+- Pros: produced directly by the encoder, so the hand-written list builder is deleted rather than corrected; quoting is handled by the library's rules, so a comma-bearing ref is safe by construction.
+- Cons: a long refs list becomes a long line.
+
+**Down the page with markers** — the same items, one per line, each marked `- `:
+
+```
+tags[2]:
+  - has space
+  - plain
+```
+
+- Pros: readable when items are long, as full URLs are.
+- Cons: still hand-written, so the class of bug survives; the encoder does not emit this form and it would have to be constructed by hand.
+
+### Decision
+
+**Inline, for both tags and refs.**
+
+The deciding factor is that it removes the hand-written builder entirely rather than fixing its output. Line length is the cost, and it is not a real one: the reader of toon output is an agent, and a human reading tags is reading the pretty output, which renders them separately.
+
+---
+
 ## Description Block Encoding
 
 ### Context
