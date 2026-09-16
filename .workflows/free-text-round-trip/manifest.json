@@ -29,6 +29,22 @@
             "write-side-input": {
               "status": "pending",
               "parent": null
+            },
+            "toon-conformance-scope": {
+              "status": "exploring",
+              "parent": null
+            },
+            "single-object-sections": {
+              "status": "pending",
+              "parent": null
+            },
+            "string-list-sections": {
+              "status": "pending",
+              "parent": null
+            },
+            "conformance-verification": {
+              "status": "pending",
+              "parent": null
             }
           }
         }

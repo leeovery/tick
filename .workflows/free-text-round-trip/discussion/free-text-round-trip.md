@@ -102,6 +102,28 @@ This constrains the encoding subtopics directly: whatever the description block 
 
 ---
 
+## Toon Conformance Scope
+
+### Context
+
+The work arrived scoped to free text. Measuring the output showed that fixing free text alone changes nothing an agent can use: a standard TOON reader fails on the first line of `tick show` and never reaches the description. The malformed parts are the task header, the tags list, the refs list and the description; the blockers, children and notes lists are correct.
+
+### Journey
+
+The fork put to the user was whether to fix free text now and log the rest as a separate concern, or fix the format outright in this work. The argument for splitting: "the agent-facing format doesn't parse" is a broader claim than "descriptions are awkward to lift", and it spans sections that are not free text at all. The argument against: fixing a quarter of a broken format leaves the output exactly as unusable as before, so the free-text work would deliver nothing on its own.
+
+### Decision
+
+**Fix the whole format in this work.** The user ruled it one bug with several symptoms. Free-text encoding is no longer the deliverable in itself — it is one of the malformed sections, and the deliverable is output a standard TOON reader can read.
+
+This brings three areas in that were previously out of scope: the single-object section headers (`tick show`'s task header, `tick stats`), the plain string-list sections (tags and refs), and whatever verification keeps the output conformant afterwards.
+
+### Open — which outputs this covers
+
+Not every command returns structured data. Status changes, dependency changes and removals currently answer in prose shared with the human-readable formatter (`internal/cli/format.go:211-241`) — e.g. `Dependency added: X blocked by Y`, `Removed tick-abc "Title"`. Whether those become structured output too is unsettled.
+
+---
+
 ## Description Block Encoding
 
 ### Context
@@ -224,7 +246,8 @@ What this leaves in scope for notes: their text must be readable out of `tick sh
 
 ### Open Threads
 
-- Whether changing the description encoding owes a correction to the v1 `tick-core` specification, which states the unstructured-section principle as a golden rule.
+- Whether changing the description encoding owes a correction to the v1 `tick-core` specification, which states the unstructured-section principle as a golden rule and shows the indented description block as the worked example.
+- The work unit's own description still reads as a free-text fix ("Make free-text fields survive an agent read-edit-write round trip… with a field-extraction flag"). Scope has widened past it — the carrier is now understating the work.
 
 ### Current State
 
