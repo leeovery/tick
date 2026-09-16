@@ -4,5 +4,35 @@
   "status": "in-progress",
   "created": "2026-09-16",
   "description": "Make free-text fields (descriptions, notes) survive an agent read-edit-write round trip in the toon output format, with a field-extraction flag for raw single-field output",
-  "phases": {}
+  "phases": {
+    "discussion": {
+      "items": {
+        "free-text-round-trip": {
+          "status": "in-progress",
+          "subtopics": {
+            "round-trip-contract": {
+              "status": "pending",
+              "parent": null
+            },
+            "description-block-encoding": {
+              "status": "pending",
+              "parent": null
+            },
+            "notes-free-text-handling": {
+              "status": "pending",
+              "parent": null
+            },
+            "field-extraction-flag": {
+              "status": "pending",
+              "parent": null
+            },
+            "write-side-input": {
+              "status": "pending",
+              "parent": null
+            }
+          }
+        }
+      }
+    }
+  }
 }
