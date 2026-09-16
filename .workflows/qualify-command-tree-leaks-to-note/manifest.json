@@ -23,6 +23,9 @@
             "qualify-command-tree-leaks-to-note": {
               "status": "incorporated"
             }
+          },
+          "tracking": {
+            "review-gap-analysis-tracking-c1": "complete"
           }
         }
       }
@@ -46,7 +49,11 @@
             "qualify-command-tree-leaks-to-note-2": "tick-a3db77",
             "qualify-command-tree-leaks-to-note-2-1": "tick-30a977"
           },
-          "external_id": "tick-0e8cc7"
+          "external_id": "tick-0e8cc7",
+          "tracking": {
+            "review-integrity-tracking-c1": "complete",
+            "review-traceability-tracking-c1": "complete"
+          }
         }
       }
     },
@@ -83,7 +90,14 @@
             2
           ],
           "analysis_cycle_total": 2,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved"
+              }
+            }
+          }
         }
       }
     }

@@ -23,6 +23,9 @@
             "cascade-unchanged-noise": {
               "status": "incorporated"
             }
+          },
+          "tracking": {
+            "review-gap-analysis-tracking-c1": "complete"
           }
         }
       }
@@ -44,7 +47,13 @@
             "cascade-unchanged-noise-1-1": "tick-f9cb01"
           },
           "external_id": "tick-4db2a3",
-          "review_cycle": 2
+          "review_cycle": 2,
+          "tracking": {
+            "review-integrity-tracking-c1": "complete",
+            "review-integrity-tracking-c2": "complete",
+            "review-traceability-tracking-c1": "complete",
+            "review-traceability-tracking-c2": "complete"
+          }
         }
       }
     },

@@ -22,6 +22,9 @@
             "cli-enhancements": {
               "status": "incorporated"
             }
+          },
+          "tracking": {
+            "review-input-tracking-c1": "complete"
           }
         }
       }
@@ -75,6 +78,14 @@
             "cli-enhancements-4": "tick-af518b",
             "cli-enhancements-5": "tick-ebe119",
             "cli-enhancements-6": "tick-c29eef"
+          },
+          "tracking": {
+            "review-integrity-tracking-c1": "complete",
+            "review-integrity-tracking-c2": "complete",
+            "review-integrity-tracking-c3": "complete",
+            "review-traceability-tracking-c1": "complete",
+            "review-traceability-tracking-c2": "complete",
+            "review-traceability-tracking-c3": "complete"
           }
         }
       }
@@ -133,7 +144,25 @@
             6
           ],
           "analysis_cycle_total": 3,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved",
+                "4": "approved",
+                "5": "approved"
+              }
+            },
+            "c2": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved"
+              }
+            }
+          }
         }
       }
     },

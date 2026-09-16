@@ -23,6 +23,10 @@
             "dep-tree-visualization": {
               "status": "incorporated"
             }
+          },
+          "tracking": {
+            "review-gap-analysis-tracking-c1": "complete",
+            "review-input-tracking-c1": "complete"
           }
         }
       }
@@ -53,7 +57,12 @@
             "dep-tree-visualization-3-2": "tick-aa2517",
             "dep-tree-visualization-3-3": "tick-b5d370"
           },
-          "external_id": "tick-86603c"
+          "external_id": "tick-86603c",
+          "tracking": {
+            "review-integrity-tracking-c1": "complete",
+            "review-integrity-tracking-c2": "complete",
+            "review-traceability-tracking-c1": "complete"
+          }
         }
       }
     },
@@ -97,7 +106,16 @@
             3
           ],
           "analysis_cycle_total": 2,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved"
+              }
+            }
+          }
         }
       }
     },

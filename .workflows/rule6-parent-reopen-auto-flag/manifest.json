@@ -23,6 +23,10 @@
             "rule6-parent-reopen-auto-flag": {
               "status": "incorporated"
             }
+          },
+          "tracking": {
+            "review-gap-analysis-tracking-c1": "complete",
+            "review-input-tracking-c1": "complete"
           }
         }
       }
@@ -49,6 +53,12 @@
             "rule6-parent-reopen-auto-flag-2-2": "tick-b119b3",
             "rule6-parent-reopen-auto-flag-1": "tick-359ce4",
             "rule6-parent-reopen-auto-flag-2": "tick-57a66a"
+          },
+          "tracking": {
+            "review-integrity-tracking-c1": "complete",
+            "review-integrity-tracking-c2": "complete",
+            "review-traceability-tracking-c1": "complete",
+            "review-traceability-tracking-c2": "complete"
           }
         }
       }
@@ -93,7 +103,15 @@
             2
           ],
           "analysis_cycle_total": 2,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved"
+              }
+            }
+          }
         }
       }
     },

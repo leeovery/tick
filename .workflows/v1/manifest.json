@@ -67,6 +67,10 @@
             "blocked-ancestor-ready": {
               "status": "incorporated"
             }
+          },
+          "tracking": {
+            "review-gap-analysis-tracking-c1": "complete",
+            "review-input-tracking-c1": "complete"
           }
         },
         "doctor-validation": {
@@ -101,6 +105,14 @@
             "task-removal": {
               "status": "incorporated"
             }
+          },
+          "tracking": {
+            "review-gap-analysis-tracking-c1": "complete",
+            "review-gap-analysis-tracking-c2": "complete",
+            "review-gap-analysis-tracking-c3": "complete",
+            "review-input-tracking-c1": "complete",
+            "review-input-tracking-c2": "complete",
+            "review-input-tracking-c3": "complete"
           }
         },
         "tick-core": {
@@ -153,6 +165,12 @@
             "blocked-ancestor-ready-2-1": "tick-cbdae7",
             "blocked-ancestor-ready-1": "tick-3cf896",
             "blocked-ancestor-ready-2": "tick-884d97"
+          },
+          "tracking": {
+            "review-integrity-tracking-c1": "complete",
+            "review-integrity-tracking-c2": "complete",
+            "review-traceability-tracking-c1": "complete",
+            "review-traceability-tracking-c2": "complete"
           }
         },
         "doctor-validation": {
@@ -201,6 +219,10 @@
             "task-removal-3": "tick-192a68",
             "task-removal-4": "tick-d5946b",
             "task-removal-5": "tick-9c6995"
+          },
+          "tracking": {
+            "review-integrity-tracking-c1": "complete",
+            "review-traceability-tracking-c1": "complete"
           }
         },
         "tick-core": {
@@ -231,7 +253,14 @@
             2
           ],
           "analysis_cycle_total": 2,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved"
+              }
+            }
+          }
         },
         "doctor-validation": {
           "status": "completed",
@@ -274,7 +303,28 @@
             6
           ],
           "analysis_cycle_total": 4,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved"
+              }
+            },
+            "c2": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved"
+              }
+            },
+            "c3": {
+              "tasks": {
+                "1": "approved"
+              }
+            }
+          }
         },
         "installation": {
           "status": "completed",
@@ -309,7 +359,28 @@
             5
           ],
           "analysis_cycle_total": 4,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved",
+                "4": "approved"
+              }
+            },
+            "c2": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved"
+              }
+            },
+            "c3": {
+              "tasks": {
+                "1": "approved"
+              }
+            }
+          }
         },
         "migration": {
           "status": "completed",
@@ -343,7 +414,22 @@
             4
           ],
           "analysis_cycle_total": 3,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved",
+                "4": "approved"
+              }
+            },
+            "c2": {
+              "tasks": {
+                "1": "approved"
+              }
+            }
+          }
         },
         "task-removal": {
           "status": "completed",
@@ -377,7 +463,20 @@
             5
           ],
           "analysis_cycle_total": 3,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved"
+              }
+            },
+            "c2": {
+              "tasks": {
+                "1": "approved"
+              }
+            }
+          }
         },
         "tick-core": {
           "status": "completed",
@@ -438,7 +537,35 @@
             8
           ],
           "analysis_cycle_total": 4,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved",
+                "4": "approved",
+                "5": "approved",
+                "6": "approved",
+                "7": "approved"
+              }
+            },
+            "c2": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved",
+                "4": "approved",
+                "5": "approved"
+              }
+            },
+            "c3": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved"
+              }
+            }
+          }
         }
       }
     },
@@ -469,13 +596,6 @@
         "exploration": {
           "status": "completed"
         }
-      },
-      "analysis_cache": {
-        "checksum": "df242d3afab27dc11f98b42a4ec51352",
-        "generated": "2026-06-14T17:42:49.023Z",
-        "files": [
-          "exploration.md"
-        ]
       }
     },
     "discovery": {

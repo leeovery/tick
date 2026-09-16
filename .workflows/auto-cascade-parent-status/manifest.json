@@ -22,6 +22,12 @@
             "auto-cascade-parent-status": {
               "status": "incorporated"
             }
+          },
+          "tracking": {
+            "review-gap-analysis-tracking-c1": "complete",
+            "review-gap-analysis-tracking-c2": "complete",
+            "review-gap-analysis-tracking-c3": "complete",
+            "review-input-tracking-c1": "complete"
           }
         }
       }
@@ -65,6 +71,16 @@
             "auto-cascade-parent-status-2": "tick-08e6f9",
             "auto-cascade-parent-status-3": "tick-02a182",
             "auto-cascade-parent-status-4": "tick-35f54b"
+          },
+          "tracking": {
+            "review-integrity-tracking-c1": "complete",
+            "review-integrity-tracking-c2": "complete",
+            "review-integrity-tracking-c3": "complete",
+            "review-integrity-tracking-c4": "in-progress",
+            "review-traceability-tracking-c1": "complete",
+            "review-traceability-tracking-c2": "in-progress",
+            "review-traceability-tracking-c3": "in-progress",
+            "review-traceability-tracking-c4": "in-progress"
           }
         }
       }
@@ -113,7 +129,19 @@
             4
           ],
           "analysis_cycle_total": 2,
-          "analysis_cycle_session": 0
+          "analysis_cycle_session": 0,
+          "staging": {
+            "c1": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved",
+                "4": "approved",
+                "5": "approved",
+                "6": "approved"
+              }
+            }
+          }
         }
       }
     },
