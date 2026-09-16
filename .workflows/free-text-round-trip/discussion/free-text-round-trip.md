@@ -102,6 +102,46 @@ This constrains the encoding subtopics directly: whatever the description block 
 
 ---
 
+## Notes Free Text Handling
+
+### Context
+
+Discovery scoped the work to free text generally, naming notes as carrying the same problem as descriptions because both reach output through the same formatter. Measuring the two showed they do not share a problem, and measuring the commands showed notes have a different one entirely.
+
+### Journey
+
+On the read side, notes already satisfy the round-trip contract. Note text is emitted through the TOON library's tabular encoder, which quotes and escapes any string containing a newline, carriage return or tab (`grep -n "case '\\\\n':" "$(go list -m -f '{{.Dir}}' github.com/toon-format/toon-go)/internal/format/format.go"` → `QuoteString` maps them to two-character escapes; `NeedsQuoting` fires on all three). A multi-line note comes out as `"multi\nline\nnote"` — lossless, unambiguous, and decodable by any standard TOON reader.
+
+On the write side there is nothing. The `note` command has exactly two subcommands (`internal/cli/note.go:28-30`):
+
+`grep -n 'case "' internal/cli/note.go` → `case "add":`, `case "remove":`
+
+`note add` appends a new entry stamped with the current time; `note remove` splices one out by 1-based index. Editing a note therefore means removing it and adding it back, which gives the corrected text a fresh `created` timestamp and moves it to the bottom of the list. An agent that reads a note, fixes a typo, and writes it back records the correction as if it were written today, and silently reorders the annotation log.
+
+So "notes survive an agent's read-edit-write round trip" was unreachable regardless of the formatter — fixing the output gets the text out cleanly, and there is still no way in.
+
+### Options Considered
+
+**Make notes editable** — a `note edit <id> <index> <text>` preserving the original `created` and the note's position.
+- Pros: closes the round trip for notes symmetrically with descriptions; an agent can correct its own typo without destroying the record of when the observation was made.
+- Cons: changes what a note is.
+
+**Read-side only** — notes stay append-and-retract; the work guarantees only that note text can be read out cleanly and reached by field extraction.
+- Pros: preserves the append-only character of the annotation log; keeps the feature's surface to the formatter and the read path.
+- Cons: a typo in a note has no remedy short of deleting it and losing its timestamp.
+
+### Decision
+
+**Read-side only. No note edit command in this work.**
+
+The deciding factor is what a note is. It carries a `created` stamp and sits in a positional log you retract from by index — an append-only record of what was observed when, not a mutable field. Adding an edit would turn it into a list of editable strings, and would do so as a side effect of a formatting fix rather than as a decision about the annotation model. If notes should become editable, that is its own piece of work with its own reasoning.
+
+Trade-off accepted: correcting a note still costs its timestamp and its position. The counter-argument — agents write these notes and agents typo — was weighed and did not carry, because the remedy it asks for changes the data model to serve a convenience.
+
+What this leaves in scope for notes: their text must be readable out of `tick show` without a rule the reader had to learn elsewhere (already true, via TOON quoting), and field extraction must be able to reach it.
+
+---
+
 ## Summary
 
 ### Key Insights
@@ -115,5 +155,5 @@ This constrains the encoding subtopics directly: whatever the description block 
 
 ### Current State
 
-- Resolved: both the single-field fetch and the whole-task read are in scope, and both must work.
-- Uncertain: how the description block should encode multi-line text; whether notes need anything beyond what the TOON quoting already gives; the shape of the field-extraction flag; whether the write side needs an input path other than a command-line argument.
+- Resolved: both the single-field fetch and the whole-task read are in scope, and both must work. Notes are read-side only — no edit command; their existing TOON quoting already satisfies the read contract.
+- Uncertain: how the description block should encode multi-line text; the shape of the field-extraction flag; whether the write side needs an input path other than a command-line argument.
