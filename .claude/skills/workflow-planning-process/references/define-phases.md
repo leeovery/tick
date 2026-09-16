@@ -14,7 +14,7 @@ Read the planning file at `.workflows/{work_unit}/planning/{topic}/planning.md`.
 
 #### If phases exist
 
-> *Output the next fenced block as a code block:*
+> *Output the next fenced block as markdown (not a code block):*
 
 ```
 Phase structure already exists. I'll present it for your review.
@@ -24,17 +24,15 @@ Phase structure already exists. I'll present it for your review.
 
 #### If no phases exist
 
-> *Output the next fenced block as a code block:*
+> *Output the next fenced block as markdown (not a code block):*
 
 ```
-I'll delegate phase design to a specialist agent. It will read the full
-specification and propose a phase structure — how we break this into
-independently testable stages.
+I'll delegate phase design to a specialist agent. It will read the full specification and propose a phase structure — how we break this into independently testable stages.
 ```
 
 Read `work_type` from the manifest:
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit} work_type
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit} work_type
 ```
 
 Invoke `workflow-planning-phase-designer` with these file paths:
@@ -48,13 +46,15 @@ Invoke `workflow-planning-phase-designer` with these file paths:
 
 The agent returns phases only — goals, ordering rationale, and acceptance criteria. **Task lists are designed separately in a later step; do not request or include them.** Write the phase structure directly to the planning file body.
 
-Update the manifest planning position:
+Update the manifest planning position — one batched write:
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.planning.{topic} phase 1
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.planning.{topic} task '~'
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest set {work_unit}.planning.{topic} phase=1 task='~'
 ```
 
-Commit: `planning({work_unit}): draft phase structure`
+Commit:
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs commit {work_unit} -m "planning({work_unit}): draft phase structure" --topic planning/{topic}
+```
 
 → Proceed to **B. Review and Approve**.
 
@@ -62,19 +62,23 @@ Commit: `planning({work_unit}): draft phase structure`
 
 ## B. Review and Approve
 
-Present the phase structure to the user as rendered markdown (not in a code block). Then, separately, present the choices:
+Write the phase-tree payload to `.workflows/.cache/{work_unit}/planning/{topic}/phase-tree.json` with the Write tool — one entry per phase from the planning file, each with its goal (and other one-line detail rows worth surfacing, e.g. acceptance criteria):
 
-> *Output the next fenced block as markdown (not a code block):*
-
+```json
+{"phases": [{"name": "…", "detail": [["Goal", "…"], ["Criteria", "…"]]}]}
 ```
-· · · · · · · · · · · ·
-Approve this phase structure?
 
-- **`y`/`yes`** — Proceed to task breakdown
-- **Tell me what to change** — reorder, split, merge, add, edit, or remove phases
-- **Navigate** — a different phase or task, or the leading edge
-· · · · · · · · · · · ·
+Render and emit each section verbatim at its marked instruction:
+
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs render phase-tree {work_unit}.planning.{topic} --file .workflows/.cache/{work_unit}/planning/{topic}/phase-tree.json --approve
 ```
+
+**STOP.** Wait for user response.
+
+#### If `view full`
+
+Present the full phase structure from the planning file as rendered markdown (not a code block) — goals, ordering rationale, acceptance criteria as the designer wrote them. Then re-emit the `MENU: phase structure gate` section.
 
 **STOP.** Wait for user response.
 
@@ -88,13 +92,22 @@ Update the planning file with the revised output.
 
 → Return to **B. Review and Approve**.
 
-#### If `approved`
+#### If navigate
+
+Resolve the destination per the caller's **Navigation** section — the user's position moves, the leading edge does not.
+
+→ Return to caller for **B. Process Current Phase**.
+
+#### If `yes`
 
 **If the phase structure is new or was amended:**
 
-1. Update each phase in the planning file: set `status: approved` and `approved_at: YYYY-MM-DD` (use today's actual date)
-2. Commit: `planning({work_unit}): approve phase structure`
+1. Record the approval — `node .claude/skills/workflow-engine/scripts/engine.cjs manifest set {work_unit}.planning.{topic} approvals.structure $(date +%Y-%m-%d)`
+2. Commit:
+   ```bash
+   node .claude/skills/workflow-engine/scripts/engine.cjs commit {work_unit} -m "planning({work_unit}): approve phase structure" --topic planning/{topic}
+   ```
 
-If the phase structure was already approved and unchanged, no updates are needed.
+If the manifest already carries `approvals.structure` and the structure is unchanged, no updates are needed.
 
 → Return to caller.

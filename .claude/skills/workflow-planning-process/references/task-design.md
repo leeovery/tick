@@ -28,6 +28,26 @@ Cross-cutting references are context, not scope. They shape how tasks are writte
 
 ---
 
+## Cross-Phase Deferrals
+
+A deferral is a phase-level fact. When a task defers work to another phase, the deferral belongs in the receiving phase's acceptance criteria — never held only in the deferring task's edge cases. Later phases' task designers and the plan review read phase definitions, not sibling phases' task tables, so a deferral recorded only in a task goes unseen and the receiving phase allocates nothing for it.
+
+---
+
+## Tasks That Edit Historical Artifacts
+
+A task whose edits land on another work unit's specification under `.workflows/` corrects a historical artifact. Fold the completed-unit protocol from **[correcting-historical-artifacts.md](../../workflow-shared/references/correcting-historical-artifacts.md)** into the task itself — in-place edit, corrigenda entry, knowledge re-index, scoped commit — as **Do** steps and **Acceptance Criteria**. The re-index is part of the task, never an afterthought. No task edits any other phase artifact of another work unit — non-spec artifacts are superseded by current work, never corrected.
+
+---
+
+## Comments Are Not Task Content
+
+**Do** steps direct code and tests, never commentary. Rationale, sequencing notes, and spec citations belong in the task's Problem/Context fields and the plan itself — never directed into source comments ("state in-source that…", "record why in a comment…"). A comment dictated by a task becomes an acceptance criterion the reviewer must police, and its claims go stale as later tasks land.
+
+A task may require a comment only where the code cannot express a constraint — a warning against a tempting wrong simplification, a non-obvious invariant — directed in one line ("comment that the discard must come last") with the wording left to the executor. Never direct comments that reference other tasks, phases, spec sections, or what tests cover.
+
+---
+
 ## Vertical Slicing
 
 Prefer **vertical slices** that deliver complete, testable functionality over horizontal slices that separate by technical layer.

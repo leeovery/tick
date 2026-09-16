@@ -33,10 +33,10 @@ Output: .workflows/{work_unit}/specification/{topic}/specification.md
 
 ```
 · · · · · · · · · · · ·
-Proceed?
-- **`y`/`yes`**
-- **`n`/`no`**
-· · · · · · · · · · · ·
+**`◆ Proceed?`**
+
+**`y/yes`**
+**`n/no`**
 ```
 
 **STOP.** Wait for user response.
@@ -45,9 +45,9 @@ Proceed?
 
 #### If any source discussion has an individual spec
 
-`has_individual_spec` is computed proposed-blind — a discussion that appears only in a proposed grouping does not count as having an individual spec, so a proposed item never lands here for supersession.
+The DATA `discussions:` lines mark this (`individual spec: {status}`). It is computed proposed-blind — a discussion that appears only in a proposed grouping does not count as having an individual spec, so a proposed item never lands here for supersession.
 
-Note the supersession (`has_individual_spec: true`):
+Note the supersession:
 
 > *Output the next fenced block as a code block:*
 
@@ -68,10 +68,10 @@ After completion:
 
 ```
 · · · · · · · · · · · ·
-Proceed?
-- **`y`/`yes`**
-- **`n`/`no`**
-· · · · · · · · · · · ·
+**`◆ Proceed?`**
+
+**`y/yes`**
+**`n/no`**
 ```
 
 **STOP.** Wait for user response.
@@ -82,7 +82,7 @@ Proceed?
 
 ## B. Handle Response
 
-#### If user confirms (y)
+#### If `yes`
 
 **If any source discussions have individual specs:**
 
@@ -92,15 +92,14 @@ Proceed?
 
 → Load **[create.md](handoffs/create.md)** and follow its instructions as written.
 
-#### If user declines (n)
+#### If `no`
 
 **If single discussion (no menu to return to):**
 
-> *Output the next fenced block as a code block:*
+> *Output the next fenced block as markdown (not a code block):*
 
 ```
-Understood. Continue working on discussions, or re-run this
-command when ready.
+Understood. Continue working on discussions, or re-run this command when ready.
 ```
 
 **STOP.** Do not proceed — terminal condition.

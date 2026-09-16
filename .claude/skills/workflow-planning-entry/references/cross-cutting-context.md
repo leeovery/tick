@@ -10,7 +10,7 @@ Issue a semantic query filtered to `work_type: cross-cutting` so only specs rele
 
 ## A. Build the query text
 
-Read the current topic's specification at `.workflows/{work_unit}/specification/{topic}/specification.md`. Extract a short natural-language description of the feature — the opening summary, the problem statement, or the first substantive paragraph after the frontmatter. Aim for 1-3 sentences that describe *what the plan is about*.
+Read the current topic's specification at `.workflows/{work_unit}/specification/{topic}/specification.md`. Extract a short natural-language description of the feature — the opening summary, the problem statement, or the first substantive paragraph. Aim for 1-3 sentences that describe *what the plan is about*.
 
 Do not use the topic slug as the query term — slugs are weak semantic signal. If the spec is unusually terse and yields no natural description, construct a descriptive phrase from the spec's headings.
 
@@ -21,22 +21,16 @@ Store the resulting text as `{query_text}`.
 A semantic query only surfaces completed work. An in-progress cross-cutting spec may contain decisions that will bind this plan but aren't yet indexed — the user needs to be aware.
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs project list --type cross-cutting
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest list --work-type cross-cutting
 ```
 
-#### If no output (no cross-cutting work units exist)
+#### If the output is `[]` (no cross-cutting work units exist)
 
 → Proceed to **C. Query the knowledge base**.
 
 #### If cross-cutting work units found
 
-For each name, check specification status:
-
-```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {cc_work_unit}.specification.{cc_work_unit} status
-```
-
-Collect work units whose spec status is `in-progress`, then assess whether any are relevant to the feature being planned (by topic overlap — a caching strategy is relevant if the feature involves data retrieval or API calls).
+The output is the full manifests — read each unit's spec status directly from `phases.specification.items.{name}.status`. Collect work units whose spec status is `in-progress`, then assess whether any are relevant to the feature being planned (by topic overlap — a caching strategy is relevant if the feature involves data retrieval or API calls).
 
 **If no in-progress specs exist, or none are relevant:**
 
@@ -57,20 +51,19 @@ These may contain architectural decisions relevant to this plan.
 
 ```
 · · · · · · · · · · · ·
-Proceed without these, or complete them first?
+**`◆ Proceed without these, or complete them first?`**
 
-- **`c`/`continue`** — Plan without them
-- **`s`/`stop`** — Complete them first
-· · · · · · · · · · · ·
+**`c/continue`** → Plan without them
+**`s/stop`**     → Complete them first
 ```
 
 **STOP.** Wait for user response.
 
-**If user chose `s`/`stop`:**
+**If user chose `s/stop`:**
 
 **STOP.** Do not proceed — terminal condition.
 
-**If user chose `c`/`continue`:**
+**If user chose `c/continue`:**
 
 → Proceed to **C. Query the knowledge base**.
 

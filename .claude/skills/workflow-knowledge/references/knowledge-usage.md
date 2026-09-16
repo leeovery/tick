@@ -33,6 +33,10 @@ See **[SKILL.md](../SKILL.md)** — query construction examples and the full fla
 
 Chunks land in context; read the source file (from the `Source:` line) only when a chunk looks load-bearing. See **[SKILL.md](../SKILL.md)** — two-step retrieval pattern.
 
+A `[baseline | …]` hit is the project baseline — observed and user-stated context about the codebase as the workflows found it. Reference, never record: it informs the conversation, but it never settles a decision the way a discussion or specification chunk does, and a stated rationale worth building on is confirmed with the user rather than silently assumed current. Baseline chunks also never decay — a claim the code has since outgrown is worth flagging to the user rather than trusting it to fade.
+
+A `[roadmap | …]` hit is the product-level record — a roadmap session's exploration, staged thinking about capabilities that may never have been pulled. Exploration-grade, never a decision of record, and it may carry ground a pull's fence deliberately left behind: material beyond the work unit's pulled items informs the conversation but never silently widens the work's scope.
+
 ## D. Query failure handling
 
 If `knowledge query` exits with a non-zero code, **pause the workflow**. Do not silently proceed without context — the knowledge base is high-value enough that silent skips are worse than a brief interruption.
@@ -52,15 +56,10 @@ If `knowledge query` exits with a non-zero code, **pause the workflow**. Do not 
   or provider mismatch. Run `knowledge status` to diagnose.
 ```
 
-> *Output the next fenced block as markdown (not a code block):*
+Fetch the gate and emit its section verbatim per its marker:
 
-```
-· · · · · · · · · · · ·
-How should I proceed?
-
-- **`r`/`retry`** — I'll fix the issue; retry the query
-- **`s`/`skip`** — Proceed without knowledge context for this phase
-· · · · · · · · · · · ·
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs render query-failure-gate
 ```
 
 **STOP.** Wait for user response.
@@ -77,7 +76,23 @@ Note in the current phase's working file that the knowledge query was skipped. E
 
 → Return to caller.
 
-## E. Phase-specific notes
+## E. When a surfaced artifact is wrong
+
+A chunk (or its source file) can carry a claim you have verified is wrong or has shifted since it was written. What happens next depends on the source phase.
+
+#### If the source is a specification
+
+Never leave it standing — the spec is the golden record and its chunks stay live at full confidence, so every future query re-serves the error as validated context.
+
+→ Load **[correcting-historical-artifacts.md](../../workflow-shared/references/correcting-historical-artifacts.md)** and follow its instructions.
+
+#### If the source is any other phase
+
+Leave the artifact alone — no correction is owed. Everything outside the specification decays in the knowledge base; record what is actually true in the current work's own artifact and let the stale claim age out.
+
+→ Return to caller.
+
+## F. Phase-specific notes
 
 - **Research** — query at the start of the phase (via the contextual query step) and throughout. Early phases have the highest chance of overlapping with prior work — research is often where the same ground gets explored twice if we don't check.
 - **Discussion** — query at the start and throughout. Decisions being made now often echo or contradict decisions made elsewhere. Check before committing to a direction.
@@ -87,5 +102,18 @@ Note in the current phase's working file that the knowledge query was skipped. E
 - **Planning** — **do not query during planning.** The spec is the golden document; planning operates on the spec alone. If a spec gap surfaces during planning, flag it to the user — don't fill it with a KB query. Cross-cutting context is handled at planning entry via the explicit `--work-type cross-cutting` query (existing mechanism, not discretionary).
 - **Implementation** — code is the source of truth for *what* exists during implementation. Read the code; don't query the KB for it. The KB is useful only for the *why* behind an existing pattern or decision (e.g., "why does this use UUID v7?" — the rationale lives in spec/discussion, not the code). Rare in practice. Never use it to fill spec gaps — those are blockers.
 - **Review** — query only for cross-work-unit consistency checks ("does this mirror how similar decisions were made elsewhere?"). Consistency with the current spec is already in scope — no KB needed for that.
+
+## G. Sibling consult at cross-topic decision points
+
+A decision that names an entity, field, rule, or classification this topic's own artifact didn't introduce is deciding on ground another document may own. The trigger is local — whether this artifact introduced the term is checkable against the current file; whether another document owns it is exactly what the consult finds out. **Citation is not introduction**: a term this artifact only carries by citing another topic's decision was introduced there, and a new decision naming it triggers the consult however familiar the term reads in this file.
+
+Before documenting such a decision:
+
+1. **Consult** — run a scoped query for the term, or cite the sibling's current decided text when it is already in this session's context.
+2. **Trace** — record the check as one line inside the documented decision: `Sibling check: {topic} — {what its decided text holds}`, or `Sibling check: no overlap found.`
+
+When the consult surfaces text the new decision contradicts or supersedes, route by owner. Text that *anticipates* the decision — a lean recorded as a lean, a question the sibling deferred or triaged to this topic — is neither: the deferral is its forward pointer, nothing is owed, and no reroute fires. A sibling topic in the same epic: reroute through the session's off-topic path at that moment. Another work unit's specification: it is owed a correction — never a prose note to carry — follow **E. When a surfaced artifact is wrong**. Any other document of another work unit: no correction is owed — this topic's own record of the decision stands, and the stale text ages out (**E**'s non-spec arm).
+
+In ordinary conversation this is the same advisory judgment as §A trigger 2. At engagement decision points — a review or synthesis finding's outcome, a rerouted triage concern's fold — the consult is a required step; the engagement flows name it.
 
 → Return to caller.

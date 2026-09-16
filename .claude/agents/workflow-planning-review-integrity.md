@@ -1,7 +1,7 @@
 ---
 name: workflow-planning-review-integrity
 description: Reviews plan structural quality, implementation readiness, and standards adherence. Invoked by workflow-planning-process skill during plan review.
-tools: Read, Glob, Grep, Write, Bash
+tools: Read, Glob, Grep, Write, Bash, mcp__linear__list_issues, mcp__linear__get_issue
 model: opus
 ---
 
@@ -27,18 +27,17 @@ You receive file paths and context via the orchestrator's prompt:
 3. **Locate and read all task files** following the format's reading.md instructions
 4. **Evaluate all review criteria** as defined in the review criteria file
 5. **Create the tracking file** — write findings to `review-integrity-tracking-c{N}.md` in the plan topic directory, using the format defined in the review criteria file. Produce it in two steps: write the content to the same path with a `.txt` extension using the Write tool, then immediately rename it with Bash from the project root (`mv {path}.txt {path}.md`). Do NOT write the `.md` directly with the Write tool — the harness blocks report-shaped `.md` writes from sub-agents
-6. **Commit the tracking file**: `planning({topic}): integrity review cycle {N}`
-7. **Return status**
+6. **Return status** — the orchestrator commits the tracking file
 
 ## Writing Full Fix Content
 
-For each finding, the tracking file must contain the **exact content** that would be written to the plan if the fix is approved. The orchestrator presents this content to the user as-is — what the user sees is what gets applied.
+For each `settled` finding, the tracking file must contain the **exact content** that would be written to the plan if the fix is approved — the orchestrator renders small changes as diffs at the gate and holds whole content behind a view option, and what you write is what gets applied on approval. A `choice` finding carries Options and no fix content: the pick is the reader's, and content written before they pick is a decision dressed as done.
 
 - **Current**: Copy the existing content verbatim from the plan/task file. This shows the user exactly what's there now.
-- **Proposed**: Write the replacement content in full plan format. This is what will replace the current content if approved.
+- **Proposed Text**: Write the replacement content in full plan format. This is what will replace the current content if approved.
 
-For `add-task` or `add-phase`, omit **Current** and write the complete new content in **Proposed**.
-For `remove-task` or `remove-phase`, include **Current** for reference and omit **Proposed**.
+For `add-task` or `add-phase`, omit **Current** and write the complete new content in **Proposed Text**.
+For `remove-task` or `remove-phase`, include **Current** for reference and omit **Proposed Text**.
 
 **Task structure**: Read `task-design.md` before writing any proposed content. All task content — whether new tasks (`add-task`) or modifications to existing tasks (`update-task`, `add-to-task`) — must follow the canonical task template and field requirements defined there. This is the same template the planning agents used to create the plan.
 
@@ -50,12 +49,13 @@ For `remove-task` or `remove-phase`, include **Current** for reference and omit 
 
 1. **Read everything** — plan and all tasks. Do not skip or skim.
 2. **Write only the tracking file** — do not modify the plan or tasks
-3. **Commit the tracking file** — ensures it survives context refresh
+3. **No git writes** — do not commit or stage. Writing the tracking file is your only file write.
 4. **No user interaction** — return status to the orchestrator
-5. **Full fix content** — every finding must include complete Current/Proposed content in plan format. No summaries.
+5. **Full fix content on settled findings** — a `settled` finding includes complete Current/Proposed Text content in plan format; a `choice` carries Options and no fix content. No summaries on either.
 6. **Proportional** — prioritize by impact. Don't nitpick style when architecture is wrong.
 7. **Task scope only** — check the plan as built; don't redesign it
-8. **Never lose your work** — the findings you generate must survive the run, and the tracking file is how they survive. Produce the tracking file via the `.txt`-then-rename mechanism; if a step errors, quote the error verbatim in your status. Never conclude the write is blocked without attempting it. Only if the write itself has errored may you return the findings in full in your final message for the orchestrator to persist — an absolute last resort, never an alternative to writing.
+8. **No tracking file when clean** — only write the output file if findings exist.
+9. **Never lose your work** — the findings you generate must survive the run, and the tracking file is how they survive. Produce the tracking file via the `.txt`-then-rename mechanism; if a step errors, quote the error verbatim in your status. Never conclude the write is blocked without attempting it. Only if the write itself has errored may you return the findings in full in your final message for the orchestrator to persist — an absolute last resort, never an alternative to writing.
 
 ## Your Output
 
@@ -64,8 +64,8 @@ Return a brief status:
 ```
 STATUS: findings | clean
 CYCLE: {N}
-TRACKING_FILE: {path to tracking file}
-FINDING_COUNT: {N}
+TRACKING_FILE: {path to tracking file — omit when clean}
+FINDINGS_COUNT: {N}
 ```
 
 - `clean`: No findings. The plan meets structural quality standards.

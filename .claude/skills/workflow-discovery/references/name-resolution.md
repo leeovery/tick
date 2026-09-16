@@ -4,7 +4,7 @@
 
 ---
 
-Resolve the work-unit name and clear any collision before the confirm-trigger creates the manifest. Loaded by [confirm-trigger.md](confirm-trigger.md). On return, `work_unit` is a confirmed, collision-free kebab-case name.
+Resolve the work-unit name and clear any collision before the unit is created. Loaded by [confirm-trigger.md](confirm-trigger.md) and by the roadmap pull ([pull.md](../../workflow-roadmap/references/pull.md)). On return, `work_unit` is a confirmed, collision-free kebab-case name.
 
 Inputs held from earlier steps: `work_type` (for phrasing), `inbox_seeds` (the promoted inbox file path(s), if the work came from the inbox), and the shaped one-line `description`.
 
@@ -20,15 +20,10 @@ Render the suggestion (for bugfix / feature / quick-fix the name becomes both `{
 Suggested {work-type} name: {work_unit}
 ```
 
-> *Output the next fenced block as markdown (not a code block):*
+Fetch the gate and emit its section verbatim per its marker:
 
-```
-· · · · · · · · · · · ·
-Is this name okay?
-
-- **`y`/`yes`** — Use this name
-- **A different name** — Tell me what to call it instead
-· · · · · · · · · · · ·
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs render name-gate
 ```
 
 **STOP.** Wait for user response.
@@ -40,30 +35,25 @@ Once the user confirms a name (the suggestion or their own), kebab-case it and h
 ## B. Conflict Check
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs exists {work_unit}
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest exists {work_unit}
 ```
 
 #### If a work unit with the same name exists
 
 A name collision is most often the user re-entering work that already exists — signpost the resume path rather than silently re-prompting.
 
-> *Output the next fenced block as a code block:*
+> *Output the next fenced block as markdown (not a code block):*
 
 ```
 A work unit named "{work_unit}" already exists.
 
-To pick that work back up, run /workflow-start and select it. Or
-choose a different name to start fresh.
+To pick that work back up, run /workflow-start and select it. Or choose a different name to start fresh.
 ```
 
-> *Output the next fenced block as markdown (not a code block):*
+Fetch the gate and emit its section verbatim per its marker:
 
-```
-· · · · · · · · · · · ·
-Choose a different name, or resume via /workflow-start.
-
-- **A different name** — Tell me what to call it instead
-· · · · · · · · · · · ·
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs render name-gate --variant collision
 ```
 
 **STOP.** Wait for user response.

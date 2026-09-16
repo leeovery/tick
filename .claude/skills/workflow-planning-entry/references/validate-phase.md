@@ -7,7 +7,7 @@
 Check whether a plan already exists for this topic.
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.planning.{topic} status
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit}.planning.{topic} status
 ```
 
 #### If output is empty (plan doesn't exist — fresh start)
@@ -18,37 +18,48 @@ node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.plann
 · · · · · · · · · · · ·
 Any additional context since the specification was completed?
 
-- **`c`/`continue`** — Continue with the specification as-is
-- Or provide additional context (priorities, constraints, new considerations)
-· · · · · · · · · · · ·
+**`c/continue`**  → Continue with the specification as-is
+**Add context** → Tell me the priorities, constraints, or new considerations
 ```
 
 **STOP.** Wait for user response.
 
-Set source="fresh".
+**If `continue`:**
+
+Set source="fresh" with no additional context.
+
+→ Return to caller.
+
+**If add context:**
+
+Store the user's response as the additional context for the handoff. Set source="fresh".
 
 → Return to caller.
 
 #### If status is `completed`
 
-Reset to in-progress:
+Reopen it:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.planning.{topic} status in-progress
+node .claude/skills/workflow-engine/scripts/engine.cjs topic reopen {work_unit} planning {topic}
 ```
 
-> *Output the next fenced block as a code block:*
+Render and emit the section verbatim:
 
-```
-Reopening plan: {topic:(titlecase)}
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs render phase-note {work_unit}.planning.{topic} --verb Reopening --noun plan
 ```
 
 Set source="existing".
+
+→ Load **[reconcile-advisory.md](../../workflow-shared/references/reconcile-advisory.md)** with downstream_phase = `planning`.
 
 → Return to caller.
 
 #### If status is `in-progress`
 
 Set source="existing".
+
+→ Load **[reconcile-advisory.md](../../workflow-shared/references/reconcile-advisory.md)** with downstream_phase = `planning`.
 
 → Return to caller.

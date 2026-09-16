@@ -26,17 +26,17 @@ Existing specifications to incorporate:
   • .workflows/{work_unit}/specification/{topic}/specification.md → will be superseded
   • .workflows/{work_unit}/specification/{topic}/specification.md → will be superseded
 
-Output: .workflows/unified/specification/unified/specification.md
+Output: .workflows/{work_unit}/specification/unified/specification.md
 ```
 
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
 · · · · · · · · · · · ·
-Proceed?
-- **`y`/`yes`**
-- **`n`/`no`**
-· · · · · · · · · · · ·
+**`◆ Proceed?`**
+
+**`y/yes`**
+**`n/no`**
 ```
 
 **STOP.** Wait for user response.
@@ -55,17 +55,17 @@ Sources:
   • {discussion-name}
   ...
 
-Output: .workflows/unified/specification/unified/specification.md
+Output: .workflows/{work_unit}/specification/unified/specification.md
 ```
 
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
 · · · · · · · · · · · ·
-Proceed?
-- **`y`/`yes`**
-- **`n`/`no`**
-· · · · · · · · · · · ·
+**`◆ Proceed?`**
+
+**`y/yes`**
+**`n/no`**
 ```
 
 **STOP.** Wait for user response.
@@ -76,7 +76,7 @@ Proceed?
 
 ## B. Handle Response
 
-#### If user confirms (y)
+#### If `yes`
 
 **If existing specifications will be superseded:**
 
@@ -86,6 +86,6 @@ Proceed?
 
 → Load **[unify.md](handoffs/unify.md)** and follow its instructions as written.
 
-#### If user declines (n)
+#### If `no`
 
 → Return to caller.

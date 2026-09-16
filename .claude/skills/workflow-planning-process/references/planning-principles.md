@@ -26,7 +26,7 @@ Planning translates the specification into actionable structure. This translatio
 
 At every stop point — phases, task lists, individual tasks, dependencies — the user must explicitly approve before you proceed or log content.
 
-**What counts as approval:** `y`/`yes` or equivalent explicit confirmation: "Approved", "That's good", "Looks right".
+**What counts as approval:** `y/yes` or equivalent explicit confirmation: "Approved", "That's good", "Looks right".
 
 **What does NOT count as approval:**
 - Silence
@@ -38,26 +38,26 @@ At every stop point — phases, task lists, individual tasks, dependencies — t
 
 When uncertain whether the user approved, ask: "Ready to proceed, or do you want to change something?"
 
-#### Self-Check Before Logging
+### Self-Check Before Logging
 
 Before logging any task to the plan, ask yourself:
 
-1. **Did I present this specific content to the user?** If no → STOP. Present it first.
-2. **Did the user explicitly approve it?** If no → STOP. Wait for approval.
-3. **Am I writing exactly what was approved?** If adding or changing anything → STOP. Present the changes first.
+1. **Did I present this specific content to the user?** If no, present it first.
+2. **Did the user explicitly approve it?** If no, wait for approval.
+3. **Am I writing exactly what was approved?** If adding or changing anything, present the changes first.
 
 ### Collaboration and Judgment
 
-**Stop and ask when judgment is needed.** Planning is collaborative — not in the sense that every line needs approval, but in the sense that the user guides structural decisions and resolves ambiguity. You must stop and ask when:
+**Stop and ask when the gap is the product's.** Planning is collaborative — not in the sense that every line needs approval, but in the sense that the user owns what the product does and resolves the ambiguities about it. You must stop and ask when:
 
-- The specification is ambiguous about implementation approach
-- Multiple valid ways to structure phases or tasks exist
-- You're uncertain whether a task is appropriately scoped
-- Edge cases aren't fully addressed in the specification
-- You need to make any decision the specification doesn't cover
-- Something doesn't add up or feels like a gap
+- The specification is silent or ambiguous about what the product does or how it behaves
+- An edge case in behaviour is not addressed in the specification
+- A decision the specification doesn't cover changes what the user gets
+- Something doesn't add up or feels like a gap in the record
 
-**Never invent to fill gaps.** If the specification doesn't address something, flag it with `[needs-info]` and ask the user. The specification is the golden document — everything in the plan must trace back to it. Assuming or guessing — even when it seems reasonable — is not acceptable. Surface the problem immediately rather than continuing and hoping to address it later.
+**A fork in how the plan builds it is the planner's.** Phase ownership, task grouping, what a consumer keys on, a bound, internal naming — where the specification, the plan's own conventions, and a measurement all leave it open, settle it on what leans, and on your honest call where nothing does, stating the call and what it weighed in the plan. A how-fork is never a stop and never a `[needs-info]`.
+
+**Never invent product intent.** Where the specification doesn't address what the product does, flag it with `[needs-info]` and ask the user. The specification is the golden document — everything the plan requires of the product must trace back to it. Assuming or guessing product intent — even when it seems reasonable — is not acceptable. Surface the problem immediately rather than continuing and hoping to address it later.
 
 ## Rules
 

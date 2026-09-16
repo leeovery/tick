@@ -10,61 +10,40 @@ Discover and configure project linters for use during the TDD cycle's LINT step.
 
 ## A. Resolve Configuration
 
-Read topic-level `linters` via manifest CLI:
+Read topic-level `linters` via `engine manifest`:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.implementation.{topic} linters
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit}.implementation.{topic} linters
 ```
 
 #### If `linters` is populated
 
-Set `source` = `topic`.
+The set was confirmed when this topic stored it — use it without re-asking.
 
-→ Proceed to **B. Confirm Linters**.
+→ Return to caller.
 
 #### Otherwise
 
-Check if project-level default `linters` exists via manifest CLI:
+Read the project-level default `linters` via `engine manifest`:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs exists project.defaults.linters
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get project.defaults.linters
 ```
 
-**If `false`:**
+**If output is empty (never set):**
 
 → Proceed to **C. Discovery**.
 
-**If `true`:**
-
-Read project default `linters` via manifest CLI:
-
-```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get project.defaults.linters
-```
-
-**If project default is populated:**
-
-Set `source` = `project`.
+**If output is a populated array:**
 
 → Proceed to **B. Confirm Linters**.
 
-**If project default is empty:**
+**If output is `[]` (previously skipped):**
 
-> *Output the next fenced block as a code block:*
+Fetch the gate, emitting each section verbatim at its marked instruction:
 
-```
-Previous implementations skipped linters.
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-· · · · · · · · · · · ·
-Skip linters again?
-
-- **`y`/`yes`** — Skip and proceed
-- **`n`/`no`** — Run full linter discovery
-· · · · · · · · · · · ·
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs render linters {work_unit}.implementation.{topic} --variant skipped
 ```
 
 **STOP.** Wait for user response.
@@ -81,51 +60,24 @@ Skip linters again?
 
 ## B. Confirm Linters
 
-List the linters returned by the `source` level manifest query.
+Write the linter names from the project default to `.workflows/.cache/{work_unit}/implementation/{topic}/linters.json` with the Write tool — `{"linters": ["{name}", ...]}` — then fetch the gate, emitting each section verbatim at its marked instruction:
 
-> *Output the next fenced block as a code block:*
-
-```
-Linters found:
-
-  • {name} — {command}
-  • ...
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-· · · · · · · · · · · ·
-Use these linters?
-
-- **`y`/`yes`** — Use and proceed
-- **`n`/`no`** — Re-discover linters
-· · · · · · · · · · · ·
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs render linters {work_unit}.implementation.{topic} --file .workflows/.cache/{work_unit}/implementation/{topic}/linters.json --variant confirm
 ```
 
 **STOP.** Wait for user response.
 
 #### If `yes`
 
-**If `source` is `project`:**
-
 Copy to topic level:
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.implementation.{topic} linters '[{project-level values}]'
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest set {work_unit}.implementation.{topic} linters '[{project-level values}]'
 ```
-
-→ Return to caller.
-
-**If `source` is `topic`:**
 
 → Return to caller.
 
 #### If `no`
-
-Clear topic-level `linters` before re-discovery:
-```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.implementation.{topic} linters '[]'
-```
 
 → Proceed to **C. Discovery**.
 
@@ -139,29 +91,28 @@ Analyse the project to determine which linters are appropriate:
 2. **Check installed tooling** — verify availability of candidate linters via the command line (e.g., `--version`). Check common install locations including package managers (brew, npm global, pip, cargo, etc.).
 3. **Recommend a linter set** — based on project analysis and available tooling. Include install commands for any recommended tools that aren't yet installed.
 
-Present discovery findings to the user:
+#### If the analysis finds no candidate linters
 
 > *Output the next fenced block as a code block:*
 
 ```
-Linter discovery:
-
-  • {tool} — {command} (installed / not installed)
-  • ...
-
-Recommendations: {any suggested tools with install commands}
+No linters found for this project. Proceeding without linting during TDD.
 ```
 
-> *Output the next fenced block as markdown (not a code block):*
-
+Store empty array at topic and project level:
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest set {work_unit}.implementation.{topic} linters '[]'
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest set project.defaults.linters '[]'
 ```
-· · · · · · · · · · · ·
-Approve these linters?
 
-- **`y`/`yes`** — Approve and proceed
-- **`c`/`change`** — Modify the linter list
-- **`s`/`skip`** — Skip linter setup (no linting during TDD)
-· · · · · · · · · · · ·
+→ Return to caller.
+
+#### If the analysis finds candidate linters
+
+Write the findings to `.workflows/.cache/{work_unit}/implementation/{topic}/linters.json` with the Write tool — `installed` is what the check above actually found, and `recommendations` (omit it when there are none) carries any install commands as one line: `{"linters": [{"name": "{tool}", "detail": "{command}", "installed": true|false}], "recommendations": "{suggested tools with their install commands}"}` — then fetch the gate, emitting each section verbatim at its marked instruction:
+
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs render linters {work_unit}.implementation.{topic} --file .workflows/.cache/{work_unit}/implementation/{topic}/linters.json --variant discovery
 ```
 
 **STOP.** Wait for user response.
@@ -170,8 +121,8 @@ Approve these linters?
 
 Store at topic and project level:
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.implementation.{topic} linters '[...]'
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set project.defaults.linters '[...]'
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest set {work_unit}.implementation.{topic} linters '[...]'
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest set project.defaults.linters '[...]'
 ```
 
 → Return to caller.
@@ -186,8 +137,8 @@ Adjust based on user input.
 
 Store empty array at topic and project level:
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.implementation.{topic} linters '[]'
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set project.defaults.linters '[]'
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest set {work_unit}.implementation.{topic} linters '[]'
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest set project.defaults.linters '[]'
 ```
 
 → Return to caller.

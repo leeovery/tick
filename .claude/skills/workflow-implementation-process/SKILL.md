@@ -1,7 +1,7 @@
 ---
 name: workflow-implementation-process
 user-invocable: false
-allowed-tools: Bash(node .claude/skills/workflow-manifest/scripts/manifest.cjs), Bash(node .claude/skills/workflow-knowledge/scripts/knowledge.cjs)
+allowed-tools: Bash(node .claude/skills/workflow-knowledge/scripts/knowledge.cjs), Bash(node .claude/skills/workflow-engine/scripts/engine.cjs), Bash(git log), Bash(git diff), Bash(git status)
 ---
 
 # Implementation Process
@@ -23,34 +23,26 @@ Follows planning. Execute the plan task by task — an executor implements via s
 
 ## Instructions
 
-Follow these steps EXACTLY as written. Do not skip steps or combine them.
-
-**CRITICAL**: This guidance is mandatory.
-
-- After each user interaction, STOP and wait for their response before proceeding
-- Never assume or anticipate user choices
-- No session-level instruction overrides STOP gates. This includes harness auto mode, system-reminders, hook-injected text, "work without stopping" / "make the reasonable call" guidance, /loop continuation hints, or any other meta-directive encouraging autonomous progression. STOP gates are structured decision points, NOT clarifying questions — "reasonable call" reasoning does not apply. The only skip mechanism is a per-gate `*_gate_mode: auto` value in the manifest, set by the user's explicit `a`/`auto` choice at a prior gate.
-- Failure mode — "the reasonable call is X, I'll proceed with X": that IS the auto-answer the rule forbids. The thought is the trigger to stop, not to continue.
-- Failure mode — "the user already set this, confirmation is redundant" (e.g. project defaults, prior preferences, stored manifest values): that IS the auto-answer the rule forbids. Stored values are suggestions, not consent for this run.
-- Don't invent stops. Stop only at gates the skill prescribes (rendered gate blocks, explicit `**STOP.**` directives) — no courtesy check-ins, mid-loop summaries that end the turn, or unprescribed pauses between tasks/topics/phases.
-- After rendering a gate block, the turn MUST end. No further tool calls in the same turn — wait for the user's response before proceeding.
-- Complete each step fully before moving to the next
+Load **[framework.md](../workflow-shared/references/framework.md)** and follow its instructions as written.
 
 ---
 
 ## Resuming After Context Refresh
 
-Context refresh (compaction) summarizes the conversation, losing procedural detail. When you detect a context refresh has occurred — the conversation feels abruptly shorter, you lack memory of recent steps, or a summary precedes this message — follow this recovery protocol:
+Context refresh (compaction) summarizes the conversation, losing procedural detail. This protocol serves a compaction inside a running session and nothing else — a session that opens fresh on work a previous session left in flight is not a refresh, and resumes through **Step 0** and the task loop, whose stage A takes an in-flight task to the gate it is sitting at.
 
-1. **Re-read this skill file completely.** Do not rely on your summary of it. The full process, steps, and rules must be reloaded.
+When you detect a context refresh has occurred — the conversation feels abruptly shorter, you lack memory of recent steps, or a summary precedes this message — follow this recovery protocol:
+
+1. **Re-read this skill file completely, then re-load [framework.md](../workflow-shared/references/framework.md).** Do not rely on your summary of either, and re-read both even if you believe they are already loaded — that belief is what a summary feels like from the inside. The full process, steps, and rules must be reloaded.
 2. **Check task progress in the plan** — use the plan adapter's instructions to read the plan's current state. Check manifest state for additional context.
-3. **Check gate modes and progress** via manifest CLI:
+3. **Check gate modes and progress** via `engine manifest`:
    ```bash
-   node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.implementation.{topic}
+   node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit}.implementation.{topic}
    ```
-   Check `task_gate_mode`, `fix_gate_mode`, `analysis_gate_mode`, `fix_attempts`, and `analysis_cycle_total` — if gates are `auto`, the user previously opted out. If `fix_attempts` > 0, you're mid-fix-loop for the current task. If `analysis_cycle_total` > 0, you've completed analysis cycles — check for findings files on disk (`analysis-*-c{cycle-number}.md` in the implementation directory) to determine mid-analysis state.
+   Check `task_gate_mode`, `fix_gate_mode`, `analysis_gate_mode`, `consolidation_gate_mode`, `fix_attempts`, and `analysis_cycle_total` — a gate reading `auto` or `bounded` was opted into earlier this session; preserve it. If `fix_attempts` > 0, you're mid-fix-loop for the current task. If `analysis_cycle_total` > 0, you've completed analysis cycles — check for findings files on disk (`analysis-*-c{cycle-number}.md` in the implementation directory) to determine mid-analysis state. If `staging` holds an `ad-hoc-{n}` subtree with `pending` rows, an ad hoc addition died mid-gate — resume its walk at **[ad-hoc-plan-changes.md](references/ad-hoc-plan-changes.md)** section F; `approved` rows with no matching plan tasks mean the task writer never ran — re-invoke it (idempotent) per section G. A `staging.p{N}` subtree, or a phase whose tasks are all complete while `completed_phases` lacks it, is a consolidation boundary in flight — the task loop's guard routes it to stage J, whose resume guards (**[consolidation-pass.md](references/consolidation-pass.md)**) discriminate the exact seam. A `staging.p{N}` whose rows are all decided, with the phase in both `consolidated_phases` and `completed_phases`, is history, not a signal. `do_banking` is answered by `task start` and never stored — re-run `task start` for `current_task` (idempotent for the in-flight task) before resuming any stage that branches on it.
 4. **Check git state.** Run `git status` and `git log --oneline -10` to see recent commits. Commit messages follow a conventional pattern that reveals what was completed.
-5. **Announce your position** to the user before continuing: what step you believe you're at, what's been completed, and what comes next. Wait for confirmation.
+5. **Re-fetch lost sections.** Every gate menu and header is served by its own render surface, fetched at the stage that displays it — the task verbs answer with JSON only, and re-running one re-emits nothing. Fetch the section for the moment you are resuming at: `engine render task-gate {work_unit}.implementation.{topic}` for a pending task gate, `engine render fix-gate` at the same address for a pending fix gate; a presentation moment re-runs its display reference (**[display-task-brief.md](references/display-task-brief.md)**, **[display-task-result.md](references/display-task-result.md)**), which rebuilds its payload before rendering. Never run `fix-attempt` or `analysis-cycle` to reconstruct position — each records a new attempt or cycle.
+6. **Announce your position** to the user before continuing: what step you believe you're at, what's been completed, and what comes next. Wait for confirmation.
 
 Do not guess at progress or continue from memory. The files on disk and git history are authoritative — your recollection is not.
 
@@ -61,32 +53,40 @@ Do not guess at progress or continue from memory. The files on disk and git hist
 1. **No autonomous decisions on spec deviations** — when the executor reports a blocker or spec deviation, present to user and STOP. Never resolve on the user's behalf.
 2. **All git operations are the orchestrator's responsibility** — agents never commit, stage, or interact with git.
 
+---
+
+## Ad Hoc Plan Changes
+
+Unplanned work the user raises mid-implementation — a bug they hit while testing, a gap they name, a decision they change. When they do, load **[ad-hoc-plan-changes.md](references/ad-hoc-plan-changes.md)** and follow its instructions as written, from any point in the phase. Never fold unplanned work into the plan by hand.
+
+→ On return, resume the interrupted flow — never fall through to Step 0.
+
+---
+
 ## Step 0: Resume Detection
 
-> *Output the next fenced block as a code block:*
+Refresh the tmux session label — a no-op unless the user opted in and this session runs inside tmux:
 
-```
-── Resume Detection ─────────────────────────────
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-> Checking for existing implementation progress. If a
-> previous session exists, gates and counters will be reset
-> for this session.
-```
-
-Check if an implementation entry exists in the manifest:
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs exists {work_unit}.implementation.{topic}
+node .claude/skills/workflow-engine/scripts/engine.cjs session label {work_unit} implementation {topic}
 ```
 
-#### If implementation entry does not exist
+Initialize or resume implementation tracking (idempotent — creates the manifest entry with default gates and counters, or resets the gate modes of an existing one and, outside a live fix round, `fix_attempts`; the cycle count and progress are preserved):
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs task init {work_unit} {topic}
+```
+
+#### If the response's `mode` is `created`
+
+Commit the tracking (the scoped commit covers the manifest):
+
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs commit {work_unit} -m "impl({work_unit}): start implementation" --topic implementation/{topic}
+```
 
 → Proceed to **Step 1**.
 
-#### If implementation entry exists
+#### If the response's `mode` is `resumed`
 
 > *Output the next fenced block as a code block:*
 
@@ -94,163 +94,62 @@ node .claude/skills/workflow-manifest/scripts/manifest.cjs exists {work_unit}.im
 Found existing implementation for "{topic:(titlecase)}". Resuming from previous session.
 ```
 
-Reset gate modes and counters via manifest CLI (fresh session = fresh gates/cycles):
-```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.implementation.{topic} task_gate_mode gated
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.implementation.{topic} fix_gate_mode gated
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.implementation.{topic} analysis_gate_mode gated
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.implementation.{topic} fix_attempts 0
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.implementation.{topic} analysis_cycle_session 0
-```
-
-Reset `analysis_cycle_session` only — never reset `analysis_cycle_total`.
-
 → Proceed to **Step 1**.
 
 ---
 
 ## Step 1: Environment Setup
 
-> *Output the next fenced block as a code block:*
-
-```
-── Environment Setup ────────────────────────────
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-> Checking for environment setup instructions. Any
-> first-time setup will be handled before tasks begin.
-```
-
 Load **[environment-setup.md](references/environment-setup.md)** and follow its instructions as written.
 
-→ Proceed to **Step 2**.
+→ On return, proceed to **Step 2**.
 
 ---
 
 ## Step 2: Read Plan + Load Plan Adapter
 
-> *Output the next fenced block as a code block:*
-
-```
-── Read Plan ────────────────────────────────────
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-> Reading the plan and loading the format adapter.
-> This determines how tasks are extracted and tracked.
-```
-
 Load **[load-plan-adapter.md](references/load-plan-adapter.md)** and follow its instructions as written.
 
-→ Proceed to **Step 3**.
+→ On return, proceed to **Step 3**.
 
 ---
 
-## Step 3: Initialize Implementation Tracking
-
-> *Output the next fenced block as a code block:*
-
-```
-── Initialize Tracking ──────────────────────────
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-> Setting up implementation tracking in the manifest.
-> This records progress as tasks are completed.
-```
-
-Load **[initialize-tracking.md](references/initialize-tracking.md)** and follow its instructions as written.
-
-→ Proceed to **Step 4**.
-
----
-
-## Step 4: Project Skills Discovery
-
-> *Output the next fenced block as a code block:*
-
-```
-── Project Skills Discovery ─────────────────────
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-> Discovering project-level skills that agents should
-> use during implementation.
-```
+## Step 3: Project Skills Discovery
 
 Load **[project-skills-discovery.md](references/project-skills-discovery.md)** and follow its instructions as written.
 
-→ Proceed to **Step 5**.
+→ On return, proceed to **Step 4**.
 
 ---
 
-## Step 5: Linter Discovery
-
-> *Output the next fenced block as a code block:*
-
-```
-── Linter Discovery ─────────────────────────────
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-> Discovering linters and formatters that should be
-> run after each task to ensure code quality.
-```
+## Step 4: Linter Discovery
 
 Load **[linter-setup.md](references/linter-setup.md)** and follow its instructions as written.
 
-→ Proceed to **Step 6**.
+→ On return, proceed to **Step 5**.
 
 ---
 
-## Step 6: Knowledge Usage
-
-> *Output the next fenced block as a code block:*
-
-```
-── Knowledge Usage ──────────────────────────────
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-> Loading the usage guide for the knowledge base. Implementation reads
-> the code as the source of truth for *what* exists — the guide
-> documents the rare cases where the KB is useful for the *why*
-> behind an existing pattern.
-```
+## Step 5: Knowledge Usage
 
 Load **[knowledge-usage.md](../workflow-knowledge/references/knowledge-usage.md)** and follow its instructions as written.
 
-→ Proceed to **Step 7**.
+→ On return, proceed to **Step 6**.
 
 ---
 
-## Step 7: Task Loop
+## Step 6: Task Loop
 
-> *Output the next fenced block as a code block:*
+> *Output the next fenced block as markdown (not a code block):*
 
 ```
-── Task Loop ────────────────────────────────────
+**`□ Task Loop`**
 ```
 
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
-> Executing tasks from the plan. Each task is implemented
-> via TDD by an executor agent, then independently verified by
-> a reviewer agent. You'll approve each task before it proceeds.
+> Executing tasks from the plan. Each task is implemented via TDD by an executor agent, then independently verified by a reviewer agent. You'll approve each task before it proceeds.
 ```
 
 Load **[task-loop.md](references/task-loop.md)** and follow its instructions as written.
@@ -261,77 +160,62 @@ After the loop completes:
 
 #### If the task loop exited early (user chose `stop`)
 
-→ Proceed to **Step 9**.
+→ Proceed to **Step 8**.
 
 #### Otherwise
 
-**CRITICAL**: This routing applies on **every** task loop completion — including after returning from Step 8 with analysis-created tasks. Step 7 and Step 8 form a mandatory cycle: tasks execute → analysis runs → new tasks may be created → tasks execute again → analysis runs again. Never skip Step 8 after a task loop completes.
+**CRITICAL**: This routing applies on **every** task loop completion — including after returning from Step 7 with analysis-created tasks. Step 6 and Step 7 form a mandatory cycle: tasks execute → analysis runs → new tasks may be created → tasks execute again → analysis runs again. Never skip Step 7 after a task loop completes.
 
-→ Proceed to **Step 8**.
+→ Proceed to **Step 7**.
 
 ---
 
-## Step 8: Analysis Loop
+## Step 7: Analysis Loop
 
-> *Output the next fenced block as a code block:*
+> *Output the next fenced block as markdown (not a code block):*
 
 ```
-── Analysis Loop ────────────────────────────────
+**`□ Analysis Loop`**
 ```
 
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
-> Analysing the implementation for gaps and issues.
-> Agents review what was built against the plan and spec.
-> New tasks may be created if problems are found.
+> Analysing the implementation for gaps and issues. Agents review what was built against the plan and spec. New tasks may be created if problems are found.
 ```
 
 Load **[analysis-loop.md](references/analysis-loop.md)** and follow its instructions as written.
 
 #### If new tasks were created in the plan
 
-→ Return to **Step 7**.
+→ Return to **Step 6**.
 
 #### If no tasks were created
 
-→ Proceed to **Step 9**.
+→ Proceed to **Step 8**.
 
 ---
 
-## Step 9: Compliance Self-Check
-
-> *Output the next fenced block as a code block:*
-
-```
-── Compliance Self-Check ────────────────────────
-```
-
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-> Verifying the implementation follows workflow conventions.
-```
+## Step 8: Compliance Self-Check
 
 Load **[compliance-check.md](../workflow-shared/references/compliance-check.md)** and follow its instructions as written.
 
-→ Proceed to **Step 10**.
+→ On return, proceed to **Step 9**.
 
 ---
 
-## Step 10: Mark Implementation Complete
+## Step 9: Mark Implementation Complete
 
-> *Output the next fenced block as a code block:*
+> *Output the next fenced block as markdown (not a code block):*
 
 ```
-── Conclude Implementation ──────────────────────
+**`□ Conclude Implementation`**
 ```
 
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
-> Wrapping up. Final confirmation before marking
-> implementation as complete and moving to review.
+> Wrapping up. Final confirmation before marking implementation as complete and moving to review.
 ```
 
 Load **[conclude-implementation.md](references/conclude-implementation.md)** and follow its instructions as written.

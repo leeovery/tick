@@ -8,53 +8,47 @@ This file defines the canonical structure for specification files (`.workflows/{
 
 The specification is a single file per topic. Structure is **flexible** — organize around phases and subject matter, not rigid sections. This is a working document.
 
+Structure is flexible; facts are not. Every value, rule, threshold, and enumeration has exactly one section that states it — its **home**. Every other mention references the home and never restates it. Reference only to avoid restating — never to justify, compare, or note consistency: if deleting the sentence containing a reference loses no information, delete the sentence. A reference cites the home by its section number (`§3.2`) — never restates or describes it. Never state a derived fact (a count or summary of a list sitting beside it) — it drifts when the list changes.
+
+An empirical claim about the codebase or toolchain — a count, an enumeration, an "all X are Y" — is recorded at its home with the command that measured it, the command alone in its span so it re-runs by copy (`` … (`rg -l 'pattern' | wc -l` → 14) ``). A claim with no command is a claim review cannot re-check; a load-bearing claim that cannot be measured is written as observation, not fact. A specification carries no open-decision markers — "Decision required", "TBD", and kin park a decision the record never made; the point routes per **[resolve-source-incoherence.md](resolve-source-incoherence.md)** instead of landing in the document.
+
 > **CHECKPOINT**: You should NOT be creating or writing to this file unless you have explicit user approval for specific content. If you're about to create this file with content you haven't presented and had approved, **STOP**. That violates the workflow.
 
 ---
 
-## Metadata (Manifest CLI)
+## Metadata
 
-Specification metadata is stored in the work-unit manifest, not in file frontmatter. Access via the manifest CLI:
+Specification metadata is stored in the work-unit manifest, not in file frontmatter. Access via `engine manifest`:
 
 ```bash
 # Read fields
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.specification.{topic} status
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.specification.{topic} review_cycle
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.specification.{topic} finding_gate_mode
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.specification.{topic} sources.{source-name}.status
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit}.specification.{topic} status
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit}.specification.{topic} review_cycle
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit}.specification.{topic} finding_gate_mode
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit}.specification.{topic} sources.{source-name}.status
 
 # Write fields
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.specification.{topic} status completed
-node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.specification.{topic} sources.{source-name}.status incorporated
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest set {work_unit}.specification.{topic} sources.{source-name}.status incorporated
 ```
+
+Lifecycle `status` transitions go through the engine, not `set` — `engine topic start` on creation, `engine topic complete` (which also indexes the artifact) at conclusion.
 
 | Field | Set when |
 |-------|----------|
 | `status` | Spec creation → `in-progress`; completion → `completed` |
 | `date` | Spec creation — today's date; update on each commit |
 | `review_cycle` | Starts at 0; incremented each review cycle. Missing field treated as 0. |
+| `review_baseline_words` | Set when review opens (cycle 0 → 1) — the document's word count at the end of construction. The convergence diagnostic measures review growth against it. |
 | `finding_gate_mode` | Spec creation → `gated`; user opts in → `auto` |
 | `construction_gate_mode` | Spec creation → `gated`; user opts in → `auto` |
-| `sources` | Spec creation — all sources as `pending`; updated as extraction completes |
+| `sources` | Spec creation — all sources as `pending`; updated as extraction completes. The engine sets a row to `stale` when its source discussion reopens after extraction; reconciliation sets it back to `incorporated` |
 | `consult_references` | Session setup — declared refs registered as `pending`; set `addressed` once the sibling discussion's hand-off slice is read narrowly and reconciled. Optional — absent when the spec owes no corrections |
 
 ---
 
 ## Body
 
-```markdown
-# Specification: [Topic Name]
-
-## Specification
-
-[Validated content accumulates here, organized by topic/phase]
-
----
-
-## Working Notes
-
-[Optional - capture in-progress discussion if needed]
-```
+→ Load **[specification-body.md](../../workflow-shared/references/specification-body.md)** and follow its instructions as written.
 
 ---
 
@@ -62,25 +56,27 @@ node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.speci
 
 **All specifications must track their sources**, even when built from a single source. This enables proper tracking when additional material is later added.
 
-Track each source with its incorporation status via the manifest CLI:
+Track each source with its incorporation status via `engine manifest`:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.specification.{topic} sources.auth-flow.status
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit}.specification.{topic} sources.auth-flow.status
 # → incorporated
 
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit}.specification.{topic} sources.api-design.status
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit}.specification.{topic} sources.api-design.status
 # → pending
 ```
 
 **Status values:**
 - `pending` — Source has been selected but content extraction is not complete
 - `incorporated` — Source content has been fully extracted and woven into the specification
+- `stale` — Source was extracted, but its discussion was re-decided since — the extraction predates the revision. Set by the engine when the source discussion reopens; never set by hand
 
 **When to update source status:**
 
-1. **When creating the specification**: All sources start as `pending` — `node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.specification.{topic} sources.{source-name}.status pending`
-2. **After completing exhaustive extraction from a source**: Mark that source as `incorporated` — `node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.specification.{topic} sources.{source-name}.status incorporated`
+1. **When creating the specification**: All sources start as `pending` — `node .claude/skills/workflow-engine/scripts/engine.cjs manifest set {work_unit}.specification.{topic} sources.{source-name}.status pending`
+2. **After completing exhaustive extraction from a source**: Mark that source as `incorporated` — `node .claude/skills/workflow-engine/scripts/engine.cjs manifest set {work_unit}.specification.{topic} sources.{source-name}.status incorporated`
 3. **When adding a new source to an existing spec**: Add it with `status: pending` via the same command
+4. **After reconciling a `stale` source** (see **[reconcile-stale-sources.md](reconcile-stale-sources.md)**): mark it `incorporated` — the same command as extraction
 
 **How to determine if a source is incorporated:**
 
@@ -89,17 +85,19 @@ A source is `incorporated` when you have:
 - Presented and logged all relevant content from that source
 - No more content from that source needs to be extracted
 
-**Important**: The specification's overall status should only be set to `completed` (via `node .claude/skills/workflow-manifest/scripts/manifest.cjs set {work_unit}.specification.{topic} status completed`) when:
-- All sources are marked as `incorporated`
-- Both review phases are complete
+**IMPORTANT**: The specification should only be marked `completed` (via `node .claude/skills/workflow-engine/scripts/engine.cjs topic complete {work_unit} specification {topic}`) when:
+- All sources are marked as `incorporated` — neither `pending` nor `stale`
+- All three review phases are complete
 - User has signed off
 
-If a new source is added to a completed specification (via grouping analysis), the specification effectively needs updating — even if the manifest still shows `status: completed`, the presence of `pending` sources indicates work remains.
+If a new source is added to a completed specification (via grouping analysis), or a source discussion is re-decided beneath it, the specification effectively needs updating — even if the manifest still shows `status: completed`, the presence of `pending` or `stale` sources indicates work remains.
 
 ---
 
 ## Cross-Cutting Concerns
 
-Cross-cutting concerns (caching strategies, rate-limiting policies, work conventions) are a separate work type with their own pipeline: Research (optional) → Discussion → Specification (terminal). They are created via `/workflow-start` or promoted from epic specifications at completion time.
+Cross-cutting concerns (caching strategies, rate-limiting policies, work conventions) are a separate work type with their own pipeline: Research (optional) → Experiment (optional) → Discussion → Specification (terminal). They are created via `/workflow-start` or promoted from epic specifications at completion time.
 
 During planning for any work type, the planning entry skill surfaces completed cross-cutting specifications as context, ensuring features and bugfixes incorporate validated architectural decisions.
+
+→ Return to caller.

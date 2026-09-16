@@ -1,0 +1,39 @@
+---
+name: workflow-engine
+user-invocable: false
+allowed-tools: Bash(node .claude/skills/workflow-engine/scripts/engine.cjs)
+---
+
+# Workflow Engine
+
+The platform behind the workflow skills: deterministic state, derivation, and rendering. Anything fully determined by data is computed here, in code, and consumed by Claude — never re-derived in prose.
+
+This skill is a reference, not a flow. In normal use the workflow prose prescribes exact engine calls at exact points; consult this documentation when you need to understand how the engine works — a command's full contract, the library surface, or the architecture — rather than which call to make next.
+
+## Architecture
+
+Three rings under `scripts/`:
+
+- **Kernel** (`kernel/`) — mechanism plus the manifest's on-disk contract: render primitives (the wrap budget `width − prefix` lives here once, so gutter-overflow bugs can exist in only one place), `manifest-io.cjs` (one read/parse, one atomic-write serialisation, one lock protocol — every manifest writer flows through it), and `manifest-schema.cjs` (the single vocabulary of legal work types, phases, and statuses). Every engine load→mutate→save holds the manifest lock; KB syncs and commits run after release.
+- **Domain** (`domain/`) — the workflow ontology: transitions, queries, projections, glyph and `[tag]` composition conventions, plus the shared read side: `reads.cjs` (generic manifest/file loads, no phase semantics) and `derivations.cjs` (lifecycle joins, next-phase computation, cache status), consumed by the domain ring and — via `lib.cjs`'s `engine.reads`/`engine.derivations` namespaces — every per-skill read adapter. Derivations may require reads; never the reverse.
+- **Gateway** (`gateway.cjs`) — the uniform verb-dispatch harness every per-skill adapter (`skills/*/scripts/gateway.cjs`) runs on, plus the demarcated output sections.
+
+Two doors:
+
+- **CLI** (`engine.cjs`) — writes: transactions, lifecycle, and the `manifest` field surface. Called from skill prose at prescribed points.
+- **Library** (`lib.cjs`) — reads: adapter scripts `require()` it in-process for detail builders, projections, and the gateway harness.
+
+Output sections are one-directional: `DATA` is for reasoning and is never displayed; `DISPLAY` and `MENU` are emitted to the user verbatim and never parsed for decisions.
+
+**Sessions run concurrently, so every write is confined.** Manifest writes hold the work unit's lock; cache state is partitioned per topic, bar the project-level session-label store, keyed per tmux session (its positions per Claude session id) and written atomically; and every engine commit — the `commit` helper and every transaction tail — commits a pathspec, never the index, so no commit can reach outside the paths its own action wrote. Session liveness rides the same principle: heartbeats are stamped by the engine as a side effect of the verbs a session runs on its own topic (`presence`), never by prose.
+
+**Anything parameterised or state-branching renders in code.** Static chrome lives as literal blocks in skill prose; adapter-side chrome is rendered in-process by projections; shared runtime surfaces (gates, menus, parameterised displays) are served by the `render` surface catalogue in `engine.cjs`, which returns demarcated sections the flow emits verbatim. The engine never parses markdown artifacts to populate a render — address-backed values are JSON state, judgment content is a validated payload file.
+
+## Reference
+
+- **[commands.md](references/commands.md)** — the CLI catalogue: command grammar, the response contract, and every noun's full signature and behaviour (`boot`, `manifest`, `workunit`, `topic`, `experiment`, `sources`, `discovery-map`, `build-order`, `discovery-session`, `discussion-map`, `research-threads`, `task`, `inbox`, `roadmap`, `cache`, `presence`, `session`, `agent`, `commit`, `render`).
+- **[library-and-gateway.md](references/library-and-gateway.md)** — the `lib.cjs` surface (render kernel, manifest IO, conventions, detail builders, projections) and the gateway contract adapter scripts implement.
+
+## Tests
+
+Engine suites are wired into `npm test` (with shell contract suites under `npm run test:cli`) — `package.json` is the authoritative list. Type contracts: `npm run typecheck` (JSDoc + `tsc --noEmit`). Add a test alongside any change to engine scripts.

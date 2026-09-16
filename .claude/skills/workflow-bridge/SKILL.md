@@ -1,7 +1,7 @@
 ---
 name: workflow-bridge
 user-invocable: false
-allowed-tools: Bash(node .claude/skills/workflow-manifest/scripts/manifest.cjs), Bash(node .claude/skills/workflow-bridge/scripts/discovery.cjs), Bash(node .claude/skills/workflow-continue-epic/scripts/discovery.cjs), Bash(node .claude/skills/workflow-discovery/scripts/discovery.cjs), Bash(node .claude/skills/workflow-knowledge/scripts/knowledge.cjs)
+allowed-tools: Bash(node .claude/skills/workflow-bridge/scripts/gateway.cjs), Bash(node .claude/skills/workflow-continue-epic/scripts/gateway.cjs), Bash(node .claude/skills/workflow-discovery/scripts/gateway.cjs), Bash(node .claude/skills/workflow-engine/scripts/engine.cjs), Bash(mkdir -p .workflows/)
 ---
 
 Enter plan mode with deterministic continuation instructions.
@@ -12,19 +12,39 @@ This skill is invoked when a phase concludes — to create a plan-mode handoff t
 
 ## Instructions
 
-This skill receives context from the calling processing skill:
-- **Work unit**: The work unit name (directory under `.workflows/`) = `{work_unit}`
-- **Completed phase**: The phase that just completed — `discovery` or any later phase = `{completed_phase}`
-- **Next phase** (optional): supplied when the caller already knows the destination — discovery handing a single-phase work type to its first phase = `{next_phase}`. Other callers omit it and the continuation computes the next phase from discovery output.
+Load **[framework.md](../workflow-shared/references/framework.md)** and follow its instructions as written.
+
+This skill receives positional arguments:
+- `$0` — **work_unit**: the work unit name (directory under `.workflows/`). Held downstream as `{work_unit}`.
+- `$1` — **completed_phase**: the phase that just completed — `discovery` or any later phase. Held downstream as `{completed_phase}`.
+- `$2` — **next_phase** (optional): supplied when the caller already knows the destination — discovery handing a single-phase work type to its first phase. Held downstream as `{next_phase}`. Absent or the literal `none` means the continuation computes the next phase from discovery output.
 
 ---
 
 ## Step 1: Read Work Type and Run Discovery
 
+Refresh the tmux session label — a no-op unless the user opted in and this session runs inside tmux:
+
+```bash
+node .claude/skills/workflow-engine/scripts/engine.cjs session label {work_unit}
+```
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+**`□ Read Work Type and Run Discovery`**
+```
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+> Reading the work unit's type, then computing the next phase from pipeline state when it isn't already known.
+```
+
 Read work type from the manifest:
 
 ```bash
-node .claude/skills/workflow-manifest/scripts/manifest.cjs get {work_unit} work_type
+node .claude/skills/workflow-engine/scripts/engine.cjs manifest get {work_unit} work_type
 ```
 
 #### If completed phase is `discovery`
@@ -42,16 +62,28 @@ The discovery handoff needs no state computation. Discovery is the first phase, 
 Run the discovery script with the work unit:
 
 ```bash
-node .claude/skills/workflow-bridge/scripts/discovery.cjs {work_unit}
+node .claude/skills/workflow-bridge/scripts/gateway.cjs {work_unit}
 ```
 
-The output contains: `work_type`, `phases` (per-phase status), and `next_phase`.
+The output contains `next_phase`, `completed_phases` (in pipeline order), and `revisitable_phases` — the completed phases before `next_phase`, filtered to the work type's pipeline. When candidates exist, a labelled `MENU: revisit phases` section follows the dump — emitted only at the continuation's revisit gate, never here.
 
 → Proceed to **Step 2**.
 
 ---
 
 ## Step 2: Route to Continuation Reference
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+**`□ Route to Continuation Reference`**
+```
+
+> *Output the next fenced block as markdown (not a code block):*
+
+```
+> Handing off to the continuation that builds the plan-mode handoff for whatever phase comes next.
+```
 
 Based on the completed phase and work type, load the appropriate continuation reference. The completed-phase check runs first so an epic concluding discovery routes to the deterministic discovery continuation; non-discovery epic completions fall through to the work-type branches below.
 

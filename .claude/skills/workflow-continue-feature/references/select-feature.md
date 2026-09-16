@@ -8,43 +8,15 @@
 
 Display active features and let the user select one.
 
-> *Output the next fenced block as a code block:*
+Run the index dump — the emission draws from this response, never a carried one:
 
-```
-{count} feature(s) in progress:
-
-@foreach(feature in features)
-  {N}. {feature.name:(titlecase)}
-     └─ {feature.phase_label:(titlecase)}
-
-@endforeach
-
-@if(completed_count > 0 || cancelled_count > 0)
-{completed_count} completed, {cancelled_count} cancelled.
-@endif
+```bash
+node .claude/skills/workflow-continue-feature/scripts/gateway.cjs
 ```
 
-Build from the discovery output's `features` array. Each feature shows `name` (titlecased) and `phase_label` (titlecased). Blank line between each numbered item.
+**If it carries no selection sections** (no active features remain — possible after a loop-back cancelled or completed the last one): render the caller's no-features-in-progress terminal from its Step 2 and stop there.
 
-> *Output the next fenced block as markdown (not a code block):*
-
-```
-· · · · · · · · · · · ·
-Which feature would you like to continue?
-
-- **`1`** — Continue "{feature.name:(titlecase)}" — {feature.phase_label}
-- **`2`** — ...
-
-@if(completed_count > 0 || cancelled_count > 0)
-- **`{N+1}`** — View completed & cancelled features
-@endif
-- **`m`/`manage`** — Manage a feature's lifecycle
-
-Select an option:
-· · · · · · · · · · · ·
-```
-
-Recreate with actual features and `phase_label` values from discovery. No auto-select, even with one item.
+Otherwise emit its `DISPLAY: selection` and `MENU: selection` sections verbatim, each per its marker. No auto-select, even with one item.
 
 **STOP.** Wait for user response.
 
@@ -58,15 +30,15 @@ Store the selected feature's name as `work_unit`.
 
 Set work_type filter = `feature`.
 
-→ Load **[../../workflow-start/references/view-completed.md](../../workflow-start/references/view-completed.md)** and follow its instructions as written.
+→ Load **[view-completed.md](../../workflow-start/references/view-completed.md)** and follow its instructions as written.
 
 Re-run discovery to refresh state after potential changes.
 
 → Return to **A. Display and Select**.
 
-#### If user chose `m`/`manage`
+#### If user chose `m/manage`
 
-→ Load **[../../workflow-start/references/manage-work-unit.md](../../workflow-start/references/manage-work-unit.md)** and follow its instructions as written.
+→ Load **[manage-work-unit.md](../../workflow-start/references/manage-work-unit.md)** and follow its instructions as written.
 
 Re-run discovery to refresh state after potential changes.
 

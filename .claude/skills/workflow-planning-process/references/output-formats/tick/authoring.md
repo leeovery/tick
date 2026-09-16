@@ -18,6 +18,16 @@ You should never do the following:
 
 If a description contains double quotes, escape them with `\"`. That's it.
 
+## Storage Pathspecs
+
+The git pathspecs this format writes **outside `--plan`'s own scope** — the planning topic's directory and the manifests. The array below is recorded verbatim as `storage_paths` on the planning item at plan init; workflow commits (`engine commit --plan`) stage every entry, and restart cleanups stage the same entries when removing authored tasks. Relative pathspecs only — `[]` when the format stores inside that scope.
+
+```json
+[".tick/"]
+```
+
+The task store lives in `.tick/` at the project root.
+
 ## Plan Structure
 
 Create the topic task — this is the plan-level entity in tick. Always set `--refs` to store the workflow's internal ID.
@@ -43,7 +53,7 @@ Each command returns the phase's tick ID — this is the phase's external identi
 
 ## Task Storage
 
-Create tasks as children of their phase task. Always set `--refs` to store the workflow's internal ID.
+Create tasks as children of their phase task. Always set `--refs` to store the workflow's internal ID. Creating an open task under a `done` parent reopens that parent's `done` ancestors (recursively upward) — the hierarchy stays consistent, no manual reopen needed.
 
 ```bash
 tick create "{task:(titlecase)}" --parent tick-c3d4 \
@@ -79,7 +89,7 @@ After every `tick create`, run `tick show <tick-id>` and confirm that the title,
 
 #### If any field is empty or wrong
 
-Load **[updating.md](updating.md)** and follow its instructions to correct the field using `tick update`.
+→ Load **[updating.md](updating.md)** and follow its instructions to correct the field using `tick update`.
 
 ## Task Properties
 
@@ -106,9 +116,9 @@ tick list --parent <phase-tick-id>
 
 ### Type
 
-Optional. Set via `--type`. Valid types: `bug`, `feature`, `task`, `chore`. Use `bug` for bugfix work types, `feature` for feature work types, and `task` or `chore` as appropriate for individual tasks within any work type. Doesn't hurt to set — adds useful categorisation at no cost.
+Optional. Set via `--type`. Valid types: `bug`, `feature`, `task`, `chore`. Use `bug` for bugfix work types, `feature` for feature work types, and `task` or `chore` as appropriate for individual tasks within any work type.
 
-### Tags
+### Labels / Tags
 
 Optional — not necessary in most cases, but available if needed. Set via `--tags` with comma-separated, kebab-case values. Tags provide additional categorisation beyond the parent/child hierarchy. Filter tasks by tag:
 
@@ -136,7 +146,7 @@ tick create "[NEEDS INFO] Rate limiting strategy" \
 
 ## Cleanup (Restart)
 
-Remove the topic task and all its descendants:
+Remove the topic task and all its descendants. `<topic-tick-id>` is the plan's `external_id` in the manifest:
 
 ```bash
 tick remove <topic-tick-id> --force
