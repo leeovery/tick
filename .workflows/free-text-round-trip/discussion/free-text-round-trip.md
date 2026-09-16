@@ -76,13 +76,44 @@ The write side has its own fidelity question, independent of format: `tick updat
 
 ---
 
+## Round Trip Contract
+
+### Context
+
+"Free text survives the round trip" needs a definition before any of the encoding subtopics can be judged against it. Two things had to be pinned: which reading paths the guarantee covers, and what fidelity it promises.
+
+### Journey
+
+The session opened by measuring the current output rather than taking discovery's account of it. Three findings reshaped the problem:
+
+1. **Notes are not lossy.** A note containing newlines is emitted as a single TOON-quoted string with the newlines escaped (`"multi\nline\nnote"`). Nothing is lost; the reader unquotes a standard TOON string and the result is unambiguous. Discovery recorded notes as carrying the same problem as descriptions — they carry a different one.
+2. **The description block is not lossy either.** Two spaces are prefixed to every line; blank lines emerge as two spaces, originally-indented lines at four. Stripping exactly two from each line returns the original bytes. The transform is reversible.
+3. **What is missing is the declaration.** Nothing in the output says the description block is indented, and nothing marks where it ends — it works today only because the description is emitted last and runs to EOF.
+
+So the defect is not data loss. It is that the two free-text fields use two different, mutually incompatible decoding rules and neither announces itself. That is why the agent in the triggering incident read `.tick/tasks.jsonl` directly: the file told it the truth without a rule it had to already know.
+
+That led to the framing question — is the round trip the single-field fetch (`tick show <id> --field description`), or the whole-task read that an agent edits in place? The lean offered was the second, with the first as a fast path, on the grounds that an agent deciding *whether* to edit usually needs the surrounding context and a second call is the same token tax in a different currency.
+
+### Decision
+
+**Both reading paths are in scope, and both must work.** The user ruled both valid: an agent must be able to fetch one field bare, and must equally be able to run one `tick show` and lift usable free text out of the full output. Neither is the designated path with the other as a fallback — the field flag does not excuse an ambiguous block in full output, and the block being fixed does not remove the need for bare single-field output.
+
+This constrains the encoding subtopics directly: whatever the description block becomes, it must hand over text the reader can lift without a rule learned elsewhere, *and* a bare-field path must exist alongside it.
+
+---
+
 ## Summary
+
+### Key Insights
+
+1. The toon output is not lossy for free text — it is undeclared. Both the description indent and the notes escaping are reversible; what is absent is anything in the output telling the reader which rule applies to which field.
+2. The two free-text fields reached their current encodings by different routes and do not agree. Descriptions follow the v1 principle "long text fields get their own unstructured sections"; notes gained a timestamp and so became a tabular section, inheriting the TOON library's string quoting instead.
 
 ### Open Threads
 
-- Nothing decided yet.
+- Whether changing the description encoding owes a correction to the v1 `tick-core` specification, which states the unstructured-section principle as a golden rule.
 
 ### Current State
 
-- The toon description block is a reversible but undeclared two-space indent with no terminator; notes are lossless TOON-quoted strings. The two free-text fields do not share a scheme.
-- The write path trims surrounding whitespace, so an exact read does not guarantee an exact write-back.
+- Resolved: both the single-field fetch and the whole-task read are in scope, and both must work.
+- Uncertain: how the description block should encode multi-line text; whether notes need anything beyond what the TOON quoting already gives; the shape of the field-extraction flag; whether the write side needs an input path other than a command-line argument.
