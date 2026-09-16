@@ -74,6 +74,7 @@
         "name": "gofmt",
         "command": "gofmt -l ./internal ./cmd"
       }
-    ]
+    ],
+    "tmux_labels": true
   }
 }
