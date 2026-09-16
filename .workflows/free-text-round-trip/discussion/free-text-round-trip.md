@@ -102,6 +102,79 @@ This constrains the encoding subtopics directly: whatever the description block 
 
 ---
 
+## Description Block Encoding
+
+### Context
+
+The description is the field that triggered this work. Today it is emitted as `description:` followed by every line of the text prefixed with two spaces, with no count and no terminator (`internal/cli/toon_formatter.go:346-355`). The round-trip contract requires that an agent reading full `tick show` output can lift the description without a rule learned elsewhere.
+
+### Journey — measurement first
+
+Three candidate encodings were measured against the TOON library the project already depends on, each encoded and then decoded back, checking byte-identity against the source text. Source text used throughout:
+
+```
+Fix the parser.
+
+Steps:
+  - read the header
+  - validate
+```
+
+**Candidate A — one quoted string.** `toon.MarshalString` of the description as a plain field value produces:
+
+```
+description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
+```
+
+Decoded back and compared: identical. One TOON unquote recovers the text, and it is the same rule note text already obeys.
+
+**Candidate B — dash-list of lines.** TOON's expanded list form marks each item with `- ` (seen in the library's own array fixtures, e.g. `  - [2]: nested,list`). Encoding each line as an item:
+
+```
+description[5]:
+  - "Fix the parser."
+  - ""
+  - "Steps:"
+  - "  - read the header"
+  - "  - validate"
+```
+
+Decoded back and rejoined with newlines: identical. The declared count says where the block ends, and the line structure of the text stays visible. Lines carrying leading whitespace, a colon, or anything else TOON quotes come out quoted; plain prose lines do not, so the block reads as a mix.
+
+Note that toon-go's *encoder* does not produce this form — given a `[]string` it emits the inline form `description[5]: Fix the parser.,"","Steps:",…`, which round-trips identically but is a single line with no readability advantage over A. The dash-list form would have to be written by hand, as the tags and refs sections already are.
+
+**Candidate C — keep the indented raw block, add a terminator or line count.** Not measured as conformant because it cannot be: it is a block form TOON has no concept of, so a standard reader fails on it however it is delimited.
+
+### The finding that reframed the subtopic
+
+Testing whether the candidates would let an agent parse the output turned up that the output cannot be parsed today at all. Feeding `ToonFormatter.FormatTaskDetail` output to `toon.Unmarshal` fails at line 1:
+
+> `line 1: invalid unquoted key "task{id,title,status,priority,type,created,updated}"`
+
+Section by section, decoded individually with `toon.Unmarshal`:
+
+| Section | Parses | Why not |
+|---|---|---|
+| `task{…}:` | no | single-object scope is tick's own invention — `buildTaskSection` marshals a 1-element array and strips the `[1]` (`internal/cli/toon_formatter.go:294`) |
+| `blocked_by[N]{…}:` | yes | — |
+| `children[N]{…}:` | yes | — |
+| `notes[N]{text,created}:` | yes | — |
+| `tags[N]:` / `refs[N]:` | no | expanded list items are missing the `- ` marker (`buildStringListSection`, `internal/cli/toon_formatter.go:320-328`); decoder reports `list length mismatch` |
+| `description:` | no | `missing colon after key` on the first indented line |
+| `stats{…}:` | not measured | same `[1]`-stripping hack via `encodeToonSingleObject` |
+
+Measured against `github.com/toon-format/toon-go@v0.0.0-20251202084852`. Whether the TOON specification itself permits a single-object scope header was not verified — the claim here is only that the reference Go implementation rejects it, and that the form is hand-constructed by tick rather than produced by the library.
+
+The tags and refs sections also emit raw item text: a ref containing a comma renders as `ref, with comma` and a URL renders with its colon unquoted, both of which TOON's quoting rules would require to be quoted.
+
+This changes what the subtopic is choosing between. Making the description "valid TOON" does not let an agent run a TOON parser over `tick show` output, because the document is already invalid before the description is reached.
+
+### Open question
+
+Whether the goal is a *stated rule* for lifting free text (this feature's own scope), or a *parseable document* (a format-conformance job spanning the single-object sections, the string-list sections and the stats output).
+
+---
+
 ## Notes Free Text Handling
 
 ### Context
