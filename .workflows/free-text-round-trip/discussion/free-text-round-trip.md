@@ -150,6 +150,65 @@ Trade-off accepted: wrapping a one-line confirmation in a data format costs toke
 
 ---
 
+## Single Object Sections
+
+### Context
+
+Three places in the output describe one thing rather than a list of things: the task's own fields at the head of `tick show` (and of `create`, `update`, `note add`, `note remove`), the counts summary in `tick stats`, and the chains/longest/blocked summary in `tick dep tree`. All three go through the same helper and all three are malformed — this is the line a reader fails on before it sees anything else.
+
+The cause is a hand-edit. `encodeToonSingleObject` marshals the value as a one-element array and then deletes the `[1]` from the header with a string replace to make it read as singular (`internal/cli/toon_formatter.go:294`, `:371-379`). The result is a table header with no table beneath it, a shape TOON has no equivalent for.
+
+### Options Considered
+
+Both were encoded and decoded back with the project's TOON library; both parse and return the original values.
+
+**One-row table** — the library's own output, `[1]` left intact:
+
+```
+task[1]{id,title,status,priority,type,created,updated}:
+  tick-abc123,Add retry to the sync worker,in_progress,2,feature,"2026-09-16T12:00:00Z","2026-09-16T12:00:00Z"
+```
+
+- Pros: three characters longer than the current broken output; minimal change.
+- Cons: values are positional — a reader counts commas across to the matching name in the header.
+
+**Named fields** — TOON's object scope:
+
+```
+task:
+  id: tick-abc123
+  title: Add retry to the sync worker
+  status: in_progress
+  priority: 2
+  type: feature
+  created: "2026-09-16T12:00:00Z"
+  updated: "2026-09-16T12:00:00Z"
+```
+
+- Pros: every value sits beside its name; adding or reordering a field cannot break a positional read; a value containing a comma is safe without relying on quoting discipline.
+- Cons: fifteen characters longer than the current output (163 → 181 for the example above; the one-row table is 166).
+
+### Journey
+
+The question raised against named fields was whether it is actually TOON or a new invention. It is not new: the form is what the project's own TOON encoder emits when given a nested object, and the decoder returns the original values from it.
+
+The distinction that settled it — TOON is a compact way of writing JSON, and the two options are simply two different JSON shapes:
+
+- An object inside an object (`{"task": {"id": …}}`) is written as the key with its fields indented beneath. That is the named-fields form.
+- A list of same-shaped objects (`{"tasks": [{…}, {…}]}`) is written as a header plus rows. That is the table form, and it is what `tick list` should use.
+
+Both are standard. What tick invented was neither — a table header with a single unnumbered row under it.
+
+### Decision
+
+**Named fields, for all three single-object sections.**
+
+The table layout earns its keep when many rows would otherwise repeat the field names — that is `tick list`'s case, not this one. With a single row it repeats nothing, so it compresses nothing, and it trades that for a positional read that can go wrong. Fifteen characters is not a real cost against a value sitting next to its own name.
+
+The user's deciding factor was clarity on reading the output.
+
+---
+
 ## Description Block Encoding
 
 ### Context
