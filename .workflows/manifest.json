@@ -76,5 +76,8 @@
       }
     ],
     "tmux_labels": true
+  },
+  "baseline": {
+    "status": "native"
   }
 }
