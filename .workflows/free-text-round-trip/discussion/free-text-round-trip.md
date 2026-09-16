@@ -331,9 +331,11 @@ The tags and refs sections also emit raw item text: a ref containing a comma ren
 
 This changes what the subtopic is choosing between. Making the description "valid TOON" does not let an agent run a TOON parser over `tick show` output, because the document is already invalid before the description is reached.
 
-### Open question
+### What remains open
 
-Whether the goal is a *stated rule* for lifting free text (this feature's own scope), or a *parseable document* (a format-conformance job spanning the single-object sections, the string-list sections and the stats output).
+*(Amended 2026-09-16 — this section previously asked whether the goal was a stated rule for lifting free text or a parseable document; the Toon Conformance Scope decision settled that fork in favour of fixing the whole format.)*
+
+Candidate C is ruled out by that same decision — it cannot be conformant. What is left is the choice between Candidate A, the whole description as one TOON-quoted string, and Candidate B, a dash-list of lines with a declared count.
 
 ---
 
