@@ -11,7 +11,7 @@
           "status": "in-progress",
           "subtopics": {
             "round-trip-contract": {
-              "status": "converging",
+              "status": "decided",
               "parent": null
             },
             "description-block-encoding": {

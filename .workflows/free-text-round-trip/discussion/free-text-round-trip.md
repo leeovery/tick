@@ -100,6 +100,12 @@ That led to the framing question — is the round trip the single-field fetch (`
 
 This constrains the encoding subtopics directly: whatever the description block becomes, it must hand over text the reader can lift without a rule learned elsewhere, *and* a bare-field path must exist alongside it.
 
+**The fidelity bar is byte-identity, and the existing whitespace trimming does not stand in its way.**
+
+**Settled by derivation** — not discussed. Determined by the write paths' own behaviour: `create` and `update` both run the value through `TrimSpace` before storing (`internal/cli/create.go:214`, `internal/cli/update.go:342`), so no stored description can carry leading or trailing whitespace. A read that returns the stored bytes exactly, written back through `tick update --description`, therefore lands the identical stored value — the trim is idempotent over anything that came out of storage.
+
+The bar is: read the value out of `tick show`, write it back unchanged, and the stored value is byte-for-byte what it was. Nothing about the trimming behaviour has to change for that to hold, so the trim is out of scope as a defect.
+
 ---
 
 ## Toon Conformance Scope
