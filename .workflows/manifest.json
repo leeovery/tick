@@ -38,6 +38,9 @@
     },
     "increase-note-char-limit": {
       "work_type": "quick-fix"
+    },
+    "free-text-round-trip": {
+      "work_type": "feature"
     }
   },
   "defaults": {
