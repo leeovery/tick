@@ -8,4 +8,3 @@ dist/
 .tick/.tasks-*.jsonl.tmp
 
 .claude/settings.local.json
-.workflows/.cache/
