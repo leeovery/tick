@@ -173,6 +173,19 @@ Status changes are the opposite case. `tick done <id>` reports the change plus a
 
 Trade-off accepted: wrapping a one-line confirmation in a data format costs tokens to restate what the caller already knows, and introduces a new way to fail. Left as prose deliberately.
 
+### Decision — which formatters move
+
+*Raised by the final review (review-002 F3): three decisions here are expressed as toon shapes but land in code the pretty and JSON formatters share, and the document never said whether those formatters move with them.*
+
+**Pretty is unchanged. Everywhere.** What a terminal prints today is what it prints after this work — the single transition line, the box-drawing cascade tree, the indented description block. It is the human surface; this work is about the agent surface.
+
+**JSON moves with toon.** It is a machine format, and a consumer parsing JSON deserves the same structured answer as one parsing toon — including the dep-tree empty case, where JSON currently hands back a `message` key carrying the English sentence. JSON's transition output today already carries the same split this work removed from toon (a singular `transition` object beside a `cascaded` list); it becomes the one `changed` list with the same `auto` flag, in JSON syntax.
+
+Two places make this more than a statement of intent, because the code is shared:
+
+- The single transition line comes from `baseFormatter.FormatTransition` (`internal/cli/format.go:211`), inherited by both the toon and pretty formatters, so they emit byte-identical text today. Restructuring the toon form requires splitting that method rather than editing it — otherwise pretty changes by accident.
+- The dep-tree empty messages are not produced by a formatter at all. They are set on the result in the shared graph builder (`internal/cli/dep_tree_graph.go:177`, `:255`) and consumed by all three, so removing them at source would strip pretty's message too. Pretty keeps its sentence; only the machine formats take the structured empty form.
+
 ### A structural consequence found while inventorying
 
 `create` and `update` do not emit one document. They print the full task detail and then, when a parent's status cascaded, append transition lines after it (`internal/cli/create.go:277-283`, `internal/cli/update.go:409-420`). A reader handed that whole stream sees a task-detail document with foreign lines stuck on the end. Making each section valid is not enough on its own — the stream has to be one document, or two clearly separated ones. This belongs to the conformance subtopics rather than to free text.
@@ -662,7 +675,9 @@ The existing suite cannot catch it. Its assertions compare output against a stri
 
 3. **Rewritten assertions check decoded values, not output text.** "The notes section has two rows and the second row's text is X", not "the output equals this blob".
 
-**No byte-level pinning is kept anywhere.** The trade was put explicitly: golden strings pin the exact output shape, so a future change cannot reshape a section without a test noticing, but they are the mechanism that rotted into the defect this discussion spent its length undoing. Decoded-value assertions survive harmless reformatting while still failing when a section goes missing or a value is wrong. The user took that trade across the board.
+**No byte-level pinning is kept in the machine formats.** The trade was put explicitly: golden strings pin the exact output shape, so a future change cannot reshape a section without a test noticing, but they are the mechanism that rotted into the defect this discussion spent its length undoing. Decoded-value assertions survive harmless reformatting while still failing when a section goes missing or a value is wrong. The user took that trade for toon and JSON.
+
+*(Amended 2026-09-17 — this rule was first written as "no byte-level pinning anywhere", which was too broad. Pretty output has no parser, so a decoded-value assertion does not exist for it; read literally the original wording removed pretty's only form of assertion and replaced it with nothing. **Pretty keeps golden-string assertions.** Raised by the final review, review-002 F3.)*
 
 ---
 
