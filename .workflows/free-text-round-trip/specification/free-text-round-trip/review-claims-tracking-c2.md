@@ -53,7 +53,7 @@ Source carrying the same assertion: `.workflows/free-text-round-trip/discussion/
 
 **Proposed Text**:
 
-**Resolution**: Pending
+**Resolution**: Routed
 **Notes**:
 
 ---

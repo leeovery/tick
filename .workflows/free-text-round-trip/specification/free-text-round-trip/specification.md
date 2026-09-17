@@ -469,7 +469,19 @@ Three published documents describe output this work replaces.
 
 #### 12.1 The README is updated as part of this work
 
-Its Output Formats section prints worked `tick list` and `tick show` samples in the agent format. After this work the `tick show` sample shows output the tool no longer produces — its header, its tags and refs lists and its description block all change (§5, §6). The `tick list` table is library-written (`grep -n 'encodeToonSection("tasks"' internal/cli/toon_formatter.go` → `toon_formatter.go:75`) and untouched by this work, so that sample stands. It is live documentation someone reads to learn the tool, not a record of a past decision, so leaving it describing output the tool does not produce is shipping a defect.
+The agent-format output the README prints is not confined to its Output Formats section, and every sample this work replaces is corrected. Measured (`grep -n '^\$ tick' README.md` and the fenced samples beneath each):
+
+| Sample | Location | Why it changes |
+|---|---|---|
+| `tick show` full detail | `README.md:430-449` | header, tags, refs and description block all change (§5, §6) |
+| dep-tree summary header | `README.md:307` (inside `### dep`) | single-object section becomes top-level named fields (§5.2) |
+| arrow transition | `README.md:473-475` | replaced by the `changed` table (§7.2) |
+| JSON `{id,from,to}` transition | `README.md:481-486` | JSON moves with toon (§4.2) |
+| cascade with `(auto)` / `(unchanged)` | `README.md:501-504` | replaced by the `changed` table; the `(unchanged)` marker was never implemented (§7.6) |
+
+The `tick list` table (`README.md:396-401`) is library-written (`grep -n 'encodeToonSection("tasks"' internal/cli/toon_formatter.go` → `toon_formatter.go:75`) and its shape is untouched by this work. Its printed row is nonetheless wrong and is corrected while the section is being rewritten: it renders an empty `type` as a bare trailing comma, where the formatter quotes it (`sed -n '31p' internal/cli/toon_formatter_test.go` → the suite's own golden row `  tick-a1b2,Setup Sanctum,done,1,""`). `toonTaskRow.Type` carries no `omitempty` and the library quotes an empty string.
+
+It is live documentation someone reads to learn the tool, not a record of a past decision, so leaving it describing output the tool does not produce is shipping a defect.
 
 The README also gains the new input surface, for the same reason: `--field`/`--fields` on `show` (§9), and `--` as the way to pass free text that may begin with a dash (§10.2). Calling `--` the canonical form only means something if a caller can find it written down, and a flag documented nowhere is a flag nobody uses.
 
