@@ -97,6 +97,17 @@ That led to the framing question — is the round trip the single-field fetch (`
 ### Decision
 
 #### 2026-09-17 — revised
+*Trigger: `grep -rn 'TrimDescription' internal/ --include='*.go' | grep -v '_test'` → only `internal/cli/create.go:214`, `internal/cli/update.go:193`, `internal/cli/update.go:342`; `internal/migrate/store_creator.go:81` stores `Description: mt.Description` raw. The derivation below names two write paths and there are three.*
+
+**Free text is trimmed on import, so the invariant the bar rests on holds for every stored task.** `tick migrate` runs descriptions and titles through the same trim `create` applies, rather than storing the source tool's value as it arrives. Titles carry the same hole — `internal/migrate/migrate.go:44` validates that a trimmed title is non-empty, then `internal/migrate/store_creator.go:78` stores the untrimmed one.
+
+Without it the bar fails on imported tasks and only on those: a description arriving from beads with a leading newline or trailing spaces reads out of `tick show` intact, and the write-back trims it — the stored value silently differs from what was sent, on precisely the tasks nobody typed by hand.
+
+Two alternatives were weighed and declined. Dropping the trim from `create` and `update` would make byte-identity hold with no invariant at all, but changes behaviour for every user to serve a case only importers hit, and reopens whitespace-only descriptions, which `ValidateDescriptionUpdate` currently routes to `--clear-description`. Writing the exception down — the bar covering CLI-authored descriptions only — costs no code and hands the reader exactly the kind of unpredictable exception this work exists to delete.
+
+The deciding factor: import is already a translation boundary, mapping statuses, priorities and timestamps on the way in, so normalising whitespace there is the same kind of move and costs a reader nothing they would notice.
+
+#### 2026-09-17 — revised
 *Trigger: review finding — the byte-identity derivation below was drawn from the description write paths only, and note text and task titles do not meet the bar as things stand.*
 
 The bar itself is unchanged, and the reasoning about trimming below still holds. What was incomplete is the claim that it costs nothing to reach: it holds for descriptions, and for note text and task titles it does not, because text beginning with a dash is rejected before it reaches storage. Reaching the bar therefore requires the free-text argument fix recorded under Write Side Input, which this work now carries.
@@ -816,7 +827,7 @@ Resolved:
 - The task's own fields become named fields at the top level of the document, with no wrapping key — the same treatment for `tick stats` and the dep-tree summary. Tags and refs use the library's inline list form. The description becomes one TOON-quoted value, the same rule note text already obeys.
 - Status changes become one `changed` table carrying every task whose status moved, with an `auto` column marking the change the caller asked for. The existing per-command split is kept, and each command emits one document rather than a document plus loose lines.
 - Notes are read-side only, with no edit command. The notes section carries an `index` column so a row's real position survives filtering.
-- Free text beginning with a dash becomes writable, via `--` as the canonical marker plus flag-inspection passthrough on `note add`; the existing bare-argument form still works. No alternative input path is added.
+- Free text beginning with a dash becomes writable, via `--` as the canonical marker plus flag-inspection passthrough on `note add`; the existing bare-argument form still works. No alternative input path is added. Descriptions and titles are trimmed on import, so the no-edge-whitespace invariant the fidelity bar rests on holds for every stored task rather than only CLI-authored ones.
 - The field flag becomes a projection: `--field`/`--fields`, comma-separated, bare value for one field and a filtered document for several, list fields reachable by position, and nothing riding along unasked.
 - Pretty output is unchanged everywhere; JSON moves with toon.
 - Verification is decode-and-assert for the machine formats, with a permanent awkward-task round-trip fixture and no byte-level pinning there; pretty keeps golden-string assertions, having no parser to assert against.
