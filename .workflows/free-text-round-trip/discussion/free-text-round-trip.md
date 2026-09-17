@@ -562,6 +562,24 @@ Asked for alone, `--field notes.2` prints that note's text bare, by the one-fiel
 
 *(Amended 2026-09-17 — this parenthetical previously called the description shape a leaning candidate not yet settled; Description Block Encoding has since decided it.)* The description section in the examples above is shown in the one-TOON-quoted-value shape that Description Block Encoding settled on.
 
+### Selecting the task's own fields
+
+*Raised by the final review (review-002 F4): every worked example above selects something that is a section, but Single Object Sections moved the task's own scalar fields inside a `task:` named-field object, so a multi-field selection naming them had no defined answer.*
+
+**The `task:` block is trimmed to the keys named.** `tick show tick-a1b2 --field title,status`:
+
+```
+task:
+  title: Add retry to the sync worker
+  status: in_progress
+```
+
+Trimming is what the flag does everywhere else. Refusing — on the grounds that only whole sections are selectable — would make the grammar depend on which side of a section boundary a name happens to sit, which is a rule to learn rather than read. Returning the block whole would ignore the request.
+
+**Nothing rides along unasked, including `id`.** The opening position was that `id` should always be present, so a filtered document identifies the task it describes. The user's question broke it: `--field description` prints the bare value with nothing around it, so an `id` riding along would wreck the case the flag exists for. Scoping the rule — `id` present in the document form, absent in the bare form — was available and rejected: it is a second rule to learn, and the argument against is simpler than the argument for. The caller passed the task's ID on the command line to make the request; handing it back tells them something they just typed.
+
+The rule is therefore uniform across both forms: you get exactly the fields you named.
+
 ### Empty values and unrecognised names
 
 **Settled by derivation** — not discussed. Determined by the project's existing stance on unknown flags, which refuses rather than silently ignoring.
