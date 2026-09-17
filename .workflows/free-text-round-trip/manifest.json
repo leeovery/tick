@@ -8,7 +8,7 @@
     "discussion": {
       "items": {
         "free-text-round-trip": {
-          "status": "in-progress",
+          "status": "completed",
           "subtopics": {
             "round-trip-contract": {
               "status": "decided",
