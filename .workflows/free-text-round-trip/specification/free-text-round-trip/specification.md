@@ -216,6 +216,85 @@ Cost accepted: correcting a note still costs its timestamp and its position. The
 
 What remains in scope for notes: their text is readable out of `tick show` without a rule learned elsewhere (already true, via TOON quoting), field extraction reaches it (§9), and note text that begins with a dash becomes writable (§10).
 
+### 7. Status Change Output
+
+#### 7.1 The current shape
+
+When an agent closes a task and other tasks move with it, what comes back is an arrow diagram:
+
+```
+tick-a1b2: in_progress → done
+tick-9f3c: open → done (auto)
+tick-77ab: in_progress → done (auto)
+```
+
+Reading it requires knowing that the ID precedes the colon, that the arrow separates old state from new, and that `(auto)` marks a knock-on rather than the requested change. It is a bespoke line format, and it is byte-identical in `--toon` and `--pretty`: both formatters embed `baseFormatter.FormatTransition` (§4.3), and `ToonFormatter.FormatCascadeTransition` is the same construction with ` (auto)` appended (`grep -n 'func (f \*ToonFormatter) FormatCascadeTransition' internal/cli/toon_formatter.go` → `toon_formatter.go:145`).
+
+#### 7.2 One table, always
+
+**Every task whose status moved gets a row, and an `auto` column says whether that row is the change the caller asked for:**
+
+```
+changed[3]{id,title,from,to,auto}:
+  tick-a1b2,Add retry to the sync worker,in_progress,done,false
+  tick-9f3c,Parse the header,open,done,true
+  tick-77ab,Validate fields,in_progress,done,true
+```
+
+A re-parenting, where nothing the caller asked for was itself a status change, is the same shape with every row marked as a consequence:
+
+```
+changed[2]{id,title,from,to,auto}:
+  tick-1111,Phase 5,done,open,true
+  tick-2222,Phase 4,in_progress,done,true
+```
+
+Two reasons carried it:
+
+1. **A reader must not have to branch on which document arrived before it can read either.** An agent parsing status output sees one table whatever command produced it, and the count is always right. A singular block for the requested change beside a table of knock-ons would be two documents for one kind of event.
+2. **The marking column is not new vocabulary.** Every task's transition history already records each change with an `auto` flag — false when a user or agent asked for it, true when the system produced it as a consequence — stored per task in the JSONL and in the `task_transitions` table. Inventing a "requested" column instead would be exactly the move that produced the malformed output this work removes: a shape someone wanted, built by hand, outside the vocabulary that already existed.
+
+The table carries the title so no second lookup is needed to know what moved. The trailing `(auto)` marker of the old arrow lines disappears into the column that always meant it.
+
+#### 7.3 The per-command split is kept
+
+`done`, `start`, `cancel` and `reopen` return **only** the `changed` table. `create` and `update` return the task's full record with the `changed` table as a section inside it.
+
+The deciding factor: `create` and `update` are edits and the caller wants the result of the edit — the new ID, the merged fields — whereas a status change is something the caller already knows it did, so a full record is tokens it did not ask for.
+
+A third option was put up and declined: leave status output alone entirely, treating `tick done` as a prose confirmation like `tick dep add`, with an agent running `tick show` afterwards if it needed to know what cascaded. The single-transition case is indeed change for consistency rather than repair. It was declined once the cascade case was seen beside it: the multi-task output carries titles the agent would otherwise have to look up, and one command's output parsing while another's does not — depending on whether a cascade fired — is exactly the branching rule this work exists to delete.
+
+#### 7.4 One document, never a document with loose lines after it
+
+`create` and `update` today print the full task detail and then append transition lines after it (`grep -n 'outputTransitionOrCascade' internal/cli/create.go internal/cli/update.go` → `create.go:283`, `update.go:415`, `update.go:420`). A reader handed that stream sees a task-detail document with foreign lines stuck on the end.
+
+**Where a command produces both a record and status changes, the result is one document with the changes as a section inside it.** Making each section valid is not sufficient on its own; the stream must be one document.
+
+`update` can carry two independent cascade blocks today because two unrelated changes can fire at once — this collapses into the single `changed` table along with everything else.
+
+#### 7.5 Why a structural change produces a status cascade
+
+Recorded because it is not obvious from the code, and the implementation must preserve it. `create` and `update` emit cascades not because the edited task's status moved, but because *other* tasks' statuses moved as a consequence of the parent/child structure changing:
+
+- **Adding work under a finished parent.** `tick create --parent <done task>` reopens that parent — it is no longer complete — and that reopen travels further up if its own parent was done (Rule 6, then Rule 5).
+- **Moving a task to a different parent.** `tick update <id> --parent <other>` can fire two unrelated changes at once: the new parent reopens if it was finished, and the old parent may auto-complete if the moved task was the last unfinished thing under it (Rule 6 and Rule 3 together).
+
+These tasks are elsewhere in the tree and are not in the edited task's record, which is why they cannot be folded into it.
+
+#### 7.6 Unchanged terminal children are not reinstated
+
+The `changed` table lists what changed, exactly as today's output does. The `auto-cascade-parent-status` specification's requirement that unchanged terminal children be shown alongside a cascade is a pre-existing unimplemented requirement in another work unit's specification; it is not reinstated and not decided here. See §12.2 for the correction owed to that document.
+
+### 8. Structured Output on Empty Branches
+
+A command in §3.1's must-parse table emits its structured form on **every** branch, the empty one included.
+
+`tick dep tree` currently answers `No dependencies found.` when nothing in the project is blocked, and a title line plus `No dependencies.` when a named task has no dependencies either way (§4.3 locates both). That is prose on the one branch an agent could not predict, from the formatter whose purpose is machine-readable output. **Both go, in toon and JSON; pretty keeps them (§4.3).**
+
+This is not an exception to §3.2's prose rule, it is that rule's boundary: the exemption covers confirmations of a command the caller issued, and "no dependencies" is the answer to a query — the answer the caller ran the command to find out.
+
+The formatter already has the shape. An empty task list comes back as a structured empty section, and so does an empty edge set — `buildRelatedSection` and `buildNotesSection` both emit a count-zero header rather than prose (`grep -n '\[0\]{' internal/cli/toon_formatter.go` → `toon_formatter.go:300`, `toon_formatter.go:333`). The two dep-tree prose branches are the exception, not the pattern.
+
 ---
 
 ## Working Notes
