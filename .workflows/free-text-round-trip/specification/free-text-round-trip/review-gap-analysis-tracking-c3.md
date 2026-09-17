@@ -149,8 +149,8 @@ The two rules only collide because the empty-field rule was written for `descrip
 **Proposed Text**:
 **An empty field prints what full output prints for it, and exits successfully.** A task legitimately having no description is a fact about the task rather than a failure of the command. A field or section that full output omits when the task does not carry it — `description`, `tags`, `refs`, `type`, `parent`, `closed` (§5.2) — prints nothing; a section full output always carries prints its count-zero header, so `--field notes` on a task with no notes returns `notes[0]{index,text,created}:`. The rule runs per name: in a multi-field selection each empty name contributes what it would contribute to full output, the rest of the document is unaffected, and a selection whose every name prints nothing prints nothing at all and still exits successfully.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -174,8 +174,8 @@ State the coverage in the unit the guarantee is made in — every branch a liste
 **Proposed Text**:
 1. **Every structured command's output is decoded by a real TOON reader in the suite, and the test fails if it will not parse.** This alone catches the entire class of defect this work exists to fix — a section nobody can read, whatever its content. The commands are §3.1's table, and the coverage is counted in documents rather than commands: every branch a listed command can take, the emptied forms of §8 included, and every document `show` produces, a multi-field selection and one narrowed by position included (§9.2, §9.3).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -199,8 +199,8 @@ Several of these are emitted only when set — `type`, `parent` and `closed` amo
 **Proposed Text**:
 Several of these are emitted only when the task carries them (§5.2, `sed -n '265,285p' internal/cli/toon_formatter.go`). **Recognition does not depend on presence**: a name on this list is always recognised, and asking for one the task does not carry is an empty field (§9.6). A name absent from the list is unrecognised whatever the task holds.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -226,8 +226,8 @@ A command in §3.1's must-parse table emits its structured form on **every** bra
 **Proposed Text**:
 `tick dep tree` currently answers `No dependencies found.` when nothing in the project is blocked, and a title line plus `No dependencies.` when a named task has no dependencies either way (§4.3 locates both).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -251,8 +251,8 @@ Today the description is `description:` followed by every line of the text prefi
 **Proposed Text**:
 Today the description is the indented raw block §2.3 describes (`grep -n 'func buildDescriptionSection' -A 10 internal/cli/toon_formatter.go` → `toon_formatter.go:346-355`).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -276,7 +276,7 @@ Its requirement that unchanged terminal children be shown alongside a cascade is
 **Proposed Text**:
 The amendment does not touch its requirement that unchanged terminal children be shown alongside a cascade (§7.6).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---

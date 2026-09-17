@@ -186,7 +186,7 @@ Cost accepted: a long refs list becomes a long line. The reader of toon output i
 
 #### 6.2 The description is one TOON-quoted value
 
-Today the description is `description:` followed by every line of the text prefixed with two spaces, with no count and no terminator (`grep -n 'func buildDescriptionSection' -A 10 internal/cli/toon_formatter.go` → `toon_formatter.go:346-355`).
+Today the description is the indented raw block §2.3 describes (`grep -n 'func buildDescriptionSection' -A 10 internal/cli/toon_formatter.go` → `toon_formatter.go:346-355`).
 
 **It becomes a single TOON-quoted string, exactly as the library's `toon.MarshalString` produces from a Go string:**
 
@@ -307,8 +307,6 @@ The `changed` table lists what changed, exactly as today's output does. The `aut
 
 ### 8. Structured Output on Empty Branches
 
-A command in §3.1's must-parse table emits its structured form on **every** branch, the empty one included.
-
 `tick dep tree` currently answers `No dependencies found.` when nothing in the project is blocked, and a title line plus `No dependencies.` when a named task has no dependencies either way (§4.3 locates both). That is prose on the one branch an agent could not predict, from the formatter whose purpose is machine-readable output. **Both go, in toon and JSON; pretty keeps them (§4.3).**
 
 **What replaces them is the document the non-empty branch produces, emptied**: the same fields, with the summary fields of §5.2 reading zero and the edges section carrying its count-zero header. Where the caller named a task, the emptied document still identifies it exactly as the populated one does. Both empty branches take that shape — nothing blocked anywhere, and a named task with no dependencies either way — so an agent parses one document whether or not anything is blocked, and reads the counts to learn which it got.
@@ -337,7 +335,7 @@ The answer's shape is split by how many fields were asked for.
 
 **The list is read leniently wherever its meaning is not in doubt.** Whitespace around a name is not part of it, so `--field "title, status"` selects what `--field title,status` selects. Repeating the flag composes rather than overrides: `--field title --field status` is `--field title,status`. A field named more than once renders once — a section named both whole and by position comes back whole, and several positions on one section render it narrowed to those positions in output order. None of this softens §9.6: a name that is empty once its whitespace is gone is still the blank-name mistake.
 
-Several of these are emitted only when set — `type`, `parent` and `closed` among the task's fields (`sed -n '265,285p' internal/cli/toon_formatter.go`), and `tags`, `refs` and `description` among the sections. **Recognition does not depend on presence**: a name on this list is always recognised, and asking for one the task does not carry is an empty field, which prints nothing and exits successfully (§9.6). A name absent from the list is unrecognised whatever the task holds.
+Several of these are emitted only when the task carries them (§5.2, `sed -n '265,285p' internal/cli/toon_formatter.go`). **Recognition does not depend on presence**: a name on this list is always recognised, and asking for one the task does not carry is an empty field (§9.6). A name absent from the list is unrecognised whatever the task holds.
 
 #### 9.2 One field returns the bare value; several return a filtered document
 
@@ -409,7 +407,7 @@ The opening position was that `id` should always be present so a filtered docume
 
 #### 9.6 Empty values, unrecognised names, and out-of-range positions
 
-**An empty field prints nothing and exits successfully.** A task legitimately having no description is a fact about the task rather than a failure of the command, and it takes the same shape as an empty notes table in full output.
+**An empty field prints what full output prints for it, and exits successfully.** A task legitimately having no description is a fact about the task rather than a failure of the command. A field or section that full output omits when the task does not carry it — `description`, `tags`, `refs`, `type`, `parent`, `closed` (§5.2) — prints nothing; a section full output always carries prints its count-zero header, so `--field notes` on a task with no notes returns `notes[0]{index,text,created}:`. The rule runs per name: in a multi-field selection each empty name contributes what it would contribute to full output, the rest of the document is unaffected, and a selection whose every name prints nothing prints nothing at all and still exits successfully.
 
 **An unrecognised field name is an error with a non-zero exit.** A field name that is not a field at all is a caller mistake, and gets what every other unrecognised flag value already gets — `ValidateFlags` refuses rather than silently ignoring (`grep -n 'unknown flag %q for %q' internal/cli/flags.go` → `flags.go:138`).
 
@@ -471,7 +469,7 @@ The existing suite cannot catch it. Its assertions compare output against a stri
 
 Three parts:
 
-1. **Every structured command's output is decoded by a real TOON reader in the suite, and the test fails if it will not parse.** This alone catches the entire class of defect this work exists to fix — a section nobody can read, whatever its content. The commands are §3.1's table.
+1. **Every structured command's output is decoded by a real TOON reader in the suite, and the test fails if it will not parse.** This alone catches the entire class of defect this work exists to fix — a section nobody can read, whatever its content. The commands are §3.1's table, and the coverage is counted in documents rather than commands: every branch a listed command can take, the emptied forms of §8 included, and every document `show` produces, a multi-field selection and one narrowed by position included (§9.2, §9.3).
 
 2. **One deliberately awkward task becomes a permanent fixture, round-tripped end to end.** Free text carrying newlines, quotes, commas, a leading dash, trailing spaces at the end of an interior line, and a line that looks like a section header. Write it in, read it out, decode it, write the decoded text back, and assert the stored value is byte-for-byte what it was — the bar §2.2 sets. Whitespace at the very start or end of a value is trimmed on the way in and stays trimmed, which is why the fixture carries its trailing spaces mid-text. That single test would have caught the original description defect, the tags item-marker defect and the refs comma defect — and it is the only test that checks the guarantee this work actually made, which is the round trip (§2.2) rather than parseability.
 
@@ -516,7 +514,7 @@ Both belong to completed work units, so the correction runs through the corrigen
 
 **Corrections are made by judgement, not as a blanket rewrite.** Specifications are forever documents that do not churn out of the knowledge base, and the facility for amending them exists, so a correction can be made wherever something is obviously wrong. But this specification supersedes those decisions regardless, so correcting them is not obligatory. Where a point is plainly and load-bearingly wrong, amend it; otherwise let supersession carry it.
 
-Both documents carry a point that is plainly and load-bearingly wrong, so both are amended. `tick-core` states as a rule the exact thing §6.2 removes. `auto-cascade-parent-status` fixes the arrow-and-`(auto)` lines as the machine-readable cascade form, which §7.2 replaces outright. Its requirement that unchanged terminal children be shown alongside a cascade is left standing — §7.6 neither reinstates nor decides it, and the amendment does not touch it.
+Both documents carry a point that is plainly and load-bearingly wrong, so both are amended. `tick-core` states as a rule the exact thing §6.2 removes. `auto-cascade-parent-status` fixes the arrow-and-`(auto)` lines as the machine-readable cascade form, which §7.2 replaces outright. The amendment does not touch its requirement that unchanged terminal children be shown alongside a cascade (§7.6).
 
 ---
 
