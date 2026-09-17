@@ -517,6 +517,8 @@ Asked for alone, `--field notes.2` prints that note's text bare, by the one-fiel
 
 **An empty field prints nothing and exits successfully. An unrecognised field name is an error with a non-zero exit.** A task legitimately having no description is a fact about the task rather than a failure of the command, and it takes the same shape as an empty notes table in full output. A field name that is not a field at all is a caller mistake, and gets what every other unrecognised flag value already gets.
 
+**A note position that does not exist is an error too.** Selecting `notes.4` on a task carrying two notes fails with a non-zero exit and a message naming the range, rather than printing nothing and succeeding. A selector that resolves to nothing is not a field that happens to be empty — the position is a claim about the data that is false. `tick note remove` already answers this for the same 1-based addressing, reporting the index as out of range and naming how many notes the task has (`internal/cli/note.go:127-128`); giving the same grammar a different answer under a different command would be a second rule for a reader to learn.
+
 ### Interaction with the format flags
 
 **Settled by derivation** — not discussed. Determined by this subtopic's own split between a raw value and a filtered document.
