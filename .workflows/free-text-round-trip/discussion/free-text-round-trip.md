@@ -376,11 +376,11 @@ Where a command produces both, it is **one document** with the changes as sectio
 
 Sibling check: `auto-cascade-parent-status` specification — its CLI Display section fixes the toon cascade rendering as "flat lines with `(auto)` and `(unchanged)` markers for machine parsing" (`.workflows/auto-cascade-parent-status/specification/auto-cascade-parent-status/specification.md:146`). This decision supersedes that rendering. The correction owed to it is part of the documentation thread still open below, not settled here.
 
-### Carried into specification
+### Out of scope — unchanged terminal children
 
-One detail this decision deliberately leaves to the specification phase rather than settling now:
+*(Amended 2026-09-17 — this section previously carried "whether the restructured output reinstates unchanged terminal children" as an open question for the specification phase. It was raised again by the final review, put to the user, and ruled out of scope: it is a pre-existing unimplemented requirement in another work unit's specification with no bearing on this work.)*
 
-- The `auto-cascade-parent-status` specification also requires unchanged terminal children to be shown so the caller can see what the cascade did *not* touch. `CascadeResult` (`internal/cli/format.go:141-147`) carries no such field, so that requirement appears unimplemented; whether the restructured output reinstates it is open.
+The new table lists what changed, exactly as today's output does. The `auto-cascade-parent-status` specification's requirement that unchanged terminal children be shown is not reinstated and not decided here.
 
 ---
 
@@ -786,7 +786,6 @@ Execution belongs to the specification phase rather than here — the correction
 
 - The `tick-core` unstructured-long-text principle and its worked `tick show` example — the most obviously wrong, since it states as a rule the exact thing this work removes.
 - The `auto-cascade-parent-status` toon cascade rendering — superseded by the structured change sections decided here.
-- The unchanged-terminal-children requirement in that same specification, which appears never to have been implemented (`CascadeResult`, `internal/cli/format.go:141-147`, carries no such field) and is therefore wrong about the tool independently of this work.
 
 ---
 
@@ -802,7 +801,6 @@ Execution belongs to the specification phase rather than here — the correction
 ### Open Threads
 
 - The work unit's own description still reads as a free-text fix ("Make free-text fields survive an agent read-edit-write round trip… with a field-extraction flag"). Scope has widened well past it — the carrier now understates the work.
-- Two details deferred to the specification phase rather than decided here, both recorded under Status Change Output: how a move producing two independent cascade roots is headed, and whether unchanged terminal children are reinstated.
 - Which corrigenda, if any, are raised against the two completed specifications — recorded under Published Documentation Owed a Correction as a judgement for the specification phase, with candidates named.
 
 ### Current State
