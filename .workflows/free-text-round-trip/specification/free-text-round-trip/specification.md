@@ -348,7 +348,11 @@ The split between the two kinds of answer was locked in knowingly. `--field desc
 ```
 notes[1]{index,text,created}:
   2,"multi\nline\nnote","2026-09-16T08:30:00Z"
+
+description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
 ```
+
+A position narrows the section it names and nothing else: every other field in the selection comes back whole.
 
 Asked for alone, `--field notes.2` prints that note's text bare, by the one-field rule.
 

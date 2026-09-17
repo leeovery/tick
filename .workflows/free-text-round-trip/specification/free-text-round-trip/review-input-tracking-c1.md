@@ -35,8 +35,8 @@ description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
 
 A position narrows the section it names and nothing else: every other field in the selection comes back whole.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim. User selected auto for remaining settled findings.
 
 ---
 
@@ -54,10 +54,12 @@ An unrecognised field name fails the command with a non-zero exit, but nothing s
 The accepted names are the names the output document itself uses — the top-level task fields and the section keys, exactly as they appear in a full `tick show`. That is the only answer the specification's own shape leaves standing: §9.2 defines the multi-field answer as the normal document minus what was not asked for, and §9.4 makes the task's own fields selectable "exactly like sections" to avoid a grammar that depends on which side of a boundary a name sits. A positional suffix is meaningful only on a section holding a list; applied anywhere else the name is unrecognised and takes §9.6's error.
 
 **Proposed Text**:
-**The names the flag accepts are the names the output document uses** — the task's own top-level fields (`id`, `title`, `status`, `priority`, `type`, `created`, `updated`) and the section keys (`description`, `notes`, `tags`, `refs`, `children`, `blocked_by`), spelled as a full `tick show` spells them. There is no second vocabulary to learn: what you read in the output is what you ask for. A positional suffix (`notes.2`, §9.3) attaches only to a section that holds a list; on anything else the whole name is unrecognised and takes §9.6's error.
+**The names the flag accepts are the names the output document uses** — the task's own top-level fields (`id`, `title`, `status`, `priority`, `type`, `parent`, `created`, `updated`, `closed`) and the section keys (`description`, `notes`, `tags`, `refs`, `children`, `blocked_by`), spelled as a full `tick show` spells them. There is no second vocabulary to learn: what you read in the output is what you ask for. A positional suffix (`notes.2`, §9.3) attaches only to a section that holds a list; on anything else the whole name is unrecognised and takes §9.6's error.
+
+Several of these are emitted only when set — `type`, `parent` and `closed` among the task's fields (`sed -n '265,285p' internal/cli/toon_formatter.go`), and `tags`, `refs` and `description` among the sections. **Recognition does not depend on presence**: a name on this list is always recognised, and asking for one the task does not carry is an empty field, which prints nothing and exits successfully (§9.6). A name absent from the list is unrecognised whatever the task holds.
 
 **Resolution**: Pending
-**Notes**:
+**Notes**: Disposal — move held as `settled`; the derivation from §9.2 and §9.4 stands. Proposed Text amended before presentation: the staged enumeration omitted `parent` and `closed`, which `buildTaskSection` emits conditionally (`sed -n '265,285p' internal/cli/toon_formatter.go`), and said nothing about whether a conditionally-emitted name is recognised when absent — load-bearing, since §9.6 makes an unrecognised name a hard error.
 
 ---
 
