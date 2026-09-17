@@ -421,11 +421,38 @@ The tags and refs sections also emit raw item text: a ref containing a comma ren
 
 This changes what the subtopic is choosing between. Making the description "valid TOON" does not let an agent run a TOON parser over `tick show` output, because the document is already invalid before the description is reached.
 
-### What remains open
+### Measured against a real description
 
-*(Amended 2026-09-16 — this section previously asked whether the goal was a stated rule for lifting free text or a parseable document; the Toon Conformance Scope decision settled that fork in favour of fixing the whole format.)*
+*(This section replaced an earlier "Open question" on 2026-09-16 — it asked whether the goal was a stated rule for lifting free text or a parseable document, a fork the Toon Conformance Scope decision settled in favour of fixing the whole format. Candidate C fell with it: it cannot be conformant.)*
 
-Candidate C is ruled out by that same decision — it cannot be conformant. What is left is the choice between Candidate A, the whole description as one TOON-quoted string, and Candidate B, a dash-list of lines with a declared count.
+Deciding between A and B was done on an actual task description from a live project rather than the toy sample above — 13 lines, 1090 characters, the shape tick descriptions really take: bold headings ending in colons, bullet lists, markdown checkboxes, fenced identifiers.
+
+| | Characters | Output lines | Lines needing quotes |
+|---|---|---|---|
+| A — one quoted value | 1117 | 1 | n/a |
+| B — dash-list of lines | 1185 | 14 | 13 of 13 (100%) |
+
+B's premise is that it preserves the visible shape of the text. On real content it does not: every line needs quoting — for a colon in a heading, a leading dash on a bullet, leading spaces on an indented line — so the structure it was meant to show is buried under quote marks, and the result is larger than A as well.
+
+A's overhead on the same text is 27 characters, about 2.5%, all of it newline escapes. On a 4500-character description it is roughly a hundred characters and one very long line.
+
+### Decision
+
+**The description is emitted as one TOON-quoted value.**
+
+```
+description: "Retry the sync worker on transient failures.\n\nCurrent behaviour: a single 500 …"
+```
+
+Three reasons, in the order they carried:
+
+1. **It is produced by the library, not hand-assembled.** `toon.MarshalString` emits this form directly from a string. Candidate B is not a form the encoder produces — it would have to be built by hand, line by line, with our own quoting rules. That is precisely the mechanism behind every malformed section this work is removing. Choosing B would mean finishing the work having reintroduced its cause.
+2. **B's advantage evaporates on real content**, as measured above.
+3. **It is the same rule note text already obeys.** One decoding rule for all free text in the output, which is what the reader needed and never had.
+
+Trade-off accepted: a long description is one long line, and unpleasant to read in a terminal. The user weighed this against a real 4500-character description and took it — a human reading a description reads the pretty output, which this work does not touch.
+
+The user's deciding input: an outright rejection of the list form, and confirmation that descriptions in practice run to thousands of characters.
 
 ---
 
