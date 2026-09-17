@@ -484,10 +484,14 @@ Asked for alone, `--field notes.2` prints that note's text bare, by the one-fiel
 
 (The description section above is shown in the whole-text-as-one-quoted-value shape, which is the leaning candidate in Description Block Encoding and not yet settled.)
 
+### Empty values and unrecognised names
+
+**Settled by derivation** — not discussed. Determined by the project's existing stance on unknown flags, which refuses rather than silently ignoring.
+
+**An empty field prints nothing and exits successfully. An unrecognised field name is an error with a non-zero exit.** A task legitimately having no description is a fact about the task rather than a failure of the command, and it takes the same shape as an empty notes table in full output. A field name that is not a field at all is a caller mistake, and gets what every other unrecognised flag value already gets.
+
 ### Still open in this subtopic
 
-- What `--field description` returns for a task with no description, and with what exit status.
-- Whether a single-field request honours `--json` / `--pretty` / `--toon`, given a raw value has no format to apply.
 - The relationship to `--quiet`, which already prints a bare task ID and nothing else.
 
 ---
