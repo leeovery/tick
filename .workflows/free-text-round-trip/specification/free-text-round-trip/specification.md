@@ -427,7 +427,7 @@ The refusal is an error with a non-zero exit and nothing on stdout, exactly as a
 
 #### 10.1 The defect
 
-An agent reads a note off a task, corrects a typo, and writes it back. If the note begins with a dash — `- read the header`, the shape a large share of this project's own notes take — the command refuses it:
+An agent reads a note off a task, corrects a typo, and writes it back. If the note begins with a dash — `- read the header`, the shape a bulleted note naturally takes — the command refuses it:
 
 ```
 unknown flag "- read the header" for "note add"

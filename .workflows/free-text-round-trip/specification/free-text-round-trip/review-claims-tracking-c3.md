@@ -67,5 +67,5 @@ An agent reads a note off a task, corrects a typo, and writes it back. If the no
 
 **Proposed Text**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: Measurement confirmed independently — tick's own store holds zero notes, so the frequency claim is unsupported. The claim is colour rather than ground: the refusal mechanism it illustrates measures exactly as described, and the decision to fix the free-text argument problem rests on that mechanism plus the round-trip hole, neither of which moves. Repaired in place in the discussion (line 680) and re-aligned in specification §10.1 — the dash-leading shape is now described as what a bulleted note naturally takes, which needs no frequency evidence.
