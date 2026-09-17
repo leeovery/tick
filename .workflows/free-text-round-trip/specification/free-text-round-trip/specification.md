@@ -96,7 +96,7 @@ Two candidate changes were declined explicitly and are **not** in scope:
 
 #### 4.2 JSON moves with toon
 
-A consumer parsing JSON gets the same structured answer as one parsing toon: the §7 `changed` list in place of the current `transition` object beside a `cascaded` list (`grep -n 'json:"transition"\|json:"cascaded"' internal/cli/json_formatter.go` → `json_formatter.go:276-277`), and the §8 structured empty dep-tree form in place of today's `message` key carrying the English sentence (`grep -n 'jsonMessage{Message: result.Message}' internal/cli/json_formatter.go` → `json_formatter.go:366`).
+A consumer parsing JSON gets the same structured answer as one parsing toon: the §7 `changed` list in place of the current `transition` object beside a `cascaded` list (`grep -n 'json:"transition"\|json:"cascaded"' internal/cli/json_formatter.go` → `json_formatter.go:276-277`), and the §8 structured empty dep-tree form in place of today's English sentence, which reaches JSON as a bare `message` object from the command handler rather than from the dep-tree formatter (§4.3).
 
 Each note also carries its 1-based index, for the reason the toon table does (§6.3): a consumer that asked for one note (§9.3) needs the note's real position before it can call `note remove`, and that need is the same whichever format it parses.
 
@@ -106,6 +106,8 @@ Pretty being unchanged while toon and JSON move is not free — the code is shar
 
 - **The single transition line** comes from `baseFormatter.FormatTransition` (`grep -n 'func (b \*baseFormatter) FormatTransition' internal/cli/format.go` → `format.go:211`), embedded by both the toon and pretty formatters, so the two emit byte-identical text today. Restructuring the toon form requires splitting that method.
 - **The dep-tree empty messages** are not produced by a formatter at all. They are set on the result in the shared graph builder (`grep -n 'No dependencies' internal/cli/dep_tree_graph.go` → `dep_tree_graph.go:177`, `dep_tree_graph.go:255`) and consumed by all three formatters, so removing them at source would strip pretty's message too.
+
+  On the nothing-blocked branch they never reach a dep-tree formatter at all: `runFullDepTree` returns as soon as the root set is empty, printing the sentence through `FormatMessage` (`sed -n '34,44p' internal/cli/dep_tree.go` → `dep_tree.go:38-41`). The guards that look like they handle it — `json_formatter.go:366` and `toon_formatter.go:180-182` — are dead code. **The change therefore lands in the handler, not in the formatters**, and it has a consequence for pretty: `PrettyFormatter.formatFullDepTree` returns `""` for zero roots (`sed -n '316,319p' internal/cli/pretty_formatter.go`), so once that branch routes through the formatters pretty must be handed its sentence explicitly or it silently prints nothing. The named-task branch already reaches the formatters (`runFocusedDepTree` calls `FormatDepTree` unconditionally) and needs no handler change.
 
 ### 5. Single-Object Sections Become Top-Level Named Fields
 

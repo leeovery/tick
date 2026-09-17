@@ -102,5 +102,5 @@ A consumer parsing JSON gets the same structured answer as one parsing toon: the
 
 Where nothing in the project is blocked, that sentence reaches both machine formats without a dep-tree formatter being asked for anything: the command handler returns first, printing the general-purpose message (`sed -n '38,41p' internal/cli/dep_tree.go` → `if len(result.Roots) == 0 { fmt.Fprintln(stdout, fmtr.FormatMessage(result.Message)); return nil }`), which JSON renders as the `message` object and toon as the bare sentence. The message branches inside the dep-tree formatters themselves (`toon_formatter.go:180-181`, `json_formatter.go:365-366`) are never reached, so the emptied document has to be produced on the path the handler takes. Pretty's sentence has to survive that move: its own full dep-tree rendering returns an empty string when there are no roots (`sed -n '317,318p' internal/cli/pretty_formatter.go` → `if len(result.Roots) == 0 { return "" }`), so pretty keeps its prose on that branch only if it is handed the message there.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied under auto. Verified independently: `runFullDepTree` short-circuits at dep_tree.go:38-41, `runFocusedDepTree` calls `FormatDepTree` unconditionally, and `PrettyFormatter.formatFullDepTree` returns `""` at pretty_formatter.go:317-319. Landed in §4.3 with the handler location and pretty's consequence; §4.2's own citation, which pointed at the dead json_formatter.go:366 guard, was corrected to defer to §4.3.
