@@ -58,8 +58,8 @@ The accepted names are the names the output document itself uses — the top-lev
 
 Several of these are emitted only when set — `type`, `parent` and `closed` among the task's fields (`sed -n '265,285p' internal/cli/toon_formatter.go`), and `tags`, `refs` and `description` among the sections. **Recognition does not depend on presence**: a name on this list is always recognised, and asking for one the task does not carry is an empty field, which prints nothing and exits successfully (§9.6). A name absent from the list is unrecognised whatever the task holds.
 
-**Resolution**: Pending
-**Notes**: Disposal — move held as `settled`; the derivation from §9.2 and §9.4 stands. Proposed Text amended before presentation: the staged enumeration omitted `parent` and `closed`, which `buildTaskSection` emits conditionally (`sed -n '265,285p' internal/cli/toon_formatter.go`), and said nothing about whether a conditionally-emitted name is recognised when absent — load-bearing, since §9.6 makes an unrecognised name a hard error.
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto. Disposal — move held as `settled`; the derivation from §9.2 and §9.4 stands. Proposed Text amended before presentation: the staged enumeration omitted `parent` and `closed`, which `buildTaskSection` emits conditionally (`sed -n '265,285p' internal/cli/toon_formatter.go`), and said nothing about whether a conditionally-emitted name is recognised when absent — load-bearing, since §9.6 makes an unrecognised name a hard error.
 
 ---
 

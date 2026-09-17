@@ -315,6 +315,10 @@ The companion to the format repair: a way to ask for one field's value and get i
 
 The answer's shape is split by how many fields were asked for.
 
+**The names the flag accepts are the names the output document uses** — the task's own top-level fields (`id`, `title`, `status`, `priority`, `type`, `parent`, `created`, `updated`, `closed`) and the section keys (`description`, `notes`, `tags`, `refs`, `children`, `blocked_by`), spelled as a full `tick show` spells them. There is no second vocabulary to learn: what you read in the output is what you ask for. A positional suffix (`notes.2`, §9.3) attaches only to a section that holds a list; on anything else the whole name is unrecognised and takes §9.6's error.
+
+Several of these are emitted only when set — `type`, `parent` and `closed` among the task's fields (`sed -n '265,285p' internal/cli/toon_formatter.go`), and `tags`, `refs` and `description` among the sections. **Recognition does not depend on presence**: a name on this list is always recognised, and asking for one the task does not carry is an empty field, which prints nothing and exits successfully (§9.6). A name absent from the list is unrecognised whatever the task holds.
+
 #### 9.2 One field returns the bare value; several return a filtered document
 
 **One field — the bare value.** `tick show tick-a1b2 --field description`:
