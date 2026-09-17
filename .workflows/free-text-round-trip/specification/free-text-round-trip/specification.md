@@ -53,7 +53,7 @@ The defect is that the two free-text fields use two different, mutually incompat
 
 #### 3.1 Output that must parse
 
-Every command listed here emits output a standard TOON reader decodes, on **every** branch — the empty one included (§8).
+Every command listed here emits output a standard TOON reader decodes, on **every** branch — the empty one included (§8). The single exception is a bare value from `tick show --field` (§9.2), which is by design not a document: it is exempt here for the reason §9.7 exempts it from the format flags. Every document `show` produces — the full detail, and a filtered one — decodes.
 
 | Output | Commands |
 |---|---|
@@ -129,6 +129,8 @@ children[1]{id,title,status}:
 
 description: "Fix it.\n\nSteps."
 ```
+
+**Which sections a document carries is unchanged by this work.** The example shows the form, not the full complement: `children`, `blocked_by` and `notes` are always present, carrying a count-zero header when empty (§8), while `type`, `parent`, `closed`, `tags`, `refs` and `description` appear only when the task carries them (§9.1). The always-present rule of §7.4 is the `changed` section's and does not extend to the rest.
 
 **The same treatment applies to the other two single-object sites**: `tick stats`' counts and the dep-tree chains/longest/blocked summary become top-level named fields beside their tables.
 
@@ -271,6 +273,8 @@ The table carries the title so no second lookup is needed to know what moved. Th
 `done`, `start`, `cancel` and `reopen` return **only** the `changed` table. `create` and `update` return the task's full record with the `changed` table as a section inside it.
 
 The deciding factor: `create` and `update` are edits and the caller wants the result of the edit — the new ID, the merged fields — whereas a status change is something the caller already knows it did, so a full record is tokens it did not ask for.
+
+`show`, `note add` and `note remove` carry no `changed` section at all. Only a parent/child structural change moves another task's status (§7.5), and none of the three performs one, so there is nothing for the section to hold. The section belongs to `create` and `update`, even though all four mutating commands share one detail helper (§3.1).
 
 A third option was put up and declined: leave status output alone entirely, treating `tick done` as a prose confirmation like `tick dep add`, with an agent running `tick show` afterwards if it needed to know what cascaded. The single-transition case is indeed change for consistency rather than repair. It was declined once the cascade case was seen beside it: the multi-task output carries titles the agent would otherwise have to look up, and one command's output parsing while another's does not — depending on whether a cascade fired — is exactly the branching rule this work exists to delete.
 
