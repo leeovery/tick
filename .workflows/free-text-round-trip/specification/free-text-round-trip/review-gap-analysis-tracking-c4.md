@@ -21,8 +21,8 @@ Append to the final paragraph of §5.2, after "become top-level named fields bes
 
 "Where `tick dep tree` names a task, the line identifying that task becomes top-level `id` and `title` fields in the same form, so a focused dependency document opens exactly as a task-detail document does."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied under auto, Proposed Text amended before applying. Measurement showed the gap is wider than staged: `formatFocusedDepTree` (toon_formatter.go:209-212) emits the identifying line only on the empty branch, as a free-form `id  title (status)` line, and the populated branch carries no identity at all — so §8's "exactly as the populated one does" currently resolves to "not at all". Added `status` to the named fields, since the line being replaced carries it and dropping it would lose information today's output has, and recorded that the identity is carried on both branches.
 
 ---
 
@@ -43,8 +43,8 @@ Stored values carry no edge whitespace (§2.2), so that byte is the terminator a
 **Proposed Text**:
 Values stored from this change onward carry no edge whitespace (§2.2), so that byte is the terminator and never part of the value.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -65,8 +65,8 @@ Which fields a task-detail document omits when the task does not carry them is s
 **Proposed Text**:
 **An empty field prints what full output prints for it, and exits successfully.** A task legitimately having no description is a fact about the task rather than a failure of the command. A field or section full output omits when the task does not carry it (§5.2) prints nothing; a section full output always carries prints its count-zero header, so `--field notes` on a task with no notes returns `notes[0]{index,text,created}:`.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -89,8 +89,8 @@ The answer for a position past the end of a list — `notes.4` on a two-note tas
 **Proposed Text**:
 **A position that names nothing is out of range whatever the reason.** `notes.4` on a task carrying two notes, `notes.0` where positions start at 1, and `tags.1` on a task carrying no tags all fail the same way: a non-zero exit and a message naming the range, rather than printing nothing and succeeding. A selector that resolves to nothing is not a field that happens to be empty — the position is a claim about the data that is false. A section the task does not carry is not the empty-field case above either: `tags` alone on a tag-less task is a field that happens to be empty, while `tags.1` is a claim that a first tag exists. `tick note remove` already answers this for the same 1-based addressing, reporting the index as out of range and naming how many notes the task has (§6.3); giving the same grammar a different answer under a different command would be a second rule for a reader to learn. A suffix that is not a number is no positional claim at all and takes the unrecognised-name error (§9.1).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -113,8 +113,8 @@ Append to the first paragraph of §9.6, after the sentence ending "returns `note
 
 "In the bare form that means no bytes at all: the terminating newline of §9.2 belongs to a value, so a field with no value produces an empty stream rather than a blank line."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -135,8 +135,8 @@ while `type`, `parent`, `closed`, `tags`, `refs` and `description` appear only w
 **Proposed Text**:
 while `type`, `parent`, `closed`, `tags`, `refs` and `description` appear only when the task carries them.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 

@@ -136,9 +136,9 @@ children[1]{id,title,status}:
 description: "Fix it.\n\nSteps."
 ```
 
-**Which sections a document carries is unchanged by this work.** The example shows the form, not the full complement: `children`, `blocked_by` and `notes` are always present, carrying a count-zero header when empty (§8), while `type`, `parent`, `closed`, `tags`, `refs` and `description` appear only when the task carries them (§9.1). The always-present rule of §7.4 is the `changed` section's and does not extend to the rest.
+**Which sections a document carries is unchanged by this work.** The example shows the form, not the full complement: `children`, `blocked_by` and `notes` are always present, carrying a count-zero header when empty (§8), while `type`, `parent`, `closed`, `tags`, `refs` and `description` appear only when the task carries them. The always-present rule of §7.4 is the `changed` section's and does not extend to the rest.
 
-**The same treatment applies to the other two single-object sites**: `tick stats`' counts and the dep-tree chains/longest/blocked summary become top-level named fields beside their tables.
+**The same treatment applies to the other two single-object sites**: `tick stats`' counts and the dep-tree chains/longest/blocked summary become top-level named fields beside their tables. Where `tick dep tree` names a task, the line identifying that task becomes top-level `id`, `title` and `status` fields in the same form, so a focused dependency document opens exactly as a task-detail document does. It is carried on both branches: today the identity appears only when the task has no dependencies, as a free-form line (`sed -n '209,212p' internal/cli/toon_formatter.go`), and the populated branch prints edge sections with nothing naming the task at all.
 
 #### 5.3 Why named fields rather than a one-row table
 
@@ -351,7 +351,7 @@ Steps:
   - validate
 ```
 
-The value goes out as a line: its own bytes followed by a single newline, as the bare task ID already is (`grep -n 'Fprintln(stdout, id)' internal/cli/helpers.go` → `helpers.go:18`). Stored values carry no edge whitespace (§2.2), so that byte is the terminator and never part of the value.
+The value goes out as a line: its own bytes followed by a single newline, as the bare task ID already is (`grep -n 'Fprintln(stdout, id)' internal/cli/helpers.go` → `helpers.go:18`). Values stored from this change onward carry no edge whitespace (§2.2), so that byte is the terminator and never part of the value.
 
 **A single field naming a list section returns that section, not a bare value.** `tick show tick-a1b2 --field notes` prints the notes table exactly as full output renders it, header and all; `--field tags` prints `tags[2]: has space,plain`. A list has no bare form, and the flag is a projection rather than a single-value extractor (§9.1), so the section is handed over in the one shape the library produces for it.
 
@@ -409,15 +409,13 @@ The opening position was that `id` should always be present so a filtered docume
 
 #### 9.6 Empty values, unrecognised names, and out-of-range positions
 
-**An empty field prints what full output prints for it, and exits successfully.** A task legitimately having no description is a fact about the task rather than a failure of the command. A field or section that full output omits when the task does not carry it — `description`, `tags`, `refs`, `type`, `parent`, `closed` (§5.2) — prints nothing; a section full output always carries prints its count-zero header, so `--field notes` on a task with no notes returns `notes[0]{index,text,created}:`. The rule runs per name: in a multi-field selection each empty name contributes what it would contribute to full output, the rest of the document is unaffected, and a selection whose every name prints nothing prints nothing at all and still exits successfully.
+**An empty field prints what full output prints for it, and exits successfully.** A task legitimately having no description is a fact about the task rather than a failure of the command. A field or section full output omits when the task does not carry it (§5.2) prints nothing; a section full output always carries prints its count-zero header, so `--field notes` on a task with no notes returns `notes[0]{index,text,created}:`. In the bare form that means no bytes at all: the terminating newline of §9.2 belongs to a value, so a field with no value produces an empty stream rather than a blank line. The rule runs per name: in a multi-field selection each empty name contributes what it would contribute to full output, the rest of the document is unaffected, and a selection whose every name prints nothing prints nothing at all and still exits successfully.
 
 **An unrecognised field name is an error with a non-zero exit.** A field name that is not a field at all is a caller mistake, and gets what every other unrecognised flag value already gets — `ValidateFlags` refuses rather than silently ignoring (`grep -n 'unknown flag %q for %q' internal/cli/flags.go` → `flags.go:138`).
 
 **A selection that names nothing is the same mistake.** An empty value, or a stray or doubled comma leaving an empty name in the list, fails with the unrecognised-name error rather than printing nothing or falling back to the full record. A blank name is a caller mistake, not a field that happens to be empty.
 
-**A note position that does not exist is an error too.** `notes.4` on a task carrying two notes fails with a non-zero exit and a message naming the range, rather than printing nothing and succeeding. A selector that resolves to nothing is not a field that happens to be empty — the position is a claim about the data that is false. `tick note remove` already answers this for the same 1-based addressing, reporting the index as out of range and naming how many notes the task has (§6.3); giving the same grammar a different answer under a different command would be a second rule for a reader to learn.
-
-**A position that names nothing is out of range whatever the reason.** `notes.4` on a two-note task, `notes.0` where positions start at 1, and `tags.1` on a task carrying no tags all fail the same way: non-zero exit and a message naming the range. A section the task does not carry is not the empty-field case above — `tags` alone on a tag-less task is a field that happens to be empty, while `tags.1` is a claim that a first tag exists. A suffix that is not a number is no positional claim at all and takes the unrecognised-name error (§9.1).
+**A position that names nothing is out of range whatever the reason.** `notes.4` on a task carrying two notes, `notes.0` where positions start at 1, and `tags.1` on a task carrying no tags all fail the same way: a non-zero exit and a message naming the range, rather than printing nothing and succeeding. A selector that resolves to nothing is not a field that happens to be empty — the position is a claim about the data that is false. A section the task does not carry is not the empty-field case above either: `tags` alone on a tag-less task is a field that happens to be empty, while `tags.1` is a claim that a first tag exists. `tick note remove` already answers this for the same 1-based addressing, reporting the index as out of range and naming how many notes the task has (§6.3); giving the same grammar a different answer under a different command would be a second rule for a reader to learn. A suffix that is not a number is no positional claim at all and takes the unrecognised-name error (§9.1).
 
 #### 9.7 Interaction with the format flags
 
