@@ -43,6 +43,56 @@ The current output is not lossy. The description block prefixes two spaces to ev
 
 The defect is that the two free-text fields use two different, mutually incompatible decoding rules, neither of which the output announces, and that the description block has no count and no terminator — it works today only because it is emitted last and runs to EOF (`sed -n '104,109p' internal/cli/toon_formatter.go`).
 
+### 3. Output Inventory
+
+#### 3.1 Output that must parse
+
+Every command listed here emits output a standard TOON reader decodes, on **every** branch — the empty one included (§8).
+
+| Output | Commands |
+|---|---|
+| Task detail | `show`, `create`, `update`, `note add`, `note remove` (all via `outputMutationResult`, `grep -n 'func outputMutationResult' internal/cli/helpers.go` → `helpers.go:16`) |
+| Task list | `list`, `ready`, `blocked` |
+| Stats | `stats` |
+| Dependency graph | `dep tree` |
+| Status change | `start`, `done`, `cancel`, `reopen` |
+
+#### 3.2 Output that stays prose
+
+`dep add`, `dep remove`, `remove`, `init`, and the general-purpose messages. These are confirmations of a command the caller issued: the caller already knows what it asked for and the exit code says whether it worked. Wrapping a one-line confirmation in a data format costs tokens to restate what the caller already knows and introduces a new way to fail.
+
+The boundary this draws: a confirmation may be prose; an **answer to a query** may not. "No dependencies" is not a confirmation — it is the answer the caller ran the command to find out (§8).
+
+#### 3.3 `doctor` and `migrate` are out of scope
+
+Both bypass the formatter entirely and print straight to the terminal — `handleDoctor` documents this in its own comment (`sed -n '44,46p' internal/cli/doctor.go`), and `RunMigrate` presents through `migrate.Present` rather than a `Formatter` (`grep -n 'migrate.Present' internal/cli/migrate.go` → `migrate.go:124`). Neither honours the format flags.
+
+The defect being fixed is output that *claims* to be machine-readable and is not — a header no reader accepts, a list missing its item markers. These two never claimed it. Bringing them in means building new formatter surface rather than repairing broken output, which is different work.
+
+Cost accepted: an agent running the health check reads a paragraph and works out what to do from the words.
+
+### 4. Formatter Scope
+
+#### 4.1 Pretty is unchanged, everywhere
+
+What a terminal prints today is what it prints after this work — the single transition line, the box-drawing cascade tree, the indented description block, the dep-tree prose on empty branches. Pretty is the human surface; this work is about the agent surface, and nothing in pretty is broken by the standard being applied: it never claimed to be machine-readable, and a human reads it fine.
+
+Two candidate changes were declined explicitly and are **not** in scope:
+
+- Replicating §7's table shape in pretty. The current cascade tree nests by which task caused which, so a grandchild closing because its parent closed shows as three levels of indentation. Flattened into rows, every knock-on looks equally directly caused. The toon table drops that too, but an agent holds the parent/child links and can reconstruct the chain; a human reading a terminal cannot, which is why the tree exists.
+- Adding the task's title to pretty's single transition line. A genuine improvement rather than a defect fix, and out of scope.
+
+#### 4.2 JSON moves with toon
+
+A consumer parsing JSON gets the same structured answer as one parsing toon: the §7 `changed` list in place of the current `transition` object beside a `cascaded` list (`grep -n 'json:"transition"\|json:"cascaded"' internal/cli/json_formatter.go` → `json_formatter.go:276-277`), and the §8 structured empty dep-tree form in place of today's `message` key carrying the English sentence (`grep -n 'jsonMessage{Message: result.Message}' internal/cli/json_formatter.go` → `json_formatter.go:366`).
+
+#### 4.3 Two shared code paths must be split, not edited
+
+Pretty being unchanged while toon and JSON move is not free — the code is shared in two places, and editing it in place would change pretty by accident:
+
+- **The single transition line** comes from `baseFormatter.FormatTransition` (`grep -n 'func (b \*baseFormatter) FormatTransition' internal/cli/format.go` → `format.go:211`), embedded by both the toon and pretty formatters, so the two emit byte-identical text today. Restructuring the toon form requires splitting that method.
+- **The dep-tree empty messages** are not produced by a formatter at all. They are set on the result in the shared graph builder (`grep -n 'No dependencies' internal/cli/dep_tree_graph.go` → `dep_tree_graph.go:177`, `dep_tree_graph.go:255`) and consumed by all three formatters, so removing them at source would strip pretty's message too. Pretty keeps its sentence; only the machine formats take the structured empty form.
+
 ---
 
 ## Working Notes
