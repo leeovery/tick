@@ -154,8 +154,8 @@ Add to §9.3, after "A position narrows the section it names and nothing else: e
 
 > **The grammar is the same on every section that holds a list** — `notes.2`, `tags.1`, `refs.2`, `children.3`, `blocked_by.1`. Positions are 1-based throughout, the section renders in its normal form narrowed to the named item (a table keeps its header and one row; an inline list keeps its count and carries one item), and a position past the end is the error of §9.6 on any of them, naming the range the same way. Only notes carry a real position in the row itself, because only notes are addressed by position elsewhere in the CLI (§6.3).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -179,8 +179,8 @@ Settled by the bar as §2.2 defines it — read out, write back, stored value by
 **Proposed Text**:
 > 2. **One deliberately awkward task becomes a permanent fixture, round-tripped end to end.** Free text carrying newlines, quotes, commas, a leading dash, trailing spaces at the end of an interior line, and a line that looks like a section header. Write it in, read it out, decode it, write the decoded text back, and assert the stored value is byte-for-byte what it was — the bar §2.2 sets. Whitespace at the very start or end of a value is trimmed on the way in and stays trimmed, which is why the fixture carries its trailing spaces mid-text. That single test would have caught the original description defect, the tags item-marker defect and the refs comma defect — and it is the only test that checks the guarantee this work actually made, which is the round trip (§2.2) rather than parseability.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -204,8 +204,8 @@ Settled by the inventory of what changes: the `tick show` sample is replaced bec
 **Proposed Text**:
 > Its Output Formats section prints worked `tick list` and `tick show` samples in the agent format. After this work the `tick show` sample shows output the tool no longer produces — its header, its tags and refs lists and its description block all change (§5, §6). The `tick list` table is library-written and untouched by this work, so that sample stands.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied under auto, with the library-written claim re-measured at toon_formatter.go:75 and the command carried into the text.
 
 ---
 

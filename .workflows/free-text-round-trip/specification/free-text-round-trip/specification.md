@@ -370,6 +370,8 @@ description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
 
 A position narrows the section it names and nothing else: every other field in the selection comes back whole.
 
+**The grammar is the same on every section that holds a list** — `notes.2`, `tags.1`, `refs.2`, `children.3`, `blocked_by.1`. Positions are 1-based throughout, the section renders in its normal form narrowed to the named item (a table keeps its header and one row; an inline list keeps its count and carries one item), and a position past the end is the error of §9.6 on any of them, naming the range the same way. Only notes carry a real position in the row itself, because only notes are addressed by position elsewhere in the CLI (§6.3).
+
 Asked for alone, `--field notes.2` prints that note's text bare, by the one-field rule.
 
 The alternative considered and rejected was to refuse filtering on notes altogether — `notes.3` returning the whole table, leaving position implicit in row order. That keeps the output minimal at the cost of the selector the caller asked for.
@@ -447,7 +449,7 @@ Three parts:
 
 1. **Every structured command's output is decoded by a real TOON reader in the suite, and the test fails if it will not parse.** This alone catches the entire class of defect this work exists to fix — a section nobody can read, whatever its content. The commands are §3.1's table.
 
-2. **One deliberately awkward task becomes a permanent fixture, round-tripped end to end.** Free text carrying newlines, quotes, commas, a leading dash, trailing spaces, and a line that looks like a section header. Write it in, read it out, decode it, assert the text is identical to what went in. That single test would have caught the original description defect, the tags item-marker defect and the refs comma defect — and it is the only test that checks the guarantee this work actually made, which is the round trip (§2.2) rather than parseability.
+2. **One deliberately awkward task becomes a permanent fixture, round-tripped end to end.** Free text carrying newlines, quotes, commas, a leading dash, trailing spaces at the end of an interior line, and a line that looks like a section header. Write it in, read it out, decode it, write the decoded text back, and assert the stored value is byte-for-byte what it was — the bar §2.2 sets. Whitespace at the very start or end of a value is trimmed on the way in and stays trimmed, which is why the fixture carries its trailing spaces mid-text. That single test would have caught the original description defect, the tags item-marker defect and the refs comma defect — and it is the only test that checks the guarantee this work actually made, which is the round trip (§2.2) rather than parseability.
 
 3. **Rewritten assertions check decoded values, not output text.** "The notes section has two rows and the second row's text is X", not "the output equals this blob".
 
@@ -461,7 +463,7 @@ Three published documents describe output this work replaces.
 
 #### 12.1 The README is updated as part of this work
 
-Its Output Formats section prints worked `tick list` and `tick show` samples in the agent format. After this work those samples show output the tool no longer produces. It is live documentation someone reads to learn the tool, not a record of a past decision, so leaving it describing output the tool does not produce is shipping a defect.
+Its Output Formats section prints worked `tick list` and `tick show` samples in the agent format. After this work the `tick show` sample shows output the tool no longer produces — its header, its tags and refs lists and its description block all change (§5, §6). The `tick list` table is library-written (`grep -n 'encodeToonSection("tasks"' internal/cli/toon_formatter.go` → `toon_formatter.go:75`) and untouched by this work, so that sample stands. It is live documentation someone reads to learn the tool, not a record of a past decision, so leaving it describing output the tool does not produce is shipping a defect.
 
 The README also gains the new input surface, for the same reason: `--field`/`--fields` on `show` (§9), and `--` as the way to pass free text that may begin with a dash (§10.2). Calling `--` the canonical form only means something if a caller can find it written down, and a flag documented nowhere is a flag nobody uses.
 
