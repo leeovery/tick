@@ -489,7 +489,7 @@ The agent-format output the README prints is not confined to its Output Formats 
 
 | Sample | Location | Why it changes |
 |---|---|---|
-| `tick show` full detail | `README.md:430-449` | header, tags, refs and description block all change (§5, §6) |
+| `tick show` full detail | `README.md:430-450` | header, tags, refs and description block all change (§5, §6) |
 | dep-tree summary header | `README.md:307` (inside `### dep`) | single-object section becomes top-level named fields (§5.2) |
 | arrow transition | `README.md:473-475` | replaced by the `changed` table (§7.2) |
 | JSON `{id,from,to}` transition | `README.md:481-486` | JSON moves with toon (§4.2) |

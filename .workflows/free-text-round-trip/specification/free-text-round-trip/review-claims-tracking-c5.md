@@ -52,5 +52,5 @@ The fenced sample opens at 429 and closes at 451; its content is 430-450. The fo
 Source carrying the same claim — `.workflows/free-text-round-trip/discussion/free-text-round-trip.md:786`, the "README's worked output samples" bullet:
 > `tick show`'s full detail (`README.md:430-449`: the malformed header, the tags and refs lists, the indented description block)
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: Measurement confirmed — the sample's last content line sits at README.md:450, so the cited range excluded it. Repaired in place in the discussion and re-aligned in §12.1; the decision that the sample is replaced is untouched.
