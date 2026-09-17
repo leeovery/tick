@@ -309,7 +309,7 @@ A command in §3.1's must-parse table emits its structured form on **every** bra
 
 `tick dep tree` currently answers `No dependencies found.` when nothing in the project is blocked, and a title line plus `No dependencies.` when a named task has no dependencies either way (§4.3 locates both). That is prose on the one branch an agent could not predict, from the formatter whose purpose is machine-readable output. **Both go, in toon and JSON; pretty keeps them (§4.3).**
 
-**What replaces them is the document the non-empty branch produces, emptied**: the summary fields of §5.2 reading zero and the edges section carrying its count-zero header. Both branches take that one shape — nothing blocked anywhere, and a named task with no dependencies either way — so an agent reads the same document whichever it hit, and reads the counts to learn which.
+**What replaces them is the document the non-empty branch produces, emptied**: the same fields, with the summary fields of §5.2 reading zero and the edges section carrying its count-zero header. Where the caller named a task, the emptied document still identifies it exactly as the populated one does. Both empty branches take that shape — nothing blocked anywhere, and a named task with no dependencies either way — so an agent parses one document whether or not anything is blocked, and reads the counts to learn which it got.
 
 This is not an exception to §3.2's prose rule, it is that rule's boundary: the exemption covers confirmations of a command the caller issued, and "no dependencies" is the answer to a query — the answer the caller ran the command to find out.
 
@@ -332,6 +332,8 @@ It is `show`'s flag and no other command's. `create`, `update`, `note add` and `
 The answer's shape is split by how many fields were asked for.
 
 **The names the flag accepts are the names the output document uses** — the task's own top-level fields (`id`, `title`, `status`, `priority`, `type`, `parent`, `created`, `updated`, `closed`) and the section keys (`description`, `notes`, `tags`, `refs`, `children`, `blocked_by`), spelled as a full `tick show` spells them. There is no second vocabulary to learn: what you read in the output is what you ask for. A positional suffix (`notes.2`, §9.3) attaches only to a section that holds a list; on anything else the whole name is unrecognised and takes §9.6's error.
+
+**The list is read leniently wherever its meaning is not in doubt.** Whitespace around a name is not part of it, so `--field "title, status"` selects what `--field title,status` selects. Repeating the flag composes rather than overrides: `--field title --field status` is `--field title,status`. A field named more than once renders once — a section named both whole and by position comes back whole, and several positions on one section render it narrowed to those positions in output order. None of this softens §9.6: a name that is empty once its whitespace is gone is still the blank-name mistake.
 
 Several of these are emitted only when set — `type`, `parent` and `closed` among the task's fields (`sed -n '265,285p' internal/cli/toon_formatter.go`), and `tags`, `refs` and `description` among the sections. **Recognition does not depend on presence**: a name on this list is always recognised, and asking for one the task does not carry is an empty field, which prints nothing and exits successfully (§9.6). A name absent from the list is unrecognised whatever the task holds.
 
@@ -419,6 +421,8 @@ The opening position was that `id` should always be present so a filtered docume
 
 **A request that returns a bare value ignores `--json`, `--pretty` and `--toon`; a request that returns a document honours them.** A bare value is not a document, so there is nothing for a format flag to act on, and honouring one would re-quote the very string the flag exists to hand over unquoted. A multi-field request produces a document, and so does a single field naming a list section (§9.2); the resolved format applies to either exactly as it applies to a full `tick show`.
 
+In pretty — the format a terminal resolves to unless a flag overrides it — the filtered document is the named fields rendered in pretty's usual style and nothing else: no header block, no labels for sections outside the selection (§9.5). A filtered record is output pretty does not produce today rather than a change to output it does, so §4.1 stands untouched.
+
 #### 9.8 Interaction with `--quiet`
 
 **Passing `--quiet` and a field selection together is refused.** `--quiet` prints a bare task ID and nothing else; a single-field request prints that field's bare value and nothing else. Two different single values have been asked for, and silently picking one hands back something the caller did not ask for.
@@ -446,7 +450,7 @@ This is the one place the §2.2 round-trip guarantee has a hole — text an agen
 - **`--` is supported as the end-of-flags marker, and becomes the canonical documented way to pass free text that may begin with a dash.** Purely additive: `--` is currently rejected on every command (`unknown flag "--" for "note add"`), so no existing invocation uses it. Everything that works today works identically, and inputs that currently fail begin to succeed.
 
   Nothing after the marker is read as a flag — not the command's own flags and not the global format flags — so flags come before it and everything after it is text. Free text that spells a flag exactly, a note reading `--json`, is writable for the same reason a dash-leading one is.
-- **Flag inspection stops after the task ID on `note add`.** The command registers no flags at all (`grep -n '"note add":' internal/cli/flags.go` → `flags.go:80`, `"note add": {}`), so once the task ID is consumed every remaining argument is text by definition and nothing dash-leading there could be a flag the check would have caught. A dash-leading note then works with or without the marker.
+- **Flag inspection stops after the task ID on `note add`.** The command registers no flags at all (`grep -n '"note add":' internal/cli/flags.go` → `flags.go:80`, `"note add": {}`), so nothing dash-leading after the ID could be a flag the check would have caught, and refusing it is the whole defect. What stops is the check, not flag handling: global flags are consumed wherever they appear, before the command sees its arguments (`sed -n '352,373p' internal/cli/app.go`), so `tick note add <id> "text" --json` prints a JSON document exactly as it does today, and note text that spells a global flag exactly still needs the marker. A dash-leading note that is not itself a global flag works with or without it.
 - **The existing bare-argument form keeps working.** `--` is the recommended form, not a required one.
 
 `create` cannot take the second half: its title shares the argument list with real flags (`--priority`, `--description`), so a dash-leading title is indistinguishable from a mistyped flag without a marker. `create` relies on `--`.
