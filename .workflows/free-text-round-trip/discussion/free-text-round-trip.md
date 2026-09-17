@@ -675,10 +675,21 @@ Execution belongs to the specification phase rather than here — the correction
 ### Open Threads
 
 - The work unit's own description still reads as a free-text fix ("Make free-text fields survive an agent read-edit-write round trip… with a field-extraction flag"). Scope has widened well past it — the carrier now understates the work.
-- Whether the write side needs an input path other than a command-line argument for very large descriptions (which carry no length cap).
-- Three points of `--field` behaviour: what an empty field returns and with what exit status, whether a single-field request honours the format flags, and its relationship to the existing `--quiet`.
+- Two details deferred to the specification phase rather than decided here, both recorded under Status Change Output: how a move producing two independent cascade roots is headed, and whether unchanged terminal children are reinstated.
+- Which corrigenda, if any, are raised against the two completed specifications — recorded under Published Documentation Owed a Correction as a judgement for the specification phase, with candidates named.
 
 ### Current State
 
-- Resolved: both reading paths are in scope, with byte-identity as the fidelity bar; the format is repaired whole rather than free text alone, covering the data commands and status changes while one-line confirmations, `doctor` and `migrate` stay prose; single-object sections become named fields; tags and refs use the library's inline list form; status changes become structured sections with the existing per-command split kept; notes are read-side only; free text beginning with a dash is made writable; the field flag becomes a projection with bare single-field output; the README is updated here and the older specifications corrected selectively.
-- Uncertain: how the description block itself should encode multi-line text — the choice between one quoted value and a list of lines — and how conformance is verified and kept.
+Resolved:
+
+- Both reading paths are in scope — the single-field fetch and the whole-task read — with byte-identity as the fidelity bar.
+- The format is repaired whole rather than free text alone: data commands and status changes must parse; one-line confirmations, `doctor` and `migrate` stay prose; a must-parse command is structured on every branch including the empty one.
+- Single-object sections become named fields. Tags and refs use the library's inline list form. The description becomes one TOON-quoted value — the same rule note text already obeys.
+- Status changes become structured sections, with the existing per-command split kept and each command emitting one document rather than a document plus loose lines.
+- Notes are read-side only, with no edit command.
+- Free text beginning with a dash becomes writable, via `--` as the canonical marker plus flag-inspection passthrough on `note add`; the existing bare-argument form still works. No alternative input path is added.
+- The field flag becomes a projection: `--field`/`--fields`, comma-separated, bare value for one field and a filtered document for several, list fields reachable by position.
+- Verification is decode-and-assert throughout, with a permanent awkward-task round-trip fixture and no byte-level pinning retained.
+- The README is updated as part of this work; the older specifications are corrected selectively through the corrigendum facility.
+
+Uncertain: nothing material remains open on the decided ground; what is left sits in Open Threads above as work for the specification phase.
