@@ -54,7 +54,7 @@ Source carrying the same assertion: `.workflows/free-text-round-trip/discussion/
 **Proposed Text**:
 
 **Resolution**: Routed
-**Notes**:
+**Notes**: Measurement confirmed independently — the README's agent-format samples reach past `tick show` to the dep-tree summary (:307), the arrow transition (:473-475), the JSON transition (:481-486) and the cascade sample (:501-504). The discussion's inventory line repaired in place; the decision it sits under (the README is updated as part of this work) is unaffected. Specification §12.1 re-aligned with a measured table of every sample and why it changes.
 
 ---
 
@@ -108,7 +108,7 @@ The `tick list` table is library-written (`grep -n 'encodeToonSection("tasks"' i
 **Proposed Text**:
 The `tick list` table is library-written (`grep -n 'encodeToonSection("tasks"' internal/cli/toon_formatter.go` → `toon_formatter.go:75`), so its shape is untouched by this work and the sample keeps its form. Its untyped row is corrected: the sample ends that row with a bare comma (`grep -n 'Update docs' README.md` → `README.md:400`, `  tick-d5c6,Update docs,open,3,`) where the tool writes the library's quoted empty field (`grep -n 'Setup Sanctum,done,1' internal/cli/toon_formatter_test.go` → ``  tick-a1b2,Setup Sanctum,done,1,""``).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Confirmed against the suite's own golden row (toon_formatter_test.go:31 → `  tick-a1b2,Setup Sanctum,done,1,""`); `toonTaskRow.Type` carries no `omitempty` and the library quotes an empty string. Landed in the same §12.1 rewrite as finding 1: the list table's shape is untouched by this work, but its printed row is wrong and is corrected while the section is rewritten.
 
 ---
