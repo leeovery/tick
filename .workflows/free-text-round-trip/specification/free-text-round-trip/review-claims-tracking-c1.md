@@ -48,8 +48,8 @@ The helper's own comment records the same narrower scope (`internal/cli/helpers.
 
 Source carrying the claim: `.workflows/free-text-round-trip/discussion/free-text-round-trip.md:166` — "| Task detail | `show`, `create`, `update`, `note add`, `note remove` (all via `outputMutationResult`, `internal/cli/helpers.go:16-30`) |".
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: Measurement confirmed independently. The discussion's must-parse table (line 166) repaired in place — the four mutating commands share the helper, `show` renders inline. The decision itself (task detail must parse from all five commands) is untouched by the correction. Specification §3.1 re-aligned to the corrected fact, naming the consequence for §9's field selection.
 
 ---
 

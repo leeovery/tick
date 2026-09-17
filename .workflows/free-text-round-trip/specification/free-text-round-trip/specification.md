@@ -51,7 +51,7 @@ Every command listed here emits output a standard TOON reader decodes, on **ever
 
 | Output | Commands |
 |---|---|
-| Task detail | `show`, `create`, `update`, `note add`, `note remove` (all via `outputMutationResult`, `grep -n 'func outputMutationResult' internal/cli/helpers.go` → `helpers.go:16`) |
+| Task detail | `show`, `create`, `update`, `note add`, `note remove`. The four mutating commands share `outputMutationResult` (`grep -rn 'outputMutationResult' internal/cli/ \| grep -v _test` → `create.go:277`, `update.go:409`, `note.go:86`, `note.go:142`); `show` queries and renders the same detail inline (`sed -n '52,64p' internal/cli/show.go`), so a change made only at the helper leaves `show` — and §9's field selection, which never reaches the helper — untouched |
 | Task list | `list`, `ready`, `blocked` |
 | Stats | `stats` |
 | Dependency graph | `dep tree` |
