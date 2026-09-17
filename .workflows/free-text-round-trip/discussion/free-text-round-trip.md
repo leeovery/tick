@@ -267,6 +267,38 @@ These tasks are elsewhere in the tree and are not in the edited task's record, w
 
 ### Decision
 
+#### 2026-09-17 — revised
+*Trigger: review finding — this section decided a singular `changed:` block heading a `cascaded[]` table, then two paragraphs later said the two-root re-parenting case likely wants one table with a column marking the requested change. Two incompatible documents for a reachable case.*
+
+**Settled by derivation** — not discussed. Determined by this work's own governing principle — output a reader can read without a rule learned elsewhere — applied to its own shape (review-002 F2).
+
+**One table, always.** Every task whose status moved gets a row, and a column says whether that row is the change the caller asked for:
+
+```
+changed[3]{id,title,from,to,auto}:
+  tick-a1b2,Add retry to the sync worker,in_progress,done,false
+  tick-9f3c,Parse the header,open,done,true
+  tick-77ab,Validate fields,in_progress,done,true
+```
+
+A re-parenting, where nothing the caller asked for was itself a status change, is the same shape with every row marked as a consequence:
+
+```
+changed[2]{id,title,from,to,auto}:
+  tick-1111,Phase 5,done,open,true
+  tick-2222,Phase 4,in_progress,done,true
+```
+
+Two reasons carried it. The first is that a reader must not have to branch on which document arrived before it can read either — an agent parsing status output sees one table whatever command produced it, and the count is always right.
+
+The second is that the marking column is not new vocabulary. Every task's transition history already records each change with an `auto` flag — false when a user or agent asked for it, true when the system produced it as a consequence — stored per task in the JSONL and in the `task_transitions` table. Inventing a "requested" column instead would be exactly the move that produced the malformed output this work is removing: a shape someone wanted, built by hand, outside the vocabulary that already existed.
+
+The table carries the title so no second lookup is needed to know what moved. The trailing `(auto)` marker of the old arrow lines disappears into the column that always meant it.
+
+The split between commands, and the one-document rule below, are unchanged by this revision.
+
+#### Initial
+
 **Status changes become structured sections, and the existing split between commands is kept.**
 
 Measured shape for a status change (encoded and decoded back against the pinned TOON build; parses and returns the original values):
@@ -292,9 +324,8 @@ Sibling check: `auto-cascade-parent-status` specification — its CLI Display se
 
 ### Carried into specification
 
-Two details this decision deliberately leaves to the specification phase rather than settling now:
+One detail this decision deliberately leaves to the specification phase rather than settling now:
 
-- A move can produce two independent roots — one parent reopening, another closing — with no single "the change you asked for" to head the output. That likely wants one table of every task whose status moved, with a column marking the requested one, rather than the singular `changed` block shown above.
 - The `auto-cascade-parent-status` specification also requires unchanged terminal children to be shown so the caller can see what the cascade did *not* touch. `CascadeResult` (`internal/cli/format.go:141-147`) carries no such field, so that requirement appears unimplemented; whether the restructured output reinstates it is open.
 
 ---
