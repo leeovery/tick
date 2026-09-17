@@ -96,6 +96,13 @@ That led to the framing question — is the round trip the single-field fetch (`
 
 ### Decision
 
+#### 2026-09-17 — revised
+*Trigger: review finding — the byte-identity derivation below was drawn from the description write paths only, and note text and task titles do not meet the bar as things stand.*
+
+The bar itself is unchanged, and the reasoning about trimming below still holds. What was incomplete is the claim that it costs nothing to reach: it holds for descriptions, and for note text and task titles it does not, because text beginning with a dash is rejected before it reaches storage. Reaching the bar therefore requires the free-text argument fix recorded under Write Side Input, which this work now carries.
+
+#### Initial
+
 **Both reading paths are in scope, and both must work.** The user ruled both valid: an agent must be able to fetch one field bare, and must equally be able to run one `tick show` and lift usable free text out of the full output. Neither is the designated path with the other as a fallback — the field flag does not excuse an ambiguous block in full output, and the block being fixed does not remove the need for bare single-field output.
 
 This constrains the encoding subtopics directly: whatever the description block becomes, it must hand over text the reader can lift without a rule learned elsewhere, *and* a bare-field path must exist alongside it.
@@ -419,6 +426,44 @@ This changes what the subtopic is choosing between. Making the description "vali
 *(Amended 2026-09-16 — this section previously asked whether the goal was a stated rule for lifting free text or a parseable document; the Toon Conformance Scope decision settled that fork in favour of fixing the whole format.)*
 
 Candidate C is ruled out by that same decision — it cannot be conformant. What is left is the choice between Candidate A, the whole description as one TOON-quoted string, and Candidate B, a dash-list of lines with a declared count.
+
+---
+
+## Write Side Input
+
+### Context
+
+*Raised by the background review (review-001 F4): the byte-identity bar was derived from the description write paths only, and the note write path does not meet it.*
+
+An agent reads a note off a task, corrects a typo, and writes it back. If the note begins with a dash — `- read the header`, the shape a large share of this project's own notes take — the command refuses it:
+
+```
+unknown flag "- read the header" for "note add"
+```
+
+Measured, and wider than notes: `tick create "- some title"` is refused identically. `ValidateFlags` inspects every argument beginning with `-` that is not numeric and not a global flag, and rejects any it cannot find in the command's flag set (`internal/cli/flags.go:116-145`). Free text passed as a bare argument — note text, task title — is inspected alongside real flags. `--description` escapes only because its value follows a registered value-taking flag, so validation skips it.
+
+The check itself is deliberate and worth keeping: it exists so `tick update tick-a1b2 --prioirty 3` refuses rather than silently reporting success. The defect is that it is applied to arguments that are free text by definition.
+
+### Journey
+
+The question raised against the obvious fix — supporting `--` as an end-of-flags marker — was whether it constitutes a breaking change. It does not. Measured: `--` is currently rejected on every command (`unknown flag "--" for "note add"`), so no existing invocation uses it. Adding support is purely additive — everything that works today works identically, and inputs that currently fail begin to succeed.
+
+The cost that does exist is ergonomic rather than compatibility-shaped: `--` only helps a caller who knows to reach for it. That led to a second half of the fix. `note add` registers no flags at all (`"note add": {}`, `internal/cli/flags.go:76`), so once the task ID is consumed every remaining argument is text by definition and nothing dash-leading there could be a flag the check would have caught. Flag inspection can simply stop. `create` cannot do the same — its title shares the argument list with real flags (`--priority`, `--description`), so a dash-leading title is indistinguishable from a mistyped flag without a marker.
+
+### Decision
+
+**The free-text argument problem is fixed as part of this work, on both halves.**
+
+- `--` is supported as the end-of-flags marker, and becomes the canonical documented way to pass free text that may begin with a dash. Purely additive.
+- Flag inspection stops after the task ID on `note add`, where the command has no flags to confuse text with. A dash-leading note then works with or without the marker.
+- **The existing bare-argument form keeps working.** Nothing that works today stops working — `--` is the recommended form, not a required one.
+
+The deciding factor: this is the one place this work's own round-trip guarantee has a hole. There is text an agent can read out of tick and cannot put back. Leaving it means shipping the contract with an exception nobody wrote down.
+
+### Still open in this subtopic
+
+Whether the write side needs an input path other than a command-line argument at all — stdin, or a file — for descriptions large enough to strain an argument list. Untouched so far; descriptions carry no length cap (unlike note text, capped at 2000 characters in `internal/task/notes.go`).
 
 ---
 
