@@ -107,7 +107,7 @@ Pretty being unchanged while toon and JSON move is not free — the code is shar
 
 #### 5.1 The current shape and its cause
 
-Three places in the output describe one thing rather than a list of things: the task's own fields at the head of `tick show` (and of `create`, `update`, `note add`, `note remove`), the counts summary in `tick stats`, and the chains/longest/blocked summary in `tick dep tree`. All three are malformed, and this is the line a reader fails on before it sees anything else.
+Three places in the output describe one thing rather than a list of things: the task's own fields at the head of the task-detail document (§3.1), the counts summary in `tick stats`, and the chains/longest/blocked summary in `tick dep tree`. All three are malformed, and this is the line a reader fails on before it sees anything else.
 
 The cause is a hand-edit. The value is marshalled as a one-element array and the `[1]` is then deleted from the header with a string replace to make it read as singular — `buildTaskSection` does it inline (`grep -n 'strings.Replace(s, "task\[1\]"' internal/cli/toon_formatter.go` → `toon_formatter.go:294`) and `encodeToonSingleObject` does it generically for stats and the dep-tree summary (`grep -n 'func encodeToonSingleObject' -A 10 internal/cli/toon_formatter.go` → `toon_formatter.go:371-379`). The result is a table header with no table beneath it, a shape TOON has no equivalent for.
 
@@ -240,7 +240,7 @@ tick-9f3c: open → done (auto)
 tick-77ab: in_progress → done (auto)
 ```
 
-Reading it requires knowing that the ID precedes the colon, that the arrow separates old state from new, and that `(auto)` marks a knock-on rather than the requested change. It is a bespoke line format, and it is byte-identical in `--toon` and `--pretty`: both formatters embed `baseFormatter.FormatTransition` (§4.3), and `ToonFormatter.FormatCascadeTransition` is the same construction with ` (auto)` appended (`grep -n 'func (f \*ToonFormatter) FormatCascadeTransition' internal/cli/toon_formatter.go` → `toon_formatter.go:145`).
+Reading it requires knowing that the ID precedes the colon, that the arrow separates old state from new, and that `(auto)` marks a knock-on rather than the requested change. It is a bespoke line format, shared with pretty (§4.3), and `ToonFormatter.FormatCascadeTransition` is the same construction with ` (auto)` appended (`grep -n 'func (f \*ToonFormatter) FormatCascadeTransition' internal/cli/toon_formatter.go` → `toon_formatter.go:145`).
 
 #### 7.2 One table, always
 
@@ -315,7 +315,7 @@ The formatter already has the shape. An empty task list comes back as a structur
 
 ### 9. Field Selection
 
-The companion to the format repair: a way to ask for one field's value and get it with nothing around it — no header, no indentation, no quoting. This is the case that started the work, where an agent needed a task's description as a plain string and went to the raw data file instead.
+The companion to the format repair: a way to ask for one field's value and get it with nothing around it — no header, no indentation, no quoting. This is the case that started the work (§1).
 
 Two routes to the same end were declined. `tick show --json` already returns the string and is the wrong shape for it: it costs tokens and hands back a value the caller has to parse JSON syntax off — the agent wanted the text, not a document containing it. A fourth output format, `--raw`, was pressed on and dropped: a format has to answer for every command in the CLI — `tick list --raw`, `tick stats --raw` — and carries that consistency burden forever. A flag that selects fields avoids designing a format at all.
 
