@@ -607,6 +607,28 @@ What this leaves in scope for notes: their text must be readable out of `tick sh
 
 ---
 
+## Conformance Verification
+
+### Context
+
+Every other decision here is a shape. Nothing in them stops the next change adding a hand-built section and breaking the output again — which is exactly how it broke the first time.
+
+The existing suite cannot catch it. Its assertions compare output against a string written down alongside the code, so a malformed header passed for the tool's entire life: the test compared a wrong string to the same wrong string. Every one of those assertions has to be rewritten regardless, since every shape this work touches changes. The question is what they become.
+
+### Decision
+
+**Three parts, all agreed.**
+
+1. **Every structured command's output is decoded by a real TOON reader in the suite, and the test fails if it will not parse.** This alone catches the entire class of defect this work exists to fix — a section nobody can read, whatever its content.
+
+2. **One deliberately awkward task becomes a permanent fixture, round-tripped end to end.** Free text carrying newlines, quotes, commas, a leading dash, trailing spaces, and a line that looks like a section header. Write it in, read it out, decode it, assert the text is identical to what went in. That single test would have caught the original description defect, the tags item-marker defect and the refs comma defect — and it is the only test that checks the guarantee this work actually made, which is the round trip rather than parseability.
+
+3. **Rewritten assertions check decoded values, not output text.** "The notes section has two rows and the second row's text is X", not "the output equals this blob".
+
+**No byte-level pinning is kept anywhere.** The trade was put explicitly: golden strings pin the exact output shape, so a future change cannot reshape a section without a test noticing, but they are the mechanism that rotted into the defect this discussion spent its length undoing. Decoded-value assertions survive harmless reformatting while still failing when a section goes missing or a value is wrong. The user took that trade across the board.
+
+---
+
 ## Published Documentation Owed a Correction
 
 ### Context
