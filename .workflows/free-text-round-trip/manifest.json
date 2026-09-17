@@ -71,7 +71,10 @@
           "finding_gate_mode": "gated",
           "construction_gate_mode": "auto",
           "date": "2026-09-17",
-          "review_baseline_words": 6154
+          "review_baseline_words": 6154,
+          "tracking": {
+            "review-claims-tracking-c1": "in-progress"
+          }
         }
       }
     }
