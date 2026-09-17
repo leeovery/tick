@@ -22,8 +22,8 @@ Settled by the flag's own reasoning, already written down: §9.7 exempts a bare 
 **Proposed Text**:
 > Every command listed here emits output a standard TOON reader decodes, on **every** branch — the empty one included (§8). The single exception is a bare value from `tick show --field` (§9.2), which is by design not a document: it is exempt here for the reason §9.7 exempts it from the format flags. Every document `show` produces — the full detail, and a filtered one — decodes.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -46,8 +46,8 @@ Add to §7.3, after "The deciding factor: `create` and `update` are edits and th
 
 > `show`, `note add` and `note remove` carry no `changed` section at all. Only a parent/child structural change moves another task's status (§7.5), and none of the three performs one, so there is nothing for the section to hold. The section belongs to `create` and `update`, even though all four mutating commands share one detail helper (§3.1).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -70,8 +70,8 @@ Add to §5.2, after the worked example and before "**The same treatment applies 
 
 > **Which sections a document carries is unchanged by this work.** The example shows the form, not the full complement: `children`, `blocked_by` and `notes` are always present, carrying a count-zero header when empty (§8), while `type`, `parent`, `closed`, `tags`, `refs` and `description` appear only when the task carries them (§9.1). The always-present rule of §7.4 is the `changed` section's and does not extend to the rest.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -94,8 +94,8 @@ Add to §10.2, after the `--` bullet's paragraph and before the `note add` bulle
 
 > Nothing after the marker is read as a flag — not the command's own flags and not the global format flags — so flags come before it and everything after it is text. Free text that spells a flag exactly, a note reading `--json`, is writable for the same reason a dash-leading one is.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -118,8 +118,8 @@ Add to §9.6, after the out-of-range paragraph:
 
 > **A position that names nothing is out of range whatever the reason.** `notes.4` on a two-note task, `notes.0` where positions start at 1, and `tags.1` on a task carrying no tags all fail the same way: non-zero exit and a message naming the range. A section the task does not carry is not the empty-field case above — `tags` alone on a tag-less task is a field that happens to be empty, while `tags.1` is a claim that a first tag exists. A suffix that is not a number is no positional claim at all and takes the unrecognised-name error (§9.1).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -142,8 +142,8 @@ Add to §9.2, after the `--field description` example and before "**A single fie
 
 > The value goes out as a line: its own bytes followed by a single newline. Stored values carry no edge whitespace (§2.2), so that byte is the terminator and never part of the value.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -167,8 +167,8 @@ Settled by §9.1, which is the one place that states the accepted vocabulary and
 **Proposed Text**:
 > | The library (`encodeToonSection`) | blocked_by, children, notes, priority breakdown, dep-tree edges | yes |
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -192,8 +192,8 @@ The fact's home is §4.3: the requirement to split rather than edit rests on it,
 **Proposed Text**:
 > Reading it requires knowing that the ID precedes the colon, that the arrow separates old state from new, and that `(auto)` marks a knock-on rather than the requested change. It is a bespoke line format, shared with pretty (§4.3), and `ToonFormatter.FormatCascadeTransition` is the same construction with ` (auto)` appended (`grep -n 'func (f \*ToonFormatter) FormatCascadeTransition' internal/cli/toon_formatter.go` → `toon_formatter.go:145`).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -217,8 +217,8 @@ The fact's home is §3.1, where the set is enumerated with its measurement and w
 **Proposed Text**:
 > Three places in the output describe one thing rather than a list of things: the task's own fields at the head of the task-detail document (§3.1), the counts summary in `tick stats`, and the chains/longest/blocked summary in `tick dep tree`.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -242,8 +242,8 @@ The account's home is §1, where it motivates the whole piece of work. §9 needs
 **Proposed Text**:
 > The companion to the format repair: a way to ask for one field's value and get it with nothing around it — no header, no indentation, no quoting. This is the case that started the work (§1).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
