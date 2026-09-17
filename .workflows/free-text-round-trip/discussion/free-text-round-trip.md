@@ -163,7 +163,7 @@ Status changes are the opposite case. `tick done <id>` reports the change plus a
 
 | Output | Commands |
 |---|---|
-| Task detail | `show`, `create`, `update`, `note add`, `note remove` (all via `outputMutationResult`, `internal/cli/helpers.go:16-30`) |
+| Task detail | `show`, `create`, `update`, `note add`, `note remove` — the four mutating commands via `outputMutationResult` (`internal/cli/helpers.go:16-30`), `show` rendering the same detail inline (`internal/cli/show.go:52-64`) |
 | Task list | `list`, `ready`, `blocked` |
 | Stats | `stats` |
 | Dependency graph | `dep tree` |
