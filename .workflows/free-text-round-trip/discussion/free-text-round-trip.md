@@ -509,7 +509,7 @@ Asked for alone, `--field notes.2` prints that note's text bare, by the one-fiel
 
 **The split between the two kinds of answer is deliberate and was locked in knowingly.** `--field description` and `--field description,notes` return different kinds of thing — a raw value versus a document — so an agent building the flag from a variable must know which it will get. The sharp edge was put to the user explicitly and accepted: it is the honest split between *fetch me this value* and *give me a trimmed record*, and collapsing them would cost the bare-value case that the work exists to serve.
 
-(The description section above is shown in the whole-text-as-one-quoted-value shape, which is the leaning candidate in Description Block Encoding and not yet settled.)
+*(Amended 2026-09-17 — this parenthetical previously called the description shape a leaning candidate not yet settled; Description Block Encoding has since decided it.)* The description section in the examples above is shown in the one-TOON-quoted-value shape that Description Block Encoding settled on.
 
 ### Empty values and unrecognised names
 
