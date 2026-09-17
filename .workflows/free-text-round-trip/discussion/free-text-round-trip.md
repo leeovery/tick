@@ -126,6 +126,15 @@ This brings three areas in that were previously out of scope: the single-object 
 
 ### Decision — which outputs this covers
 
+#### 2026-09-17 — revised
+*Trigger: review finding — `doctor` and `migrate` emit agent-facing output but appear in neither column of an inventory presented as complete.*
+
+**`tick doctor` and `tick migrate` are out of scope, explicitly.** Both bypass the formatter entirely and print straight to the terminal — `handleDoctor` documents this in its own comment (`internal/cli/doctor.go:44-46`), and `RunMigrate` presents through `migrate.Present` rather than a `Formatter` (`internal/cli/migrate.go:127`). Neither honours the format flags.
+
+The line this draws: the defect being fixed is output that *claims* to be machine-readable and is not — a header no reader accepts, a list missing its item markers. These two never claimed it. Bringing them in means building new formatter surface rather than repairing broken output, which is different work.
+
+Cost accepted: an agent running the health check reads a paragraph and works out what to do from the words. The user ruled `migrate` out without hesitation as a command run by hand, and `doctor` out on the same footing.
+
 #### 2026-09-16 — revised
 *Trigger: review finding — `tick dep tree` answers in prose on its empty branches, inside a command the inventory below lists as output that must parse.*
 
