@@ -27,7 +27,7 @@ Each hand-rolled section exists because it wanted a shape the library does not p
 
 A narrower version was available and refused: repair free text now and log the rest as a separate concern. A quarter of a broken format is exactly as unusable as all of it — the document fails on its first line, so a reader never reaches the repaired description and the agent goes back to the data file — which means the free-text work delivers nothing on its own. Free-text encoding is therefore not the deliverable in itself; it is one of the malformed sections. Taking the whole format brings in three areas that sat outside the original framing: the single-object section headers (§5), the tags and refs lists (§6.1), and the verification that keeps the output conformant afterwards (§11).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---

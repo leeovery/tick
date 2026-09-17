@@ -21,6 +21,8 @@ Each hand-rolled section exists because it wanted a shape the library does not p
 
 **This work delivers toon output that a standard TOON reader can read, for every command that returns data, and free text that survives an agent's read-edit-write cycle without a rule learned outside the output.**
 
+A narrower version was available and refused: repair free text now and log the rest as a separate concern. A quarter of a broken format is exactly as unusable as all of it — the document fails on its first line, so a reader never reaches the repaired description and the agent goes back to the data file — which means the free-text work delivers nothing on its own. Free-text encoding is therefore not the deliverable in itself; it is one of the malformed sections. Taking the whole format brings in three areas that sat outside the original framing: the single-object section headers (§5), the tags and refs lists (§6.1), and the verification that keeps the output conformant afterwards (§11).
+
 Measured against `github.com/toon-format/toon-go@v0.0.0-20251202084852` (`grep toon-go go.mod`). Whether the TOON specification itself permits a single-object scope header was not verified — the claim is only that the reference Go implementation rejects it, and that the form is hand-constructed by tick rather than produced by the library.
 
 ### 2. Round-Trip Contract
