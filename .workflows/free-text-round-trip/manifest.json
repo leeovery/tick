@@ -23,7 +23,7 @@
               "parent": null
             },
             "field-extraction-flag": {
-              "status": "pending",
+              "status": "exploring",
               "parent": null
             },
             "write-side-input": {

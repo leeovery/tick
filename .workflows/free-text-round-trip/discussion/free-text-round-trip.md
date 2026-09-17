@@ -429,6 +429,69 @@ Candidate C is ruled out by that same decision — it cannot be conformant. What
 
 ---
 
+## Field Extraction Flag
+
+### Context
+
+The companion to the format repair: a way to ask for one field's value and get it with nothing around it — no header, no indentation, no quoting. This is the case that started the work, where an agent needed a task's description as a plain string and went to the raw data file instead.
+
+*The background review (review-001 F5) raised that the flag's behaviour over anything that isn't a single string was undefined, while the notes decision had already promised it would reach note text.*
+
+### Journey
+
+The opening position was that the flag should always yield exactly one string and never a joined list — a flag that sometimes returns something needing to be split apart has handed back the problem it exists to remove. Two ways to honour that were put up: reach a single note by position, or put list fields out of the flag's reach entirely.
+
+The user took neither, and reframed the flag instead. Asking for the notes table is a legitimate thing to want — editing and writing back is not the only use for reading a field, and sometimes you just want to see the notes. From there the flag stopped being a single-value extractor and became a projection: a comma-separated list of fields, returning the normal document with only those sections in it.
+
+### Decision
+
+**`--field` takes a comma-separated list, and `--fields` is an alias of it.** Both spellings work; the plural exists so the flag reads naturally when selecting several. The same flag serves both jobs, split by how many fields were asked for:
+
+**One field — the bare value.** `tick show tick-a1b2 --field description`:
+
+```
+Fix the parser.
+
+Steps:
+  - read the header
+  - validate
+```
+
+**Several fields — the normal document, filtered.** `tick show tick-a1b2 --field description,notes`:
+
+```
+notes[2]{text,created}:
+  Retried twice before it stuck,"2026-09-14T10:02:00Z"
+  "multi\nline\nnote","2026-09-16T08:30:00Z"
+
+description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
+```
+
+Identical to a full `tick show` minus the sections not asked for. **Sections keep their usual output order**, not the order they were typed, so the shape does not shift with how the flag was written.
+
+**List fields can be reached by position.** `notes.2` selects the second note. In a multi-field selection the section is rendered as normal with the count following the selection, so a reader need not know it was filtered — `tick show tick-a1b2 --field description,notes.2`:
+
+```
+notes[1]{text,created}:
+  "multi\nline\nnote","2026-09-16T08:30:00Z"
+
+description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
+```
+
+Asked for alone, `--field notes.2` prints that note's text bare, by the one-field rule.
+
+**The split between the two kinds of answer is deliberate and was locked in knowingly.** `--field description` and `--field description,notes` return different kinds of thing — a raw value versus a document — so an agent building the flag from a variable must know which it will get. The sharp edge was put to the user explicitly and accepted: it is the honest split between *fetch me this value* and *give me a trimmed record*, and collapsing them would cost the bare-value case that the work exists to serve.
+
+(The description section above is shown in the whole-text-as-one-quoted-value shape, which is the leaning candidate in Description Block Encoding and not yet settled.)
+
+### Still open in this subtopic
+
+- What `--field description` returns for a task with no description, and with what exit status.
+- Whether a single-field request honours `--json` / `--pretty` / `--toon`, given a raw value has no format to apply.
+- The relationship to `--quiet`, which already prints a bare task ID and nothing else.
+
+---
+
 ## Write Side Input
 
 ### Context
