@@ -250,6 +250,40 @@ Both are standard. What tick invented was neither — a table header with a sing
 
 ### Decision
 
+#### 2026-09-17 — revised
+*Trigger: user question while settling field selection — "what do we have the `task:` bit for anyway? seems unnecessary."*
+
+**Named fields, with no wrapping key.** The task's own fields sit at the top level of the document, beside the collection sections rather than nested inside a `task:` scope:
+
+```
+id: tick-a1b2
+title: Add retry to the sync worker
+status: in_progress
+priority: 2
+type: feature
+created: "2026-09-10T09:14:00Z"
+updated: "2026-09-17T16:00:00Z"
+
+children[1]{id,title,status}:
+  tick-9f3c,Parse the header,done
+
+description: "Fix it.\n\nSteps."
+```
+
+Measured: 256 characters flat against 276 wrapped for the same content, both parsing and round-tripping.
+
+Three reasons, the size being the least of them:
+
+1. **It removes an inconsistency the wrapper created.** `description` is a task field and sits at the top level. `title` is a task field and sat nested. Same kind of thing at two different depths, for no reason beyond one of them being long.
+2. **It mirrors storage.** The JSONL file already holds each task as a flat object — `{"id":…,"title":…,"status":…,"description":…}` — so the output stops inventing a grouping that exists nowhere else in the system.
+3. **The field flag falls out of it.** `--field title,status` returns two lines with nothing wrapped around them, rather than a trimmed block.
+
+The same applies to the other two single-object sites: `tick stats`' counts and the dep-tree summary become top-level fields beside their tables.
+
+What is given up: a consumer can no longer grab "the task's own fields" as one object without naming them. Nothing identified wants that.
+
+#### Initial
+
 **Named fields, for all three single-object sections.**
 
 The table layout earns its keep when many rows would otherwise repeat the field names — that is `tick list`'s case, not this one. With a single row it repeats nothing, so it compresses nothing, and it trades that for a positional read that can go wrong. Fifteen characters is not a real cost against a value sitting next to its own name.
@@ -566,15 +600,16 @@ Asked for alone, `--field notes.2` prints that note's text bare, by the one-fiel
 
 *Raised by the final review (review-002 F4): every worked example above selects something that is a section, but Single Object Sections moved the task's own scalar fields inside a `task:` named-field object, so a multi-field selection naming them had no defined answer.*
 
-**The `task:` block is trimmed to the keys named.** `tick show tick-a1b2 --field title,status`:
+**The task's own fields are selectable individually, exactly like sections.** `tick show tick-a1b2 --field title,status`:
 
 ```
-task:
-  title: Add retry to the sync worker
-  status: in_progress
+title: Add retry to the sync worker
+status: in_progress
 ```
 
-Trimming is what the flag does everywhere else. Refusing — on the grounds that only whole sections are selectable — would make the grammar depend on which side of a section boundary a name happens to sit, which is a rule to learn rather than read. Returning the block whole would ignore the request.
+Refusing — on the grounds that only whole sections are selectable — would make the grammar depend on which side of a boundary a name happens to sit, which is a rule to learn rather than read.
+
+*(Amended 2026-09-17 — this section first showed the selection as a trimmed `task:` block. The question it prompted retired the wrapper entirely; see the revision under Single Object Sections. The selection rule is unchanged, and the result now has nothing wrapped around it.)*
 
 **Nothing rides along unasked, including `id`.** The opening position was that `id` should always be present, so a filtered document identifies the task it describes. The user's question broke it: `--field description` prints the bare value with nothing around it, so an `id` riding along would wreck the case the flag exists for. Scoping the rule — `id` present in the document form, absent in the bare form — was available and rejected: it is a second rule to learn, and the argument against is simpler than the argument for. The caller passed the task's ID on the command line to make the request; handing it back tells them something they just typed.
 
