@@ -451,6 +451,10 @@ Three published documents describe output this work replaces.
 
 Its Output Formats section prints worked `tick list` and `tick show` samples in the agent format. After this work those samples show output the tool no longer produces. It is live documentation someone reads to learn the tool, not a record of a past decision, so leaving it describing output the tool does not produce is shipping a defect.
 
+The README also gains the new input surface, for the same reason: `--field`/`--fields` on `show` (§9), and `--` as the way to pass free text that may begin with a dash (§10.2). Calling `--` the canonical form only means something if a caller can find it written down, and a flag documented nowhere is a flag nobody uses.
+
+The command's own help text carries both alongside — not a preference but a constraint: `--field` must be registered in `commandFlags` for §9.6's unrecognised-name error to fire at all, and `TestCommandFlagsMatchHelp` (`grep -n 'func TestCommandFlagsMatchHelp' internal/cli/flag_validation_test.go` → `flag_validation_test.go:310`) fails the suite when a registered long flag has no matching help entry.
+
 #### 12.2 Two completed specifications are corrected selectively
 
 Both belong to completed work units, so the correcting route is the one that presents each proposed amendment and confirms before editing another unit's record.

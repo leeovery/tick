@@ -84,8 +84,8 @@ Its Output Formats section prints worked `tick list` and `tick show` samples in 
 
 The same section gains the new input surface, for the same reason: `--field`/`--fields` on `show` (§9), and `--` as the way to pass free text that may begin with a dash (§10.2). Calling `--` the canonical form only means something if a caller can find it written down, and a flag documented nowhere is a flag nobody uses. The command's own help text carries both alongside.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied under auto, with the help-text clause grounded: `TestCommandFlagsMatchHelp` (flag_validation_test.go:310) makes a help entry mandatory for any registered long flag, so documenting `--field` in help is a project constraint rather than an added preference.
 
 ---
 
