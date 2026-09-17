@@ -677,7 +677,7 @@ The rule is therefore uniform across both forms: you get exactly the fields you 
 
 *Raised by the background review (review-001 F4): the byte-identity bar was derived from the description write paths only, and the note write path does not meet it.*
 
-An agent reads a note off a task, corrects a typo, and writes it back. If the note begins with a dash — `- read the header`, the shape a large share of this project's own notes take — the command refuses it:
+An agent reads a note off a task, corrects a typo, and writes it back. If the note begins with a dash — `- read the header`, the shape a bulleted note naturally takes — the command refuses it:
 
 ```
 unknown flag "- read the header" for "note add"
