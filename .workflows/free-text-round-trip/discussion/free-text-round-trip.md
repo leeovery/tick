@@ -563,9 +563,11 @@ The cost that does exist is ergonomic rather than compatibility-shaped: `--` onl
 
 The deciding factor: this is the one place this work's own round-trip guarantee has a hole. There is text an agent can read out of tick and cannot put back. Leaving it means shipping the contract with an exception nobody wrote down.
 
-### Still open in this subtopic
+### No alternative input path
 
-Whether the write side needs an input path other than a command-line argument at all — stdin, or a file — for descriptions large enough to strain an argument list. Untouched so far; descriptions carry no length cap (unlike note text, capped at 2000 characters in `internal/task/notes.go`).
+**Settled by derivation** — not discussed. Determined by measurement of the argument limit together with the absence of any observed description approaching it.
+
+**Descriptions are passed as command-line arguments; no stdin or file input path is added.** The open question was whether very large descriptions strain an argument list. Measured: `getconf ARG_MAX` → `1048576`, and passing a 200 KB argument through a process call succeeds. A real task description taken from a live project runs to roughly 4.5 KB — under half a percent of the limit. Descriptions carry no length cap of their own (unlike note text, capped at 2000 characters in `internal/task/notes.go`), so an arbitrarily large one remains possible in principle, but building an input path for it would serve a case that does not occur.
 
 ---
 

@@ -27,7 +27,7 @@
               "parent": null
             },
             "write-side-input": {
-              "status": "exploring",
+              "status": "decided",
               "parent": null
             },
             "toon-conformance-scope": {
