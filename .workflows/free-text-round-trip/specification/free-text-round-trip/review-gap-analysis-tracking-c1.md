@@ -229,8 +229,8 @@ Settled by the rule the section itself sets — amend where a point is plainly a
 **Proposed Text**:
 > Both documents carry a point that is plainly and load-bearingly wrong, so both are amended. `tick-core` states as a rule the exact thing §6.2 removes. `auto-cascade-parent-status` fixes the arrow-and-`(auto)` lines as the machine-readable cascade form, which §7.2 replaces outright. Its requirement that unchanged terminal children be shown alongside a cascade is left standing — §7.6 neither reinstates nor decides it, and the amendment does not touch it.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -254,8 +254,8 @@ The fact's home is §2.3, where it carries the "current output is not lossy" cla
 **Proposed Text**:
 > Notes already round-trip on the read side (§2.3). What changes is the schema.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -279,8 +279,8 @@ The boundary's home is §3.3, which owns scope and already carries the carve-out
 **Proposed Text**:
 > Import is already a translation boundary — statuses, priorities and timestamps are all mapped on the way in — so normalising whitespace there is the same kind of move, and it costs a reader nothing they would notice.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -304,8 +304,8 @@ The requirement's home is §8, and §4.1 already lists the dep-tree prose among 
 **Proposed Text**:
 > - **The dep-tree empty messages** are not produced by a formatter at all. They are set on the result in the shared graph builder (`grep -n 'No dependencies' internal/cli/dep_tree_graph.go` → `dep_tree_graph.go:177`, `dep_tree_graph.go:255`) and consumed by all three formatters, so removing them at source would strip pretty's message too.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 

@@ -37,7 +37,7 @@ Existing whitespace trimming does not stand in the way of this, **provided no st
 
 The invariant that derivation rests on is not currently true. `tick migrate` is a third write path and it stores the source tool's value as it arrives — `grep -rn 'TrimDescription' internal/ --include='*.go' | grep -v '_test'` returns only the `create`/`update` sites above plus the definition, and `sed -n '75,84p' internal/migrate/store_creator.go` builds the task with `Description: mt.Description`. Titles carry the same hole: `grep -n 'TrimSpace(mt.Title)' internal/migrate/migrate.go` → `migrate.go:44` validates that a trimmed title is non-empty, and `store_creator.go:78` then stores the untrimmed one. An imported description with a leading newline or trailing spaces reads out of `tick show` intact and is silently trimmed on write-back — the bar failing on precisely the tasks nobody typed by hand.
 
-**`tick migrate` therefore trims every free-text value it imports, exactly as `create` does.** Today that is descriptions and titles — the import framework carries no notes (`grep -rn 'Note' internal/migrate/ --include='*.go' | grep -v _test` → no matches; `MigratedTask` holds Title, Status, Priority, Description and the three timestamps, `sed -n '30,38p' internal/migrate/migrate.go`) — and a provider that later brings note text across is covered by the same rule rather than by a second decision. This is in scope for this work: it makes the invariant true system-wide rather than documenting an exception a reader cannot predict from the output. Import is already a translation boundary — statuses, priorities and timestamps are all mapped on the way in — so normalising whitespace there is the same kind of move, and it costs a reader nothing they would notice. (This is the only part of `migrate` this work touches; its output remains out of scope per §3.3.)
+**`tick migrate` therefore trims every free-text value it imports, exactly as `create` does.** Today that is descriptions and titles — the import framework carries no notes (`grep -rn 'Note' internal/migrate/ --include='*.go' | grep -v _test` → no matches; `MigratedTask` holds Title, Status, Priority, Description and the three timestamps, `sed -n '30,38p' internal/migrate/migrate.go`) — and a provider that later brings note text across is covered by the same rule rather than by a second decision. This is in scope for this work: it makes the invariant true system-wide rather than documenting an exception a reader cannot predict from the output. Import is already a translation boundary — statuses, priorities and timestamps are all mapped on the way in — so normalising whitespace there is the same kind of move, and it costs a reader nothing they would notice.
 
 Two alternatives were declined. Dropping the trim from `create` and `update` would make byte-identity hold with no invariant at all, but changes behaviour for every user to serve a case only importers hit, and reopens whitespace-only descriptions, which `ValidateDescriptionUpdate` currently routes to `--clear-description`. Writing the exception down — the bar covering CLI-authored descriptions only — costs no code and hands the reader the kind of unpredictable exception this work exists to delete.
 
@@ -101,7 +101,7 @@ Each note also carries its 1-based index, for the reason the toon table does (§
 Pretty being unchanged while toon and JSON move is not free — the code is shared in two places, and editing it in place would change pretty by accident:
 
 - **The single transition line** comes from `baseFormatter.FormatTransition` (`grep -n 'func (b \*baseFormatter) FormatTransition' internal/cli/format.go` → `format.go:211`), embedded by both the toon and pretty formatters, so the two emit byte-identical text today. Restructuring the toon form requires splitting that method.
-- **The dep-tree empty messages** are not produced by a formatter at all. They are set on the result in the shared graph builder (`grep -n 'No dependencies' internal/cli/dep_tree_graph.go` → `dep_tree_graph.go:177`, `dep_tree_graph.go:255`) and consumed by all three formatters, so removing them at source would strip pretty's message too. Pretty keeps its sentence; only the machine formats take the structured empty form.
+- **The dep-tree empty messages** are not produced by a formatter at all. They are set on the result in the shared graph builder (`grep -n 'No dependencies' internal/cli/dep_tree_graph.go` → `dep_tree_graph.go:177`, `dep_tree_graph.go:255`) and consumed by all three formatters, so removing them at source would strip pretty's message too.
 
 ### 5. Single-Object Sections Become Top-Level Named Fields
 
@@ -202,7 +202,7 @@ A third candidate — keeping the indented raw block and adding a terminator or 
 
 #### 6.3 The notes section carries an index column
 
-Notes already round-trip on the read side: note text goes through the library's tabular encoder, which quotes and escapes newlines, carriage returns and tabs, so a multi-line note is emitted as one unambiguous quoted string. What changes is the schema.
+Notes already round-trip on the read side (§2.3). What changes is the schema.
 
 **The notes section gains a leading `index` column carrying each note's 1-based position, present whether the section is filtered (§9.3) or not:**
 
@@ -480,7 +480,7 @@ Both belong to completed work units, so the correcting route is the one that pre
 
 **Corrections are made by judgement, not as a blanket rewrite.** Specifications are forever documents that do not churn out of the knowledge base, and the facility for amending them exists, so a correction can be made wherever something is obviously wrong. But this specification supersedes those decisions regardless, so correcting them is not obligatory. Where a point is plainly and load-bearingly wrong, amend it; otherwise let supersession carry it.
 
-The `tick-core` unstructured-long-text principle is the most obviously wrong of the two, since it states as a rule the exact thing §6.2 removes.
+Both documents carry a point that is plainly and load-bearingly wrong, so both are amended. `tick-core` states as a rule the exact thing §6.2 removes. `auto-cascade-parent-status` fixes the arrow-and-`(auto)` lines as the machine-readable cascade form, which §7.2 replaces outright. Its requirement that unchanged terminal children be shown alongside a cascade is left standing — §7.6 neither reinstates nor decides it, and the amendment does not touch it.
 
 ---
 
