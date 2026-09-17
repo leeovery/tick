@@ -144,6 +144,78 @@ Three reasons, the size being the least of them:
 
 Given up: a consumer can no longer grab "the task's own fields" as one object without naming them. Nothing identified wants that.
 
+### 6. Collection and Free-Text Sections
+
+#### 6.1 Tags and refs use the library's inline list form
+
+Today tags and refs are emitted as a header followed by one raw item per indented line (`grep -n 'func buildStringListSection' -A 9 internal/cli/toon_formatter.go` → `toon_formatter.go:320-328`):
+
+```
+tags[2]:
+  has space
+  plain
+```
+
+A TOON reader rejects this: an item written on its own line carries a leading `- ` marker, and without it the decoder reports a length mismatch. The items are also written raw, so a ref containing a comma comes back as two values rather than one, and a URL's colon goes unquoted where the format's own rules would quote it.
+
+**Both become the inline form, produced by the library:**
+
+```
+tags[2]: has space,plain
+```
+
+The deciding factor is that this deletes the hand-written builder rather than correcting its output, and quoting becomes the library's responsibility — so a comma-bearing ref is safe by construction. The alternative, one item per line each marked `- `, is not a form the encoder emits: it would have to be hand-built, preserving the exact class of defect this work removes.
+
+Cost accepted: a long refs list becomes a long line. The reader of toon output is an agent; a human reading tags reads pretty output, which renders them separately and is unchanged (§4.1).
+
+#### 6.2 The description is one TOON-quoted value
+
+Today the description is `description:` followed by every line of the text prefixed with two spaces, with no count and no terminator (`grep -n 'func buildDescriptionSection' -A 10 internal/cli/toon_formatter.go` → `toon_formatter.go:346-355`).
+
+**It becomes a single TOON-quoted string, exactly as the library's `toon.MarshalString` produces from a Go string:**
+
+```
+description: "Retry the sync worker on transient failures.\n\nCurrent behaviour: a single 500 …"
+```
+
+Three reasons, in the order they carried:
+
+1. **It is produced by the library, not hand-assembled.** The alternative — a dash-list of lines, one item per line with a declared count — is not a form the encoder produces from a `[]string` (given one it emits the inline form). It would have to be built by hand with our own quoting rules, which is the mechanism behind every malformed section this work removes.
+2. **The dash-list's advantage evaporates on real content.** Measured on an actual 13-line, 1090-character task description from a live project: the quoted value is 1117 characters on one line; the dash-list is 1185 characters over 14 lines with **13 of 13 lines needing quotes** — for a colon in a heading, a leading dash on a bullet, leading spaces on an indented line. The line structure it exists to preserve is buried under quote marks, and it is larger as well.
+3. **It is the rule note text already obeys.** One decoding rule for all free text in the output, which is what the reader needed and never had.
+
+The quoted form's overhead on that text is 27 characters, about 2.5%, all of it newline escapes. On a 4500-character description it is roughly a hundred characters and one very long line.
+
+Cost accepted: a long description is one long line and unpleasant to read in a terminal. A human reading a description reads pretty output, which this work does not touch.
+
+A third candidate — keeping the indented raw block and adding a terminator or a line count — cannot be conformant however it is delimited: it is a block form TOON has no concept of.
+
+#### 6.3 The notes section carries an index column
+
+Notes already round-trip on the read side: note text goes through the library's tabular encoder, which quotes and escapes newlines, carriage returns and tabs, so a multi-line note is emitted as one unambiguous quoted string. What changes is the schema.
+
+**The notes section gains a leading `index` column carrying each note's 1-based position, present whether the section is filtered (§9.3) or not:**
+
+```
+notes[2]{index,text,created}:
+  1,Retried twice before it stuck,"2026-09-14T10:02:00Z"
+  2,"multi\nline\nnote","2026-09-16T08:30:00Z"
+```
+
+Position is the only handle a note has. There is no note ID; `note remove` takes a 1-based index (`grep -n 'index %d out of range' internal/cli/note.go` → `note.go:128`); and notes stay an append-and-retract log (§6.4), so nothing else identifies one. Without the column, an agent that asked for the third note alone sees `notes[1]` with one row, decides the note is wrong, runs `tick note remove <id> 1`, and deletes the first note on the task.
+
+One shape either way, so there is no rule about when the column appears. It also retires a smaller oddity: in full output today an agent must count rows to work out what to pass to `note remove`.
+
+#### 6.4 Notes stay read-side only — no edit command
+
+Editing a note today means removing it and adding it back, which gives the corrected text a fresh `created` timestamp and moves it to the bottom of the list. The `note` command has exactly two subcommands (`grep -n 'case "add":\|case "remove":' internal/cli/note.go` → `note.go:28`, `note.go:30`).
+
+**No `note edit` command is added by this work.** A note carries a `created` stamp and sits in a positional log you retract from by index — an append-only record of what was observed when, not a mutable field. Adding an edit would turn it into a list of editable strings, and would do so as a side effect of a formatting fix rather than as a decision about the annotation model. If notes should become editable, that is its own piece of work with its own reasoning.
+
+Cost accepted: correcting a note still costs its timestamp and its position. The counter-argument — agents write these notes and agents typo — was weighed and did not carry, because the remedy it asks for changes the data model to serve a convenience.
+
+What remains in scope for notes: their text is readable out of `tick show` without a rule learned elsewhere (already true, via TOON quoting), field extraction reaches it (§9), and note text that begins with a dash becomes writable (§10).
+
 ---
 
 ## Working Notes
