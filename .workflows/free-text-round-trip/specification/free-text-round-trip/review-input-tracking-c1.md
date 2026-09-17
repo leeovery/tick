@@ -110,7 +110,7 @@ The companion to the format repair: a way to ask for one field's value and get i
 
 Two routes to the same end were declined. `tick show --json` already returns the string and is the wrong shape for it: it costs tokens and hands back a value the caller has to parse JSON syntax off — the agent wanted the text, not a document containing it. A fourth output format, `--raw`, was pressed on and dropped: a format has to answer for every command in the CLI — `tick list --raw`, `tick stats --raw` — and carries that consistency burden forever. A flag that selects fields avoids designing a format at all.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---

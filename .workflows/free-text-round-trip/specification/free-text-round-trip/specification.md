@@ -307,6 +307,8 @@ The formatter already has the shape. An empty task list comes back as a structur
 
 The companion to the format repair: a way to ask for one field's value and get it with nothing around it — no header, no indentation, no quoting. This is the case that started the work, where an agent needed a task's description as a plain string and went to the raw data file instead.
 
+Two routes to the same end were declined. `tick show --json` already returns the string and is the wrong shape for it: it costs tokens and hands back a value the caller has to parse JSON syntax off — the agent wanted the text, not a document containing it. A fourth output format, `--raw`, was pressed on and dropped: a format has to answer for every command in the CLI — `tick list --raw`, `tick stats --raw` — and carries that consistency burden forever. A flag that selects fields avoids designing a format at all.
+
 `show` accepts no command-specific flags today (`grep -n '"show":' internal/cli/flags.go` → `flags.go:72`, `"show": {}`), so this is its first, alongside the global `--quiet`.
 
 #### 9.1 `--field` and `--fields` are the same flag
