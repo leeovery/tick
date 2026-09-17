@@ -33,9 +33,15 @@ An agent must be able to fetch one field bare, **and** must equally be able to r
 
 Read a value out of `tick show`, write it back unchanged, and the stored value is byte-for-byte what it was.
 
-Existing whitespace trimming does not stand in the way of this. `create` and `update` both run a description through `TrimDescription` before storing (`grep -n 'TrimDescription(' internal/cli/create.go internal/cli/update.go` → `create.go:214`, `update.go:193`, `update.go:342`), which is `strings.TrimSpace` (`grep -n 'func TrimDescription' -A 2 internal/task/task.go` → `task.go:193-195`). No stored description can therefore carry leading or trailing whitespace, and the trim is idempotent over anything that came out of storage. The trimming behaviour is out of scope as a defect.
+Existing whitespace trimming does not stand in the way of this, **provided no stored value carries edge whitespace**. `create` and `update` both run a description through `TrimDescription` before storing (`grep -n 'TrimDescription(' internal/cli/create.go internal/cli/update.go` → `create.go:214`, `update.go:193`, `update.go:342`), which is `strings.TrimSpace` (`grep -n 'func TrimDescription' -A 2 internal/task/task.go` → `task.go:193-195`). The trim is idempotent over anything that came out of storage, so a read that returns the stored bytes exactly, written back, lands the identical value. The trimming behaviour on those two paths is out of scope as a defect.
 
-The bar does not hold for free of charge across all three free-text carriers. Note text and task titles are rejected before reaching storage when they begin with a dash — see §10. Reaching byte-identity for them requires that fix, which this work carries.
+The invariant that derivation rests on is not currently true. `tick migrate` is a third write path and it stores the source tool's value as it arrives — `grep -rn 'TrimDescription' internal/ --include='*.go' | grep -v '_test'` returns only the `create`/`update` sites above plus the definition, and `sed -n '75,84p' internal/migrate/store_creator.go` builds the task with `Description: mt.Description`. Titles carry the same hole: `grep -n 'TrimSpace(mt.Title)' internal/migrate/migrate.go` → `migrate.go:44` validates that a trimmed title is non-empty, and `store_creator.go:78` then stores the untrimmed one. An imported description with a leading newline or trailing spaces reads out of `tick show` intact and is silently trimmed on write-back — the bar failing on precisely the tasks nobody typed by hand.
+
+**`tick migrate` therefore trims descriptions and titles on import, exactly as `create` does.** This is in scope for this work: it makes the invariant true system-wide rather than documenting an exception a reader cannot predict from the output. Import is already a translation boundary — statuses, priorities and timestamps are all mapped on the way in — so normalising whitespace there is the same kind of move, and it costs a reader nothing they would notice. (This is the only part of `migrate` this work touches; its output remains out of scope per §3.3.)
+
+Two alternatives were declined. Dropping the trim from `create` and `update` would make byte-identity hold with no invariant at all, but changes behaviour for every user to serve a case only importers hit, and reopens whitespace-only descriptions, which `ValidateDescriptionUpdate` currently routes to `--clear-description`. Writing the exception down — the bar covering CLI-authored descriptions only — costs no code and hands the reader the kind of unpredictable exception this work exists to delete.
+
+The bar also does not hold for free of charge across all three free-text carriers. Note text and task titles are rejected before reaching storage when they begin with a dash — see §10. Reaching byte-identity for them requires that fix, which this work carries.
 
 #### 2.3 What is not a defect
 
@@ -70,6 +76,8 @@ Both bypass the formatter entirely and print straight to the terminal — `handl
 The defect being fixed is output that *claims* to be machine-readable and is not — a header no reader accepts, a list missing its item markers. These two never claimed it. Bringing them in means building new formatter surface rather than repairing broken output, which is different work.
 
 Cost accepted: an agent running the health check reads a paragraph and works out what to do from the words.
+
+This covers their **output** only. `migrate`'s import write path is touched by §2.2, which trims descriptions and titles on the way in.
 
 ### 4. Formatter Scope
 

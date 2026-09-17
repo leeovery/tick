@@ -100,5 +100,5 @@ $ sed -n '75,86p' internal/migrate/store_creator.go
 
 Source carrying the claim: `.workflows/free-text-round-trip/discussion/free-text-round-trip.md:112` — "Determined by the write paths' own behaviour: `create` and `update` both run the value through `TrimSpace` before storing … so no stored description can carry leading or trailing whitespace."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: Measurement confirmed independently — `migrate` is a third write path and stores the provider's description raw; titles carry the same hole (validated trimmed at migrate.go:44, stored untrimmed at store_creator.go:78). No record-supported repair existed: every way the conclusion could re-land picked between live alternatives, so it went to the user. User chose trim-on-import over dropping the write-path trim or documenting the exception. Landed in the discussion's Round Trip Contract decision as a dated timeline revision with the failed measurement as its trigger, and in its Current State summary. Specification §2.2 re-aligned — the invariant is now stated as something this work makes true rather than assumed — with a boundary note in §3.3 so the migrate out-of-scope ruling is not read as covering the import trim.
