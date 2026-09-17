@@ -24,8 +24,8 @@ The answer is already fixed by two decisions in the document: a document-returni
 
 In pretty — the format a terminal resolves to unless a flag overrides it — the filtered document is the named fields rendered in pretty's usual style and nothing else: no header block, no labels for sections outside the selection (§9.5). A filtered record is output pretty does not produce today rather than a change to output it does, so §4.1 stands untouched.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -49,8 +49,8 @@ What stops after the task ID is the validation check, not flag handling — the 
 **Proposed Text**:
 - **Flag inspection stops after the task ID on `note add`.** The command registers no flags at all (`grep -n '"note add":' internal/cli/flags.go` → `flags.go:80`, `"note add": {}`), so nothing dash-leading after the ID could be a flag the check would have caught, and refusing it is the whole defect. What stops is the check, not flag handling: the global flags are still read wherever they appear, so `tick note add <id> "text" --json` prints a JSON document exactly as it does today, and note text that spells a global flag exactly still needs the marker. A dash-leading note that is not itself a global flag works with or without it.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -76,8 +76,8 @@ The names the flag accepts are the names the output document uses — the task's
 
 **The list is read leniently wherever its meaning is not in doubt.** Whitespace around a name is not part of it, so `--field "title, status"` selects what `--field title,status` selects. Repeating the flag composes rather than overrides: `--field title --field status` is `--field title,status`. A field named more than once renders once — a section named both whole and by position comes back whole, and several positions on one section render it narrowed to those positions in output order. None of this softens §9.6: a name that is empty once its whitespace is gone is still the blank-name mistake.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -101,8 +101,8 @@ The emptied document is the populated one with its numbers at zero, field for fi
 **Proposed Text**:
 **What replaces them is the document the non-empty branch produces, emptied**: the same fields, with the summary fields of §5.2 reading zero and the edges section carrying its count-zero header. Where the caller named a task, the emptied document still identifies it exactly as the populated one does. Both empty branches take that shape — nothing blocked anywhere, and a named task with no dependencies either way — so an agent parses one document whether or not anything is blocked, and reads the counts to learn which it got.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -124,8 +124,8 @@ Byte-identity is made to hold by trimming free text as it is imported. Tasks imp
 
 **Notes on the search**: §2.2 decides the import-path trim and rules out two alternatives to it; §3.3 scopes `migrate`'s output out while naming its write path as in; §11's fixture round-trips a task this work itself writes. Nothing in the record reaches values already stored.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: User chose option 1 — leave stored values alone. Disposal held the `choice`: the fork cleared every prong (what a user with an imported project gets; nothing in the record reaches stored values; leaving them alone visibly costs the guarantee on the tasks that motivated it; the tie-break is appetite for rewriting stored records). Landed in §2.2 alongside the import trim, with the declined options recorded.
 
 ---
 

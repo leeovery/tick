@@ -43,6 +43,8 @@ The invariant that derivation rests on is not currently true. `tick migrate` is 
 
 Two alternatives were declined. Dropping the trim from `create` and `update` would make byte-identity hold with no invariant at all, but changes behaviour for every user to serve a case only importers hit, and reopens whitespace-only descriptions, which `ValidateDescriptionUpdate` currently routes to `--clear-description`. Writing the exception down — the bar covering CLI-authored descriptions only — costs no code and hands the reader the kind of unpredictable exception this work exists to delete.
 
+**Values already in storage are left alone.** The bar holds for everything written from this change onward; a task imported by an earlier version keeps its untrimmed value and can still lose edge whitespace on a write-back, and that exposure closes itself as those tasks are edited. No pass rewrites stored records, and `tick show` never emits anything but the stored bytes — trimming on the way out would buy the match by breaking the read the bar is stated over.
+
 The bar also does not hold for free of charge across all three free-text carriers. Note text and task titles are rejected before reaching storage when they begin with a dash — see §10. Reaching byte-identity for them requires that fix, which this work carries.
 
 #### 2.3 What is not a defect
