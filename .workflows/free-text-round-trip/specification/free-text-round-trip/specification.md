@@ -317,6 +317,8 @@ Two routes to the same end were declined. `tick show --json` already returns the
 
 `show` accepts no command-specific flags today (`grep -n '"show":' internal/cli/flags.go` → `flags.go:72`, `"show": {}`), so this is its first, alongside the global `--quiet`.
 
+It is `show`'s flag and no other command's. `create`, `update`, `note add` and `note remove` emit the same detail document but take no field selection: a caller that wants one value out of them runs `tick show --field` afterwards, and the flag stays registered against a single command.
+
 #### 9.1 `--field` and `--fields` are the same flag
 
 **`--field` takes a comma-separated list of field names, and `--fields` is an alias of it.** Both spellings work; the plural exists so the flag reads naturally when selecting several. The flag is a projection, not a single-value extractor — asking for the notes table is a legitimate thing to want, since editing and writing back is not the only reason to read a field.
@@ -399,6 +401,8 @@ The opening position was that `id` should always be present so a filtered docume
 
 **An unrecognised field name is an error with a non-zero exit.** A field name that is not a field at all is a caller mistake, and gets what every other unrecognised flag value already gets — `ValidateFlags` refuses rather than silently ignoring (`grep -n 'unknown flag %q for %q' internal/cli/flags.go` → `flags.go:138`).
 
+**A selection that names nothing is the same mistake.** An empty value, or a stray or doubled comma leaving an empty name in the list, fails with the unrecognised-name error rather than printing nothing or falling back to the full record. A blank name is a caller mistake, not a field that happens to be empty.
+
 **A note position that does not exist is an error too.** `notes.4` on a task carrying two notes fails with a non-zero exit and a message naming the range, rather than printing nothing and succeeding. A selector that resolves to nothing is not a field that happens to be empty — the position is a claim about the data that is false. `tick note remove` already answers this for the same 1-based addressing, reporting the index as out of range and naming how many notes the task has (§6.3); giving the same grammar a different answer under a different command would be a second rule for a reader to learn.
 
 #### 9.7 Interaction with the format flags
@@ -408,6 +412,8 @@ The opening position was that `id` should always be present so a filtered docume
 #### 9.8 Interaction with `--quiet`
 
 **Passing `--quiet` and a field selection together is refused.** `--quiet` prints a bare task ID and nothing else; a single-field request prints that field's bare value and nothing else. Two different single values have been asked for, and silently picking one hands back something the caller did not ask for.
+
+The refusal is an error with a non-zero exit and nothing on stdout, exactly as an unrecognised field name is (§9.6).
 
 ### 10. Free Text That Begins With a Dash
 

@@ -328,8 +328,8 @@ Add to §9, after "`show` accepts no command-specific flags today (`grep -n '\"s
 
 > It is `show`'s flag and no other command's. `create`, `update`, `note add` and `note remove` emit the same detail document but take no field selection: a caller that wants one value out of them runs `tick show --field` afterwards, and the flag stays registered against a single command.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -352,8 +352,8 @@ Add to §9.8, after the existing paragraph:
 
 > The refusal is an error with a non-zero exit and nothing on stdout, exactly as an unrecognised field name is (§9.6).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -376,8 +376,8 @@ Add to §9.6, after the unrecognised-name paragraph:
 
 > **A selection that names nothing is the same mistake.** An empty value, or a stray or doubled comma leaving an empty name in the list, fails with the unrecognised-name error rather than printing nothing or falling back to the full record. A blank name is a caller mistake, not a field that happens to be empty.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
