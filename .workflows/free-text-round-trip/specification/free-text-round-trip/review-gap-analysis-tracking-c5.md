@@ -22,8 +22,8 @@ Say that the fixture carries the awkward text in all three carriers — title, d
 **Proposed Text**:
 > 2. **One deliberately awkward task becomes a permanent fixture, round-tripped end to end.** Free text carrying newlines, quotes, commas, a leading dash, trailing spaces at the end of an interior line, and a line that looks like a section header. It carries that text in all three free-text carriers — title, description and a note — each taking what its shape allows: the title and the note text begin with a dash, and the description carries the multi-line content. Write it in, read it out, decode it, write the decoded text back, and assert the stored value is byte-for-byte what it was — the bar §2.2 sets. A note is written back by adding it again, since notes carry no edit (§6.4), and the assertion is made against the new note's stored text.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -47,8 +47,8 @@ Drop the second clause from the table cell so the row names only the claim that 
 **Proposed Text**:
 > | `auto-cascade-parent-status` specification | Fixes the arrow-and-`(auto)` lines as the machine-readable cascade form (`sed -n '117,162p' .workflows/auto-cascade-parent-status/specification/auto-cascade-parent-status/specification.md`) | Work unit completed |
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -71,8 +71,8 @@ Append to the paragraph beginning "**`tick migrate` therefore trims every free-t
 
 > The trim normalises, it does not validate: a value that is nothing but whitespace stores as empty, and no import fails because of it.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -95,8 +95,8 @@ Append to §7.2, after the paragraph beginning "The table carries the title so n
 
 > **A task appears at most once.** One command can move the same task's status twice — the two cascades of §7.5 meeting on a shared ancestor — and the table still carries one row for it, reading from the status it held before the command to the status it holds after. A task that ends where it started carries no row: the table lists what changed.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -120,8 +120,8 @@ Extend the exception to output with no bytes, in every format: a request that pr
 **Proposed Text**:
 > Every command listed here emits output a standard TOON reader decodes, on **every** branch — the empty one included (§8). Two things are exempt, both because they are not documents: a bare value from `tick show --field` (§9.2), for the reason §9.7 exempts it from the format flags, and a field selection that prints no bytes at all (§9.6), which is nothing rather than an empty document, in every format. Every document `show` produces — the full detail, and a filtered one — decodes.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -145,8 +145,8 @@ Say that a repeated name counts once for the split, so a selection naming one fi
 **Proposed Text**:
 > **The list is read leniently wherever its meaning is not in doubt.** Whitespace around a name is not part of it, so `--field "title, status"` selects what `--field title,status` selects. Repeating the flag composes rather than overrides: `--field title --field status` is `--field title,status`. A field named more than once renders once, and counts once when the answer splits by how many fields were asked for (§9.2) — `--field title,title` is `--field title` and comes back as the bare value. A section named both whole and by position comes back whole, and several positions on one section render it narrowed to those positions in output order. None of this softens §9.6: a name that is empty once its whitespace is gone is still the blank-name mistake.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -170,8 +170,8 @@ Leave the consequence where the bare value is decided and keep the trimming pass
 **Proposed Text**:
 > Stating it over all three is what makes the bar hold for a note or a title read out and written back, not descriptions alone.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
