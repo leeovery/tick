@@ -295,6 +295,90 @@ This is not an exception to §3.2's prose rule, it is that rule's boundary: the 
 
 The formatter already has the shape. An empty task list comes back as a structured empty section, and so does an empty edge set — `buildRelatedSection` and `buildNotesSection` both emit a count-zero header rather than prose (`grep -n '\[0\]{' internal/cli/toon_formatter.go` → `toon_formatter.go:300`, `toon_formatter.go:333`). The two dep-tree prose branches are the exception, not the pattern.
 
+### 9. Field Selection
+
+The companion to the format repair: a way to ask for one field's value and get it with nothing around it — no header, no indentation, no quoting. This is the case that started the work, where an agent needed a task's description as a plain string and went to the raw data file instead.
+
+`show` accepts no command-specific flags today (`grep -n '"show":' internal/cli/flags.go` → `flags.go:72`, `"show": {}`), so this is its first, alongside the global `--quiet`.
+
+#### 9.1 `--field` and `--fields` are the same flag
+
+**`--field` takes a comma-separated list of field names, and `--fields` is an alias of it.** Both spellings work; the plural exists so the flag reads naturally when selecting several. The flag is a projection, not a single-value extractor — asking for the notes table is a legitimate thing to want, since editing and writing back is not the only reason to read a field.
+
+The answer's shape is split by how many fields were asked for.
+
+#### 9.2 One field returns the bare value; several return a filtered document
+
+**One field — the bare value.** `tick show tick-a1b2 --field description`:
+
+```
+Fix the parser.
+
+Steps:
+  - read the header
+  - validate
+```
+
+**Several fields — the normal document with only those sections in it.** `tick show tick-a1b2 --field description,notes`:
+
+```
+notes[2]{index,text,created}:
+  1,Retried twice before it stuck,"2026-09-14T10:02:00Z"
+  2,"multi\nline\nnote","2026-09-16T08:30:00Z"
+
+description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
+```
+
+Identical to a full `tick show` minus the sections not asked for. **Sections keep their usual output order**, not the order they were typed, so the shape does not shift with how the flag was written.
+
+The split between the two kinds of answer was locked in knowingly. `--field description` and `--field description,notes` return different kinds of thing — a raw value versus a document — so an agent building the flag from a variable must know which it will get. It is the honest split between *fetch me this value* and *give me a trimmed record*, and collapsing them would cost the bare-value case the work exists to serve.
+
+#### 9.3 List fields are reachable by position
+
+`notes.2` selects the second note. In a multi-field selection the section renders as normal, its count following the selection while each row carries its real position via the `index` column (§6.3) — `tick show tick-a1b2 --field description,notes.2`:
+
+```
+notes[1]{index,text,created}:
+  2,"multi\nline\nnote","2026-09-16T08:30:00Z"
+```
+
+Asked for alone, `--field notes.2` prints that note's text bare, by the one-field rule.
+
+The alternative considered and rejected was to refuse filtering on notes altogether — `notes.3` returning the whole table, leaving position implicit in row order. That keeps the output minimal at the cost of the selector the caller asked for.
+
+#### 9.4 The task's own fields are selectable individually
+
+**Exactly like sections.** `tick show tick-a1b2 --field title,status`:
+
+```
+title: Add retry to the sync worker
+status: in_progress
+```
+
+Refusing — on the grounds that only whole sections are selectable — would make the grammar depend on which side of a boundary a name happens to sit, which is a rule to learn rather than read. §5.2 removed the wrapper, so the result has nothing around it.
+
+#### 9.5 Nothing rides along unasked, including `id`
+
+**You get exactly the fields you named**, in both forms.
+
+The opening position was that `id` should always be present so a filtered document identifies the task it describes. It does not survive the bare form: `--field description` prints the bare value with nothing around it, so an `id` riding along would wreck the case the flag exists for. Scoping the rule — `id` present in the document form, absent in the bare form — was available and rejected as a second rule to learn. The caller passed the task's ID on the command line to make the request; handing it back tells them something they just typed.
+
+#### 9.6 Empty values, unrecognised names, and out-of-range positions
+
+**An empty field prints nothing and exits successfully.** A task legitimately having no description is a fact about the task rather than a failure of the command, and it takes the same shape as an empty notes table in full output.
+
+**An unrecognised field name is an error with a non-zero exit.** A field name that is not a field at all is a caller mistake, and gets what every other unrecognised flag value already gets — `ValidateFlags` refuses rather than silently ignoring (`grep -n 'unknown flag %q for %q' internal/cli/flags.go` → `flags.go:138`).
+
+**A note position that does not exist is an error too.** `notes.4` on a task carrying two notes fails with a non-zero exit and a message naming the range, rather than printing nothing and succeeding. A selector that resolves to nothing is not a field that happens to be empty — the position is a claim about the data that is false. `tick note remove` already answers this for the same 1-based addressing, reporting the index as out of range and naming how many notes the task has (§6.3); giving the same grammar a different answer under a different command would be a second rule for a reader to learn.
+
+#### 9.7 Interaction with the format flags
+
+**A single-field request ignores `--json`, `--pretty` and `--toon`; a multi-field request honours them.** A one-field answer is a raw value, so there is no document for a format flag to act on, and honouring one would re-quote the very string the flag exists to hand over unquoted. A multi-field request does produce a document, and the resolved format applies to it exactly as it applies to a full `tick show`.
+
+#### 9.8 Interaction with `--quiet`
+
+**Passing `--quiet` and a field selection together is refused.** `--quiet` prints a bare task ID and nothing else; a single-field request prints that field's bare value and nothing else. Two different single values have been asked for, and silently picking one hands back something the caller did not ask for.
+
 ---
 
 ## Working Notes
