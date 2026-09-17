@@ -379,6 +379,75 @@ The opening position was that `id` should always be present so a filtered docume
 
 **Passing `--quiet` and a field selection together is refused.** `--quiet` prints a bare task ID and nothing else; a single-field request prints that field's bare value and nothing else. Two different single values have been asked for, and silently picking one hands back something the caller did not ask for.
 
+### 10. Free Text That Begins With a Dash
+
+#### 10.1 The defect
+
+An agent reads a note off a task, corrects a typo, and writes it back. If the note begins with a dash — `- read the header`, the shape a large share of this project's own notes take — the command refuses it:
+
+```
+unknown flag "- read the header" for "note add"
+```
+
+Wider than notes: `tick create "- some title"` is refused identically. `ValidateFlags` inspects every argument beginning with `-` that is not numeric and not a global flag, and rejects any it cannot find in the command's flag set (`grep -n 'func ValidateFlags' -A 30 internal/cli/flags.go` → `flags.go:117-147`). Free text passed as a bare argument — note text, task title — is inspected alongside real flags. `--description` escapes only because its value follows a registered value-taking flag, so validation skips it.
+
+The check itself is deliberate and worth keeping: it exists so `tick update tick-a1b2 --prioirty 3` refuses rather than silently reporting success. The defect is that it is applied to arguments that are free text by definition.
+
+This is the one place the §2.2 round-trip guarantee has a hole — text an agent can read out of tick and cannot put back. It is fixed here rather than left as a follow-up, because leaving it means shipping the contract with an exception nobody wrote down.
+
+#### 10.2 The fix, both halves
+
+- **`--` is supported as the end-of-flags marker, and becomes the canonical documented way to pass free text that may begin with a dash.** Purely additive: `--` is currently rejected on every command (`unknown flag "--" for "note add"`), so no existing invocation uses it. Everything that works today works identically, and inputs that currently fail begin to succeed.
+- **Flag inspection stops after the task ID on `note add`.** The command registers no flags at all (`grep -n '"note add":' internal/cli/flags.go` → `flags.go:80`, `"note add": {}`), so once the task ID is consumed every remaining argument is text by definition and nothing dash-leading there could be a flag the check would have caught. A dash-leading note then works with or without the marker.
+- **The existing bare-argument form keeps working.** `--` is the recommended form, not a required one.
+
+`create` cannot take the second half: its title shares the argument list with real flags (`--priority`, `--description`), so a dash-leading title is indistinguishable from a mistyped flag without a marker. `create` relies on `--`.
+
+#### 10.3 No alternative input path
+
+**Descriptions are passed as command-line arguments; no stdin or file input path is added.**
+
+Measured: `getconf ARG_MAX` → `1048576`, and passing a 200 KB argument through a process call succeeds. A real task description taken from a live project runs to roughly 4.5 KB — under half a percent of the limit. Descriptions carry no length cap of their own, unlike note text, which is capped at 2000 characters (`grep -n 'maxNoteTextLen' internal/task/notes.go` → `notes.go:12`), so an arbitrarily large description remains possible in principle; building an input path for it would serve a case that does not occur.
+
+### 11. Conformance Verification
+
+Every other decision here is a shape. Nothing in them stops the next change adding a hand-built section and breaking the output again — which is exactly how it broke the first time.
+
+The existing suite cannot catch it. Its assertions compare output against a string written down alongside the code, so a malformed header passed for the tool's entire life: the test compared a wrong string to the same wrong string. Every one of those assertions has to be rewritten regardless, since every shape this work touches changes.
+
+Three parts:
+
+1. **Every structured command's output is decoded by a real TOON reader in the suite, and the test fails if it will not parse.** This alone catches the entire class of defect this work exists to fix — a section nobody can read, whatever its content. The commands are §3.1's table.
+
+2. **One deliberately awkward task becomes a permanent fixture, round-tripped end to end.** Free text carrying newlines, quotes, commas, a leading dash, trailing spaces, and a line that looks like a section header. Write it in, read it out, decode it, assert the text is identical to what went in. That single test would have caught the original description defect, the tags item-marker defect and the refs comma defect — and it is the only test that checks the guarantee this work actually made, which is the round trip (§2.2) rather than parseability.
+
+3. **Rewritten assertions check decoded values, not output text.** "The notes section has two rows and the second row's text is X", not "the output equals this blob".
+
+**No byte-level pinning is kept in the machine formats.** Golden strings pin the exact output shape, so a future change cannot reshape a section without a test noticing — but they are the mechanism that rotted into the defect this work undoes. Decoded-value assertions survive harmless reformatting while still failing when a section goes missing or a value is wrong. That trade is taken for toon and JSON.
+
+**Pretty keeps golden-string assertions.** Pretty output has no parser, so a decoded-value assertion does not exist for it; removing its golden strings would replace its only form of assertion with nothing.
+
+### 12. Documentation Owed a Correction
+
+Three published documents describe output this work replaces.
+
+#### 12.1 The README is updated as part of this work
+
+Its Output Formats section prints worked `tick list` and `tick show` samples in the agent format. After this work those samples show output the tool no longer produces. It is live documentation someone reads to learn the tool, not a record of a past decision, so leaving it describing output the tool does not produce is shipping a defect.
+
+#### 12.2 Two completed specifications are corrected selectively
+
+Both belong to completed work units, so the correcting route is the one that presents each proposed amendment and confirms before editing another unit's record.
+
+| Document | What is wrong | Status |
+|---|---|---|
+| `v1` / `tick-core` specification | States "long text fields get their own unstructured sections" as a principle and prints the indented description block as its worked example (`sed -n '693,714p' .workflows/v1/specification/tick-core/specification.md`) | Work unit completed |
+| `auto-cascade-parent-status` specification | Fixes the arrow-and-`(auto)` lines as the machine-readable cascade form and requires unchanged terminal children to be shown alongside them (`sed -n '117,162p' .workflows/auto-cascade-parent-status/specification/auto-cascade-parent-status/specification.md`) | Work unit completed |
+
+**Corrections are made by judgement, not as a blanket rewrite.** Specifications are forever documents that do not churn out of the knowledge base, and the facility for amending them exists, so a correction can be made wherever something is obviously wrong. But this specification supersedes those decisions regardless, so correcting them is not obligatory. Where a point is plainly and load-bearingly wrong, amend it; otherwise let supersession carry it.
+
+The `tick-core` unstructured-long-text principle is the most obviously wrong of the two, since it states as a rule the exact thing §6.2 removes.
+
 ---
 
 ## Working Notes
