@@ -177,7 +177,14 @@ Trade-off accepted: wrapping a one-line confirmation in a data format costs toke
 
 *Raised by the final review (review-002 F3): three decisions here are expressed as toon shapes but land in code the pretty and JSON formatters share, and the document never said whether those formatters move with them.*
 
-**Pretty is unchanged. Everywhere.** What a terminal prints today is what it prints after this work — the single transition line, the box-drawing cascade tree, the indented description block. It is the human surface; this work is about the agent surface.
+**Pretty is unchanged. Everywhere.** What a terminal prints today is what it prints after this work — the single transition line, the box-drawing cascade tree, the indented description block. It is the human surface; this work is about the agent surface, and nothing in pretty is broken by the standard being applied: it never claimed to be machine-readable, and a human reads it fine.
+
+Two candidate changes were put up and both declined:
+
+- **Replicating the table shape in pretty.** Rendered in pretty's aligned-column house style for comparison, it loses what the tree does better — the current cascade nests by which task caused which, so a grandchild closing because its parent closed shows as three levels of indentation. Flattened into rows, every knock-on looks equally directly caused. The toon table drops that too, but an agent holds the parent/child links and can reconstruct the chain; a human reading a terminal cannot, which is why the tree exists.
+- **Adding the task's title to the single transition line**, so a human learns what they closed as the agent now does (`tick-a1b2 "Add retry to the sync worker": in_progress → done`). A genuine improvement rather than a defect fix, and declined as out of scope.
+
+The user's ruling was to leave it the same.
 
 **JSON moves with toon.** It is a machine format, and a consumer parsing JSON deserves the same structured answer as one parsing toon — including the dep-tree empty case, where JSON currently hands back a `message` key carrying the English sentence. JSON's transition output today already carries the same split this work removed from toon (a singular `transition` object beside a `cascaded` list); it becomes the one `changed` list with the same `auto` flag, in JSON syntax.
 
