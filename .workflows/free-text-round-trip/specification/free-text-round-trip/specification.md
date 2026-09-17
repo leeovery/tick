@@ -14,7 +14,7 @@ The cause is uniform. Every section the formatter assembles by hand is malformed
 
 | Written by | Sections | Parses |
 |---|---|---|
-| The library (`encodeToonSection`) | blockers, children, notes, priority breakdown, dep-tree edges | yes |
+| The library (`encodeToonSection`) | blocked_by, children, notes, priority breakdown, dep-tree edges | yes |
 | Hand-assembled string building | task header, stats summary, dep-tree summary, tags, refs, description | no |
 
 Each hand-rolled section exists because it wanted a shape the library does not produce directly — a singular object header, a list down the page, an unstructured text block. In every case the invented shape turned out to be invalid.
@@ -345,6 +345,8 @@ Steps:
   - validate
 ```
 
+The value goes out as a line: its own bytes followed by a single newline, as the bare task ID already is (`grep -n 'Fprintln(stdout, id)' internal/cli/helpers.go` → `helpers.go:18`). Stored values carry no edge whitespace (§2.2), so that byte is the terminator and never part of the value.
+
 **A single field naming a list section returns that section, not a bare value.** `tick show tick-a1b2 --field notes` prints the notes table exactly as full output renders it, header and all; `--field tags` prints `tags[2]: has space,plain`. A list has no bare form, and the flag is a projection rather than a single-value extractor (§9.1), so the section is handed over in the one shape the library produces for it.
 
 The bare form belongs to a selection that resolves to exactly one value: the task's own fields, `description`, and a position that names one — `notes.2`'s text, `tags.1`'s item (§9.3). A selection that resolves to a row rather than a value — `children.1` — comes back as its one-row section.
@@ -409,6 +411,8 @@ The opening position was that `id` should always be present so a filtered docume
 
 **A note position that does not exist is an error too.** `notes.4` on a task carrying two notes fails with a non-zero exit and a message naming the range, rather than printing nothing and succeeding. A selector that resolves to nothing is not a field that happens to be empty — the position is a claim about the data that is false. `tick note remove` already answers this for the same 1-based addressing, reporting the index as out of range and naming how many notes the task has (§6.3); giving the same grammar a different answer under a different command would be a second rule for a reader to learn.
 
+**A position that names nothing is out of range whatever the reason.** `notes.4` on a two-note task, `notes.0` where positions start at 1, and `tags.1` on a task carrying no tags all fail the same way: non-zero exit and a message naming the range. A section the task does not carry is not the empty-field case above — `tags` alone on a tag-less task is a field that happens to be empty, while `tags.1` is a claim that a first tag exists. A suffix that is not a number is no positional claim at all and takes the unrecognised-name error (§9.1).
+
 #### 9.7 Interaction with the format flags
 
 **A request that returns a bare value ignores `--json`, `--pretty` and `--toon`; a request that returns a document honours them.** A bare value is not a document, so there is nothing for a format flag to act on, and honouring one would re-quote the very string the flag exists to hand over unquoted. A multi-field request produces a document, and so does a single field naming a list section (§9.2); the resolved format applies to either exactly as it applies to a full `tick show`.
@@ -438,6 +442,8 @@ This is the one place the §2.2 round-trip guarantee has a hole — text an agen
 #### 10.2 The fix, both halves
 
 - **`--` is supported as the end-of-flags marker, and becomes the canonical documented way to pass free text that may begin with a dash.** Purely additive: `--` is currently rejected on every command (`unknown flag "--" for "note add"`), so no existing invocation uses it. Everything that works today works identically, and inputs that currently fail begin to succeed.
+
+  Nothing after the marker is read as a flag — not the command's own flags and not the global format flags — so flags come before it and everything after it is text. Free text that spells a flag exactly, a note reading `--json`, is writable for the same reason a dash-leading one is.
 - **Flag inspection stops after the task ID on `note add`.** The command registers no flags at all (`grep -n '"note add":' internal/cli/flags.go` → `flags.go:80`, `"note add": {}`), so once the task ID is consumed every remaining argument is text by definition and nothing dash-leading there could be a flag the check would have caught. A dash-leading note then works with or without the marker.
 - **The existing bare-argument form keeps working.** `--` is the recommended form, not a required one.
 
