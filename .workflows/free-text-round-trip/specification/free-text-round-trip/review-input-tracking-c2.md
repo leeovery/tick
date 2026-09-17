@@ -21,7 +21,7 @@ Both belong to completed work units, so the correcting route is the one that pre
 **Proposed Text**:
 Both belong to completed work units, so the correction runs through the corrigendum facility: each proposed amendment is presented and confirmed before another unit's record is edited, the wrong claim is replaced in place, a dated corrigendum entry records what the document used to claim and what is true instead, and the document is re-indexed. The re-index is the point of the route — a specification's content stays live in the knowledge base at full confidence, so an amendment that stops at the file leaves the superseded claim being served as validated context to every later query.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto. Disposal verified the facility's own steps before applying — correcting-historical-artifacts.md defines edit-in-place, a dated `## Corrigenda` entry, and an idempotent re-index — so the text describes a real route rather than an invented one.
 
 ---

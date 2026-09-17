@@ -489,7 +489,7 @@ The command's own help text carries both alongside — not a preference but a co
 
 #### 12.2 Two completed specifications are corrected selectively
 
-Both belong to completed work units, so the correcting route is the one that presents each proposed amendment and confirms before editing another unit's record.
+Both belong to completed work units, so the correction runs through the corrigendum facility: each proposed amendment is presented and confirmed before another unit's record is edited, the wrong claim is replaced in place, a dated corrigendum entry records what the document used to claim and what is true instead, and the document is re-indexed. The re-index is the point of the route — a specification's content stays live in the knowledge base at full confidence, so an amendment that stops at the file leaves the superseded claim being served as validated context to every later query.
 
 | Document | What is wrong | Status |
 |---|---|---|
