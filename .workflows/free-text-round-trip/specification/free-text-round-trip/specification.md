@@ -37,7 +37,7 @@ Existing whitespace trimming does not stand in the way of this, **provided no st
 
 The invariant that derivation rests on is not currently true. `tick migrate` is a third write path and it stores the source tool's value as it arrives — `grep -rn 'TrimDescription' internal/ --include='*.go' | grep -v '_test'` returns only the `create`/`update` sites above plus the definition, and `sed -n '75,84p' internal/migrate/store_creator.go` builds the task with `Description: mt.Description`. Titles carry the same hole: `grep -n 'TrimSpace(mt.Title)' internal/migrate/migrate.go` → `migrate.go:44` validates that a trimmed title is non-empty, and `store_creator.go:78` then stores the untrimmed one. An imported description with a leading newline or trailing spaces reads out of `tick show` intact and is silently trimmed on write-back — the bar failing on precisely the tasks nobody typed by hand.
 
-**`tick migrate` therefore trims descriptions and titles on import, exactly as `create` does.** This is in scope for this work: it makes the invariant true system-wide rather than documenting an exception a reader cannot predict from the output. Import is already a translation boundary — statuses, priorities and timestamps are all mapped on the way in — so normalising whitespace there is the same kind of move, and it costs a reader nothing they would notice. (This is the only part of `migrate` this work touches; its output remains out of scope per §3.3.)
+**`tick migrate` therefore trims every free-text value it imports, exactly as `create` does.** Today that is descriptions and titles — the import framework carries no notes (`grep -rn 'Note' internal/migrate/ --include='*.go' | grep -v _test` → no matches; `MigratedTask` holds Title, Status, Priority, Description and the three timestamps, `sed -n '30,38p' internal/migrate/migrate.go`) — and a provider that later brings note text across is covered by the same rule rather than by a second decision. This is in scope for this work: it makes the invariant true system-wide rather than documenting an exception a reader cannot predict from the output. Import is already a translation boundary — statuses, priorities and timestamps are all mapped on the way in — so normalising whitespace there is the same kind of move, and it costs a reader nothing they would notice. (This is the only part of `migrate` this work touches; its output remains out of scope per §3.3.)
 
 Two alternatives were declined. Dropping the trim from `create` and `update` would make byte-identity hold with no invariant at all, but changes behaviour for every user to serve a case only importers hit, and reopens whitespace-only descriptions, which `ValidateDescriptionUpdate` currently routes to `--clear-description`. Writing the exception down — the bar covering CLI-authored descriptions only — costs no code and hands the reader the kind of unpredictable exception this work exists to delete.
 
@@ -93,6 +93,8 @@ Two candidate changes were declined explicitly and are **not** in scope:
 #### 4.2 JSON moves with toon
 
 A consumer parsing JSON gets the same structured answer as one parsing toon: the §7 `changed` list in place of the current `transition` object beside a `cascaded` list (`grep -n 'json:"transition"\|json:"cascaded"' internal/cli/json_formatter.go` → `json_formatter.go:276-277`), and the §8 structured empty dep-tree form in place of today's `message` key carrying the English sentence (`grep -n 'jsonMessage{Message: result.Message}' internal/cli/json_formatter.go` → `json_formatter.go:366`).
+
+Each note also carries its 1-based index, for the reason the toon table does (§6.3): a consumer that asked for one note (§9.3) needs the note's real position before it can call `note remove`, and that need is the same whichever format it parses.
 
 #### 4.3 Two shared code paths must be split, not edited
 
@@ -278,6 +280,8 @@ A third option was put up and declined: leave status output alone entirely, trea
 
 **Where a command produces both a record and status changes, the result is one document with the changes as a section inside it.** Making each section valid is not sufficient on its own; the stream must be one document.
 
+**The section is always there.** `tick create` with no parent moves no task's status; the document still carries `changed[0]{id,title,from,to,auto}:`, exactly as an empty notes or children section carries its count-zero header (§8). A reader that must first find out whether the section exists is branching on which document arrived, which §7.2 exists to prevent.
+
 `update` can carry two independent cascade blocks today because two unrelated changes can fire at once — this collapses into the single `changed` table along with everything else.
 
 #### 7.5 Why a structural change produces a status cascade
@@ -298,6 +302,8 @@ The `changed` table lists what changed, exactly as today's output does. The `aut
 A command in §3.1's must-parse table emits its structured form on **every** branch, the empty one included.
 
 `tick dep tree` currently answers `No dependencies found.` when nothing in the project is blocked, and a title line plus `No dependencies.` when a named task has no dependencies either way (§4.3 locates both). That is prose on the one branch an agent could not predict, from the formatter whose purpose is machine-readable output. **Both go, in toon and JSON; pretty keeps them (§4.3).**
+
+**What replaces them is the document the non-empty branch produces, emptied**: the summary fields of §5.2 reading zero and the edges section carrying its count-zero header. Both branches take that one shape — nothing blocked anywhere, and a named task with no dependencies either way — so an agent reads the same document whichever it hit, and reads the counts to learn which.
 
 This is not an exception to §3.2's prose rule, it is that rule's boundary: the exemption covers confirmations of a command the caller issued, and "no dependencies" is the answer to a query — the answer the caller ran the command to find out.
 

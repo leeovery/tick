@@ -55,8 +55,8 @@ Settled by the stated aim of the import fix — making the invariant true system
 **Proposed Text**:
 > **`tick migrate` therefore trims every free-text value it imports, exactly as `create` does.** Today that is descriptions and titles — the import framework carries no notes (`grep -rn 'Note' internal/migrate/ --include='*.go' | grep -v _test` → no matches; `MigratedTask` holds Title, Status, Priority, Description and the three timestamps, `sed -n '30,38p' internal/migrate/migrate.go`) — and a provider that later brings note text across is covered by the same rule rather than by a second decision. This is in scope for this work: it makes the invariant true system-wide rather than documenting an exception a reader cannot predict from the output.
 
-**Resolution**: Pending
-**Notes**: Disposal — move held as `settled`, Proposed Text amended before presentation. The staged wording ("note text where a provider carries notes") reads to a builder as a requirement against a surface that does not exist: the import framework has no notes field at all. Rewritten to state the rule over whatever free text an import carries, with the measurement showing today's set is descriptions and titles.
+**Resolution**: Approved
+**Notes**: Applied under auto. Disposal — move held as `settled`, Proposed Text amended before presentation. The staged wording ("note text where a provider carries notes") reads to a builder as a requirement against a surface that does not exist: the import framework has no notes field at all. Rewritten to state the rule over whatever free text an import carries, with the measurement showing today's set is descriptions and titles.
 
 ---
 
@@ -82,8 +82,8 @@ Settled by the index column's own reasoning, which is about what the consumer ca
 >
 > Each note also carries its 1-based index, for the reason the toon table does (§6.3): a consumer that asked for one note (§9.3) needs the note's real position before it can call `note remove`, and that need is the same whichever format it parses.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
@@ -106,8 +106,8 @@ Add to §7.4, after "**Where a command produces both a record and status changes
 
 > **The section is always there.** `tick create` with no parent moves no task's status; the document still carries `changed[0]{id,title,from,to,auto}:`, exactly as an empty notes or children section carries its count-zero header (§8). A reader that must first find out whether the section exists is branching on which document arrived, which §7.2 exists to prevent.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied under auto. Disposal checked the derivation against both precedents in the format — tags/refs/description are omitted when empty, blockers/children/notes carry count-zero headers — and the second governs, since absence and emptiness mean the same thing for a changes table.
 
 ---
 
@@ -130,8 +130,8 @@ Add to §8, after "**Both go, in toon and JSON; pretty keeps them (§4.3).**":
 
 > **What replaces them is the document the non-empty branch produces, emptied**: the summary fields of §5.2 reading zero and the edges section carrying its count-zero header. Both branches take that one shape — nothing blocked anywhere, and a named task with no dependencies either way — so an agent reads the same document whichever it hit, and reads the counts to learn which.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied verbatim under auto.
 
 ---
 
