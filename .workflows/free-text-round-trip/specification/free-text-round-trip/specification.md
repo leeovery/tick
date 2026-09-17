@@ -93,6 +93,57 @@ Pretty being unchanged while toon and JSON move is not free — the code is shar
 - **The single transition line** comes from `baseFormatter.FormatTransition` (`grep -n 'func (b \*baseFormatter) FormatTransition' internal/cli/format.go` → `format.go:211`), embedded by both the toon and pretty formatters, so the two emit byte-identical text today. Restructuring the toon form requires splitting that method.
 - **The dep-tree empty messages** are not produced by a formatter at all. They are set on the result in the shared graph builder (`grep -n 'No dependencies' internal/cli/dep_tree_graph.go` → `dep_tree_graph.go:177`, `dep_tree_graph.go:255`) and consumed by all three formatters, so removing them at source would strip pretty's message too. Pretty keeps its sentence; only the machine formats take the structured empty form.
 
+### 5. Single-Object Sections Become Top-Level Named Fields
+
+#### 5.1 The current shape and its cause
+
+Three places in the output describe one thing rather than a list of things: the task's own fields at the head of `tick show` (and of `create`, `update`, `note add`, `note remove`), the counts summary in `tick stats`, and the chains/longest/blocked summary in `tick dep tree`. All three are malformed, and this is the line a reader fails on before it sees anything else.
+
+The cause is a hand-edit. The value is marshalled as a one-element array and the `[1]` is then deleted from the header with a string replace to make it read as singular — `buildTaskSection` does it inline (`grep -n 'strings.Replace(s, "task\[1\]"' internal/cli/toon_formatter.go` → `toon_formatter.go:294`) and `encodeToonSingleObject` does it generically for stats and the dep-tree summary (`grep -n 'func encodeToonSingleObject' -A 10 internal/cli/toon_formatter.go` → `toon_formatter.go:371-379`). The result is a table header with no table beneath it, a shape TOON has no equivalent for.
+
+#### 5.2 The required shape
+
+**The task's own fields sit at the top level of the document, as named fields, with no wrapping key.** They are peers of the collection sections rather than nested inside a `task:` scope:
+
+```
+id: tick-a1b2
+title: Add retry to the sync worker
+status: in_progress
+priority: 2
+type: feature
+created: "2026-09-10T09:14:00Z"
+updated: "2026-09-17T16:00:00Z"
+
+children[1]{id,title,status}:
+  tick-9f3c,Parse the header,done
+
+description: "Fix it.\n\nSteps."
+```
+
+**The same treatment applies to the other two single-object sites**: `tick stats`' counts and the dep-tree chains/longest/blocked summary become top-level named fields beside their tables.
+
+#### 5.3 Why named fields rather than a one-row table
+
+Two conformant options existed; both were encoded and decoded back with the project's TOON library, and both round-trip.
+
+The one-row table (`task[1]{id,title,…}:` with a single row beneath) is three characters longer than today's broken output and is the library's own output with nothing stripped. Its cost is positional reading: a consumer counts commas across to the matching name in the header. The table layout earns its keep when many rows would otherwise repeat the field names — that is `tick list`'s case, not this one. With a single row it repeats nothing, so it compresses nothing, and it trades that for a positional read that can go wrong.
+
+Named fields put every value beside its name, so adding or reordering a field cannot break a positional read and a value containing a comma is safe without relying on quoting discipline.
+
+Neither form is an invention. TOON is a compact way of writing JSON: an object inside an object is written as the key with its fields indented beneath (the named-fields form), and a list of same-shaped objects is written as a header plus rows (the table form, which is what `tick list` uses). What tick invented was neither.
+
+#### 5.4 Why no wrapping key
+
+Measured: 256 characters flat against 276 wrapped, for the same content, both parsing and round-tripping.
+
+Three reasons, the size being the least of them:
+
+1. **It removes an inconsistency the wrapper created.** `description` is a task field and sits at the top level. `title` is a task field and sat nested. The same kind of thing at two different depths, for no reason beyond one of them being long.
+2. **It mirrors storage.** The JSONL file already holds each task as a flat object — `{"id":…,"title":…,"status":…,"description":…}` — so the output stops inventing a grouping that exists nowhere else in the system.
+3. **The field flag falls out of it.** `--field title,status` returns two lines with nothing wrapped around them, rather than a trimmed block (§9.4).
+
+Given up: a consumer can no longer grab "the task's own fields" as one object without naming them. Nothing identified wants that.
+
 ---
 
 ## Working Notes
