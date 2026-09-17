@@ -24,7 +24,7 @@ The bar also does not hold for free of charge across all three free-text carrier
 
 The whitespace invariant covers all three the same way: **every path that stores free text trims edge whitespace before storing it** — note text and titles exactly as a description is, on the command line as on import. Where that trim is already in place nothing changes; where it is not, it is added, as it is for `tick migrate` above. It is what makes the bar hold for a note read out and written back, and what makes the terminating newline of §9.2 a terminator rather than part of the value, whichever field was asked for.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied under auto, Proposed Text amended before applying. The staged wording hedged ("where it is not, it is added"); measurement shows every CLI write path already trims — TrimNoteText at note.go:50, TrimTitle at create.go:117 and update.go:182/337 — so the invariant is already true CLI-side and only the import path needed the addition §2.2 already makes. Rewritten to state the measured fact with its commands rather than imply work that does not exist.
 
 ---

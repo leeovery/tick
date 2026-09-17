@@ -47,6 +47,8 @@ Two alternatives were declined. Dropping the trim from `create` and `update` wou
 
 The bar also does not hold for free of charge across all three free-text carriers. Note text and task titles are rejected before reaching storage when they begin with a dash — see §10. Reaching byte-identity for them requires that fix, which this work carries.
 
+The whitespace invariant itself covers all three the same way, and on the CLI side it already holds: **every path that stores free text trims edge whitespace before storing it** — `TrimNoteText` on note text (`grep -n 'TrimNoteText' internal/cli/note.go` → `note.go:50`) and `TrimTitle` on titles (`grep -n 'TrimTitle' internal/cli/create.go internal/cli/update.go` → `create.go:117`, `update.go:182`, `update.go:337`), exactly as `TrimDescription` does above. The import path is the only one where it does not, which is what the trim above adds. Stating it over all three is what makes the bar hold for a note read out and written back, and what makes the terminating newline of §9.2 a terminator rather than part of the value, whichever field was asked for.
+
 #### 2.3 What is not a defect
 
 The current output is not lossy. The description block prefixes two spaces to every line, so blank lines emerge as two spaces and originally-indented lines at four; stripping exactly two from each line returns the original bytes. Note text passes through the library's tabular encoder, which quotes and escapes any string containing a newline, carriage return or tab, so a multi-line note survives as `"multi\nline\nnote"`.
