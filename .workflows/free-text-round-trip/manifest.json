@@ -57,6 +57,22 @@
           }
         }
       }
+    },
+    "specification": {
+      "items": {
+        "free-text-round-trip": {
+          "status": "in-progress",
+          "sources": {
+            "free-text-round-trip": {
+              "status": "pending"
+            }
+          },
+          "review_cycle": 0,
+          "finding_gate_mode": "gated",
+          "construction_gate_mode": "gated",
+          "date": "2026-09-17"
+        }
+      }
     }
   }
 }
