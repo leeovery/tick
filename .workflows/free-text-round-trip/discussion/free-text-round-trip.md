@@ -592,6 +592,25 @@ description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
 
 Asked for alone, `--field notes.2` prints that note's text bare, by the one-field rule.
 
+### The notes section carries its positions
+
+*Raised by the final review (review-002 F5): a filtered notes section renumbers, and the number is how notes are addressed.*
+
+An agent asks for the third note, sees `notes[1]{text,created}:` with one row, decides the note is wrong, and runs `tick note remove tick-a1b2 1`. It deletes the first note on the task. Nothing in the output said the row it read was note 3.
+
+The renumbering was deliberate — the decision above renders a filtered section as normal "so a reader need not know it was filtered" — and that property is exactly what makes the trap. Position is the only handle a note has: there is no note ID, `note remove` takes a 1-based index (`internal/cli/note.go:89-130`), and Notes Free Text Handling keeps notes as an append-and-retract log, so nothing else identifies one.
+
+**The notes section carries an `index` column, present whether the section is filtered or not:**
+
+```
+notes[1]{index,text,created}:
+  3,"multi\nline\nnote","2026-09-16T08:30:00Z"
+```
+
+One shape either way, so there is no rule about when the column appears. It also retires a smaller oddity nobody had raised: in full output today an agent must count rows to work out what to pass to `note remove`.
+
+The alternative considered and rejected was to refuse filtering on notes altogether — `notes.3` would return the whole table, leaving position implicit in row order. That keeps the output minimal at the cost of the selector the caller asked for.
+
 **The split between the two kinds of answer is deliberate and was locked in knowingly.** `--field description` and `--field description,notes` return different kinds of thing — a raw value versus a document — so an agent building the flag from a variable must know which it will get. The sharp edge was put to the user explicitly and accepted: it is the honest split between *fetch me this value* and *give me a trimmed record*, and collapsing them would cost the bare-value case that the work exists to serve.
 
 *(Amended 2026-09-17 — this parenthetical previously called the description shape a leaning candidate not yet settled; Description Block Encoding has since decided it.)* The description section in the examples above is shown in the one-TOON-quoted-value shape that Description Block Encoding settled on.
