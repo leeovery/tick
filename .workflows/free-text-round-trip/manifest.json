@@ -45,6 +45,10 @@
             "conformance-verification": {
               "status": "pending",
               "parent": null
+            },
+            "status-change-output": {
+              "status": "decided",
+              "parent": null
             }
           }
         }

@@ -222,6 +222,67 @@ The user's deciding factor was clarity on reading the output.
 
 ---
 
+## Status Change Output
+
+### Context
+
+*Raised by the background review (review-001 F3): status changes sit in the must-parse inventory but no subtopic owned them, and their current shape was never measured.*
+
+When an agent closes a task and other tasks move with it, what comes back is an arrow diagram:
+
+```
+tick-a1b2: in_progress → done
+tick-9f3c: open → done (auto)
+tick-77ab: in_progress → done (auto)
+```
+
+Reading it requires knowing that the ID precedes the colon, that the arrow separates old state from new, and that `(auto)` marks a knock-on rather than the requested change. It is a bespoke line format, and it is byte-identical in `--toon` and `--pretty` — both formatters share `baseFormatter.FormatTransition` (`internal/cli/format.go:211`), and `ToonFormatter.FormatCascadeTransition` (`internal/cli/toon_formatter.go:145`) is the same construction with ` (auto)` appended.
+
+Two separate problems sit here. The first is the shape itself. The second is that `create` and `update` print the task's full record and then append these lines after it (`internal/cli/create.go:277-283`, `internal/cli/update.go:409-420`) — a complete document with foreign lines trailing it.
+
+### Why a structural change produces a status cascade
+
+Worth recording, because it was not obvious from the code. `create` and `update` emit cascades not because the edited task's status moved, but because *other* tasks' statuses moved as a consequence of the parent/child structure changing:
+
+- **Adding work under a finished parent.** `tick create --parent <done task>` reopens that parent — it is no longer complete — and that reopen travels further up if its own parent was done (Rule 6, then Rule 5).
+- **Moving a task to a different parent.** `tick update <id> --parent <other>` can fire two unrelated changes at once: the new parent reopens if it was finished, and the old parent may auto-complete if the moved task was the last unfinished thing under it (Rule 6 and Rule 3 together). This is why `update` carries two independent cascade blocks rather than one.
+
+These tasks are elsewhere in the tree and are not in the edited task's record, which is why they cannot simply be folded into it.
+
+### Decision
+
+**Status changes become structured sections, and the existing split between commands is kept.**
+
+Measured shape for a status change (encoded and decoded back against the pinned TOON build; parses and returns the original values):
+
+```
+changed:
+  id: tick-a1b2
+  from: in_progress
+  to: done
+
+cascaded[2]{id,title,from,to}:
+  tick-9f3c,Parse the header,open,done
+  tick-77ab,Validate fields,in_progress,done
+```
+
+The knock-ons take a table because there can be many, and the table carries the title so no second lookup is needed to know what closed. The `(auto)` marker disappears — membership of the cascaded section is what it meant.
+
+**The split stands:** `done`, `start`, `cancel` and `reopen` return only what changed; `create` and `update` return the task's full record with the change sections appended to the same document. The deciding factor: `create` and `update` are edits and the caller wants the result of the edit — the new ID, the merged fields — whereas a status change is something the caller already knows it did, so a full record is tokens it did not ask for.
+
+Where a command produces both, it is **one document** with the changes as sections inside it, never a document with loose lines after it.
+
+Sibling check: `auto-cascade-parent-status` specification — its CLI Display section fixes the toon cascade rendering as "flat lines with `(auto)` and `(unchanged)` markers for machine parsing" (`.workflows/auto-cascade-parent-status/specification/auto-cascade-parent-status/specification.md:146`). This decision supersedes that rendering. The correction owed to it is part of the documentation thread still open below, not settled here.
+
+### Carried into specification
+
+Two details this decision deliberately leaves to the specification phase rather than settling now:
+
+- A move can produce two independent roots — one parent reopening, another closing — with no single "the change you asked for" to head the output. That likely wants one table of every task whose status moved, with a column marking the requested one, rather than the singular `changed` block shown above.
+- The `auto-cascade-parent-status` specification also requires unchanged terminal children to be shown so the caller can see what the cascade did *not* touch. `CascadeResult` (`internal/cli/format.go:141-147`) carries no such field, so that requirement appears unimplemented; whether the restructured output reinstates it is open.
+
+---
+
 ## String List Sections
 
 ### Context
