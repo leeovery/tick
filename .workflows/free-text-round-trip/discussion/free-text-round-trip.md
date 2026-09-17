@@ -374,6 +374,8 @@ The knock-ons take a table because there can be many, and the table carries the 
 
 Where a command produces both, it is **one document** with the changes as sections inside it, never a document with loose lines after it.
 
+**A third option was put up and declined: leave status output alone entirely.** When the user pushed back that `tick-a1b2: in_progress → done` is perfectly good output and asked why it was being changed at all, the honest concession was that the single-transition case is change for consistency rather than repair. The alternative offered was to treat `tick done` as a confirmation like `tick dep add` — prose, out of the must-parse list — with an agent running `tick show` afterwards if it needed to know what cascaded. The user declined it once the cascade case was rendered side by side: the multi-task output carries titles the agent would otherwise have to look up, and one command's output parsing while another's does not, depending on whether a cascade fired, is the branching rule this work exists to delete.
+
 Sibling check: `auto-cascade-parent-status` specification — its CLI Display section fixes the toon cascade rendering as "flat lines with `(auto)` and `(unchanged)` markers for machine parsing" (`.workflows/auto-cascade-parent-status/specification/auto-cascade-parent-status/specification.md:146`). This decision supersedes that rendering. The correction owed to it is part of the documentation thread still open below, not settled here.
 
 ### Out of scope — unchanged terminal children
@@ -572,23 +574,25 @@ Steps:
 **Several fields — the normal document, filtered.** `tick show tick-a1b2 --field description,notes`:
 
 ```
-notes[2]{text,created}:
-  Retried twice before it stuck,"2026-09-14T10:02:00Z"
-  "multi\nline\nnote","2026-09-16T08:30:00Z"
+notes[2]{index,text,created}:
+  1,Retried twice before it stuck,"2026-09-14T10:02:00Z"
+  2,"multi\nline\nnote","2026-09-16T08:30:00Z"
 
 description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
 ```
 
 Identical to a full `tick show` minus the sections not asked for. **Sections keep their usual output order**, not the order they were typed, so the shape does not shift with how the flag was written.
 
-**List fields can be reached by position.** `notes.2` selects the second note. In a multi-field selection the section is rendered as normal with the count following the selection, so a reader need not know it was filtered — `tick show tick-a1b2 --field description,notes.2`:
+**List fields can be reached by position.** `notes.2` selects the second note. In a multi-field selection the section renders as normal, its count following the selection while each row carries its real position — `tick show tick-a1b2 --field description,notes.2`:
 
 ```
-notes[1]{text,created}:
-  "multi\nline\nnote","2026-09-16T08:30:00Z"
+notes[1]{index,text,created}:
+  2,"multi\nline\nnote","2026-09-16T08:30:00Z"
 
 description: "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
 ```
+
+*(Amended 2026-09-17 — this paragraph first said the filtered section renders "so a reader need not know it was filtered", with no position on the rows. The final review showed that property to be a trap, since position is how a note is deleted; see the index column below.)*
 
 Asked for alone, `--field notes.2` prints that note's text bare, by the one-field rule.
 
@@ -598,7 +602,7 @@ Asked for alone, `--field notes.2` prints that note's text bare, by the one-fiel
 
 An agent asks for the third note, sees `notes[1]{text,created}:` with one row, decides the note is wrong, and runs `tick note remove tick-a1b2 1`. It deletes the first note on the task. Nothing in the output said the row it read was note 3.
 
-The renumbering was deliberate — the decision above renders a filtered section as normal "so a reader need not know it was filtered" — and that property is exactly what makes the trap. Position is the only handle a note has: there is no note ID, `note remove` takes a 1-based index (`internal/cli/note.go:89-130`), and Notes Free Text Handling keeps notes as an append-and-retract log, so nothing else identifies one.
+The renumbering was deliberate — the decision above rendered a filtered section as normal so a reader need not know it was filtered — and that property is exactly what makes the trap. Position is the only handle a note has: there is no note ID, `note remove` takes a 1-based index (`internal/cli/note.go:89-130`), and Notes Free Text Handling keeps notes as an append-and-retract log, so nothing else identifies one.
 
 **The notes section carries an `index` column, present whether the section is filtered or not:**
 
@@ -780,7 +784,7 @@ Three published documents describe output this work replaces:
 
 Both specifications belong to completed work units, so the correcting route is the one that presents each proposed correction and confirms before editing another unit's record.
 
-Execution belongs to the specification phase rather than here — the corrections cannot be written until the replacing shapes are fixed, and the description encoding is still open.
+Execution belongs to the specification phase rather than here: the corrections cannot be drafted until the replacing shapes are fixed in a specification, and the correcting route requires each proposed amendment to be presented and confirmed before another unit's record is edited.
 
 ### Candidates the specification phase should weigh
 
@@ -809,12 +813,13 @@ Resolved:
 
 - Both reading paths are in scope — the single-field fetch and the whole-task read — with byte-identity as the fidelity bar.
 - The format is repaired whole rather than free text alone: data commands and status changes must parse; one-line confirmations, `doctor` and `migrate` stay prose; a must-parse command is structured on every branch including the empty one.
-- Single-object sections become named fields. Tags and refs use the library's inline list form. The description becomes one TOON-quoted value — the same rule note text already obeys.
-- Status changes become structured sections, with the existing per-command split kept and each command emitting one document rather than a document plus loose lines.
-- Notes are read-side only, with no edit command.
+- The task's own fields become named fields at the top level of the document, with no wrapping key — the same treatment for `tick stats` and the dep-tree summary. Tags and refs use the library's inline list form. The description becomes one TOON-quoted value, the same rule note text already obeys.
+- Status changes become one `changed` table carrying every task whose status moved, with an `auto` column marking the change the caller asked for. The existing per-command split is kept, and each command emits one document rather than a document plus loose lines.
+- Notes are read-side only, with no edit command. The notes section carries an `index` column so a row's real position survives filtering.
 - Free text beginning with a dash becomes writable, via `--` as the canonical marker plus flag-inspection passthrough on `note add`; the existing bare-argument form still works. No alternative input path is added.
-- The field flag becomes a projection: `--field`/`--fields`, comma-separated, bare value for one field and a filtered document for several, list fields reachable by position.
-- Verification is decode-and-assert throughout, with a permanent awkward-task round-trip fixture and no byte-level pinning retained.
+- The field flag becomes a projection: `--field`/`--fields`, comma-separated, bare value for one field and a filtered document for several, list fields reachable by position, and nothing riding along unasked.
+- Pretty output is unchanged everywhere; JSON moves with toon.
+- Verification is decode-and-assert for the machine formats, with a permanent awkward-task round-trip fixture and no byte-level pinning there; pretty keeps golden-string assertions, having no parser to assert against.
 - The README is updated as part of this work; the older specifications are corrected selectively through the corrigendum facility.
 
 Uncertain: nothing material remains open on the decided ground; what is left sits in Open Threads above as work for the specification phase.
