@@ -49,6 +49,10 @@
             "status-change-output": {
               "status": "decided",
               "parent": null
+            },
+            "published-documentation": {
+              "status": "decided",
+              "parent": null
             }
           }
         }

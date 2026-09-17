@@ -570,19 +570,52 @@ What this leaves in scope for notes: their text must be readable out of `tick sh
 
 ---
 
+## Published Documentation Owed a Correction
+
+### Context
+
+*Raised by the background review (review-001 F6): the correction thread recorded in this document was scoped to the description alone, having been written before scope widened to the whole format.*
+
+Three published documents describe output this work replaces:
+
+- **README's Output Formats section** — prints worked `tick list` and `tick show` samples in the agent format. After this work those samples show output the tool no longer produces.
+- **`v1` / `tick-core` specification** — states "long text fields get their own unstructured sections" as a principle and prints the indented description block as its worked example (`.workflows/v1/specification/tick-core/specification.md:693-714`). Work unit status: `completed`.
+- **`auto-cascade-parent-status` specification** — fixes the arrow-and-`(auto)` lines as the machine-readable cascade form and requires unchanged terminal children to be shown alongside them (`.workflows/auto-cascade-parent-status/specification/auto-cascade-parent-status/specification.md:117-162`). Work unit status: `completed`.
+
+### Decision
+
+**The README is updated as part of this work, not as a follow-up.** It is live documentation someone reads to learn the tool rather than a record of a past decision, so leaving it describing output the tool does not produce is shipping a defect.
+
+**The specifications are corrected selectively, by judgement, through the corrigendum facility — not as a blanket rewrite.** The user's reasoning: specifications are forever documents that do not churn out of the knowledge base, and the facility for amending them exists, so a correction can be made wherever something is obviously wrong. But the specification this work produces supersedes those decisions regardless, so correcting them is not obligatory. Where a point is plainly and load-bearingly wrong, amend it; otherwise let supersession carry it.
+
+Both specifications belong to completed work units, so the correcting route is the one that presents each proposed correction and confirms before editing another unit's record.
+
+Execution belongs to the specification phase rather than here — the corrections cannot be written until the replacing shapes are fixed, and the description encoding is still open.
+
+### Candidates the specification phase should weigh
+
+- The `tick-core` unstructured-long-text principle and its worked `tick show` example — the most obviously wrong, since it states as a rule the exact thing this work removes.
+- The `auto-cascade-parent-status` toon cascade rendering — superseded by the structured change sections decided here.
+- The unchanged-terminal-children requirement in that same specification, which appears never to have been implemented (`CascadeResult`, `internal/cli/format.go:141-147`, carries no such field) and is therefore wrong about the tool independently of this work.
+
+---
+
 ## Summary
 
 ### Key Insights
 
 1. The toon output is not lossy for free text — it is undeclared. Both the description indent and the notes escaping are reversible; what is absent is anything in the output telling the reader which rule applies to which field.
 2. The two free-text fields reached their current encodings by different routes and do not agree. Descriptions follow the v1 principle "long text fields get their own unstructured sections"; notes gained a timestamp and so became a tabular section, inheriting the TOON library's string quoting instead.
+3. Every section the formatter assembles by hand is malformed, and every section handed to the TOON library is correct. Each hand-rolled section exists because it wanted a shape the library does not produce — a singular object header, a list down the page, an unstructured text block — and in every case the invented shape turned out to be invalid.
+4. The defect is not confined to free text. `tick show` output fails a standard TOON reader on its first line, so no amount of free-text repair would have made the output parseable on its own.
 
 ### Open Threads
 
-- Whether changing the description encoding owes a correction to the v1 `tick-core` specification, which states the unstructured-section principle as a golden rule and shows the indented description block as the worked example.
-- The work unit's own description still reads as a free-text fix ("Make free-text fields survive an agent read-edit-write round trip… with a field-extraction flag"). Scope has widened past it — the carrier is now understating the work.
+- The work unit's own description still reads as a free-text fix ("Make free-text fields survive an agent read-edit-write round trip… with a field-extraction flag"). Scope has widened well past it — the carrier now understates the work.
+- Whether the write side needs an input path other than a command-line argument for very large descriptions (which carry no length cap).
+- Three points of `--field` behaviour: what an empty field returns and with what exit status, whether a single-field request honours the format flags, and its relationship to the existing `--quiet`.
 
 ### Current State
 
-- Resolved: both the single-field fetch and the whole-task read are in scope, and both must work. Notes are read-side only — no edit command; their existing TOON quoting already satisfies the read contract.
-- Uncertain: how the description block should encode multi-line text; the shape of the field-extraction flag; whether the write side needs an input path other than a command-line argument.
+- Resolved: both reading paths are in scope, with byte-identity as the fidelity bar; the format is repaired whole rather than free text alone, covering the data commands and status changes while one-line confirmations, `doctor` and `migrate` stay prose; single-object sections become named fields; tags and refs use the library's inline list form; status changes become structured sections with the existing per-command split kept; notes are read-side only; free text beginning with a dash is made writable; the field flag becomes a projection with bare single-field output; the README is updated here and the older specifications corrected selectively.
+- Uncertain: how the description block itself should encode multi-line text — the choice between one quoted value and a list of lines — and how conformance is verified and kept.
