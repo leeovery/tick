@@ -490,6 +490,12 @@ Asked for alone, `--field notes.2` prints that note's text bare, by the one-fiel
 
 **An empty field prints nothing and exits successfully. An unrecognised field name is an error with a non-zero exit.** A task legitimately having no description is a fact about the task rather than a failure of the command, and it takes the same shape as an empty notes table in full output. A field name that is not a field at all is a caller mistake, and gets what every other unrecognised flag value already gets.
 
+### Interaction with the format flags
+
+**Settled by derivation** — not discussed. Determined by this subtopic's own split between a raw value and a filtered document.
+
+**A single-field request ignores `--json`, `--pretty` and `--toon`; a multi-field request honours them.** A one-field answer is a raw value, so there is no document for a format flag to act on, and honouring one would re-quote the very string the flag exists to hand over unquoted. A multi-field request does produce a document, and the resolved format applies to it exactly as it applies to a full `tick show`.
+
 ### Still open in this subtopic
 
 - The relationship to `--quiet`, which already prints a bare task ID and nothing else.
