@@ -523,9 +523,11 @@ Asked for alone, `--field notes.2` prints that note's text bare, by the one-fiel
 
 **A single-field request ignores `--json`, `--pretty` and `--toon`; a multi-field request honours them.** A one-field answer is a raw value, so there is no document for a format flag to act on, and honouring one would re-quote the very string the flag exists to hand over unquoted. A multi-field request does produce a document, and the resolved format applies to it exactly as it applies to a full `tick show`.
 
-### Still open in this subtopic
+### Combining with `--quiet`
 
-- The relationship to `--quiet`, which already prints a bare task ID and nothing else.
+**Settled by derivation** — not discussed. Determined by the project's stance on unknown flags, which refuses a contradictory invocation rather than guessing at intent, and by the same reasoning that makes an unrecognised field name an error rather than empty output.
+
+**Passing `--quiet` and a field selection together is refused.** `--quiet` prints a bare task ID and nothing else; a single-field request prints that field's bare value and nothing else. Two different single values have been asked for, and silently picking one hands back something the caller did not ask for.
 
 ---
 
