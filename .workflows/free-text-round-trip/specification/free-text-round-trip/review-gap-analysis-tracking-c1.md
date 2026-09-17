@@ -30,8 +30,8 @@ Replace §9.7's paragraph with:
 
 > **A request that returns a bare value ignores `--json`, `--pretty` and `--toon`; a request that returns a document honours them.** A bare value is not a document, so there is nothing for a format flag to act on, and honouring one would re-quote the very string the flag exists to hand over unquoted. A multi-field request produces a document, and so does a single field naming a list section (§9.2); the resolved format applies to either exactly as it applies to a full `tick show`.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied under auto to both §9.2 and §9.7.
 
 ---
 
@@ -53,10 +53,10 @@ Settled by the stated aim of the import fix — making the invariant true system
 > **`tick migrate` therefore trims descriptions and titles on import, exactly as `create` does.** This is in scope for this work: it makes the invariant true system-wide rather than documenting an exception a reader cannot predict from the output.
 
 **Proposed Text**:
-> **`tick migrate` therefore trims every free-text value it imports — descriptions, titles, and note text where a provider carries notes — exactly as `create` does.** This is in scope for this work: it makes the invariant true system-wide rather than documenting an exception a reader cannot predict from the output.
+> **`tick migrate` therefore trims every free-text value it imports, exactly as `create` does.** Today that is descriptions and titles — the import framework carries no notes (`grep -rn 'Note' internal/migrate/ --include='*.go' | grep -v _test` → no matches; `MigratedTask` holds Title, Status, Priority, Description and the three timestamps, `sed -n '30,38p' internal/migrate/migrate.go`) — and a provider that later brings note text across is covered by the same rule rather than by a second decision. This is in scope for this work: it makes the invariant true system-wide rather than documenting an exception a reader cannot predict from the output.
 
 **Resolution**: Pending
-**Notes**:
+**Notes**: Disposal — move held as `settled`, Proposed Text amended before presentation. The staged wording ("note text where a provider carries notes") reads to a builder as a requirement against a surface that does not exist: the import framework has no notes field at all. Rewritten to state the rule over whatever free text an import carries, with the measurement showing today's set is descriptions and titles.
 
 ---
 

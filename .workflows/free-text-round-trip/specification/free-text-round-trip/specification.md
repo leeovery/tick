@@ -333,6 +333,10 @@ Steps:
   - validate
 ```
 
+**A single field naming a list section returns that section, not a bare value.** `tick show tick-a1b2 --field notes` prints the notes table exactly as full output renders it, header and all; `--field tags` prints `tags[2]: has space,plain`. A list has no bare form, and the flag is a projection rather than a single-value extractor (§9.1), so the section is handed over in the one shape the library produces for it.
+
+The bare form belongs to a selection that resolves to exactly one value: the task's own fields, `description`, and a position that names one — `notes.2`'s text, `tags.1`'s item (§9.3). A selection that resolves to a row rather than a value — `children.1` — comes back as its one-row section.
+
 **Several fields — the normal document with only those sections in it.** `tick show tick-a1b2 --field description,notes`:
 
 ```
@@ -391,7 +395,7 @@ The opening position was that `id` should always be present so a filtered docume
 
 #### 9.7 Interaction with the format flags
 
-**A single-field request ignores `--json`, `--pretty` and `--toon`; a multi-field request honours them.** A one-field answer is a raw value, so there is no document for a format flag to act on, and honouring one would re-quote the very string the flag exists to hand over unquoted. A multi-field request does produce a document, and the resolved format applies to it exactly as it applies to a full `tick show`.
+**A request that returns a bare value ignores `--json`, `--pretty` and `--toon`; a request that returns a document honours them.** A bare value is not a document, so there is nothing for a format flag to act on, and honouring one would re-quote the very string the flag exists to hand over unquoted. A multi-field request produces a document, and so does a single field naming a list section (§9.2); the resolved format applies to either exactly as it applies to a full `tick show`.
 
 #### 9.8 Interaction with `--quiet`
 
