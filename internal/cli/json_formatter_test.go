@@ -936,7 +936,7 @@ func TestJSONFormatter(t *testing.T) {
 		}
 	})
 
-	t.Run("it displays notes in json show output with text and created", func(t *testing.T) {
+	t.Run("it numbers notes from 1 in json output", func(t *testing.T) {
 		f := &JSONFormatter{}
 		now := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
 		detail := TaskDetail{
@@ -971,6 +971,9 @@ func TestJSONFormatter(t *testing.T) {
 		}
 
 		note0 := notes[0].(map[string]any)
+		if note0["index"] != float64(1) {
+			t.Errorf("notes[0].index = %v, want 1", note0["index"])
+		}
 		if note0["text"] != "Started investigating the auth flow" {
 			t.Errorf("notes[0].text = %v, want %q", note0["text"], "Started investigating the auth flow")
 		}
@@ -979,6 +982,9 @@ func TestJSONFormatter(t *testing.T) {
 		}
 
 		note1 := notes[1].(map[string]any)
+		if note1["index"] != float64(2) {
+			t.Errorf("notes[1].index = %v, want 2", note1["index"])
+		}
 		if note1["text"] != "Root cause found" {
 			t.Errorf("notes[1].text = %v, want %q", note1["text"], "Root cause found")
 		}

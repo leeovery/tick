@@ -32,6 +32,23 @@ func detailWithDescription(description string) TaskDetail {
 	}
 }
 
+func detailWithNotes(notes []task.Note) TaskDetail {
+	now := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
+	return TaskDetail{
+		Task: task.Task{
+			ID:       "tick-a1b2",
+			Title:    "Task with notes",
+			Status:   task.StatusInProgress,
+			Priority: 1,
+			Created:  now,
+			Updated:  now,
+		},
+		BlockedBy: []RelatedTask{},
+		Children:  []RelatedTask{},
+		Notes:     notes,
+	}
+}
+
 func assertDescriptionRoundTrip(t *testing.T, description string) {
 	t.Helper()
 	f := &ToonFormatter{}
@@ -144,7 +161,7 @@ func TestToonFormatter(t *testing.T) {
 			t.Errorf("children section = %q, want %q", sections[2], expectedChildren)
 		}
 		// Section 4: notes
-		expectedNotes := "notes[0]{text,created}:"
+		expectedNotes := "notes[0]{index,text,created}:"
 		if sections[3] != expectedNotes {
 			t.Errorf("notes section = %q, want %q", sections[3], expectedNotes)
 		}
@@ -643,61 +660,73 @@ func TestToonFormatter(t *testing.T) {
 		})
 	})
 
-	t.Run("it displays notes in toon show output", func(t *testing.T) {
+	t.Run("it numbers notes from 1 in the toon notes table", func(t *testing.T) {
 		f := &ToonFormatter{}
-		now := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
-		detail := TaskDetail{
-			Task: task.Task{
-				ID:       "tick-a1b2",
-				Title:    "Task with notes",
-				Status:   task.StatusInProgress,
-				Priority: 1,
-				Created:  now,
-				Updated:  now,
-			},
-			BlockedBy: []RelatedTask{},
-			Children:  []RelatedTask{},
-			Notes: []task.Note{
-				{Text: "Started investigating", Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
-				{Text: "Root cause found", Created: time.Date(2026, 2, 27, 14, 30, 0, 0, time.UTC)},
-			},
+		result := f.FormatTaskDetail(detailWithNotes([]task.Note{
+			{Text: "Started investigating", Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
+			{Text: "Root cause found", Created: time.Date(2026, 2, 27, 14, 30, 0, 0, time.UTC)},
+		}))
+		if !strings.Contains(result, "notes[2]{index,text,created}:") {
+			t.Errorf("should contain notes section header with the index column, got:\n%s", result)
 		}
-		result := f.FormatTaskDetail(detail)
-		if !strings.Contains(result, "notes[2]{text,created}:") {
-			t.Errorf("should contain notes section header with count, got:\n%s", result)
+		notes := decodeToonNotes(t, result)
+		if len(notes) != 2 {
+			t.Fatalf("notes length = %d, want 2", len(notes))
 		}
-		if !strings.Contains(result, "Started investigating") {
-			t.Errorf("should contain first note text, got:\n%s", result)
+		wantNotes := []map[string]any{
+			{"index": float64(1), "text": "Started investigating", "created": "2026-02-27T10:00:00Z"},
+			{"index": float64(2), "text": "Root cause found", "created": "2026-02-27T14:30:00Z"},
 		}
-		if !strings.Contains(result, "Root cause found") {
-			t.Errorf("should contain second note text, got:\n%s", result)
-		}
-		if !strings.Contains(result, "2026-02-27T10:00:00Z") {
-			t.Errorf("should contain first note timestamp, got:\n%s", result)
-		}
-		if !strings.Contains(result, "2026-02-27T14:30:00Z") {
-			t.Errorf("should contain second note timestamp, got:\n%s", result)
+		for i, want := range wantNotes {
+			for key, wantValue := range want {
+				if notes[i][key] != wantValue {
+					t.Errorf("notes[%d].%s = %#v, want %#v", i, key, notes[i][key], wantValue)
+				}
+			}
 		}
 	})
 
-	t.Run("it shows empty notes in toon when no notes", func(t *testing.T) {
+	t.Run("it carries the index column on the empty notes section", func(t *testing.T) {
 		f := &ToonFormatter{}
-		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
-		detail := TaskDetail{
-			Task: task.Task{
-				ID:       "tick-a1b2",
-				Title:    "No notes task",
-				Status:   task.StatusOpen,
-				Priority: 2,
-				Created:  now,
-				Updated:  now,
-			},
-			BlockedBy: []RelatedTask{},
-			Children:  []RelatedTask{},
+		result := f.FormatTaskDetail(detailWithNotes(nil))
+		if !strings.Contains(result, "notes[0]{index,text,created}:") {
+			t.Errorf("should contain empty notes section 'notes[0]{index,text,created}:', got:\n%s", result)
 		}
-		result := f.FormatTaskDetail(detail)
-		if !strings.Contains(result, "notes[0]{text,created}:") {
-			t.Errorf("should contain empty notes section 'notes[0]{text,created}:', got:\n%s", result)
+		if notes := decodeToonNotes(t, result); len(notes) != 0 {
+			t.Errorf("notes = %#v, want empty", notes)
+		}
+	})
+
+	t.Run("it keeps multi-line note text quoted", func(t *testing.T) {
+		f := &ToonFormatter{}
+		text := "multi\nline\nnote"
+		result := f.FormatTaskDetail(detailWithNotes([]task.Note{
+			{Text: text, Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
+		}))
+		notes := decodeToonNotes(t, result)
+		if len(notes) != 1 {
+			t.Fatalf("notes length = %d, want 1", len(notes))
+		}
+		if notes[0]["text"] != text {
+			t.Errorf("notes[0].text = %#v, want %#v", notes[0]["text"], text)
+		}
+		if notes[0]["index"] != float64(1) {
+			t.Errorf("notes[0].index = %#v, want %#v", notes[0]["index"], float64(1))
+		}
+	})
+
+	t.Run("it keeps a note beginning with a dash intact", func(t *testing.T) {
+		f := &ToonFormatter{}
+		text := "- read the header, then retry"
+		result := f.FormatTaskDetail(detailWithNotes([]task.Note{
+			{Text: text, Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
+		}))
+		notes := decodeToonNotes(t, result)
+		if len(notes) != 1 {
+			t.Fatalf("notes length = %d, want 1", len(notes))
+		}
+		if notes[0]["text"] != text {
+			t.Errorf("notes[0].text = %#v, want %#v", notes[0]["text"], text)
 		}
 	})
 	t.Run("it emits the task's own fields as top-level named fields", func(t *testing.T) {

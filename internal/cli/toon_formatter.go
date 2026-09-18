@@ -47,6 +47,7 @@ type toonStatsSummary struct {
 
 // toonNoteRow is a TOON-serializable row for the notes section in show output.
 type toonNoteRow struct {
+	Index   int    `toon:"index"`
 	Text    string `toon:"text"`
 	Created string `toon:"created"`
 }
@@ -324,11 +325,12 @@ func buildRelatedSection(name string, related []RelatedTask) string {
 // buildNotesSection builds the notes section as a TOON tabular section.
 func buildNotesSection(notes []task.Note) string {
 	if len(notes) == 0 {
-		return "notes[0]{text,created}:"
+		return "notes[0]{index,text,created}:"
 	}
 	rows := make([]toonNoteRow, len(notes))
 	for i, n := range notes {
 		rows[i] = toonNoteRow{
+			Index:   i + 1,
 			Text:    n.Text,
 			Created: task.FormatTimestamp(n.Created),
 		}

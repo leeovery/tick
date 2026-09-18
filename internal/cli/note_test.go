@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -565,4 +567,97 @@ func TestNoteTreeRejection(t *testing.T) {
 			t.Errorf("stderr must not reference \"note tree\", got %q", stderr)
 		}
 	})
+}
+
+func TestNoteIndex(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+
+	t.Run("it matches the index note remove accepts", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		for _, text := range []string{"First note", "Second note", "Third note"} {
+			if _, _, code := runNote(t, dir, "add", "tick-aaa111", text); code != 0 {
+				t.Fatalf("note add %q exit code = %d, want 0", text, code)
+			}
+		}
+
+		stdout, _, code := runShow(t, dir, "tick-aaa111", "--toon")
+		if code != 0 {
+			t.Fatalf("show exit code = %d, want 0", code)
+		}
+		notes := decodeToonNotes(t, stdout)
+		if len(notes) != 3 {
+			t.Fatalf("notes length = %d, want 3", len(notes))
+		}
+		var secondIndex float64
+		for _, note := range notes {
+			if note["text"] == "Second note" {
+				secondIndex, _ = note["index"].(float64)
+			}
+		}
+		if secondIndex == 0 {
+			t.Fatalf("second note not found in %#v", notes)
+		}
+
+		if _, _, code := runNote(t, dir, "remove", "tick-aaa111", strconv.Itoa(int(secondIndex))); code != 0 {
+			t.Fatalf("note remove exit code = %d, want 0", code)
+		}
+
+		remaining := notesTextsOf(t, readPersistedTasks(t, tickDir), "tick-aaa111")
+		want := []string{"First note", "Third note"}
+		if !slices.Equal(remaining, want) {
+			t.Errorf("remaining notes = %#v, want %#v", remaining, want)
+		}
+	})
+
+	t.Run("it keeps insertion order for notes sharing a created timestamp", func(t *testing.T) {
+		taskA := task.Task{
+			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+			Notes: []task.Note{
+				{Text: "Zulu first", Created: now},
+				{Text: "Alpha second", Created: now},
+			},
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{taskA})
+
+		stdout, _, code := runShow(t, dir, "tick-aaa111", "--toon")
+		if code != 0 {
+			t.Fatalf("show exit code = %d, want 0", code)
+		}
+		notes := decodeToonNotes(t, stdout)
+		if len(notes) != 2 {
+			t.Fatalf("notes length = %d, want 2", len(notes))
+		}
+		wantRows := []struct {
+			index float64
+			text  string
+		}{{1, "Zulu first"}, {2, "Alpha second"}}
+		for i, want := range wantRows {
+			if notes[i]["index"] != want.index || notes[i]["text"] != want.text {
+				t.Errorf("notes[%d] = %#v, want index %v text %q", i, notes[i], want.index, want.text)
+			}
+		}
+	})
+}
+
+// notesTextsOf returns the note texts of the named task, in stored order.
+func notesTextsOf(t *testing.T, tasks []task.Task, id string) []string {
+	t.Helper()
+	for _, tk := range tasks {
+		if tk.ID != id {
+			continue
+		}
+		texts := make([]string, 0, len(tk.Notes))
+		for _, n := range tk.Notes {
+			texts = append(texts, n.Text)
+		}
+		return texts
+	}
+	t.Fatalf("task %q not found", id)
+	return nil
 }

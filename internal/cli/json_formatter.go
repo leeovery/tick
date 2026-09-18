@@ -47,6 +47,7 @@ type jsonRelatedTask struct {
 
 // jsonNote represents a note in JSON output.
 type jsonNote struct {
+	Index   int    `json:"index"`
 	Text    string `json:"text"`
 	Created string `json:"created"`
 }
@@ -91,8 +92,9 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 	refs = append(refs, detail.Refs...)
 
 	notes := make([]jsonNote, 0, len(detail.Notes))
-	for _, n := range detail.Notes {
+	for i, n := range detail.Notes {
 		notes = append(notes, jsonNote{
+			Index:   i + 1,
 			Text:    n.Text,
 			Created: task.FormatTimestamp(n.Created),
 		})

@@ -22,6 +22,28 @@ func decodeToonDoc(t *testing.T, doc string) map[string]any {
 	return obj
 }
 
+// decodeToonNotes decodes a task detail document and returns its notes rows.
+func decodeToonNotes(t *testing.T, doc string) []map[string]any {
+	t.Helper()
+	raw, ok := decodeToonDoc(t, doc)["notes"]
+	if !ok {
+		t.Fatalf("key \"notes\" missing from decoded document:\n%s", doc)
+	}
+	items, ok := raw.([]any)
+	if !ok {
+		t.Fatalf("key \"notes\" = %#v, want a list", raw)
+	}
+	rows := make([]map[string]any, 0, len(items))
+	for i, item := range items {
+		row, ok := item.(map[string]any)
+		if !ok {
+			t.Fatalf("notes[%d] = %#v, want an object", i, item)
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
 func assertToonFields(t *testing.T, doc map[string]any, want map[string]any) {
 	t.Helper()
 	for key, wantValue := range want {
