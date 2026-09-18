@@ -90,6 +90,25 @@
           }
         }
       }
+    },
+    "planning": {
+      "items": {
+        "free-text-round-trip": {
+          "status": "in-progress",
+          "format": "tick",
+          "spec_commit": "8a6a9dc5aff3e09b0dbb88610fbc5e1b66ab91fa",
+          "task_list_gate_mode": "gated",
+          "author_gate_mode": "gated",
+          "finding_gate_mode": "gated",
+          "review_cycle": 0,
+          "phase": 1,
+          "task": null,
+          "task_map": {},
+          "storage_paths": [
+            ".tick/"
+          ]
+        }
+      }
     }
   }
 }
