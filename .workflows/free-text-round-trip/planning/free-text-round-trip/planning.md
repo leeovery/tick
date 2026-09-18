@@ -154,7 +154,7 @@ status: draft
 - [ ] Every command in the must-parse inventory has its output decoded by the TOON library in the suite, on every branch it can take, the emptied forms included
 - [ ] Both field-selection document forms — a multi-field selection and one narrowed by position — are decoded in the suite, and bare-value output is asserted as bytes
 - [ ] JSON output for each listed command is parsed and asserted by decoded value
-- [ ] No toon or JSON test asserts against a pinned full-output string
+- [ ] No toon or JSON test asserts against a pinned full-output string, with one retained set recorded in task `free-text-round-trip-6-6`: the count-zero section headers — `tasks[0]{…}`, `notes[0]{…}`, `changed[0]{…}`, `blocked_by[0]{…}`, `blocks[0]{…}`, `children[0]{…}` and `dep_tree[0]{…}` — stay as text assertions, because a decoder collapses them to the same empty list a bare `name[0]:` produces, and each sits beside a decoded assertion of the same empty section
 - [ ] Pretty's golden-string assertions remain in place
 - [ ] `go test ./...`, `go vet ./...` and `golangci-lint run ./...` are clean
 

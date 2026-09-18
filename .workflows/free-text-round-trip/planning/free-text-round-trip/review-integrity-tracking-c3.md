@@ -68,8 +68,8 @@ Carry the exception into the criterion, in the words `free-text-round-trip-6-6` 
 - [ ] No toon or JSON test asserts against a pinned full-output string, with one retained set recorded in task `free-text-round-trip-6-6`: the count-zero section headers — `tasks[0]{…}`, `notes[0]{…}`, `changed[0]{…}`, `blocked_by[0]{…}`, `blocks[0]{…}`, `children[0]{…}` and `dep_tree[0]{…}` — stay as text assertions, because a decoder collapses them to the same empty list a bare `name[0]:` produces, and each sits beside a decoded assertion of the same empty section
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to Phase 6's acceptance list in planning.md — the criterion now names the seven retained count-zero headers in task 6-6's words.
 
 ---
 
