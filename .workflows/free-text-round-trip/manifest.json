@@ -226,7 +226,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 1,
-          "current_task": "free-text-round-trip-1-2",
+          "current_task": "free-text-round-trip-1-3",
           "bank": [
             {
               "task": "free-text-round-trip-1-1",
@@ -240,7 +240,8 @@
             }
           ],
           "completed_tasks": [
-            "free-text-round-trip-1-1"
+            "free-text-round-trip-1-1",
+            "free-text-round-trip-1-2"
           ]
         }
       }
