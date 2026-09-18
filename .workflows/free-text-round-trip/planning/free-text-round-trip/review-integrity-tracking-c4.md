@@ -47,8 +47,8 @@ Name the three sites and direct pretty's golden to move rather than go. `PrettyF
 ...
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-2-2` (tick-ed0952) — the two missing sites added, the helpers range corrected, the pretty golden directed to move to `FormatCascadeTransition`, and the pinning acceptance criterion added, in both the task detail file and the tick store.
 
 ---
 
