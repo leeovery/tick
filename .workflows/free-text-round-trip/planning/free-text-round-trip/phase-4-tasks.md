@@ -327,7 +327,7 @@
 **Outcome**: `tick show <id> --field title,status --pretty` prints two labelled lines and nothing else; unfiltered pretty output for every command is byte-identical to before, and its golden-string assertions are untouched.
 
 **Do**:
-1. `internal/cli/pretty_formatter.go` — restructure `FormatTaskDetail` to collect a `[]string` of header lines (`ID`, `Title`, `Status`, `Priority`, `Type`, `Tags`, `Parent`, `Created`, `Updated`, `Closed` in today's order and with today's padding) and a `[]string` of blocks (`Blocked by`, `Children`, `Refs`, `Notes`, `Description` in today's order), then join the header group with `"\n"`, and join that group and each non-empty block with `"\n\n"`.
+1. `internal/cli/pretty_formatter.go` — restructure `FormatTaskDetail` to collect a `[]string` of header lines (`ID`, `Title`, `Status`, `Priority`, `Type`, `Tags`, `Parent`, `Created`, `Updated`, `Closed` in today's order and with today's padding) and a `[]string` of blocks (`Blocked by`, `Children`, `Refs`, `Notes`, `Description` in today's order), then join the header group with `"\n"`, and join that group and each non-empty block with `"\n\n"`. The cascade tail Phase 2 task `free-text-round-trip-2-4` appended to this function stays exactly as that task left it: when `detail.Changes != nil && len(detail.Changes.Blocks) > 0`, `"\n"` followed by each block rendered through `f.FormatCascadeTransition(block)` joined by `"\n"`, appended to the joined groups rather than added to either list. It is not a group and must not take the `"\n\n"` join — that would put a blank line into `create` and `update` output that is not there today.
 2. `internal/cli/pretty_formatter.go` — gate each header line and each block on `detail.Fields == nil || detail.Fields.Selected(name)`, mapping each label to its selection name: `ID`→`id`, `Title`→`title`, `Status`→`status`, `Priority`→`priority`, `Type`→`type`, `Tags`→`tags`, `Parent`→`parent`, `Created`→`created`, `Updated`→`updated`, `Closed`→`closed`, `Blocked by`→`blocked_by`, `Children`→`children`, `Refs`→`refs`, `Notes`→`notes`, `Description`→`description`. Keep every existing non-empty guard as it is.
 3. `internal/cli/pretty_formatter.go` — return `""` when no group survives, so `RunShow`'s empty-render guard from Task 3 prints nothing.
 4. `internal/cli/pretty_formatter_test.go` — leave every existing golden-string assertion in place and add golden-string subtests for the filtered forms: scalars only, one block only, a mix, and a selection that renders nothing.
@@ -335,6 +335,7 @@
 
 **Acceptance Criteria**:
 - [ ] Unfiltered pretty output for `show`, `create`, `update`, `note add` and `note remove` is byte-identical to before this task, including blank-line spacing and column alignment
+- [ ] `create` and `update` still print their cascade tree, appended after the joined groups with the single `"\n"` separator Phase 2 gave it
 - [ ] A filtered pretty render carries no header block for unselected fields and no labels for them
 - [ ] Selected fields keep pretty's label text, padding and alignment exactly as full output renders them
 - [ ] `--field type` on a task with no type prints `Type:     -`, because that is what pretty's full output prints for it
@@ -358,6 +359,7 @@
 
 **Edge Cases**:
 - Unfiltered pretty stays byte-identical: today's output is one header group followed by blocks separated by `"\n\n"`, so the group-join restructure must reproduce it exactly, including the absence of a trailing newline
+- The cascade tail is neither a header line nor a block: it is appended after the joined groups with a single `"\n"`, and a filtered render never carries one, because `--field` is `show`'s flag alone and `show` builds its detail with `Changes` nil
 - No header block and no labels for unselected fields — the filtered render is the named fields in pretty's usual style and nothing else
 - A selected field the task does not carry prints nothing wherever pretty's full output omits it; `Type` is the exception, because pretty's full output always prints it as `-`
 - A filtered record is output pretty does not produce today, so §4.1's "pretty is unchanged" is not disturbed by adding it

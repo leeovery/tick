@@ -50,8 +50,8 @@ Name the cascade tail in Do step 1, with the separator and the reason it sits ou
 ...
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-4-5` (tick-86b409) — cascade tail named in Do step 1 with its separator, plus one acceptance criterion and one edge case, in both the task detail file and the tick store.
 
 ---
 
