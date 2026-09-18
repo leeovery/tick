@@ -156,8 +156,8 @@ Add the CLAUDE.md line to this task rather than to the phase's README task, beca
 ...
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-2-2` (tick-ed0952) — Do step 6 and the matching acceptance criterion added, in both the task detail file and the tick store.
 
 ---
 

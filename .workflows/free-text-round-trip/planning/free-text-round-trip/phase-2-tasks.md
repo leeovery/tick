@@ -89,6 +89,7 @@
 3. `internal/cli/toon_formatter.go` — rewrite `FormatCascadeTransition` to `return buildChangedSection(result.Changed)`, deleting the arrow-line construction and the `result.TaskID == ""` early return.
 4. `internal/cli/format.go` — remove `FormatTransition` from the `Formatter` interface, from `baseFormatter` and from `StubFormatter`; `internal/cli/json_formatter.go` — remove `JSONFormatter.FormatTransition` and the `jsonTransition` struct (`internal/cli/json_formatter.go:132-146`).
 5. Rewrite the assertions the removals and the new shape break: `internal/cli/base_formatter_test.go` (the `FormatTransition` subtests and `TestAllFormattersProduceConsistentTransitionOutput` at lines 129-150), `internal/cli/toon_formatter_test.go:318-325`, `internal/cli/format_test.go:207-211` and the empty-`CascadeResult` loop at `internal/cli/format_test.go:414-421`, `internal/cli/json_formatter_test.go:537`, `internal/cli/helpers_test.go:293-350`, `internal/cli/transition_test.go:389-407` and the cascade assertions beneath it, and the toon subtests in `internal/cli/cascade_formatter_test.go`. Toon assertions decode stdout with `decodeToonDoc` (`internal/cli/toon_decode_test.go`, added in Phase 1) and check row values; pretty assertions keep their golden strings unchanged.
+6. `CLAUDE.md:49` — remove `FormatTransition` from the Formatter interface's method list, leaving the eight that remain and the rest of the bullet as it is.
 
 **Acceptance Criteria**:
 - [ ] `tick start` on a task with no children emits `changed[1]{id,title,from,to,auto}:` and one row — never a bare arrow line
@@ -99,6 +100,7 @@
 - [ ] `tick start --quiet` and its siblings print nothing at all
 - [ ] Pretty output for `start`, `done`, `cancel` and `reopen` — the single line and the box-drawing tree — is byte-identical to before this task
 - [ ] `grep -rn 'FormatTransition' internal/` returns nothing
+- [ ] `CLAUDE.md`'s Formatter bullet lists the eight remaining methods and no longer names `FormatTransition`
 - [ ] Every status command's toon stdout decodes via `toon.DecodeString`
 - [ ] `go test ./...`, `go vet ./...` and `gofmt -l ./internal ./cmd` are clean
 
