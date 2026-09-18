@@ -102,7 +102,7 @@
           "finding_gate_mode": "gated",
           "review_cycle": 0,
           "phase": 6,
-          "task": "free-text-round-trip-6-1",
+          "task": "free-text-round-trip-6-2",
           "task_map": {
             "free-text-round-trip-1-1": "tick-36cfbf",
             "free-text-round-trip-1": "tick-063549",
@@ -140,7 +140,9 @@
             "free-text-round-trip-5-3": "tick-7962a1",
             "free-text-round-trip-5-4": "tick-b70d39",
             "free-text-round-trip-5-5": "tick-3a59e1",
-            "free-text-round-trip-5-6": "tick-d35d1b"
+            "free-text-round-trip-5-6": "tick-d35d1b",
+            "free-text-round-trip-6-1": "tick-25fabf",
+            "free-text-round-trip-6": "tick-9a4efb"
           },
           "storage_paths": [
             ".tick/"
@@ -156,7 +158,18 @@
               "p6": "2026-09-18"
             }
           },
-          "staging": {},
+          "staging": {
+            "author-p6": {
+              "tasks": {
+                "free-text-round-trip-6-1": "approved",
+                "free-text-round-trip-6-2": "approved",
+                "free-text-round-trip-6-3": "approved",
+                "free-text-round-trip-6-4": "approved",
+                "free-text-round-trip-6-5": "approved",
+                "free-text-round-trip-6-6": "approved"
+              }
+            }
+          },
           "external_id": "tick-1fe74e"
         }
       }
