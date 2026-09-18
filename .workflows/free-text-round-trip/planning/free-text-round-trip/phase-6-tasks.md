@@ -226,7 +226,7 @@
 
 ### Task 4: Field-selection documents and the two exemptions are covered
 
-**Problem**: §11 requires both field-selection document forms — a multi-field selection and one narrowed by position — to be decoded in the suite, and requires bare-value output to be asserted as bytes. Phase 4 built those outputs and tested each behaviour where it landed, but the inventory of documents stops at full `show`. §3.1 also carves out the only two things in the whole CLI that are exempt from the must-parse rule — a bare value from `show --field`, and a selection that prints no bytes at all — and an exemption that exists only as an absence is indistinguishable from an oversight: a reader of the table cannot tell whether the bare value was considered and excluded or simply forgotten.
+**Problem**: §11 requires every document `show` produces to be decoded in the suite, "a multi-field selection and one narrowed by position included". Phase 4 built those outputs and tested each behaviour where it landed, but the inventory of documents stops at full `show`. §3.1 also carves out the only two things in the whole CLI that are exempt from the must-parse rule — a bare value from `show --field`, and a selection that prints no bytes at all — and an exemption that exists only as an absence is indistinguishable from an oversight: a reader of the table cannot tell whether the bare value was considered and excluded or simply forgotten. The exempt bare value is not thereby unchecked: §9.2 fixes its bytes exactly, and bytes are the only assertion that reaches output no decoder will accept.
 
 **Solution**: Add the three filtered documents `show` produces to the inventory so the driver decodes them, declare each exemption as an entry carrying its reason, and assert the exempt outputs as exact bytes in a test of their own.
 
@@ -275,7 +275,9 @@
 - The JSON counterparts of the filtered documents belong to Task 5, which runs the same inventory under `--json`
 
 **Context**:
-> §11: "the coverage is counted in documents rather than commands: every branch a listed command can take, the emptied forms of §8 included, and every document `show` produces, a multi-field selection and one narrowed by position included (§9.2, §9.3)." And: "Both field-selection document forms — a multi-field selection and one narrowed by position — are decoded in the suite, and bare-value output is asserted as bytes."
+> §11: "the coverage is counted in documents rather than commands: every branch a listed command can take, the emptied forms of §8 included, and every document `show` produces, a multi-field selection and one narrowed by position included (§9.2, §9.3)."
+>
+> The bare-value byte assertion is this task's own rather than §11's: §11 asks for decoded-value assertions over documents, §3.1 exempts the bare value from the must-parse rule because it is not a document, and §9.2 fixes its exact bytes — "its own bytes followed by a single newline" — so a byte assertion is the only check that reaches it. Task `free-text-round-trip-6-6` states the same boundary when it keeps the bare-value byte assertions out of its sweep.
 >
 > §3.1: "Two things are exempt, both because they are not documents: a bare value from `tick show --field` (§9.2), for the reason §9.7 exempts it from the format flags, and a field selection that prints no bytes at all (§9.6), which is nothing rather than an empty document, in every format. Every document `show` produces — the full detail, and a filtered one — decodes."
 >

@@ -141,8 +141,8 @@ Site 3 — `phase-6-tasks.md`, task `free-text-round-trip-6-4`, Context, first p
 > The bare-value byte assertion is this task's own rather than §11's: §11 asks for decoded-value assertions over documents, §3.1 exempts the bare value from the must-parse rule because it is not a document, and §9.2 fixes its exact bytes — "its own bytes followed by a single newline" — so a byte assertion is the only check that reaches it. Task `free-text-round-trip-6-6` states the same boundary when it keeps the bare-value byte assertions out of its sweep.
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim across all three sites in `free-text-round-trip-4-8` and `free-text-round-trip-6-4`, in both the task detail files and the tick store. Both fabricated quotes are now absent from every task file, and all 38 stored tasks were re-diffed against their detail files with no mismatches.
 
 ---
 

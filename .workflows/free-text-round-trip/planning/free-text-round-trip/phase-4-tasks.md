@@ -585,7 +585,7 @@
 >
 > §9.8: "Passing `--quiet` and a field selection together is refused."
 >
-> §11: "Both field-selection document forms — a multi-field selection and one narrowed by position — are decoded in the suite, and bare-value output is asserted as bytes." That coverage is Phase 6's; this task only anchors the README's own sample.
+> §11: "the coverage is counted in documents rather than commands: … every document `show` produces, a multi-field selection and one narrowed by position included (§9.2, §9.3)." That coverage is Phase 6's, along with the byte assertion Phase 6 adds for the bare value §3.1 exempts from it; this task only anchors the README's own sample.
 >
 > `TestREADMEToonSamplesDecode` was added by Phase 1 task free-text-round-trip-1-6 in `internal/cli/readme_samples_test.go`: it locates `README.md` via `testutil.FindRepoRoot(t)`, collects every fenced block with an empty info string, strips a leading `$ tick …` prompt line, indexes the blocks by their first remaining line, and fails both when an anchor has no matching block and when `toon.DecodeString` rejects one.
 
