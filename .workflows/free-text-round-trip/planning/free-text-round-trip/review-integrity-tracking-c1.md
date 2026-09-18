@@ -111,8 +111,8 @@ Drop `parent` from the capture instruction and pin the head fields in the accept
 ...
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-1-6` (tick-a8523e) — `parent` dropped from the capture instruction and the head fields pinned in the acceptance criterion, in both the task detail file and the tick store.
 
 ---
 

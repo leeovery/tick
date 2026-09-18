@@ -320,14 +320,14 @@ A TOON reader rejects this — an item on its own line carries a leading `- ` ma
 **Outcome**: The `tick show` and `tick list` samples in the README are byte-for-byte what the tool prints, and a test fails if either stops parsing as TOON.
 
 **Do**:
-1. Build the binary to a scratch path and, in a throwaway `.tick` project, produce real `--toon` output for a task carrying type, parent (rendered as `parent`), tags, refs, one note and a multi-line description plus one blocker and no children; copy it into `README.md:429-450` verbatim. The target shape is in Context.
+1. Build the binary to a scratch path and, in a throwaway `.tick` project, produce real `--toon` output for a task carrying type, tags, refs, one note and a multi-line description plus one blocker and no children; copy it into `README.md:429-450` verbatim. The target shape is in Context and the captured output must match it field for field — the sample task has no parent, so the document carries no `parent` line.
 2. `README.md:396-401` — correct the empty-type row of the `tick list` sample to `tick-d5c6,Update docs,open,3,""`.
 3. Leave the dep-tree sample (`README.md:302-307`) and the transition and cascade samples (`README.md:473-504`) alone — they are corrected by the phases that change them.
 4. `internal/cli/readme_samples_test.go` (new file) — add `TestREADMEToonSamplesDecode`: locate `README.md` via `testutil.FindRepoRoot(t)`, collect every fenced block with an empty info string, strip a leading `$ tick …` prompt line from each, index the blocks by their first remaining line, then for each anchor in `{"tasks[3]{id,title,status,priority,type}:", "tasks[2]{id,title,status,priority,type}:", "id: tick-a1b2"}` fail if no block carries it and fail if `toon.DecodeString` rejects that block.
 
 **Acceptance Criteria**:
 - [ ] The `tick show` sample was copied from real tool output, not hand-written, and its section order is head fields, `blocked_by`, `children`, `tags`, `refs`, `notes`, `description`
-- [ ] The sample's head is top-level named fields with no `task` key and no `[1]`
+- [ ] The sample's head is the top-level named fields `id`, `title`, `status`, `priority`, `type`, `created`, `updated` — no `task` key, no `[1]` and no `parent` line, matching the target shape in Context
 - [ ] `tags` and `refs` in the sample are inline lists, and the refs URL is quoted as the encoder quotes it
 - [ ] The sample's `description` is one quoted value with `\n` escapes, not an indented block
 - [ ] The sample's notes table header is `notes[1]{index,text,created}:` and its row starts with `1`
