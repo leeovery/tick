@@ -100,7 +100,7 @@
           "task_list_gate_mode": "auto",
           "author_gate_mode": "auto",
           "finding_gate_mode": "auto",
-          "review_cycle": 7,
+          "review_cycle": 8,
           "phase": 7,
           "task": null,
           "task_map": {
