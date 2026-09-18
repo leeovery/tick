@@ -381,7 +381,7 @@
 5. Record the sweep's result with two greps that can be re-run: `grep -rn 'Contains(stdout, "task{\|Contains(stdout, "tasks\[\|Contains(stdout, "changed\[\|Contains(stdout, "dep_tree\[\|Contains(stdout, "summary{' internal/cli/*_test.go` returns nothing, and `grep -rn '"\[\]"' internal/cli/*_test.go` returns nothing.
 
 **Acceptance Criteria**:
-- [ ] No toon or JSON test compares a whole rendered document against a string literal
+- [ ] No toon or JSON test compares a whole rendered document against a string literal, apart from the count-zero section headers retained below — `FormatTaskList(nil)` compared against `tasks[0]{id,title,status,priority,type}:` is one of them
 - [ ] Format detection in `format_integration_test.go` works by decoding and checking a key rather than by matching a section header
 - [ ] The empty toon list is asserted by decoding to an empty `tasks` list
 - [ ] The empty JSON list is asserted by unmarshalling to a non-nil zero-length slice

@@ -63,7 +63,8 @@ Carry the exception into the criterion, as the phase acceptance already does, an
 - [ ] No toon or JSON test compares a whole rendered document against a string literal, apart from the count-zero section headers retained below — `FormatTaskList(nil)` compared against `tasks[0]{id,title,status,priority,type}:` is one of them
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-6-6` (tick-f9b5f3) in both the task detail file and the tick store.
 **Notes**:
 
 ---
