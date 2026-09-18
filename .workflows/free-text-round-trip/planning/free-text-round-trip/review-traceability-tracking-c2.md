@@ -30,8 +30,8 @@ Replace the Context's final paragraph with the same shape Phase 1 task `free-tex
 **Spec Reference**: `.workflows/free-text-round-trip/specification/free-text-round-trip/specification.md` §12.1, §12.2, §7.2, §7.6, §4.1, §4.2
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-2-6` (tick-477df7) — Context's final paragraph replaced with the bounded form and §12.2 added to the Spec Reference, in both the task detail file and the tick store.
 
 ---
 
