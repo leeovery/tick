@@ -126,7 +126,7 @@ status: draft
 **Acceptance**:
 - [ ] `--` is accepted on every command as the end-of-flags marker; nothing after it is read as a flag, including an argument that spells a global flag exactly
 - [ ] `tick create -- "- title"` and `tick note add <id> "- text"` both succeed, and dash-leading note text that is not itself a global flag works with or without the marker
-- [ ] Every invocation that works today produces identical output and exit status
+- [ ] Every invocation that works today produces identical output and exit status, with one accepted exception recorded in task `free-text-round-trip-5-1`: `tick create --description -- x` now reports `--description requires a value`, because a `--` sitting where a value-taking flag's value belongs becomes the marker
 - [ ] `tick migrate` trims edge whitespace from imported titles and descriptions; a whitespace-only value imports as empty and no import fails because of it
 - [ ] Values already in storage are untouched — no pass rewrites stored records, and `show` emits stored bytes unmodified
 - [ ] A permanent fixture task carrying newlines, quotes, commas, a leading dash, trailing spaces on an interior line and a header-shaped line — across title, description and a note — round-trips write → read → decode → write-back with the stored value byte-for-byte what it was

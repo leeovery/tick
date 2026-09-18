@@ -79,8 +79,8 @@ Carry the exception into the criterion, in the words task `free-text-round-trip-
 - [ ] Every invocation that works today produces identical output and exit status, with one accepted exception recorded in task `free-text-round-trip-5-1`: `tick create --description -- x` now reports `--description requires a value`, because a `--` sitting where a value-taking flag's value belongs becomes the marker
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to Phase 5's acceptance list in planning.md — the criterion now carries the accepted exception in task 5-1's words.
 
 ---
 
