@@ -232,9 +232,9 @@
 
 **Do**:
 1. `internal/cli/conformance_test.go` — add three `show` document entries: `--field description,notes` (a multi-field selection), `--field description,notes.2` (narrowed by position), and `--field notes` (a single name of a list section), each seeded on a task carrying a description and two notes.
-2. `internal/cli/conformance_test.go` — add three `NotADocument` entries: `show --field description` (a bare value, §9.2), `show --field tags` on a tag-less task (zero bytes, §9.6), and `show --quiet --field title` (refused, §9.8). Each reason names why the output is not a document.
+2. `internal/cli/conformance_test.go` — add three `NotADocument` entries: `show --field description` (a bare value, §9.2), `show --field parent,closed` on a task carrying neither (zero bytes, §9.6), and `show --quiet --field title` (refused, §9.8). Each reason names why the output is not a document. The zero-byte entry names `parent` and `closed` because those two are the fields every format omits when the task does not carry them; `--field tags` on a tag-less task is zero bytes in toon and pretty but a `{"tags": []}` document in JSON, so it is a document rather than an exemption.
 3. `internal/cli/conformance_test.go` — add `TestFieldSelectionExemptions` seeding one task and asserting `tick show <id> --field description` stdout equals the stored description plus exactly one `"\n"`, with stdout byte-identical under no format flag, `--toon`, `--pretty` and `--json`.
-4. `internal/cli/conformance_test.go` — extend that test: `tick show <id> --field tags` on a tag-less task produces zero bytes and exit 0, and `tick show <id> --quiet --field title` exits non-zero with zero bytes on stdout.
+4. `internal/cli/conformance_test.go` — extend that test: `tick show <id> --field parent,closed` on a task carrying neither produces zero bytes and exit 0 with no format flag, under `--toon`, under `--pretty` and under `--json`, and `tick show <id> --quiet --field title` exits non-zero with zero bytes on stdout.
 5. `internal/cli/conformance_test.go` — add decoded-value subtests for the three filtered documents: the multi-field one carries exactly `notes` and `description`; the narrowed one carries a single-row `notes` list whose `index` decodes as `2`; the list-section one carries `notes` alone.
 
 **Acceptance Criteria**:
@@ -243,7 +243,7 @@
 - [ ] `tick show <id> --field notes --toon` decodes and carries `notes` alone
 - [ ] The bare-value output equals the stored value's bytes followed by exactly one newline
 - [ ] That output is byte-identical with no format flag, with `--toon`, with `--pretty` and with `--json`
-- [ ] A selection whose every name prints nothing produces zero bytes and exits zero
+- [ ] A selection whose every name prints nothing produces zero bytes and exits zero, identically with no format flag, under `--toon`, under `--pretty` and under `--json`
 - [ ] `--quiet` combined with a selection exits non-zero with zero bytes on stdout
 - [ ] The three exemptions are entries in `conformanceDocs` carrying their reasons, not absences
 - [ ] The driver skips them rather than attempting a decode
@@ -255,7 +255,8 @@
 - `"it decodes a single list-section selection document"` — decoded document's only key is `notes`
 - `"it prints a bare value as its bytes plus one newline"` — stdout equals the stored description plus `"\n"`
 - `"it prints the same bare bytes under every format flag"` — the four invocations produce identical stdout
-- `"it prints zero bytes for a selection that renders nothing"` — empty stdout, exit 0
+- `"it prints zero bytes for a selection that renders nothing"` — `--field parent,closed` on a task carrying neither gives empty stdout and exit 0
+- `"it prints zero bytes in every format for a selection that renders nothing"` — the four invocations all give empty stdout and exit 0
 - `"it refuses quiet alongside a selection"` — exit non-zero, empty stdout
 - `"it declares the bare value exempt in the inventory"` — the entry exists with a non-empty reason
 - `"it declares the zero-byte selection exempt in the inventory"` — same
@@ -265,6 +266,7 @@
 - A multi-field selection and a position-narrowed selection are documents and belong in the table; a bare value and a zero-byte selection are §3.1's two exemptions
 - The bare-value assertion compares exact bytes including the single terminating newline, and holds identically under `--json`, `--pretty` and `--toon` because a bare value never reaches a formatter
 - A selection whose every name prints nothing produces zero bytes — that is nothing rather than an empty document, so there is no document to decode and no `{}` to parse
+- The exempt selection has to print nothing in *every* format: `parent` and `closed` are omitted when absent in toon, JSON and pretty alike, while `--field tags` on a tag-less task is zero bytes in toon and pretty and a `{"tags": []}` document in JSON, because JSON always carries a selected `tags` as `[]` (task `free-text-round-trip-4-4`)
 - The exemptions are declared in the inventory with their reasons rather than being absent from it, so the table reads as a complete account of the tool's output
 - A single name of a list section is a document, not a bare value, so it belongs in the table beside the multi-field form
 - `--quiet` with a selection is refused, so it produces no document and no bare value either; it is declared for the same reason the other two are

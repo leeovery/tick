@@ -68,8 +68,8 @@ Swap the zero-byte exemption's example from `--field tags` on a tag-less task to
 ...
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-6-4` (tick-ae3897) — zero-byte exemption swapped to `--field parent,closed`, four-format criterion and test added, and the tags-is-a-document-in-JSON reason recorded in Do step 2 and Edge Cases. Landed in both the task detail file and the tick store.
 
 ---
 
