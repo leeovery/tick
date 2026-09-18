@@ -99,8 +99,8 @@ State the field's content where the struct is declared. The plan settles the spe
 1. `internal/cli/conformance_test.go` (new file) — declare `type conformanceDoc struct { Name string; Command string; Setup func(t *testing.T) (dir string, args []string); NotADocument string }` and `var conformanceDocs = []conformanceDoc{}`. `Command` is the fully-qualified command name exactly as `commandFlags` spells it — `list`, `show`, `dep tree`, `note add` — carrying no arguments and no flags, because task `free-text-round-trip-6-3`'s coverage guard matches it against that map's keys; `Setup` seeds a project and returns its directory plus the arguments that follow `tick`; `NotADocument` holds the reason an entry's output is not a document, and an entry carrying one carries no `Setup`.
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-6-1` (tick-25fabf) in both the task detail file and the tick store. All 38 stored tasks were then diffed against their detail files — no mismatches remain.
 
 ---
 
