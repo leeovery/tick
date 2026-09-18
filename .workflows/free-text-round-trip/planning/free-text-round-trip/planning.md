@@ -48,6 +48,17 @@ status: draft
 - [ ] Pretty's single transition line and box-drawing cascade tree are byte-identical to before the change
 - [ ] README's arrow transition, JSON transition and cascade samples match real output
 
+#### Tasks
+
+| Internal ID | Name | Edge Cases |
+|-------------|------|------------|
+| free-text-round-trip-2-1 | Collapse a command's status movements into one changed set | a task moved twice by two cascades collapses to one row reading pre-command to post-command status, a task that ends where it started carries no row, every row auto=true when the caller asked for no status change, deterministic row order, an empty set is valid, pretty's tree inputs (head row, ParentID links) survive alongside the flat rows |
+| free-text-round-trip-2-2 | Status commands emit the changed table in toon | a single transition with no cascades still renders a one-row table never a bare line, toon and pretty stop being byte-identical so the base-formatter equality assertion goes, a title containing a comma is library-quoted, auto renders as an unquoted boolean, quiet mode still prints nothing |
+| free-text-round-trip-2-3 | JSON status output becomes the changed list | `changed` is `[]` and never null, `auto` is a JSON boolean, the `transition` and `cascaded` keys disappear entirely, single-transition and cascade branches produce one shape |
+| free-text-round-trip-2-4 | The detail document carries a changed section | no section versus an always-present count-0 section must be distinguishable (nil versus empty), pretty's detail plus trailing transition line/tree stays byte-identical including blank-line spacing, the section's position in document order is fixed once and identical for create and update, JSON stops emitting a second top-level document |
+| free-text-round-trip-2-5 | create and update emit one document | update's Rule 6 and Rule 3 blocks collapse into one table including when they meet on a shared ancestor, a shared ancestor that ends where it started carries no row, create with no parent carries `changed[0]`, quiet mode still prints only the task ID, pretty byte-identical with both blocks in today's order |
+| free-text-round-trip-2-6 | README transition and cascade samples match real output | the `(unchanged)` marker in both the toon and pretty cascade samples was never implemented and goes rather than being reproduced, the pretty column stays a tree corrected to real output, sample rows must carry the new title column |
+
 ### Phase 3: Stats and dependency-tree documents
 status: draft
 
