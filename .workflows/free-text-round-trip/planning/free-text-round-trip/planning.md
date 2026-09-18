@@ -20,6 +20,17 @@ status: draft
 - [ ] README's `tick show` sample matches real output, and the `tick list` sample's empty-type row shows the quoted empty string the formatter emits
 - [ ] Toon and JSON assertions for this document check decoded values rather than output text
 
+#### Tasks
+
+| Internal ID | Name | Edge Cases |
+|-------------|------|------------|
+| free-text-round-trip-1-1 | Task fields become top-level named fields | task carrying none of type/parent/closed (presence rules unchanged), title containing a comma/colon/leading dash, timestamps emitted quoted, marshal-error fallback, blank-line section joining must still decode |
+| free-text-round-trip-1-2 | Tags and refs use the library's inline list form | ref containing a comma decodes back as one value, tag containing a space, URL colon quoted by the library, single-item list, empty tags/refs still omit their section entirely |
+| free-text-round-trip-1-3 | Description becomes one TOON-quoted value | blank lines inside the text, interior lines with leading spaces, a header-shaped line ("Steps:"), leading dash, embedded double quotes/tabs/CR, empty description still omits the section, decoded value byte-identical to the stored value |
+| free-text-round-trip-1-4 | Notes carry a 1-based index column | count-zero header carries the index column, multi-line note text stays library-quoted, index matches the 1-based addressing `note remove` takes |
+| free-text-round-trip-1-5 | Detail-document assertions check decoded values | pretty's golden-string assertions must stay in place, JSON full-document golden blobs in create/update/note tests, assertions on sections whose shape did not change |
+| free-text-round-trip-1-6 | README samples match real output | list sample's empty type renders as a quoted empty string, show sample's section order must match the formatter's real order |
+
 ### Phase 2: Status changes become one `changed` table
 status: draft
 
