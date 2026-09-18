@@ -147,8 +147,8 @@ The duplicate question is settled by the plan's own convention rather than left 
 ...
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-4-6` (tick-377527) — Do step 5, two acceptance criteria and three tests, in both the task detail file and the tick store.
 
 ---
 

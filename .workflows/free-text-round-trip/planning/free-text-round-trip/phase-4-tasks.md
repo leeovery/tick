@@ -395,15 +395,15 @@
 2. `internal/cli/toon_formatter.go` — thread `detail.Fields.Positions(name)` into the notes, `blocked_by`, `children`, `tags` and `refs` sections: build each from `selectedItems`, and set each note row's `Index` from the returned position rather than from its loop counter.
 3. `internal/cli/json_formatter.go` — in the filtered map path, narrow `notes`, `blocked_by`, `children`, `tags` and `refs` through `selectedItems`, taking each note object's `index` from the returned position.
 4. `internal/cli/pretty_formatter.go` — narrow the `Blocked by`, `Children`, `Refs`, `Notes` and `Tags` renderings through `selectedItems`, discarding the positions since pretty renders no index.
-5. `internal/cli/show_fields.go` — extend `bareFieldValue`: a single name that is `notes`, `tags` or `refs` with exactly one selected position resolves to that item's value (a note's text, a tag, a ref); `children` and `blocked_by` never resolve bare, and a name with more than one position never resolves bare.
+5. `internal/cli/show_fields.go` — extend `bareFieldValue`: a single name that is `notes`, `tags` or `refs` with exactly one selected position — counted after duplicate positions collapse, mirroring §9.1's rule that a repeated name counts once toward the one-versus-several split — resolves to that item's value (a note's text, a tag, a ref); `children` and `blocked_by` never resolve bare, and a name carrying two or more distinct positions never resolves bare.
 
 **Acceptance Criteria**:
 - [ ] `--field notes.2` inside a multi-field selection renders `notes[1]{index,text,created}:` with one row whose `index` decodes as `2`
 - [ ] The narrowed section's count follows the selection while each note row carries its real position
-- [ ] `--field tags.2` renders `tags[1]: <second tag>` — an inline list keeping its count and one item
+- [ ] `--field title,tags.2` renders `tags[1]: <second tag>` — an inline list keeping its count and one item
 - [ ] `--field children.1` renders the `children` table header and one row
 - [ ] `--field notes.1,notes.3` renders two rows with indexes `1` and `3`, and `--field notes.3,notes.1` renders the same two rows in the same order
-- [ ] A repeated position renders once
+- [ ] `--field title,notes.2,notes.2` renders one row, and `--field notes.2,notes.2` alone collapses to one position and prints the note's text bare
 - [ ] `--field notes,notes.2` renders the whole notes section
 - [ ] A position narrows only the section it names — every other selected field comes back whole
 - [ ] `--field notes.2` alone prints the note's text bare with one terminating newline
@@ -413,12 +413,12 @@
 - [ ] `go test ./...`, `go vet ./...` and `gofmt -l ./internal ./cmd` are clean
 
 **Tests**:
-- `"it narrows the notes section to one position"` — decoded `notes` has one row
+- `"it narrows the notes section to one position"` — `--field description,notes.2` decodes with `notes` carrying one row
 - `"it keeps the real index on a narrowed note"` — that row's `index` decodes as `2`
-- `"it narrows an inline list to one item"` — decoded `tags` has one element equal to the second stored tag
+- `"it narrows an inline list to one item"` — `--field title,tags.2` decodes with `tags` carrying one element equal to the second stored tag
 - `"it narrows a table to one row"` — decoded `children` has one row equal to the first child
 - `"it narrows to several positions in output order"` — `notes.3,notes.1` decodes to indexes `1` then `3`
-- `"it collapses a repeated position"` — `notes.2,notes.2` decodes to one row
+- `"it collapses a repeated position"` — `--field title,notes.2,notes.2` decodes to one row, and `--field notes.2,notes.2` alone prints the note's text bare
 - `"it returns the whole section when named both whole and by position"` — `notes,notes.2` decodes to every note
 - `"it leaves other selected fields whole"` — `--field notes.2,tags` decodes with one note and every tag
 - `"it prints a note's text bare for a lone position"` — `--field notes.2` stdout equals that note's text plus `"\n"`
