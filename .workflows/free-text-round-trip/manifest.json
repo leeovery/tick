@@ -100,7 +100,7 @@
           "task_list_gate_mode": "auto",
           "author_gate_mode": "auto",
           "finding_gate_mode": "gated",
-          "review_cycle": 0,
+          "review_cycle": 1,
           "phase": 7,
           "task": null,
           "task_map": {
@@ -164,7 +164,10 @@
             }
           },
           "staging": {},
-          "external_id": "tick-1fe74e"
+          "external_id": "tick-1fe74e",
+          "tracking": {
+            "review-traceability-tracking-c1": "in-progress"
+          }
         }
       }
     }
