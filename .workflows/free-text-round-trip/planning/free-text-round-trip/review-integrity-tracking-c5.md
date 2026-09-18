@@ -30,8 +30,8 @@ Keep the true half of the sentence and replace the false conclusion with what th
 **Why this order**: It is the case that started the work, and it is a projection of the document Phase 1 defines — the names it accepts are the names that document uses, and the bare form exists only because Phase 1 removed the wrapper. Nothing it projects comes from Phases 2 and 3, since `show` carries no `changed` section — but it follows Phase 2 rather than preceding it, because two of its formatter tasks build on what Phase 2 left: task `free-text-round-trip-4-3` gates the `changed` section task `free-text-round-trip-2-4` added to the toon detail document, and task `free-text-round-trip-4-5` restructures the pretty detail around the cascade tail that same task appended. It lands once every document it could project is conformant.
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to Phase 4's "Why this order" in planning.md.
 
 ---
 

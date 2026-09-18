@@ -91,7 +91,7 @@ status: draft
 
 **Goal**: `tick show --field`/`--fields` returns one field's value bare with nothing around it, or a document carrying only the named sections, with list sections addressable by position.
 
-**Why this order**: It is the case that started the work, and it is a projection of the document Phase 1 defines — the names it accepts are the names that document uses, and the bare form exists only because Phase 1 removed the wrapper. It depends on nothing from Phases 2 and 3, since `show` carries no `changed` section, so it follows once every document it could project is conformant.
+**Why this order**: It is the case that started the work, and it is a projection of the document Phase 1 defines — the names it accepts are the names that document uses, and the bare form exists only because Phase 1 removed the wrapper. Nothing it projects comes from Phases 2 and 3, since `show` carries no `changed` section — but it follows Phase 2 rather than preceding it, because two of its formatter tasks build on what Phase 2 left: task `free-text-round-trip-4-3` gates the `changed` section task `free-text-round-trip-2-4` added to the toon detail document, and task `free-text-round-trip-4-5` restructures the pretty detail around the cascade tail that same task appended. It lands once every document it could project is conformant.
 
 **Acceptance**:
 - [ ] `--field` and `--fields` are registered against `show` alone with matching help text, and the flag/help drift test passes
