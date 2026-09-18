@@ -75,6 +75,17 @@ status: draft
 - [ ] No code path anywhere in the formatter strips a count from a section header
 - [ ] README's dep-tree summary sample matches real output
 
+#### Tasks
+
+| Internal ID | Name | Edge Cases |
+|-------------|------|------------|
+| free-text-round-trip-3-1 | Stats counts become top-level named fields | a zero count must still be emitted (no omitempty), a project with no tasks emits all-zero counts plus by_priority's five rows, by_priority's shape and order unchanged, decoded numbers arrive as float64, no `stats` key in the decoded document, pretty and JSON stats unchanged |
+| free-text-round-trip-3-2 | The full dep-tree summary becomes top-level named fields | zero-valued summary fields still emitted, no `summary` key in the decoded document, `DepTreeResult.Summary` prose stays for pretty, the emptied form is unreachable through the handler until task 4 so it is unit-tested on the formatter, `encodeToonSingleObject` deleted and no code path strips a count from a header |
+| free-text-round-trip-3-3 | The focused dep tree names its task on both branches | the hand-built `id  title (status)` line and the `No dependencies.` early return go, both `blocked_by` and `blocks` always present with count-zero headers (changes today's omit-when-empty rule on the populated branch), the no-dependencies branch is the populated document emptied, a comma-bearing title or ID quoted by the library, pretty's focused view byte-identical |
+| free-text-round-trip-3-4 | Nothing blocked anywhere returns the emptied document | pretty returns `""` for zero roots today and must be handed its sentence explicitly, pretty stdout byte-identical, a dependency cycle leaves zero roots with non-zero blocked/chains so counts are real not forced zeros, the dead `result.Message` guard in `ToonFormatter.FormatDepTree` goes, empty project and unconnected-tasks project both take the branch, `--quiet` prints nothing |
+| free-text-round-trip-3-5 | JSON dep-tree documents drop their message forms | `roots`/`blocked_by`/`blocks` are `[]` never null, `omitempty` comes off both direction fields, `message` disappears from both dep-tree branches while `FormatMessage` stays for the prose commands, JSON's nested `target` is not flattened, `mode` stays |
+| free-text-round-trip-3-6 | README dep-tree sample matches real output | the `summary{…}:` block becomes top-level `chains`/`longest`/`blocked` lines, sample copied from real output, the pretty companion block and its prose stay, the dep-tree sample is added as an anchor to `TestREADMEToonSamplesDecode`, no `tick stats` sample exists so none is added, earlier phases' samples untouched |
+
 ### Phase 4: Field selection on `show`
 status: draft
 
