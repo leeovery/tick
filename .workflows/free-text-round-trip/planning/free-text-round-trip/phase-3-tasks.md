@@ -325,7 +325,7 @@
 >
 > §3.2 keeps the prose exemption alive for other commands: "`dep add`, `dep remove`, `remove`, `init`, and the general-purpose messages… These are confirmations of a command the caller issued." `FormatMessage` is their renderer and stays.
 >
-> §11: "Rewritten assertions check decoded values, not output text," and "JSON output for each listed command is parsed and asserted by decoded value" — the rewritten subtests unmarshal rather than matching strings.
+> §11: "Rewritten assertions check decoded values, not output text," and "**No byte-level pinning is kept in the machine formats.** … That trade is taken for toon and JSON" — the rewritten subtests unmarshal rather than matching strings.
 >
 > The JSON formatter already treats empty collections this way elsewhere: `toJSONRelated` documents that it "Always returns a non-nil empty slice to ensure JSON `[]` instead of `null`", and `toJSONDepTreeNodes` is built the same way. The defect is the `len(...)` guards and the `omitempty` tags around it, not the converter.
 

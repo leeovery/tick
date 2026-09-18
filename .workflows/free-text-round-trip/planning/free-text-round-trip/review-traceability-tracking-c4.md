@@ -80,8 +80,8 @@ Site 5 — `phase-6-tasks.md`, task `free-text-round-trip-6-5`, Context, final p
 > §11's enumerated parse coverage is stated over a TOON reader — "Every structured command's output is decoded by a real TOON reader in the suite" — and the specification nowhere enumerates the same coverage for JSON. Running the whole inventory under `--json` is this task's extension of it, taken because §4.2 requires a JSON consumer to get the same structured answer as a TOON one, because §11's no-pinning trade is taken "for toon and JSON", and because §7.4's "the stream must be one document" is a property nothing else checks document by document. The specification does not fix the shape of the check either. "Exactly one JSON value, then EOF" is chosen because the top-level shape is not uniform — `FormatTaskList` marshals an array while every other document marshals an object — and the property §7.4 actually requires is that the stream holds one document, not that it holds an object.
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim across all five sites in `free-text-round-trip-3-5`, `free-text-round-trip-4-4` and `free-text-round-trip-6-5`, in both the task detail files and the tick store. No Do step, acceptance criterion or test changed.
 
 ---
 

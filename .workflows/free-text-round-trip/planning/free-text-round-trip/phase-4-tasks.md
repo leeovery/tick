@@ -310,7 +310,7 @@
 >
 > §4.2: "Each note also carries its 1-based index, for the reason the toon table does (§6.3): a consumer that asked for one note (§9.3) needs the note's real position before it can call `note remove`, and that need is the same whichever format it parses."
 >
-> §11: "JSON output for each listed command is parsed and asserted by decoded value" and "No byte-level pinning is kept in the machine formats."
+> §11: "Rewritten assertions check decoded values, not output text" and "**No byte-level pinning is kept in the machine formats.** … That trade is taken for toon and JSON."
 >
 > The specification fixes that filtered JSON carries exactly the selected keys but says nothing about their order beyond the keys themselves; it is an open point. A `map[string]any` is chosen because it is the only shape that expresses both "only these keys" and "selected but empty", and Go's sorted map-key marshalling gives a deterministic order. Filtered key order therefore differs from unfiltered struct order, which the specification neither requires nor forbids.
 

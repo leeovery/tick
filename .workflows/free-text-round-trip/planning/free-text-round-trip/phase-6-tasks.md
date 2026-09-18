@@ -297,7 +297,7 @@
 
 ### Task 5: JSON output is parsed and asserted by decoded value
 
-**Problem**: §11 requires JSON output for each listed command to be parsed and asserted by decoded value, and §4.2 requires a JSON consumer to get the same structured answer as a TOON one. Today each command's JSON assertions sit beside its toon ones, so the two coverages are maintained by hand and drift: a branch added to the toon table has no JSON counterpart unless someone remembers to write one. JSON also carries invariants toon does not have and that nothing checks across the board — a list unmarshalling to `null` instead of `[]`, an `auto` rendered as a quoted string rather than a boolean, and a second document concatenated after the first, which is exactly what `create` emitted before Phase 2 folded the transition output into the record.
+**Problem**: §11 takes its no-byte-level-pinning trade for toon and JSON alike and requires every rewritten assertion to check decoded values rather than output text, and §4.2 requires a JSON consumer to get the same structured answer as a TOON one. Today each command's JSON assertions sit beside its toon ones, so the two coverages are maintained by hand and drift: a branch added to the toon table has no JSON counterpart unless someone remembers to write one. JSON also carries invariants toon does not have and that nothing checks across the board — a list unmarshalling to `null` instead of `[]`, an `auto` rendered as a quoted string rather than a boolean, and a second document concatenated after the first, which is exactly what `create` emitted before Phase 2 folded the transition output into the record.
 
 **Solution**: Run the same inventory under `--json` through a second driver that parses each document with `encoding/json`, asserts exactly one value per stream, and checks the invariants that hold across every document, then add decoded-value subtests where JSON's presence rules differ from toon's and cannot be copied across.
 
@@ -347,7 +347,7 @@
 - Pretty is in neither driver because it has no parser, and its assertions stay golden strings
 
 **Context**:
-> §11: "JSON output for each listed command is parsed and asserted by decoded value." And: "Rewritten assertions check decoded values, not output text."
+> §11: "Rewritten assertions check decoded values, not output text." And: "**No byte-level pinning is kept in the machine formats.** … Decoded-value assertions survive harmless reformatting while still failing when a section goes missing or a value is wrong. That trade is taken for toon and JSON."
 >
 > §4.2: "A consumer parsing JSON gets the same structured answer as one parsing toon: the §7 `changed` list in place of the current `transition` object beside a `cascaded` list, and the §8 structured empty dep-tree form in place of today's English sentence… Each note also carries its 1-based index, for the reason the toon table does (§6.3)."
 >
@@ -357,7 +357,7 @@
 >
 > `jsonTaskDetail` (`internal/cli/json_formatter.go:58-74`) always carries `type`, `tags`, `refs` and `description` and puts `omitempty` on `parent` and `closed` — presence rules that differ from the toon document's, which omits `type`, `tags`, `refs` and `description` when empty. `toJSONRelated` documents that it "Always returns a non-nil empty slice to ensure JSON `[]` instead of `null`", which is the invariant the walker checks across every list key.
 >
-> The specification says each listed command's JSON is parsed and asserted by decoded value but does not fix the shape of the check. "Exactly one JSON value, then EOF" is chosen because the top-level shape is not uniform — `FormatTaskList` marshals an array while every other document marshals an object — and the property §7.4 actually requires is that the stream holds one document, not that it holds an object.
+> §11's enumerated parse coverage is stated over a TOON reader — "Every structured command's output is decoded by a real TOON reader in the suite" — and the specification nowhere enumerates the same coverage for JSON. Running the whole inventory under `--json` is this task's extension of it, taken because §4.2 requires a JSON consumer to get the same structured answer as a TOON one, because §11's no-pinning trade is taken "for toon and JSON", and because §7.4's "the stream must be one document" is a property nothing else checks document by document. The specification does not fix the shape of the check either. "Exactly one JSON value, then EOF" is chosen because the top-level shape is not uniform — `FormatTaskList` marshals an array while every other document marshals an object — and the property §7.4 actually requires is that the stream holds one document, not that it holds an object.
 
 **Spec Reference**: `.workflows/free-text-round-trip/specification/free-text-round-trip/specification.md` §11, §4.2, §7.4, §3.1
 
