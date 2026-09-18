@@ -90,12 +90,12 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 
 	// Section 4: tags (omitted when empty)
 	if len(detail.Tags) > 0 {
-		sections = append(sections, buildTagsSection(detail.Tags))
+		sections = append(sections, encodeToonSection("tags", detail.Tags))
 	}
 
 	// Section 5: refs (omitted when empty)
 	if len(detail.Refs) > 0 {
-		sections = append(sections, buildRefsSection(detail.Refs))
+		sections = append(sections, encodeToonSection("refs", detail.Refs))
 	}
 
 	// Section 6: notes (always present, even with count 0)
@@ -321,27 +321,6 @@ func buildRelatedSection(name string, related []RelatedTask) string {
 	return encodeToonSection(name, rows)
 }
 
-// buildTagsSection builds the tags section as a TOON array of strings.
-func buildTagsSection(tags []string) string {
-	return buildStringListSection("tags", tags)
-}
-
-// buildRefsSection builds the refs section as a TOON array of strings.
-func buildRefsSection(refs []string) string {
-	return buildStringListSection("refs", refs)
-}
-
-// buildStringListSection builds a named TOON section from a list of strings.
-func buildStringListSection(name string, items []string) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s[%d]:", name, len(items))
-	for _, item := range items {
-		b.WriteString("\n  ")
-		b.WriteString(item)
-	}
-	return b.String()
-}
-
 // buildNotesSection builds the notes section as a TOON tabular section.
 func buildNotesSection(notes []task.Note) string {
 	if len(notes) == 0 {
@@ -369,8 +348,8 @@ func buildDescriptionSection(desc string) string {
 	return b.String()
 }
 
-// encodeToonSection encodes an array of structs as a TOON tabular section using toon-go.
-// It wraps the rows in a named field, marshals via toon-go, and returns the result.
+// encodeToonSection encodes a slice as a named TOON section using toon-go: structs
+// become a tabular section, scalars an inline list. Quoting is the encoder's.
 func encodeToonSection[T any](name string, rows []T) string {
 	// Build an Object with the named array field
 	obj := toon.NewObject(toon.Field{Key: name, Value: rows})

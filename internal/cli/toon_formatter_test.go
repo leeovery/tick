@@ -471,10 +471,9 @@ func TestToonFormatter(t *testing.T) {
 		assertToonKeysAbsent(t, doc, "type")
 	})
 
-	t.Run("it displays tags in toon format show output", func(t *testing.T) {
-		f := &ToonFormatter{}
+	detailWith := func(tags, refs []string) TaskDetail {
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
-		detail := TaskDetail{
+		return TaskDetail{
 			Task: task.Task{
 				ID:       "tick-a1b2",
 				Title:    "Tagged task",
@@ -483,92 +482,73 @@ func TestToonFormatter(t *testing.T) {
 				Created:  now,
 				Updated:  now,
 			},
-			Tags:      []string{"backend", "ui"},
+			Tags:      tags,
+			Refs:      refs,
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
-		// tags section should appear with count and values
-		if !strings.Contains(result, "tags[2]:") {
-			t.Errorf("should contain 'tags[2]:', got:\n%s", result)
+	}
+
+	t.Run("it emits tags as an inline list that decodes to the stored tags", func(t *testing.T) {
+		f := &ToonFormatter{}
+		tags := []string{"backend", "ui"}
+		result := f.FormatTaskDetail(detailWith(tags, nil))
+		if !strings.Contains(result, "tags[2]: backend,ui") {
+			t.Errorf("should contain inline tags list, got:\n%s", result)
 		}
-		if !strings.Contains(result, "  backend") {
-			t.Errorf("should contain indented 'backend', got:\n%s", result)
-		}
-		if !strings.Contains(result, "  ui") {
-			t.Errorf("should contain indented 'ui', got:\n%s", result)
-		}
+		assertToonStringList(t, decodeToonDoc(t, result), "tags", tags)
 	})
 
-	t.Run("it omits tags section in toon format when task has no tags", func(t *testing.T) {
+	t.Run("it keeps a ref containing a comma as one element", func(t *testing.T) {
 		f := &ToonFormatter{}
-		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
-		detail := TaskDetail{
-			Task: task.Task{
-				ID:       "tick-a1b2",
-				Title:    "Simple task",
-				Status:   task.StatusOpen,
-				Priority: 2,
-				Created:  now,
-				Updated:  now,
-			},
-			BlockedBy: []RelatedTask{},
-			Children:  []RelatedTask{},
-		}
-		result := f.FormatTaskDetail(detail)
-		if strings.Contains(result, "tags[") || strings.Contains(result, "tags:") {
-			t.Errorf("should not contain tags section when empty, got:\n%s", result)
-		}
+		refs := []string{"https://x.dev/a?b=1,2"}
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(nil, refs)))
+		assertToonStringList(t, doc, "refs", refs)
 	})
 
-	t.Run("it displays refs in toon show output", func(t *testing.T) {
+	t.Run("it keeps a tag containing a space as one element", func(t *testing.T) {
 		f := &ToonFormatter{}
-		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
-		detail := TaskDetail{
-			Task: task.Task{
-				ID:       "tick-a1b2",
-				Title:    "Task with refs",
-				Status:   task.StatusOpen,
-				Priority: 2,
-				Created:  now,
-				Updated:  now,
-			},
-			Refs:      []string{"gh-123", "JIRA-456"},
-			BlockedBy: []RelatedTask{},
-			Children:  []RelatedTask{},
-		}
-		result := f.FormatTaskDetail(detail)
-		// refs section should appear with count and values
-		if !strings.Contains(result, "refs[2]:") {
-			t.Errorf("should contain 'refs[2]:', got:\n%s", result)
-		}
-		if !strings.Contains(result, "  gh-123") {
-			t.Errorf("should contain indented 'gh-123', got:\n%s", result)
-		}
-		if !strings.Contains(result, "  JIRA-456") {
-			t.Errorf("should contain indented 'JIRA-456', got:\n%s", result)
-		}
+		tags := []string{"has space", "plain"}
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(tags, nil)))
+		assertToonStringList(t, doc, "tags", tags)
 	})
 
-	t.Run("it omits refs section in toon format when task has no refs", func(t *testing.T) {
+	t.Run("it quotes a ref containing a URL colon", func(t *testing.T) {
 		f := &ToonFormatter{}
-		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
-		detail := TaskDetail{
-			Task: task.Task{
-				ID:       "tick-a1b2",
-				Title:    "Simple task",
-				Status:   task.StatusOpen,
-				Priority: 2,
-				Created:  now,
-				Updated:  now,
-			},
-			BlockedBy: []RelatedTask{},
-			Children:  []RelatedTask{},
+		refs := []string{"https://x.dev/issues/3", "JIRA-456"}
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(nil, refs)))
+		assertToonStringList(t, doc, "refs", refs)
+	})
+
+	t.Run("it emits a single-item refs list", func(t *testing.T) {
+		f := &ToonFormatter{}
+		refs := []string{"gh-123"}
+		result := f.FormatTaskDetail(detailWith(nil, refs))
+		if !strings.Contains(result, "refs[1]: gh-123") {
+			t.Errorf("should contain single-item inline refs list, got:\n%s", result)
 		}
-		result := f.FormatTaskDetail(detail)
-		if strings.Contains(result, "refs[") || strings.Contains(result, "refs:") {
-			t.Errorf("should not contain refs section when empty, got:\n%s", result)
-		}
+		assertToonStringList(t, decodeToonDoc(t, result), "refs", refs)
+	})
+
+	t.Run("it omits the tags section when the task has no tags", func(t *testing.T) {
+		f := &ToonFormatter{}
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(nil, []string{"gh-123"})))
+		assertToonKeysAbsent(t, doc, "tags")
+	})
+
+	t.Run("it omits the refs section when the task has no refs", func(t *testing.T) {
+		f := &ToonFormatter{}
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith([]string{"backend"}, nil)))
+		assertToonKeysAbsent(t, doc, "refs")
+	})
+
+	t.Run("it decodes the whole document when both tags and refs are present", func(t *testing.T) {
+		f := &ToonFormatter{}
+		tags := []string{"has space", "backend"}
+		refs := []string{"https://x.dev/a?b=1,2", "PR #3"}
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(tags, refs)))
+		assertToonStringList(t, doc, "tags", tags)
+		assertToonStringList(t, doc, "refs", refs)
 	})
 
 	t.Run("it includes type, parent and closed when the task carries them", func(t *testing.T) {

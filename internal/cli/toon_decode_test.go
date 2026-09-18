@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"slices"
 	"testing"
 
 	toon "github.com/toon-format/toon-go"
@@ -41,5 +42,28 @@ func assertToonKeysAbsent(t *testing.T, doc map[string]any, keys ...string) {
 		if _, ok := doc[key]; ok {
 			t.Errorf("key %q should be absent from decoded document", key)
 		}
+	}
+}
+
+func assertToonStringList(t *testing.T, doc map[string]any, key string, want []string) {
+	t.Helper()
+	raw, ok := doc[key]
+	if !ok {
+		t.Fatalf("key %q missing from decoded document", key)
+	}
+	items, ok := raw.([]any)
+	if !ok {
+		t.Fatalf("key %q = %#v, want a list", key, raw)
+	}
+	got := make([]string, 0, len(items))
+	for i, item := range items {
+		s, ok := item.(string)
+		if !ok {
+			t.Fatalf("key %q item %d = %#v, want a string", key, i, item)
+		}
+		got = append(got, s)
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("key %q = %#v, want %#v", key, got, want)
 	}
 }
