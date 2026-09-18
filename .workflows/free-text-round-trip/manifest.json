@@ -102,7 +102,7 @@
           "finding_gate_mode": "gated",
           "review_cycle": 0,
           "phase": 6,
-          "task": null,
+          "task": "free-text-round-trip-6-1",
           "task_map": {
             "free-text-round-trip-1-1": "tick-36cfbf",
             "free-text-round-trip-1": "tick-063549",
@@ -152,7 +152,8 @@
               "p2": "2026-09-18",
               "p3": "2026-09-18",
               "p4": "2026-09-18",
-              "p5": "2026-09-18"
+              "p5": "2026-09-18",
+              "p6": "2026-09-18"
             }
           },
           "staging": {},
