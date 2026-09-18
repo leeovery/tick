@@ -103,7 +103,7 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 
 	// Section 7: description (omitted when empty)
 	if detail.Task.Description != "" {
-		sections = append(sections, buildDescriptionSection(detail.Task.Description))
+		sections = append(sections, encodeToonFields(toon.Field{Key: "description", Value: detail.Task.Description}))
 	}
 
 	return joinToonSections(sections)
@@ -334,18 +334,6 @@ func buildNotesSection(notes []task.Note) string {
 		}
 	}
 	return encodeToonSection("notes", rows)
-}
-
-// buildDescriptionSection builds the description section with indented lines.
-func buildDescriptionSection(desc string) string {
-	var b strings.Builder
-	b.WriteString("description:")
-	lines := strings.SplitSeq(desc, "\n")
-	for line := range lines {
-		b.WriteString("\n  ")
-		b.WriteString(line)
-	}
-	return b.String()
 }
 
 // encodeToonSection encodes a slice as a named TOON section using toon-go: structs

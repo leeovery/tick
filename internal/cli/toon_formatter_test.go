@@ -11,6 +11,40 @@ import (
 	"github.com/leeovery/tick/internal/task"
 )
 
+// awkwardDescription carries a blank line, a two-space indent, a header-shaped
+// line, a bullet, a double quote, a tab and a carriage return.
+const awkwardDescription = "Fix it.\n\n  indented by two\nSteps:\n- read the header\nHe said \"go\" \there\r\nlast line."
+
+func detailWithDescription(description string) TaskDetail {
+	now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+	return TaskDetail{
+		Task: task.Task{
+			ID:          "tick-a1b2",
+			Title:       "With description",
+			Status:      task.StatusOpen,
+			Priority:    2,
+			Description: description,
+			Created:     now,
+			Updated:     now,
+		},
+		BlockedBy: []RelatedTask{},
+		Children:  []RelatedTask{},
+	}
+}
+
+func assertDescriptionRoundTrip(t *testing.T, description string) {
+	t.Helper()
+	f := &ToonFormatter{}
+	doc := decodeToonDoc(t, f.FormatTaskDetail(detailWithDescription(description)))
+	got, ok := doc["description"].(string)
+	if !ok {
+		t.Fatalf("description = %#v, want a string", doc["description"])
+	}
+	if got != description {
+		t.Errorf("description = %q, want %q", got, description)
+	}
+}
+
 func TestToonFormatter(t *testing.T) {
 	// Compile-time interface verification.
 	var _ Formatter = (*ToonFormatter)(nil)
@@ -115,16 +149,9 @@ func TestToonFormatter(t *testing.T) {
 			t.Errorf("notes section = %q, want %q", sections[3], expectedNotes)
 		}
 		// Section 5: description
-		descLines := strings.Split(sections[4], "\n")
-		if descLines[0] != "description:" {
-			t.Errorf("description header = %q, want %q", descLines[0], "description:")
-		}
-		if descLines[1] != "  Full task description here." {
-			t.Errorf("description line 1 = %q, want %q", descLines[1], "  Full task description here.")
-		}
-		if descLines[2] != "  Can be multiple lines." {
-			t.Errorf("description line 2 = %q, want %q", descLines[2], "  Can be multiple lines.")
-		}
+		assertToonFields(t, decodeToonDoc(t, sections[4]), map[string]any{
+			"description": detail.Task.Description,
+		})
 	})
 
 	t.Run("it omits type, parent and closed when the task does not carry them", func(t *testing.T) {
@@ -179,7 +206,7 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 
-	t.Run("it omits description section when empty", func(t *testing.T) {
+	t.Run("it omits the description section when the description is empty", func(t *testing.T) {
 		f := &ToonFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		detail := TaskDetail{
@@ -195,9 +222,7 @@ func TestToonFormatter(t *testing.T) {
 			Children:  []RelatedTask{},
 		}
 		result := f.FormatTaskDetail(detail)
-		if strings.Contains(result, "description:") {
-			t.Errorf("description section should be omitted when empty, got: %q", result)
-		}
+		assertToonKeysAbsent(t, decodeToonDoc(t, result), "description")
 		// Should have exactly 4 sections (task, blocked_by, children, notes)
 		sections := strings.Split(result, "\n\n")
 		if len(sections) != 4 {
@@ -205,41 +230,79 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 
-	t.Run("it renders multiline description as indented lines", func(t *testing.T) {
+	t.Run("it emits the description as one quoted value", func(t *testing.T) {
+		f := &ToonFormatter{}
+		description := "Line one.\nLine two.\nLine three."
+		result := f.FormatTaskDetail(detailWithDescription(description))
+		sections := strings.Split(result, "\n\n")
+		descSection := sections[len(sections)-1]
+		if strings.Contains(descSection, "\n") {
+			t.Errorf("description section spans multiple lines: %q", descSection)
+		}
+		want := `description: "Line one.\nLine two.\nLine three."`
+		if descSection != want {
+			t.Errorf("description section = %q, want %q", descSection, want)
+		}
+		assertToonFields(t, decodeToonDoc(t, result), map[string]any{"description": description})
+	})
+
+	t.Run("it round-trips blank lines inside the description", func(t *testing.T) {
+		assertDescriptionRoundTrip(t, "Fix it.\n\nSteps.")
+	})
+
+	t.Run("it round-trips interior lines with leading spaces", func(t *testing.T) {
+		assertDescriptionRoundTrip(t, "Fix it.\n  indented by two\nback to the margin.")
+	})
+
+	t.Run("it round-trips a header-shaped line", func(t *testing.T) {
+		description := "Fix it.\nSteps:\nrun the thing."
+		assertDescriptionRoundTrip(t, description)
+		doc := decodeToonDoc(t, (&ToonFormatter{}).FormatTaskDetail(detailWithDescription(description)))
+		assertToonKeysAbsent(t, doc, "Steps")
+	})
+
+	t.Run("it round-trips a line beginning with a dash", func(t *testing.T) {
+		assertDescriptionRoundTrip(t, "Fix it.\n- read the header\n- write it back")
+	})
+
+	t.Run("it round-trips a description beginning with a dash", func(t *testing.T) {
+		assertDescriptionRoundTrip(t, "- read the header\n- write it back")
+	})
+
+	t.Run("it round-trips embedded quotes, tabs and carriage returns", func(t *testing.T) {
+		assertDescriptionRoundTrip(t, "He said \"go\".\ncol\tcol\r\nafter the CR")
+	})
+
+	t.Run("it round-trips an awkward description byte-identically", func(t *testing.T) {
+		assertDescriptionRoundTrip(t, awkwardDescription)
+	})
+
+	t.Run("it decodes the whole document with a description present", func(t *testing.T) {
 		f := &ToonFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		detail := TaskDetail{
 			Task: task.Task{
 				ID:          "tick-a1b2",
-				Title:       "With description",
-				Status:      task.StatusOpen,
-				Priority:    2,
-				Description: "Line one.\nLine two.\nLine three.",
+				Title:       "Everything",
+				Status:      task.StatusInProgress,
+				Priority:    1,
+				Description: awkwardDescription,
 				Created:     now,
 				Updated:     now,
 			},
-			BlockedBy: []RelatedTask{},
-			Children:  []RelatedTask{},
+			BlockedBy: []RelatedTask{{ID: "tick-c3d4", Title: "Migrations", Status: "done"}},
+			Children:  []RelatedTask{{ID: "tick-g7h8", Title: "Config setup", Status: "open"}},
+			Tags:      []string{"backend"},
+			Refs:      []string{"gh-123"},
+			Notes:     []task.Note{{Text: "Started investigating", Created: now}},
 		}
-		result := f.FormatTaskDetail(detail)
-		sections := strings.Split(result, "\n\n")
-		descSection := sections[len(sections)-1]
-		descLines := strings.Split(descSection, "\n")
-		if descLines[0] != "description:" {
-			t.Errorf("description header = %q, want %q", descLines[0], "description:")
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detail))
+		for _, key := range []string{"id", "title", "status", "priority", "created", "updated", "blocked_by", "children", "tags", "refs", "notes"} {
+			if _, ok := doc[key]; !ok {
+				t.Errorf("key %q missing from decoded document", key)
+			}
 		}
-		if len(descLines) != 4 {
-			t.Fatalf("expected 4 description lines (header + 3), got %d: %q", len(descLines), descSection)
-		}
-		if descLines[1] != "  Line one." {
-			t.Errorf("line 1 = %q, want %q", descLines[1], "  Line one.")
-		}
-		if descLines[2] != "  Line two." {
-			t.Errorf("line 2 = %q, want %q", descLines[2], "  Line two.")
-		}
-		if descLines[3] != "  Line three." {
-			t.Errorf("line 3 = %q, want %q", descLines[3], "  Line three.")
-		}
+		assertToonFields(t, doc, map[string]any{"description": awkwardDescription})
 	})
 
 	t.Run("it escapes commas in titles", func(t *testing.T) {
