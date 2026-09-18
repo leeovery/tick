@@ -108,8 +108,8 @@ Correct the count to eight. §3.1's table holds fourteen must-parse commands; `f
 **Problem**: The eight remaining commands in §3.1's must-parse table — `create`, `update`, `note add`, `note remove`, `start`, `done`, `cancel` and `reopen` — produce the documents Phase 2 reshaped, and none is in the inventory.
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-6-3` (tick-6e30b5) — count corrected to eight in both the task detail file and the tick store. The tick copy was also resynced to the approved text after an unapproved sentence was found in it from the traceability c2 apply.
 
 ---
 
