@@ -187,8 +187,10 @@ A TOON reader rejects this — an item on its own line carries a leading `- ` ma
 > §2.2 sets the bar this task is measured against: "Read a value out of `tick show`, write it back unchanged, and the stored value is byte-for-byte what it was."
 >
 > Verified against the project's toon-go version: a string carrying `\n\n`, two-space indentation, `"`, `\t` and `\r\n` encodes to one `description: "…"` line and decodes back byte-identical.
+>
+> §12.2 records that the `v1` / `tick-core` specification is owed a correction on exactly this point: it states "long text fields get their own unstructured sections" as a principle and prints the indented description block as its worked example (`sed -n '693,714p' .workflows/v1/specification/tick-core/specification.md`) — "`tick-core` states as a rule the exact thing §6.2 removes", which is plainly and load-bearingly wrong and is therefore amended rather than left to supersession. That is a completed work unit's artifact: it is corrected through the session's corrigendum route — the amendment presented and confirmed, the wrong claim replaced in place, a dated corrigendum entry recording what the document used to claim, and the document re-indexed — never by this task.
 
-**Spec Reference**: `.workflows/free-text-round-trip/specification/free-text-round-trip/specification.md` §6.2, §2.2, §2.3, §5.2
+**Spec Reference**: `.workflows/free-text-round-trip/specification/free-text-round-trip/specification.md` §6.2, §2.2, §2.3, §5.2, §12.2
 
 ## free-text-round-trip-1-4
 

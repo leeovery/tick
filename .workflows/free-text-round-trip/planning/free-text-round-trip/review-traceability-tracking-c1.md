@@ -32,8 +32,8 @@ Note the owed correction in the Context of `free-text-round-trip-1-3`, the task 
 **Spec Reference**: `.workflows/free-text-round-trip/specification/free-text-round-trip/specification.md` §6.2, §2.2, §2.3, §5.2, §12.2
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-1-3` (tick-a119e7) — Context paragraph added and §12.2 appended to the Spec Reference, in both the task detail file and the tick store. Gate mode set to auto at this finding.
 
 ---
 
