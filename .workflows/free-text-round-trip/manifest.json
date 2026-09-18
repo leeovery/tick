@@ -98,12 +98,15 @@
           "format": "tick",
           "spec_commit": "8a6a9dc5aff3e09b0dbb88610fbc5e1b66ab91fa",
           "task_list_gate_mode": "auto",
-          "author_gate_mode": "gated",
+          "author_gate_mode": "auto",
           "finding_gate_mode": "gated",
           "review_cycle": 0,
           "phase": 1,
-          "task": "free-text-round-trip-1-1",
-          "task_map": {},
+          "task": "free-text-round-trip-1-2",
+          "task_map": {
+            "free-text-round-trip-1-1": "tick-36cfbf",
+            "free-text-round-trip-1": "tick-063549"
+          },
           "storage_paths": [
             ".tick/"
           ],
@@ -112,7 +115,20 @@
             "tasks": {
               "p1": "2026-09-18"
             }
-          }
+          },
+          "staging": {
+            "author-p1": {
+              "tasks": {
+                "free-text-round-trip-1-1": "approved",
+                "free-text-round-trip-1-2": "approved",
+                "free-text-round-trip-1-3": "approved",
+                "free-text-round-trip-1-4": "approved",
+                "free-text-round-trip-1-5": "approved",
+                "free-text-round-trip-1-6": "approved"
+              }
+            }
+          },
+          "external_id": "tick-1fe74e"
         }
       }
     }
