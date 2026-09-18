@@ -152,14 +152,14 @@
 **Outcome**: Every document `create`, `update`, `note add`, `note remove` and the four status commands can produce is decoded by the driver, and `TestConformanceInventoryCoversEveryCommand` fails when a `commandFlags` key is declared nowhere or in two places.
 
 **Do**:
-1. `internal/cli/conformance_test.go` — add the status entries: `start`, `done`, `cancel` and `reopen` each on a childless task with no cascade, plus `done` on a parent with an open child and `reopen` on a done task under a done parent, both of which cascade.
+1. `internal/cli/conformance_test.go` — add the status entries: `start`, `done`, `cancel` and `reopen` each on a childless task with no cascade, plus a cascading document for each of the four — `start` on a child under an open parent (Rule 2 carries the parent to `in_progress`), `done` on a parent with an open child (Rule 4), `cancel` on a parent with an open child (Rule 4), and `reopen` on a done task under a done parent (Rule 5).
 2. `internal/cli/conformance_test.go` — add the `create` entries — no `--parent`, and `--parent <done task>` — and the `note add` and `note remove` entries, each on a task already carrying a note.
 3. `internal/cli/conformance_test.go` — add the four `update` entries: an edit that moves no status, a move to a done parent (Rule 6 alone), a move away from a parent whose remaining children are all terminal (Rule 3 alone), and a move where both fire and meet on a shared ancestor. Add one `NotADocument` entry for `create --quiet`, its reason naming the bare ID.
 4. `internal/cli/conformance_test.go` — declare `conformanceProseCommands = []string{"dep add", "dep remove", "remove", "init", "rebuild"}` and `conformanceOutOfScopeCommands = []string{"doctor", "migrate"}`, and add `TestConformanceInventoryCoversEveryCommand` reading the live `commandFlags` map and failing when a key appears in none of the three sets, when a key appears in more than one, or when a name in either declared list is not a `commandFlags` key.
 5. `internal/cli/conformance_test.go` — assert in the `note add` and `note remove` entries' own subtests that the decoded document carries no `changed` key.
 
 **Acceptance Criteria**:
-- [ ] Each of `start`, `done`, `cancel` and `reopen` has a decoded document for its no-cascade branch, and `done` and `reopen` additionally for a cascading branch
+- [ ] Each of `start`, `done`, `cancel` and `reopen` has a decoded document for its no-cascade branch and one for its cascading branch
 - [ ] `tick create --toon` with no parent decodes with `changed` present and empty
 - [ ] `tick create --parent <done task> --toon` decodes with a row per task the reopen moved
 - [ ] `tick update --toon` decodes on all four branches, and the shared-ancestor branch carries each task once
@@ -176,7 +176,9 @@
 - `"it decodes a done document with no cascade"` — same for `done`
 - `"it decodes a cancel document with no cascade"` — same for `cancel`
 - `"it decodes a reopen document with no cascade"` — same for `reopen`
+- `"it decodes a cascading start document"` — decoded `changed` carries the requested row and the parent's row
 - `"it decodes a cascading done document"` — decoded `changed` carries the requested row and the child's row
+- `"it decodes a cascading cancel document"` — decoded `changed` carries the requested row and the descendant's row
 - `"it decodes a cascading reopen document"` — decoded `changed` carries the requested row and the ancestor's row
 - `"it decodes a create document with no parent"` — decoded `changed` is an empty list and the key is present
 - `"it decodes a create document under a done parent"` — decoded `changed` carries the reopened parent
@@ -197,7 +199,7 @@
 - `create` with no parent carries `changed[0]` while `create --parent <done task>` carries rows — both are branches and both are entries
 - `update` has four branches: no status movement, Rule 6 alone, Rule 3 alone, and both meeting on a shared ancestor
 - `note add` and `note remove` carry no `changed` section at all, and that absence is part of the document's shape, so it is asserted rather than left unchecked
-- Each of `start`, `done`, `cancel` and `reopen` gets a no-cascade document; `done` and `reopen` are the two that cascade naturally, so they carry the cascading entries
+- All four status commands cascade — `start` carries open ancestors to `in_progress` (Rule 2), `done` and `cancel` carry non-terminal descendants down (Rule 4), and `reopen` carries done ancestors back to open (Rule 5) — so each of the four carries both a no-cascade and a cascading entry, and the coverage is counted in branches as it is for `create` and `update`
 - `--quiet` on a mutating command prints the bare ID and is not a document; the entry carries its reason
 - `rebuild` prints a confirmation message and belongs with the prose commands, not with the must-parse inventory
 

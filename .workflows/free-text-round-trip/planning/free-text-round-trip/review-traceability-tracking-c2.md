@@ -81,8 +81,8 @@ Give each of the four status commands both branches, which is the coverage §11 
 - All four status commands cascade — `start` carries open ancestors to `in_progress` (Rule 2), `done` and `cancel` carry non-terminal descendants down (Rule 4), and `reopen` carries done ancestors back to open (Rule 5) — so each of the four carries both a no-cascade and a cascading entry, and the coverage is counted in branches as it is for `create` and `update`
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-6-3` (tick-6e30b5) — Do step 1, the first acceptance criterion, two added test names and the corrected edge case, in both the task detail file and the tick store.
 
 ---
 
