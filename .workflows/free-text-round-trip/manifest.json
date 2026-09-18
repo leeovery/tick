@@ -132,7 +132,8 @@
             "free-text-round-trip-4-4": "tick-75bf6f",
             "free-text-round-trip-4-5": "tick-86b409",
             "free-text-round-trip-4-6": "tick-377527",
-            "free-text-round-trip-4-7": "tick-b55ed5"
+            "free-text-round-trip-4-7": "tick-b55ed5",
+            "free-text-round-trip-4-8": "tick-4de057"
           },
           "storage_paths": [
             ".tick/"
