@@ -94,9 +94,9 @@
     "planning": {
       "items": {
         "free-text-round-trip": {
-          "status": "in-progress",
+          "status": "completed",
           "format": "tick",
-          "spec_commit": "8a6a9dc5aff3e09b0dbb88610fbc5e1b66ab91fa",
+          "spec_commit": "b3bcde7bda134bfbb664311614917c25e1ebea06",
           "task_list_gate_mode": "auto",
           "author_gate_mode": "auto",
           "finding_gate_mode": "auto",
