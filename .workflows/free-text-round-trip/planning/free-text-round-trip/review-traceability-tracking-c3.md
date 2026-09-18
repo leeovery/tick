@@ -194,7 +194,7 @@ The values are constrained by the tool's own validation rather than by a choice:
 **Spec Reference**: `.workflows/free-text-round-trip/specification/free-text-round-trip/specification.md` §11, §2.1, §2.2, §6.1, §6.4, §9.2, §9.3, §10.2
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-5-5` (tick-3a59e1) — tags and refs added to the fixture across Do steps 1-3, three acceptance criteria, three tests, three edge cases, the Context and the Spec Reference, in both the task detail file and the tick store.
 
 ---
