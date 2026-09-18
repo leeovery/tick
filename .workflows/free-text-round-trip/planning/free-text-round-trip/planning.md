@@ -64,7 +64,7 @@ status: draft
 
 **Goal**: The remaining two hand-built single-object headers become top-level named fields, a focused dep tree identifies its task exactly as a task-detail document does on both branches, and both empty branches return the populated document emptied instead of an English sentence.
 
-**Why this order**: These are the last two malformed headers and the last prose answer to a query. They share no code with Phases 1 and 2, so the phase is self-contained; it follows them because it reuses the named-field form Phase 1 establishes, and because its risk profile differs — the empty-branch fix lands in the dep-tree handler rather than a formatter, and pretty prints nothing at all on that branch unless handed its sentence explicitly.
+**Why this order**: These are the last two malformed headers and the last prose answer to a query. They share no code with Phase 2, so nothing ties the phase to it — but three of its six tasks depend on Phase 1: `free-text-round-trip-3-1`, `free-text-round-trip-3-2` and `free-text-round-trip-3-3` each call `encodeToonFields`, the helper `free-text-round-trip-1-1` added, to produce the named-field form. It follows Phase 1 for that reason, and follows both Phases 1 and 2 because its risk profile differs from theirs — the empty-branch fix lands in the dep-tree handler rather than a formatter, and pretty prints nothing at all on that branch unless handed its sentence explicitly.
 
 **Acceptance**:
 - [ ] `tick stats` counts decode as top-level named fields beside the `by_priority` table

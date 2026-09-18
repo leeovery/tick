@@ -28,7 +28,8 @@ Narrow the "share no code" claim to Phase 2, where it holds, and state the Phase
 **Why this order**: These are the last two malformed headers and the last prose answer to a query. They share no code with Phase 2, so nothing ties the phase to it — but three of its six tasks depend on Phase 1: `free-text-round-trip-3-1`, `free-text-round-trip-3-2` and `free-text-round-trip-3-3` each call `encodeToonFields`, the helper `free-text-round-trip-1-1` added, to produce the named-field form. It follows Phase 1 for that reason, and follows both Phases 1 and 2 because its risk profile differs from theirs — the empty-branch fix lands in the dep-tree handler rather than a formatter, and pretty prints nothing at all on that branch unless handed its sentence explicitly.
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
+**Notes**: Applied verbatim to Phase 3's "Why this order" in planning.md.
 **Notes**:
 
 ---
