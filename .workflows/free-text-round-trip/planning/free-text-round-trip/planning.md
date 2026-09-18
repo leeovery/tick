@@ -7,7 +7,7 @@ status: draft
 
 **Goal**: The document that `show`, `create`, `update`, `note add` and `note remove` all emit decodes with a standard TOON reader — the task's own fields at the top level with no wrapping key, tags and refs as library-produced inline lists, the description as one quoted value, and notes carrying a 1-based index column.
 
-**Why this order**: It is the document five of the eight listed commands produce, and its header is the line a reader fails on before it sees anything else. Every later phase consumes it: the `changed` table becomes a section inside it, field selection projects from it, the round-trip fixture reads through it. It also deletes the mechanism behind every malformed section — hand-assembled string building and header surgery — establishing the pattern the remaining phases follow.
+**Why this order**: It is the document five of the fourteen commands in §3.1's must-parse inventory produce, and its header is the line a reader fails on before it sees anything else. Every later phase consumes it: the `changed` table becomes a section inside it, field selection projects from it, the round-trip fixture reads through it. It also deletes the mechanism behind every malformed section — hand-assembled string building and header surgery — establishing the pattern the remaining phases follow.
 
 **Acceptance**:
 - [ ] `tick show` output decodes with the project's TOON library for a task carrying every optional field (type, parent, closed, tags, refs, description, notes, children, blocked_by) and for one carrying none of them

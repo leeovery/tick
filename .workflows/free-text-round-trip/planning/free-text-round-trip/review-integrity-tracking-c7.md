@@ -26,7 +26,8 @@ Correct the count to the one the plan's own §3.1 inventory supports — fourtee
 **Why this order**: It is the document five of the fourteen commands in §3.1's must-parse inventory produce, and its header is the line a reader fails on before it sees anything else. Every later phase consumes it: the `changed` table becomes a section inside it, field selection projects from it, the round-trip fixture reads through it. It also deletes the mechanism behind every malformed section — hand-assembled string building and header surgery — establishing the pattern the remaining phases follow.
 ```
 
-**Resolution**: Pending
+**Resolution**: Fixed
+**Notes**: Applied verbatim to Phase 1's "Why this order" in planning.md.
 **Notes**:
 
 ---
