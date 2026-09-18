@@ -37,8 +37,8 @@ Delete the stray step from the tick record, leaving the four steps the planning 
 4. `internal/cli/readme_samples_test.go` (new file) — add `TestREADMEToonSamplesDecode`: locate `README.md` via `testutil.FindRepoRoot(t)`, collect every fenced block with an empty info string, strip a leading `$ tick …` prompt line from each, index the blocks by their first remaining line, then for each anchor in `{"tasks[3]{id,title,status,priority,type}:", "tasks[2]{id,title,status,priority,type}:", "id: tick-a1b2"}` fail if no block carries it and fail if `toon.DecodeString` rejects that block.
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Stray Do step 5 removed from tick-a8523e; the stored record now matches the planning file's four steps byte-for-byte (verified by diff).
 
 ---
 
