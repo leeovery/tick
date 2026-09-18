@@ -1,9 +1,12 @@
 package cli
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	toon "github.com/toon-format/toon-go"
 
 	"github.com/leeovery/tick/internal/task"
 )
@@ -83,16 +86,18 @@ func TestToonFormatter(t *testing.T) {
 		if len(sections) != 5 {
 			t.Fatalf("expected 5 sections, got %d: %q", len(sections), result)
 		}
-		// Section 1: task
-		taskLines := strings.Split(sections[0], "\n")
-		expectedTaskHeader := "task{id,title,status,priority,parent,created,updated}:"
-		if taskLines[0] != expectedTaskHeader {
-			t.Errorf("task header = %q, want %q", taskLines[0], expectedTaskHeader)
-		}
-		expectedTaskRow := `  tick-a1b2,Setup Sanctum,in_progress,1,tick-e5f6,"2026-01-19T10:00:00Z","2026-01-19T14:30:00Z"`
-		if taskLines[1] != expectedTaskRow {
-			t.Errorf("task row = %q, want %q", taskLines[1], expectedTaskRow)
-		}
+		// Section 1: the task's own fields
+		doc := decodeToonDoc(t, sections[0])
+		assertToonFields(t, doc, map[string]any{
+			"id":       "tick-a1b2",
+			"title":    "Setup Sanctum",
+			"status":   "in_progress",
+			"priority": float64(1),
+			"parent":   "tick-e5f6",
+			"created":  "2026-01-19T10:00:00Z",
+			"updated":  "2026-01-19T14:30:00Z",
+		})
+		assertToonKeysAbsent(t, doc, "task")
 		// Section 2: blocked_by
 		blockedLines := strings.Split(sections[1], "\n")
 		expectedBlockedHeader := "blocked_by[2]{id,title,status}:"
@@ -122,7 +127,7 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 
-	t.Run("it omits parent and closed from schema when null", func(t *testing.T) {
+	t.Run("it omits type, parent and closed when the task does not carry them", func(t *testing.T) {
 		f := &ToonFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		detail := TaskDetail{
@@ -138,16 +143,16 @@ func TestToonFormatter(t *testing.T) {
 			Children:  []RelatedTask{},
 		}
 		result := f.FormatTaskDetail(detail)
-		sections := strings.Split(result, "\n\n")
-		taskLines := strings.Split(sections[0], "\n")
-		expectedHeader := "task{id,title,status,priority,created,updated}:"
-		if taskLines[0] != expectedHeader {
-			t.Errorf("header = %q, want %q", taskLines[0], expectedHeader)
-		}
-		expectedRow := `  tick-a1b2,Simple task,open,2,"2026-01-19T10:00:00Z","2026-01-19T10:00:00Z"`
-		if taskLines[1] != expectedRow {
-			t.Errorf("row = %q, want %q", taskLines[1], expectedRow)
-		}
+		doc := decodeToonDoc(t, result)
+		assertToonFields(t, doc, map[string]any{
+			"id":       "tick-a1b2",
+			"title":    "Simple task",
+			"status":   "open",
+			"priority": float64(2),
+			"created":  "2026-01-19T10:00:00Z",
+			"updated":  "2026-01-19T10:00:00Z",
+		})
+		assertToonKeysAbsent(t, doc, "task", "type", "parent", "closed")
 	})
 
 	t.Run("it renders blocked_by and children with count 0 when empty", func(t *testing.T) {
@@ -364,16 +369,16 @@ func TestToonFormatter(t *testing.T) {
 			Children:  []RelatedTask{},
 		}
 		result := f.FormatTaskDetail(detail)
-		sections := strings.Split(result, "\n\n")
-		taskLines := strings.Split(sections[0], "\n")
-		expectedHeader := "task{id,title,status,priority,created,updated,closed}:"
-		if taskLines[0] != expectedHeader {
-			t.Errorf("header = %q, want %q", taskLines[0], expectedHeader)
-		}
-		expectedRow := `  tick-a1b2,Done task,done,1,"2026-01-19T10:00:00Z","2026-01-19T10:00:00Z","2026-01-19T16:00:00Z"`
-		if taskLines[1] != expectedRow {
-			t.Errorf("row = %q, want %q", taskLines[1], expectedRow)
-		}
+		doc := decodeToonDoc(t, result)
+		assertToonFields(t, doc, map[string]any{
+			"id":       "tick-a1b2",
+			"title":    "Done task",
+			"status":   "done",
+			"priority": float64(1),
+			"created":  "2026-01-19T10:00:00Z",
+			"updated":  "2026-01-19T10:00:00Z",
+			"closed":   "2026-01-19T16:00:00Z",
+		})
 	})
 
 	t.Run("it formats single task removal via baseFormatter", func(t *testing.T) {
@@ -434,18 +439,16 @@ func TestToonFormatter(t *testing.T) {
 			Children:  []RelatedTask{},
 		}
 		result := f.FormatTaskDetail(detail)
-		sections := strings.Split(result, "\n\n")
-		taskLines := strings.Split(sections[0], "\n")
-		// Header should include type in schema
-		expectedHeader := "task{id,title,status,priority,type,created,updated}:"
-		if taskLines[0] != expectedHeader {
-			t.Errorf("header = %q, want %q", taskLines[0], expectedHeader)
-		}
-		// Row should include type value
-		expectedRow := `  tick-a1b2,Fix login bug,open,1,bug,"2026-01-19T10:00:00Z","2026-01-19T10:00:00Z"`
-		if taskLines[1] != expectedRow {
-			t.Errorf("row = %q, want %q", taskLines[1], expectedRow)
-		}
+		doc := decodeToonDoc(t, result)
+		assertToonFields(t, doc, map[string]any{
+			"id":       "tick-a1b2",
+			"title":    "Fix login bug",
+			"status":   "open",
+			"priority": float64(1),
+			"type":     "bug",
+			"created":  "2026-01-19T10:00:00Z",
+			"updated":  "2026-01-19T10:00:00Z",
+		})
 	})
 
 	t.Run("it omits type from toon show when empty", func(t *testing.T) {
@@ -464,17 +467,8 @@ func TestToonFormatter(t *testing.T) {
 			Children:  []RelatedTask{},
 		}
 		result := f.FormatTaskDetail(detail)
-		sections := strings.Split(result, "\n\n")
-		taskLines := strings.Split(sections[0], "\n")
-		// Header should NOT include type when empty
-		expectedHeader := "task{id,title,status,priority,created,updated}:"
-		if taskLines[0] != expectedHeader {
-			t.Errorf("header = %q, want %q", taskLines[0], expectedHeader)
-		}
-		// Row should not contain type field
-		if strings.Contains(taskLines[1], ",type") || strings.Count(taskLines[1], ",") > 5 {
-			t.Errorf("row should not contain type when empty: %q", taskLines[1])
-		}
+		doc := decodeToonDoc(t, result)
+		assertToonKeysAbsent(t, doc, "type")
 	})
 
 	t.Run("it displays tags in toon format show output", func(t *testing.T) {
@@ -577,7 +571,7 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 
-	t.Run("it includes both parent and closed in show schema when both present", func(t *testing.T) {
+	t.Run("it includes type, parent and closed when the task carries them", func(t *testing.T) {
 		f := &ToonFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		closed := time.Date(2026, 1, 19, 16, 0, 0, 0, time.UTC)
@@ -587,6 +581,7 @@ func TestToonFormatter(t *testing.T) {
 				Title:    "Done child",
 				Status:   task.StatusDone,
 				Priority: 1,
+				Type:     "feature",
 				Parent:   "tick-e5f6",
 				Created:  now,
 				Updated:  now,
@@ -597,12 +592,12 @@ func TestToonFormatter(t *testing.T) {
 			ParentTitle: "Parent task",
 		}
 		result := f.FormatTaskDetail(detail)
-		sections := strings.Split(result, "\n\n")
-		taskLines := strings.Split(sections[0], "\n")
-		expectedHeader := "task{id,title,status,priority,parent,created,updated,closed}:"
-		if taskLines[0] != expectedHeader {
-			t.Errorf("header = %q, want %q", taskLines[0], expectedHeader)
-		}
+		doc := decodeToonDoc(t, result)
+		assertToonFields(t, doc, map[string]any{
+			"type":   "feature",
+			"parent": "tick-e5f6",
+			"closed": "2026-01-19T16:00:00Z",
+		})
 	})
 
 	t.Run("it displays notes in toon show output", func(t *testing.T) {
@@ -660,6 +655,141 @@ func TestToonFormatter(t *testing.T) {
 		result := f.FormatTaskDetail(detail)
 		if !strings.Contains(result, "notes[0]{text,created}:") {
 			t.Errorf("should contain empty notes section 'notes[0]{text,created}:', got:\n%s", result)
+		}
+	})
+	t.Run("it emits the task's own fields as top-level named fields", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		closed := time.Date(2026, 1, 19, 16, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Add retry to the sync worker",
+				Status:   task.StatusDone,
+				Priority: 0,
+				Type:     "feature",
+				Parent:   "tick-e5f6",
+				Created:  now,
+				Updated:  now,
+				Closed:   &closed,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		result := f.FormatTaskDetail(detail)
+		doc := decodeToonDoc(t, result)
+		assertToonFields(t, doc, map[string]any{
+			"id":       "tick-a1b2",
+			"title":    "Add retry to the sync worker",
+			"status":   "done",
+			"priority": float64(0),
+			"created":  "2026-01-19T10:00:00Z",
+			"updated":  "2026-01-19T10:00:00Z",
+		})
+		assertToonKeysAbsent(t, doc, "task")
+
+		head, _, _ := strings.Cut(result, "\n\n")
+		var keys []string
+		for line := range strings.SplitSeq(head, "\n") {
+			key, _, _ := strings.Cut(line, ":")
+			keys = append(keys, key)
+		}
+		wantKeys := []string{"id", "title", "status", "priority", "type", "parent", "created", "updated", "closed"}
+		if !slices.Equal(keys, wantKeys) {
+			t.Errorf("field order = %v, want %v", keys, wantKeys)
+		}
+	})
+
+	t.Run("it round-trips a title containing a comma, a colon and a leading dash", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		title := "- fix: retries, backoff and jitter"
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    title,
+				Status:   task.StatusOpen,
+				Priority: 1,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detail))
+		if doc["title"] != title {
+			t.Errorf("title = %#v, want %#v", doc["title"], title)
+		}
+	})
+
+	t.Run("it emits created and updated as quoted timestamps", func(t *testing.T) {
+		f := &ToonFormatter{}
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		updated := time.Date(2026, 1, 19, 14, 30, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Timestamps",
+				Status:   task.StatusOpen,
+				Priority: 1,
+				Created:  created,
+				Updated:  updated,
+			},
+			BlockedBy: []RelatedTask{},
+			Children:  []RelatedTask{},
+		}
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detail))
+		for key, want := range map[string]string{
+			"created": task.FormatTimestamp(created),
+			"updated": task.FormatTimestamp(updated),
+		} {
+			got, ok := doc[key].(string)
+			if !ok {
+				t.Errorf("%s = %#v, want a string", key, doc[key])
+				continue
+			}
+			if got != want {
+				t.Errorf("%s = %q, want %q", key, got, want)
+			}
+		}
+	})
+
+	t.Run("it decodes the whole document when sections are joined by blank lines", func(t *testing.T) {
+		f := &ToonFormatter{}
+		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		detail := TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Everything",
+				Status:   task.StatusInProgress,
+				Priority: 1,
+				Created:  now,
+				Updated:  now,
+			},
+			BlockedBy: []RelatedTask{{ID: "tick-c3d4", Title: "Migrations", Status: "done"}},
+			Children:  []RelatedTask{{ID: "tick-g7h8", Title: "Config setup", Status: "open"}},
+			Notes:     []task.Note{{Text: "Started investigating", Created: now}},
+		}
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detail))
+		for _, key := range []string{"id", "blocked_by", "children", "notes"} {
+			if _, ok := doc[key]; !ok {
+				t.Errorf("key %q missing from decoded document", key)
+			}
+		}
+	})
+
+	t.Run("it returns an empty string when the encoder rejects a field value", func(t *testing.T) {
+		if got := encodeToonFields(toon.Field{Key: "x", Value: make(chan int)}); got != "" {
+			t.Errorf("encodeToonFields = %q, want empty string", got)
+		}
+	})
+
+	t.Run("it omits the head rather than emitting a blank line when the head cannot be encoded", func(t *testing.T) {
+		firstSection := "blocked_by[0]{id,title,status}:"
+		got := joinToonSections([]string{"", firstSection, "notes[0]{text,created}:"})
+		want := firstSection + "\n\nnotes[0]{text,created}:"
+		if got != want {
+			t.Errorf("joinToonSections = %q, want %q", got, want)
 		}
 	})
 }

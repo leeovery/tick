@@ -79,7 +79,7 @@ func (f *ToonFormatter) FormatTaskList(tasks []task.Task) string {
 func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 	var sections []string
 
-	// Section 1: task (single-object scope with dynamic schema)
+	// Section 1: the task's own fields as top-level named fields
 	sections = append(sections, buildTaskSection(detail.Task))
 
 	// Section 2: blocked_by (always present, even with count 0)
@@ -106,7 +106,7 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 		sections = append(sections, buildDescriptionSection(detail.Task.Description))
 	}
 
-	return strings.Join(sections, "\n\n")
+	return joinToonSections(sections)
 }
 
 // FormatStats renders task statistics in multi-section TOON format.
@@ -256,7 +256,8 @@ func buildEdgeSection(name string, edges []toonEdgeRow) string {
 	return encodeToonSection(name, edges)
 }
 
-// buildTaskSection builds the task section with dynamic schema (omitting parent/closed when null).
+// buildTaskSection builds the task's own fields as top-level named fields,
+// omitting type, parent and closed when the task does not carry them.
 func buildTaskSection(t task.Task) string {
 	var fields []toon.Field
 
@@ -284,14 +285,28 @@ func buildTaskSection(t task.Task) string {
 		fields = append(fields, toon.Field{Key: "closed", Value: task.FormatTimestamp(*t.Closed)})
 	}
 
-	row := toon.NewObject(fields...)
-	// Encode as 1-element array under "task" key, then strip "[1]" for single-object scope
-	wrapper := toon.NewObject(toon.Field{Key: "task", Value: []toon.Object{row}})
-	s, err := toon.MarshalString(wrapper)
+	return encodeToonFields(fields...)
+}
+
+// encodeToonFields encodes ordered fields as top-level TOON named fields,
+// returning "" when the encoder rejects a value.
+func encodeToonFields(fields ...toon.Field) string {
+	s, err := toon.MarshalString(toon.NewObject(fields...))
 	if err != nil {
-		return "task:"
+		return ""
 	}
-	return strings.Replace(s, "task[1]", "task", 1)
+	return s
+}
+
+// joinToonSections joins non-empty sections with a blank line between them.
+func joinToonSections(sections []string) string {
+	kept := make([]string, 0, len(sections))
+	for _, section := range sections {
+		if section != "" {
+			kept = append(kept, section)
+		}
+	}
+	return strings.Join(kept, "\n\n")
 }
 
 // buildRelatedSection builds a blocked_by or children section.

@@ -24,9 +24,9 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--toon",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					// Toon format: should contain task{...}: section
-					if !strings.Contains(stdout, "task{") {
-						t.Errorf("toon format should contain 'task{', got %q", stdout)
+					// Toon format: the task's own fields open the document
+					if !strings.HasPrefix(stdout, "id: ") {
+						t.Errorf("toon format should open with 'id: ', got %q", stdout)
 					}
 				},
 			},
@@ -301,8 +301,8 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--toon",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					if !strings.Contains(stdout, "task{") {
-						t.Errorf("toon show should contain 'task{', got %q", stdout)
+					if !strings.HasPrefix(stdout, "id: ") {
+						t.Errorf("toon show should open with 'id: ', got %q", stdout)
 					}
 				},
 			},
@@ -616,8 +616,8 @@ func TestFormatIntegration(t *testing.T) {
 			if exitCode != 0 {
 				t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderrBuf.String())
 			}
-			// TOON format uses "task{...}:" header
-			if !strings.Contains(stdoutBuf.String(), "task{") {
+			// TOON detail output opens with the task's own fields
+			if !strings.HasPrefix(stdoutBuf.String(), "id: ") {
 				t.Errorf("non-TTY should default to toon format, got %q", stdoutBuf.String())
 			}
 		})
@@ -660,7 +660,7 @@ func TestFormatIntegration(t *testing.T) {
 			if exitCode != 0 {
 				t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderrBuf.String())
 			}
-			if !strings.Contains(stdoutBuf.String(), "task{") {
+			if !strings.HasPrefix(stdoutBuf.String(), "id: ") {
 				t.Errorf("--toon should force toon format, got %q", stdoutBuf.String())
 			}
 		})
