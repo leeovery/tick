@@ -82,8 +82,8 @@ State which branches move and when. Toon's is the only expectation this task fal
 ...
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Applied verbatim to `free-text-round-trip-2-2` (tick-ed0952) in both the task detail file and the tick store.
 
 ---
 

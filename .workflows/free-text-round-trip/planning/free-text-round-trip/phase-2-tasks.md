@@ -121,7 +121,7 @@
 - A title containing a comma, a colon or a leading dash — quoting is the library's job via `encodeToonSection`, never the formatter's
 - `auto` must be a Go `bool` in `toonChangedRow`, so the encoder emits `true`/`false` unquoted rather than a quoted string
 - The empty case cannot come from `encodeToonSection`: an empty slice encodes as `changed[0]:` with no field schema, so the count-zero header is a literal, exactly as `buildRelatedSection` and `buildNotesSection` write theirs
-- `format_test.go`'s "empty CascadeResult returns empty string" expectation no longer holds for toon — an empty result is a count-zero table, and `StubFormatter` alone still returns `""`
+- `format_test.go`'s "empty CascadeResult returns empty string" expectation no longer holds for toon — an empty result is a count-zero table. The other three branches of that loop stay: `StubFormatter` and `PrettyFormatter` both still return `""`, pretty because its own `result.TaskID == ""` guard is untouched by this task, and `JSONFormatter` still returns `""` until task 3 replaces its early return with `{"changed": []}`
 - `create` and `update` keep their trailing call in this task, so their toon output is a detail document followed by a `changed` table until Task 5 folds it in; that is the interim state Phase 2 exists to close, not a regression to assert against
 
 **Context**:
