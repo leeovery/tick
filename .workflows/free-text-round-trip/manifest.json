@@ -102,7 +102,7 @@
           "finding_gate_mode": "gated",
           "review_cycle": 0,
           "phase": 6,
-          "task": "free-text-round-trip-6-4",
+          "task": "free-text-round-trip-6-5",
           "task_map": {
             "free-text-round-trip-1-1": "tick-36cfbf",
             "free-text-round-trip-1": "tick-063549",
@@ -144,7 +144,8 @@
             "free-text-round-trip-6-1": "tick-25fabf",
             "free-text-round-trip-6": "tick-9a4efb",
             "free-text-round-trip-6-2": "tick-f5455a",
-            "free-text-round-trip-6-3": "tick-6e30b5"
+            "free-text-round-trip-6-3": "tick-6e30b5",
+            "free-text-round-trip-6-4": "tick-ae3897"
           },
           "storage_paths": [
             ".tick/"
