@@ -61,11 +61,17 @@ func readmeContent(t *testing.T) string {
 func readmeFences(t *testing.T) []readmeFence {
 	t.Helper()
 
+	return fencesIn(readmeContent(t))
+}
+
+// fencesIn returns the fenced blocks of a markdown document with their info
+// string, each body stripped of any leading shell prompt line.
+func fencesIn(content string) []readmeFence {
 	var fences []readmeFence
 	var current []string
 	info := ""
 	inBlock := false
-	for line := range strings.SplitSeq(readmeContent(t), "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		if !strings.HasPrefix(line, "```") {
 			if inBlock {
 				current = append(current, line)
@@ -538,11 +544,19 @@ func TestREADMEPromptedSamplesAreClaimed(t *testing.T) {
 // readmeShowSection returns the body of the README's `### show` section.
 func readmeShowSection(t *testing.T) string {
 	t.Helper()
-	_, after, ok := strings.Cut(readmeContent(t), "\n### `show`\n")
+	return readmeSection(t, "### `show`")
+}
+
+// readmeSection returns the body of the README section under heading, up to the
+// next heading at the same level.
+func readmeSection(t *testing.T, heading string) string {
+	t.Helper()
+	_, after, ok := strings.Cut(readmeContent(t), "\n"+heading+"\n")
 	if !ok {
-		t.Fatal("README has no `### show` section")
+		t.Fatalf("README has no %q section", heading)
 	}
-	section, _, _ := strings.Cut(after, "\n### ")
+	level, _, _ := strings.Cut(heading, " ")
+	section, _, _ := strings.Cut(after, "\n"+level+" ")
 	return section
 }
 
@@ -589,4 +603,74 @@ func showHelpFlagNames(t *testing.T) []string {
 		t.Fatal("show's help entry lists no long flags")
 	}
 	return names
+}
+
+// readmeGlobalFlagLabels returns the labels listed in the README's Global Flags
+// fenced block, each the text before its description column.
+func readmeGlobalFlagLabels(t *testing.T) []string {
+	t.Helper()
+	for _, fence := range fencesIn(readmeSection(t, "## Global Flags")) {
+		if fence.info != "" || fence.prompt != "" {
+			continue
+		}
+		var labels []string
+		for line := range strings.SplitSeq(fence.body, "\n") {
+			label, _, ok := strings.Cut(line, "  ")
+			if !ok {
+				t.Fatalf("global flag line %q separates no label from its description", line)
+			}
+			labels = append(labels, label)
+		}
+		return labels
+	}
+	t.Fatal("README Global Flags section has no flag listing block")
+	return nil
+}
+
+func TestREADMEDocumentsEndOfFlagsMarker(t *testing.T) {
+	t.Run("it documents the marker in the README global flags block", func(t *testing.T) {
+		if labels := readmeGlobalFlagLabels(t); !slices.Contains(labels, endOfFlagsMarker) {
+			t.Errorf("README global flags are %v, want one labelled %q", labels, endOfFlagsMarker)
+		}
+	})
+
+	t.Run("it states that an argument spelling a global flag is text after the marker", func(t *testing.T) {
+		section := readmeSection(t, "## Global Flags")
+		var prose strings.Builder
+		inFence := false
+		for line := range strings.SplitSeq(section, "\n") {
+			if strings.HasPrefix(line, "```") {
+				inFence = !inFence
+				continue
+			}
+			if !inFence {
+				prose.WriteString(line + "\n")
+			}
+		}
+		for _, want := range []string{backticked(endOfFlagsMarker), backticked("--json")} {
+			if !strings.Contains(prose.String(), want) {
+				t.Errorf("README Global Flags prose does not mention %s:\n%s", want, prose.String())
+			}
+		}
+	})
+
+	for _, heading := range []string{"### `create`", "### `note`"} {
+		t.Run("it shows a marker invocation in the "+heading+" examples", func(t *testing.T) {
+			var marked int
+			for _, fence := range fencesIn(readmeSection(t, heading)) {
+				if fence.info != "bash" {
+					t.Errorf("%s section carries a %q fence, want shell examples only", heading, fence.info)
+					continue
+				}
+				for line := range strings.SplitSeq(fence.body, "\n") {
+					if strings.Contains(line, " "+endOfFlagsMarker+" ") {
+						marked++
+					}
+				}
+			}
+			if marked != 1 {
+				t.Errorf("%s section has %d %q invocations, want 1", heading, marked, endOfFlagsMarker)
+			}
+		})
+	}
 }

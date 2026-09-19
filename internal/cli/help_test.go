@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -405,6 +406,126 @@ func TestHelpFlagColumn(t *testing.T) {
 		}
 		if strings.Contains(stdout, "Flags:") {
 			t.Errorf("tick help init should print no Flags section, got:\n%s", stdout)
+		}
+	})
+}
+
+// globalFlagLabels returns the labels listed in `tick help`'s Global flags
+// block, each the text before its description column.
+func globalFlagLabels(t *testing.T) []string {
+	t.Helper()
+	stdout, _, code := runHelp(t, "help")
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+	_, after, ok := strings.Cut(stdout, "Global flags:\n")
+	if !ok {
+		t.Fatal("tick help prints no Global flags block")
+	}
+	block, _, _ := strings.Cut(after, "\n\n")
+
+	var labels []string
+	for line := range strings.SplitSeq(block, "\n") {
+		label, _, ok := strings.Cut(strings.TrimSpace(line), "  ")
+		if !ok {
+			t.Fatalf("global flag line %q separates no label from its description", line)
+		}
+		labels = append(labels, label)
+	}
+	return labels
+}
+
+// allHelpGlobalFlagTokens returns the space-separated tokens of `tick help
+// --all`'s Global flags line.
+func allHelpGlobalFlagTokens(t *testing.T) []string {
+	t.Helper()
+	stdout, _, code := runHelp(t, "help", "--all")
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+	line, _, _ := strings.Cut(stdout, "\n")
+	rest, ok := strings.CutPrefix(line, "Global flags: ")
+	if !ok {
+		t.Fatalf("tick help --all starts with %q, want a Global flags line", line)
+	}
+	return strings.Fields(rest)
+}
+
+// longFlagsIn returns the long flag names a help label or token spells,
+// splitting the alternative spellings help writes as "--force, -f" or
+// "--force/-f".
+func longFlagsIn(spelling string) []string {
+	var names []string
+	for part := range strings.FieldsFuncSeq(spelling, func(r rune) bool { return r == ',' || r == '/' || r == ' ' }) {
+		if strings.HasPrefix(part, "--") {
+			names = append(names, part)
+		}
+	}
+	return names
+}
+
+// commandHelpDescription returns the prose a command's help prints above its
+// Flags block.
+func commandHelpDescription(t *testing.T, command string) string {
+	t.Helper()
+	stdout, _, code := runHelp(t, "help", command)
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+	description, _, _ := strings.Cut(stdout, "\nFlags:")
+	return description
+}
+
+func TestHelpDocumentsEndOfFlagsMarker(t *testing.T) {
+	t.Run("it names the end-of-flags marker in top level help", func(t *testing.T) {
+		if labels := globalFlagLabels(t); !slices.Contains(labels, endOfFlagsMarker) {
+			t.Errorf("tick help global flags are %v, want one labelled %q", labels, endOfFlagsMarker)
+		}
+	})
+
+	t.Run("it names the end-of-flags marker in the all-commands help", func(t *testing.T) {
+		if tokens := allHelpGlobalFlagTokens(t); !slices.Contains(tokens, endOfFlagsMarker) {
+			t.Errorf("tick help --all global flags are %v, want one reading %q", tokens, endOfFlagsMarker)
+		}
+	})
+
+	t.Run("it keeps the two global flag lists in agreement", func(t *testing.T) {
+		listed := make(map[string]bool)
+		for _, token := range allHelpGlobalFlagTokens(t) {
+			for _, name := range longFlagsIn(token) {
+				listed[name] = true
+			}
+		}
+		for _, label := range globalFlagLabels(t) {
+			for _, name := range longFlagsIn(label) {
+				if !listed[name] {
+					t.Errorf("tick help lists global flag %q, which tick help --all omits", name)
+				}
+			}
+		}
+	})
+
+	for _, command := range []string{"create", "note"} {
+		t.Run("it documents the marker in "+command+" help", func(t *testing.T) {
+			description := commandHelpDescription(t, command)
+			if !strings.Contains(description, endOfFlagsMarker+" ") {
+				t.Errorf("tick help %s does not name %q as the end-of-flags marker:\n%s", command, endOfFlagsMarker, description)
+			}
+		})
+	}
+
+	t.Run("it registers no flag for the marker", func(t *testing.T) {
+		for command, flags := range commandFlags {
+			if _, ok := flags[endOfFlagsMarker]; ok {
+				t.Errorf("commandFlags[%q] registers %q as a flag", command, endOfFlagsMarker)
+			}
+		}
+		for _, cmd := range commands {
+			for _, f := range cmd.Flags {
+				if slices.Contains(longFlagsIn(f.Name), endOfFlagsMarker) {
+					t.Errorf("help for %q lists %q in its Flags block", cmd.Name, endOfFlagsMarker)
+				}
+			}
 		}
 	})
 }

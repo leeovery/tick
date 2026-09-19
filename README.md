@@ -107,6 +107,7 @@ tick create "Build auth module"
 tick create "Critical fix" --priority 0 --type bug
 tick create "Write tests" --blocked-by tick-a1b2,tick-c3d4 --tags backend,testing
 tick create "Login endpoint" --parent tick-a1b2 --refs https://github.com/org/repo/issues/42
+tick create -- "--dry-run support"     # -- passes a dash-leading title
 ```
 
 ### `list`
@@ -292,6 +293,7 @@ tick note remove <task-id> <index>
 ```bash
 tick note add tick-a1b2 "Discussed approach with team"
 tick note remove tick-a1b2 1          # remove note at index 1 (1-based)
+tick note add tick-a1b2 -- "--json output was wrong here"
 ```
 
 ### `dep`
@@ -626,6 +628,7 @@ Add to `.gitignore`:
 --toon            Force TOON format
 --pretty          Force pretty format
 --json            Force JSON format
+--                End of flags; every argument after it is text
 ```
 
 Global flags are accepted on every command. Unknown or misspelled flags are rejected with a helpful error:
@@ -634,6 +637,8 @@ Global flags are accepted on every command. Unknown or misspelled flags are reje
 $ tick list --stauts open
 unknown flag "--stauts" for "list". Run 'tick help list' for usage.
 ```
+
+Flags come before `--`; everything after it is text, including an argument that spells a global flag exactly, so `tick note add tick-a1b2 -- --json` stores the literal note `--json`. On `note add` the marker is recommended rather than required — dash-leading note text that does not spell a global flag is read as text without it. `create` checks its title against its own flags, so a dash-leading title needs the marker.
 
 ## License
 

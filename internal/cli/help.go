@@ -37,7 +37,9 @@ var commands = []commandInfo{
 		Usage:   "tick create <title> [flags]",
 		Description: "Creates a new task with the given title. A unique ID is generated\n" +
 			"automatically. Priority defaults to 2 (medium).\n" +
-			"If the parent task is done, it is automatically reopened.",
+			"If the parent task is done, it is automatically reopened.\n" +
+			"Put -- before a title that begins with a dash; everything after\n" +
+			"-- is text.",
 		Flags: []flagInfo{
 			{"--priority", "<0-4>", "Task priority (default: 2)", false},
 			{"--description", "<text>", "Task description", false},
@@ -148,7 +150,9 @@ var commands = []commandInfo{
 		Usage:   "tick note <add|remove> <task-id> <text|index>",
 		Description: "Adds or removes timestamped notes on a task.\n" +
 			"'add' appends a new note with the given text.\n" +
-			"'remove' deletes the note at the given 1-based index.",
+			"'remove' deletes the note at the given 1-based index.\n" +
+			"Put -- before note text that begins with a dash; everything after\n" +
+			"-- is text.",
 	},
 	{
 		Name:    "dep",
@@ -265,6 +269,7 @@ func printTopLevelHelp(w io.Writer) {
 	fmt.Fprintln(w, "  --pretty        Force pretty output format")
 	fmt.Fprintln(w, "  --json          Force JSON output format")
 	fmt.Fprintln(w, "  --version, -V   Show tick version")
+	fmt.Fprintln(w, "  --              End of flags; every later argument is text")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run 'tick help <command>' for detailed help on a command.")
 	fmt.Fprintln(w, "Run 'tick help --all' for complete reference of all commands and flags.")
@@ -273,7 +278,7 @@ func printTopLevelHelp(w io.Writer) {
 // printAllHelp writes compact, concatenated help for every command to w.
 // Designed for AI agents to discover the full CLI surface in one call.
 func printAllHelp(w io.Writer) {
-	fmt.Fprintln(w, "Global flags: --help/-h --quiet/-q --verbose/-v --toon --pretty --json --version/-V")
+	fmt.Fprintln(w, "Global flags: --help/-h --quiet/-q --verbose/-v --toon --pretty --json --version/-V --")
 	fmt.Fprintln(w)
 	for i, cmd := range commands {
 		fmt.Fprintln(w, cmd.Usage)
