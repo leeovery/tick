@@ -154,7 +154,12 @@
             "free-text-round-trip-3-7": "tick-98d2e0",
             "free-text-round-trip-3-8": "tick-aa98d9",
             "free-text-round-trip-3-9": "tick-98c333",
-            "free-text-round-trip-3-10": "tick-d05b7e"
+            "free-text-round-trip-3-10": "tick-d05b7e",
+            "free-text-round-trip-4-9": "tick-6c3925",
+            "free-text-round-trip-4-10": "tick-46ece2",
+            "free-text-round-trip-4-11": "tick-f31314",
+            "free-text-round-trip-4-12": "tick-e8d2eb",
+            "free-text-round-trip-4-13": "tick-1267e8"
           },
           "storage_paths": [
             ".tick/"
@@ -196,7 +201,7 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "auto",
           "analysis_gate_mode": "gated",
-          "consolidation_gate_mode": "gated",
+          "consolidation_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle_total": 0,
           "linters": [
@@ -293,111 +298,27 @@
               "tasks": {
                 "1": "approved"
               }
+            },
+            "p4": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved",
+                "3": "approved",
+                "4": "approved",
+                "5": "approved"
+              }
             }
           },
           "consolidated_phases": [
             1,
             2,
-            3
+            3,
+            4
           ],
           "completed_phases": [
             1,
             2,
             3
-          ],
-          "bank": [
-            {
-              "task": "free-text-round-trip-4-1",
-              "source": "executor",
-              "summary": "printCommandHelp pads flag labels to a fixed 24 columns, so a longer label runs into its description with no separator.",
-              "failure": "A user running `tick help create` reads `--type <bug|feature|task|chore>Task type` — flag name and description fused with no gap, so the description looks like part of the flag argument. Same for `tick help show`. Noticed the first time anyone reads help for a command with a long flag label.",
-              "detail": "internal/cli/help.go:308 formats with \"  %-24s%s\\n\". Pre-existing for create/update `--type <bug|feature|task|chore>` (31 chars); this task adds `--field, --fields <name,...>` (28 chars) as the second instance. Fix is one format string (widen, or compute width from the longest label) but it shifts every command help output, touching help expectations across the suite.",
-              "files": [
-                "internal/cli/help.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-4-1",
-              "source": "reviewer",
-              "summary": "printCommandHelp fixed-width flag column has no minimum gap, so a long flag label runs straight into its description.",
-              "failure": "A user or agent running `tick help show` reads `--field, --fields <name,...>Select fields by name; a section may be narrowed with .N (e.g. notes.2)` — argument spec and description glued together with no separator. show's only flag entry is the whole Flags block, so the command help reads as garbled. Noticed by eye the first time anyone runs `tick help show`, and §12.1 makes the help text a deliverable of this work.",
-              "detail": "internal/cli/help.go:308 formats with \"  %-24s%s\\n\"; any label longer than 24 columns loses the gap entirely. The new show entry label is 28 columns (internal/cli/help.go:74). Pre-existing, not introduced here — `tick help create` already prints `--type <bug|feature|task|chore>Task type` from internal/cli/help.go:44. Out of this task scope on both counts: the task fixed Name and Arg verbatim (no in-scope shortening fits 24 columns while keeping both spellings the drift test requires), and the remedy — a two-space minimum gap, or widening the column to the longest label — changes the rendered help of create, list, remove and migrate too.",
-              "files": [
-                "internal/cli/help.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-4-3",
-              "source": "reviewer",
-              "summary": "FieldSelection carries two gates with opposite nil behaviour — exported Selected panics on a nil receiver, unexported includes treats nil as everything.",
-              "failure": "A later site reaching for the exported Selected where the selection may be nil (the JSON and pretty formatters of tasks 4-4 and 4-5 need exactly this gate, and TaskDetail.Fields is nil for every mutation command) dereferences nil and crashes `tick show`/`tick create` with a runtime panic instead of printing a document. Noticed as a CLI panic in the field, not at compile time.",
-              "detail": "Selected at internal/cli/show_fields.go:90 indexes s.whole without a nil check; includes at :96 wraps it with `s == nil ||`. After this task Selected has no production caller except through includes (grep -rn \"\\.Selected(\" internal/ → show_fields.go:97 plus four sites in show_fields_test.go). The consolidation — make Selected nil-safe, delete includes, update the eight call sites in toon_formatter.go — reaches task 4-1 method and its tests, and is best done once 4-4/4-5 have landed their own gates.",
-              "files": [
-                "internal/cli/show_fields.go",
-                "internal/cli/toon_formatter.go",
-                "internal/cli/show_fields_test.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-4-3",
-              "source": "reviewer",
-              "summary": "showFieldScalar and showFieldDescription are a distinction nothing reads.",
-              "failure": "A maintainer adding a rule keyed on showFieldScalar (a plausible shape for the position/formatting work in 4-6/4-7) silently excludes description, since it is the sole member of a kind that behaves identically — a wrong `--field description` result with no compile error and no failing test to flag it.",
-              "detail": "Kinds declared at internal/cli/show_fields.go:15-18; only showFieldUnknown (:149) and showFieldList (:155) are ever compared, and bareFieldValue (:56-70) branches on `bare == nil` rather than on kind. The executor confirmed this task filtering did not need the distinction. Either collapse showFieldDescription into showFieldScalar or let 4-6/4-7 give it a job; decide at the phase boundary once those tasks are in.",
-              "files": [
-                "internal/cli/show_fields.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-4-5",
-              "source": "reviewer",
-              "summary": "Field-selection names are bare string literals repeated across the registry and all three formatters, with no cross-format parity test.",
-              "failure": "A name that drifts in one formatter (typo, rename, a new section wired into two formats and not the third) silently drops that section from that format alone — `tick show <id> --field children` prints nothing on a terminal while `--toon` prints the section. No compile error, no failing test, and the user reads the empty output as \"this task has no children\". Noticed only by a caller comparing formats.",
-              "detail": "internal/cli/show_fields.go:31-47 holds the canonical 15 names; internal/cli/toon_formatter.go:75-100 and :253-270 repeat them as literals; internal/cli/json_formatter.go:133-140 repeats them; internal/cli/pretty_formatter.go:146-167,184-205 now repeats them a third time. Remedies worth weighing at the boundary: named constants keyed off the registry, or a single table-driven parity test asserting that every registry name renders in all three formats on a fixture carrying every field.",
-              "files": [
-                "internal/cli/show_fields.go",
-                "internal/cli/toon_formatter.go",
-                "internal/cli/json_formatter.go",
-                "internal/cli/pretty_formatter.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-4-5",
-              "source": "reviewer",
-              "summary": "The fifteen selectable field names exist as four independent sets of bare string literals — the recognition registry and one gate list per formatter — with nothing tying them together.",
-              "failure": "A field added to (or respelled in) the showFields registry is accepted by the parser but silently unrendered by any formatter whose gate literal was not updated in the same edit. `tick show <id> --field <name>` then prints zero bytes and exits 0 on a terminal while `--toon` prints the field — no compile error, no failing test unless someone remembers to add one per format. Noticed by a user or agent getting an empty answer for a field the help text advertises, i.e. exactly the human-surface/agent-surface divergence §9.7 exists to close.",
-              "detail": "Registry at internal/cli/show_fields.go:31-47; toon gates at internal/cli/toon_formatter.go:75,79,83,87,91,99 and the add(...) calls in buildTaskSection at :255-272; JSON gates at internal/cli/json_formatter.go:128-142; pretty gates at internal/cli/pretty_formatter.go:151-173 and 185-206. A single ordered name constant set (or driving the gates off the registry) would make an unrouted name a compile-time or single-test failure. Fix reaches all three formatters plus the registry, so it belongs with the phase-boundary consolidation pass alongside the already-banked Selected/includes duality.",
-              "files": [
-                "internal/cli/show_fields.go",
-                "internal/cli/toon_formatter.go",
-                "internal/cli/json_formatter.go",
-                "internal/cli/pretty_formatter.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-4-6",
-              "source": "reviewer",
-              "summary": "The registry and the three formatters each hold their own copy of where a section data lives, and Task 7 will need a fourth (section lengths for the range message).",
-              "failure": "A list section added or renamed later gets wired into the formatters but not into showFields[...].items (or vice versa). `--field <section>.1` then silently returns the whole section instead of the bare value — or narrows in toon but not JSON — with no compile error and no failing test, because coverage is written per section. The agent consuming it acts on the wrong item.",
-              "detail": "showFields now carries a per-section `items func(TaskDetail) []string` (internal/cli/show_fields.go:45-47, noteTexts at :80-86) that restates what internal/cli/toon_formatter.go:85-96, internal/cli/json_formatter.go:133-140 and internal/cli/pretty_formatter.go:157-202 each reach for directly. This is the data-accessor facet of the already-banked \"fifteen field names as bare string literals with no cross-format parity test\" item and should probably be merged with it at the consolidation pass rather than treated separately; flagged because a cross-format parity test over names alone would not catch a missing items entry.",
-              "files": [
-                "internal/cli/show_fields.go",
-                "internal/cli/toon_formatter.go",
-                "internal/cli/json_formatter.go",
-                "internal/cli/pretty_formatter.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-4-8",
-              "source": "reviewer",
-              "summary": "The README two bare-value samples are documented output that nothing verifies.",
-              "failure": "A later change to the bare-value path (an added trailing newline, a prefix, quoting, a different resolution for notes.2) leaves README.md:184-188 and README.md:203-206 describing output the tool no longer produces, and the whole suite stays green. Nobody notices until a user or agent copies the sample and gets something else — precisely the defect §12.1 names the README work as existing to prevent. Phase 6 task free-text-round-trip-6-4 pins the bare value bytes against the tool but never against the README, so no later task closes this.",
-              "detail": "readmeSample compares a fence body to stdout byte-for-byte and is format-agnostic, so the two blocks fit the existing readmeSampleGroups table as-is — the format field is simply inert for a bare value, which is itself the §9.7 claim worth pinning. Task 4-8 explicitly instructed that they stay out of the table (original Do step 4 and the orchestrator addition both say so), so it was out of scope there and belongs to the consolidation pass or to Phase 6 owner.",
-              "files": [
-                "README.md",
-                "internal/cli/readme_samples_test.go"
-              ]
-            }
           ]
         }
       }
