@@ -233,7 +233,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 4,
-          "current_task": "free-text-round-trip-4-5",
+          "current_task": "free-text-round-trip-4-6",
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -263,7 +263,8 @@
             "free-text-round-trip-4-1",
             "free-text-round-trip-4-2",
             "free-text-round-trip-4-3",
-            "free-text-round-trip-4-4"
+            "free-text-round-trip-4-4",
+            "free-text-round-trip-4-5"
           ],
           "staging": {
             "p1": {
@@ -342,6 +343,32 @@
               "detail": "Kinds declared at internal/cli/show_fields.go:15-18; only showFieldUnknown (:149) and showFieldList (:155) are ever compared, and bareFieldValue (:56-70) branches on `bare == nil` rather than on kind. The executor confirmed this task filtering did not need the distinction. Either collapse showFieldDescription into showFieldScalar or let 4-6/4-7 give it a job; decide at the phase boundary once those tasks are in.",
               "files": [
                 "internal/cli/show_fields.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-4-5",
+              "source": "reviewer",
+              "summary": "Field-selection names are bare string literals repeated across the registry and all three formatters, with no cross-format parity test.",
+              "failure": "A name that drifts in one formatter (typo, rename, a new section wired into two formats and not the third) silently drops that section from that format alone — `tick show <id> --field children` prints nothing on a terminal while `--toon` prints the section. No compile error, no failing test, and the user reads the empty output as \"this task has no children\". Noticed only by a caller comparing formats.",
+              "detail": "internal/cli/show_fields.go:31-47 holds the canonical 15 names; internal/cli/toon_formatter.go:75-100 and :253-270 repeat them as literals; internal/cli/json_formatter.go:133-140 repeats them; internal/cli/pretty_formatter.go:146-167,184-205 now repeats them a third time. Remedies worth weighing at the boundary: named constants keyed off the registry, or a single table-driven parity test asserting that every registry name renders in all three formats on a fixture carrying every field.",
+              "files": [
+                "internal/cli/show_fields.go",
+                "internal/cli/toon_formatter.go",
+                "internal/cli/json_formatter.go",
+                "internal/cli/pretty_formatter.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-4-5",
+              "source": "reviewer",
+              "summary": "The fifteen selectable field names exist as four independent sets of bare string literals — the recognition registry and one gate list per formatter — with nothing tying them together.",
+              "failure": "A field added to (or respelled in) the showFields registry is accepted by the parser but silently unrendered by any formatter whose gate literal was not updated in the same edit. `tick show <id> --field <name>` then prints zero bytes and exits 0 on a terminal while `--toon` prints the field — no compile error, no failing test unless someone remembers to add one per format. Noticed by a user or agent getting an empty answer for a field the help text advertises, i.e. exactly the human-surface/agent-surface divergence §9.7 exists to close.",
+              "detail": "Registry at internal/cli/show_fields.go:31-47; toon gates at internal/cli/toon_formatter.go:75,79,83,87,91,99 and the add(...) calls in buildTaskSection at :255-272; JSON gates at internal/cli/json_formatter.go:128-142; pretty gates at internal/cli/pretty_formatter.go:151-173 and 185-206. A single ordered name constant set (or driving the gates off the registry) would make an unrouted name a compile-time or single-test failure. Fix reaches all three formatters plus the registry, so it belongs with the phase-boundary consolidation pass alongside the already-banked Selected/includes duality.",
+              "files": [
+                "internal/cli/show_fields.go",
+                "internal/cli/toon_formatter.go",
+                "internal/cli/json_formatter.go",
+                "internal/cli/pretty_formatter.go"
               ]
             }
           ]
