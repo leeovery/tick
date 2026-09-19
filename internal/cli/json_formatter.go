@@ -112,30 +112,30 @@ func taskDetailJSONObject(detail TaskDetail) jsonObject {
 		}
 	}
 
-	tags, _ := selectedItems(detail.Tags, fields.Positions("tags"))
-	refs, _ := selectedItems(detail.Refs, fields.Positions("refs"))
-	blockedBy, _ := selectedItems(detail.BlockedBy, fields.Positions("blocked_by"))
-	children, _ := selectedItems(detail.Children, fields.Positions("children"))
+	tags, _ := selectedItems(detail.Tags, fields.Positions(fieldTags))
+	refs, _ := selectedItems(detail.Refs, fields.Positions(fieldRefs))
+	blockedBy, _ := selectedItems(detail.BlockedBy, fields.Positions(fieldBlockedBy))
+	children, _ := selectedItems(detail.Children, fields.Positions(fieldChildren))
 
-	add("id", t.ID)
-	add("title", t.Title)
-	add("status", string(t.Status))
-	add("priority", t.Priority)
-	add("type", t.Type)
-	add("tags", toJSONStrings(tags))
-	add("refs", toJSONStrings(refs))
-	add("notes", toJSONNotes(selectedItems(detail.Notes, fields.Positions("notes"))))
-	add("description", t.Description)
+	add(fieldID, t.ID)
+	add(fieldTitle, t.Title)
+	add(fieldStatus, string(t.Status))
+	add(fieldPriority, t.Priority)
+	add(fieldType, t.Type)
+	add(fieldTags, toJSONStrings(tags))
+	add(fieldRefs, toJSONStrings(refs))
+	add(fieldNotes, toJSONNotes(selectedItems(detail.Notes, fields.Positions(fieldNotes))))
+	add(fieldDescription, t.Description)
 	if t.Parent != "" {
-		add("parent", t.Parent)
+		add(fieldParent, t.Parent)
 	}
-	add("created", task.FormatTimestamp(t.Created))
-	add("updated", task.FormatTimestamp(t.Updated))
+	add(fieldCreated, task.FormatTimestamp(t.Created))
+	add(fieldUpdated, task.FormatTimestamp(t.Updated))
 	if closed := jsonClosedTimestamp(t); closed != "" {
-		add("closed", closed)
+		add(fieldClosed, closed)
 	}
-	add("blocked_by", toJSONRelated(blockedBy))
-	add("children", toJSONRelated(children))
+	add(fieldBlockedBy, toJSONRelated(blockedBy))
+	add(fieldChildren, toJSONRelated(children))
 	if detail.Changes != nil {
 		add("changed", toJSONStatusChanges(detail.Changes.Rows()))
 	}

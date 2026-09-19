@@ -148,15 +148,15 @@ func prettyDetailHeader(detail TaskDetail) []string {
 		}
 	}
 
-	add("id", "ID", t.ID)
-	add("title", "Title", t.Title)
-	add("status", "Status", string(t.Status))
-	add("priority", "Priority", strconv.Itoa(t.Priority))
-	add("type", "Type", typeOrDash(t.Type))
+	add(fieldID, "ID", t.ID)
+	add(fieldTitle, "Title", t.Title)
+	add(fieldStatus, "Status", string(t.Status))
+	add(fieldPriority, "Priority", strconv.Itoa(t.Priority))
+	add(fieldType, "Type", typeOrDash(t.Type))
 
 	if len(detail.Tags) > 0 {
-		tags, _ := selectedItems(detail.Tags, sel.Positions("tags"))
-		add("tags", "Tags", strings.Join(tags, ", "))
+		tags, _ := selectedItems(detail.Tags, sel.Positions(fieldTags))
+		add(fieldTags, "Tags", strings.Join(tags, ", "))
 	}
 
 	if t.Parent != "" {
@@ -164,14 +164,14 @@ func prettyDetailHeader(detail TaskDetail) []string {
 		if detail.ParentTitle != "" {
 			parent = fmt.Sprintf("%s (%s)", t.Parent, detail.ParentTitle)
 		}
-		add("parent", "Parent", parent)
+		add(fieldParent, "Parent", parent)
 	}
 
-	add("created", "Created", task.FormatTimestamp(t.Created))
-	add("updated", "Updated", task.FormatTimestamp(t.Updated))
+	add(fieldCreated, "Created", task.FormatTimestamp(t.Created))
+	add(fieldUpdated, "Updated", task.FormatTimestamp(t.Updated))
 
 	if t.Closed != nil {
-		add("closed", "Closed", task.FormatTimestamp(*t.Closed))
+		add(fieldClosed, "Closed", task.FormatTimestamp(*t.Closed))
 	}
 
 	return lines
@@ -183,23 +183,23 @@ func prettyDetailBlocks(detail TaskDetail) []string {
 	sel := detail.Fields
 	var blocks []string
 
-	if len(detail.BlockedBy) > 0 && sel.includes("blocked_by") {
-		blockedBy, _ := selectedItems(detail.BlockedBy, sel.Positions("blocked_by"))
+	if len(detail.BlockedBy) > 0 && sel.includes(fieldBlockedBy) {
+		blockedBy, _ := selectedItems(detail.BlockedBy, sel.Positions(fieldBlockedBy))
 		blocks = append(blocks, prettyDetailBlock("Blocked by", prettyRelatedEntries(blockedBy)))
 	}
 
-	if len(detail.Children) > 0 && sel.includes("children") {
-		children, _ := selectedItems(detail.Children, sel.Positions("children"))
+	if len(detail.Children) > 0 && sel.includes(fieldChildren) {
+		children, _ := selectedItems(detail.Children, sel.Positions(fieldChildren))
 		blocks = append(blocks, prettyDetailBlock("Children", prettyRelatedEntries(children)))
 	}
 
-	if len(detail.Refs) > 0 && sel.includes("refs") {
-		refs, _ := selectedItems(detail.Refs, sel.Positions("refs"))
+	if len(detail.Refs) > 0 && sel.includes(fieldRefs) {
+		refs, _ := selectedItems(detail.Refs, sel.Positions(fieldRefs))
 		blocks = append(blocks, prettyDetailBlock("Refs", refs))
 	}
 
-	if len(detail.Notes) > 0 && sel.includes("notes") {
-		notes, _ := selectedItems(detail.Notes, sel.Positions("notes"))
+	if len(detail.Notes) > 0 && sel.includes(fieldNotes) {
+		notes, _ := selectedItems(detail.Notes, sel.Positions(fieldNotes))
 		entries := make([]string, len(notes))
 		for i, note := range notes {
 			entries[i] = fmt.Sprintf("%s  %s", note.Created.Format("2006-01-02 15:04"), note.Text)
@@ -207,7 +207,7 @@ func prettyDetailBlocks(detail TaskDetail) []string {
 		blocks = append(blocks, prettyDetailBlock("Notes", entries))
 	}
 
-	if detail.Task.Description != "" && sel.includes("description") {
+	if detail.Task.Description != "" && sel.includes(fieldDescription) {
 		blocks = append(blocks, prettyDetailBlock("Description", strings.Split(detail.Task.Description, "\n")))
 	}
 

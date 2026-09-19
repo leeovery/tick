@@ -25,30 +25,49 @@ func (f showField) isList() bool {
 	return f.length != nil
 }
 
-// showFields is the registry of field names `tick show --field` recognises,
-// spelled as the detail document spells them. Only list sections accept a
-// positional suffix.
+// The field names `tick show --field` recognises, each spelled as the detail
+// document spells it.
+const (
+	fieldID          = "id"
+	fieldTitle       = "title"
+	fieldStatus      = "status"
+	fieldPriority    = "priority"
+	fieldType        = "type"
+	fieldParent      = "parent"
+	fieldCreated     = "created"
+	fieldUpdated     = "updated"
+	fieldClosed      = "closed"
+	fieldDescription = "description"
+	fieldBlockedBy   = "blocked_by"
+	fieldChildren    = "children"
+	fieldTags        = "tags"
+	fieldRefs        = "refs"
+	fieldNotes       = "notes"
+)
+
+// showFields is the registry of the recognised field names. Only list sections
+// accept a positional suffix.
 var showFields = map[string]showField{
-	"id":          {bare: func(d TaskDetail) string { return d.Task.ID }},
-	"title":       {bare: func(d TaskDetail) string { return d.Task.Title }},
-	"status":      {bare: func(d TaskDetail) string { return string(d.Task.Status) }},
-	"priority":    {bare: func(d TaskDetail) string { return strconv.Itoa(d.Task.Priority) }},
-	"type":        {bare: func(d TaskDetail) string { return d.Task.Type }},
-	"parent":      {bare: func(d TaskDetail) string { return d.Task.Parent }},
-	"created":     {bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Created) }},
-	"updated":     {bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Updated) }},
-	"closed":      {bare: bareClosed},
-	"description": {bare: func(d TaskDetail) string { return d.Task.Description }},
-	"blocked_by":  {noun: "blocker(s)", length: func(d TaskDetail) int { return len(d.BlockedBy) }},
-	"children":    {noun: "child(ren)", length: func(d TaskDetail) int { return len(d.Children) }},
-	"tags":        {noun: "tag(s)", length: func(d TaskDetail) int { return len(d.Tags) }, items: func(d TaskDetail) []string { return d.Tags }},
-	"refs":        {noun: "ref(s)", length: func(d TaskDetail) int { return len(d.Refs) }, items: func(d TaskDetail) []string { return d.Refs }},
-	"notes":       {noun: "note(s)", length: func(d TaskDetail) int { return len(d.Notes) }, items: noteTexts},
+	fieldID:          {bare: func(d TaskDetail) string { return d.Task.ID }},
+	fieldTitle:       {bare: func(d TaskDetail) string { return d.Task.Title }},
+	fieldStatus:      {bare: func(d TaskDetail) string { return string(d.Task.Status) }},
+	fieldPriority:    {bare: func(d TaskDetail) string { return strconv.Itoa(d.Task.Priority) }},
+	fieldType:        {bare: func(d TaskDetail) string { return d.Task.Type }},
+	fieldParent:      {bare: func(d TaskDetail) string { return d.Task.Parent }},
+	fieldCreated:     {bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Created) }},
+	fieldUpdated:     {bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Updated) }},
+	fieldClosed:      {bare: bareClosed},
+	fieldDescription: {bare: func(d TaskDetail) string { return d.Task.Description }},
+	fieldBlockedBy:   {noun: "blocker(s)", length: func(d TaskDetail) int { return len(d.BlockedBy) }},
+	fieldChildren:    {noun: "child(ren)", length: func(d TaskDetail) int { return len(d.Children) }},
+	fieldTags:        {noun: "tag(s)", length: func(d TaskDetail) int { return len(d.Tags) }, items: func(d TaskDetail) []string { return d.Tags }},
+	fieldRefs:        {noun: "ref(s)", length: func(d TaskDetail) int { return len(d.Refs) }, items: func(d TaskDetail) []string { return d.Refs }},
+	fieldNotes:       {noun: "note(s)", length: func(d TaskDetail) int { return len(d.Notes) }, items: noteTexts},
 }
 
 // showListSections names the list sections in the order the toon document
 // renders them, the order an out-of-range error reports the first failure in.
-var showListSections = []string{"blocked_by", "children", "tags", "refs", "notes"}
+var showListSections = []string{fieldBlockedBy, fieldChildren, fieldTags, fieldRefs, fieldNotes}
 
 // selectedItems narrows a section's items to the requested 1-based positions,
 // returning the surviving items alongside the positions they hold in the whole

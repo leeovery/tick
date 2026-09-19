@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -115,12 +116,7 @@ func TestParseShowArgs(t *testing.T) {
 	})
 
 	t.Run("it recognises every registered name", func(t *testing.T) {
-		names := []string{
-			"id", "title", "status", "priority", "type", "parent",
-			"created", "updated", "closed", "description",
-			"notes", "tags", "refs", "children", "blocked_by",
-		}
-		for _, name := range names {
+		for _, name := range slices.Sorted(maps.Keys(showFields)) {
 			_, sel, err := parseShowArgs([]string{"tick-a1b2", "--field", name})
 			if err != nil {
 				t.Errorf("parseShowArgs for %q returned error: %v", name, err)
@@ -759,4 +755,27 @@ func TestTaskDetailWithoutFieldSelection(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRegisteredFieldRendering(t *testing.T) {
+	t.Run("it renders every registered name in every format", func(t *testing.T) {
+		formatters := []struct {
+			format string
+			fmtr   Formatter
+		}{
+			{"toon", &ToonFormatter{}},
+			{"pretty", &PrettyFormatter{}},
+			{"json", &JSONFormatter{}},
+		}
+
+		for _, name := range slices.Sorted(maps.Keys(showFields)) {
+			for _, f := range formatters {
+				detail := richDetail()
+				detail.Fields = fieldSelection(t, name)
+				if f.fmtr.FormatTaskDetail(detail) == "" {
+					t.Errorf("%s renders nothing for field %q", f.format, name)
+				}
+			}
+		}
+	})
 }

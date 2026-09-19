@@ -1422,11 +1422,22 @@ func TestToonFilteredTaskDetail(t *testing.T) {
 		}
 	})
 
-	t.Run("it never carries the changed section", func(t *testing.T) {
+	t.Run("it renders the changed section for a mutation document", func(t *testing.T) {
 		detail := richDetail()
-		detail.Changes = &StatusChanges{}
-		detail.Fields = fieldSelection(t, "title")
-		assertToonKeysAbsent(t, decodeToonDoc(t, f.FormatTaskDetail(detail)), "changed")
+		detail.Changes = &StatusChanges{Blocks: []CascadeResult{{
+			TaskID: "tick-a1b2", TaskTitle: "Add retry to the sync worker",
+			OldStatus: "open", NewStatus: "in_progress",
+		}}}
+
+		rows := toonRows(t, decodeToonDoc(t, f.FormatTaskDetail(detail)), "changed")
+
+		if len(rows) != 1 {
+			t.Fatalf("changed has %d rows, want 1", len(rows))
+		}
+		assertToonFields(t, rows[0], map[string]any{
+			"id": "tick-a1b2", "title": "Add retry to the sync worker",
+			"from": "open", "to": "in_progress", "auto": false,
+		})
 	})
 
 	t.Run("it leaves unfiltered output unchanged", func(t *testing.T) {

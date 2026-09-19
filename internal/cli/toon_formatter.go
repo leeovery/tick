@@ -72,35 +72,35 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 
 	sections = append(sections, buildTaskSection(detail.Task, sel))
 
-	if sel.includes("blocked_by") {
-		blockedBy, _ := selectedItems(detail.BlockedBy, sel.Positions("blocked_by"))
+	if sel.includes(fieldBlockedBy) {
+		blockedBy, _ := selectedItems(detail.BlockedBy, sel.Positions(fieldBlockedBy))
 		sections = append(sections, buildRelatedSection("blocked_by", blockedBy))
 	}
 
-	if sel.includes("children") {
-		children, _ := selectedItems(detail.Children, sel.Positions("children"))
+	if sel.includes(fieldChildren) {
+		children, _ := selectedItems(detail.Children, sel.Positions(fieldChildren))
 		sections = append(sections, buildRelatedSection("children", children))
 	}
 
-	if len(detail.Tags) > 0 && sel.includes("tags") {
-		tags, _ := selectedItems(detail.Tags, sel.Positions("tags"))
+	if len(detail.Tags) > 0 && sel.includes(fieldTags) {
+		tags, _ := selectedItems(detail.Tags, sel.Positions(fieldTags))
 		sections = append(sections, encodeToonSection("tags", tags))
 	}
 
-	if len(detail.Refs) > 0 && sel.includes("refs") {
-		refs, _ := selectedItems(detail.Refs, sel.Positions("refs"))
+	if len(detail.Refs) > 0 && sel.includes(fieldRefs) {
+		refs, _ := selectedItems(detail.Refs, sel.Positions(fieldRefs))
 		sections = append(sections, encodeToonSection("refs", refs))
 	}
 
-	if sel.includes("notes") {
-		sections = append(sections, buildNotesSection(selectedItems(detail.Notes, sel.Positions("notes"))))
+	if sel.includes(fieldNotes) {
+		sections = append(sections, buildNotesSection(selectedItems(detail.Notes, sel.Positions(fieldNotes))))
 	}
 
-	if detail.Changes != nil && sel.includes("changed") {
+	if detail.Changes != nil {
 		sections = append(sections, buildChangedSection(detail.Changes.Rows()))
 	}
 
-	if detail.Task.Description != "" && sel.includes("description") {
+	if detail.Task.Description != "" && sel.includes(fieldDescription) {
 		sections = append(sections, encodeToonFields(toon.Field{Key: "description", Value: detail.Task.Description}))
 	}
 
@@ -254,24 +254,24 @@ func buildTaskSection(t task.Task, sel *FieldSelection) string {
 		}
 	}
 
-	add("id", t.ID)
-	add("title", t.Title)
-	add("status", string(t.Status))
-	add("priority", t.Priority)
+	add(fieldID, t.ID)
+	add(fieldTitle, t.Title)
+	add(fieldStatus, string(t.Status))
+	add(fieldPriority, t.Priority)
 
 	if t.Type != "" {
-		add("type", t.Type)
+		add(fieldType, t.Type)
 	}
 
 	if t.Parent != "" {
-		add("parent", t.Parent)
+		add(fieldParent, t.Parent)
 	}
 
-	add("created", task.FormatTimestamp(t.Created))
-	add("updated", task.FormatTimestamp(t.Updated))
+	add(fieldCreated, task.FormatTimestamp(t.Created))
+	add(fieldUpdated, task.FormatTimestamp(t.Updated))
 
 	if t.Closed != nil {
-		add("closed", task.FormatTimestamp(*t.Closed))
+		add(fieldClosed, task.FormatTimestamp(*t.Closed))
 	}
 
 	if len(fields) == 0 {

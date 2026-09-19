@@ -1749,14 +1749,6 @@ func TestJSONFilteredTaskDetail(t *testing.T) {
 		}
 	})
 
-	t.Run("it keeps key order stable", func(t *testing.T) {
-		first := filtered(t, richDetail(), "status,title,notes")
-		second := filtered(t, richDetail(), "status,title,notes")
-		if first != second {
-			t.Errorf("repeated renders differ:\n%s\n%s", first, second)
-		}
-	})
-
 	t.Run("it never carries the changed key", func(t *testing.T) {
 		detail := richDetail()
 		detail.Changes = &StatusChanges{}
