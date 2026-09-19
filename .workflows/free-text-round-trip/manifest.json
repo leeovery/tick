@@ -226,7 +226,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 1,
-          "current_task": "free-text-round-trip-1-6",
+          "current_task": null,
           "bank": [
             {
               "task": "free-text-round-trip-1-1",
@@ -247,6 +247,16 @@
               "files": [
                 "README.md"
               ]
+            },
+            {
+              "task": "free-text-round-trip-1-6",
+              "source": "reviewer",
+              "summary": "Pre-existing lint failure on main, untouched by this task.",
+              "failure": "golangci-lint run ./... — the lint command CLAUDE.md documents — exits non-zero on a clean tree, so every contributor and every agent that runs it sees a failure unrelated to their change and learns to ignore lint output. There is no CI lint gate (.github/workflows/ holds only release.yml), so nothing else catches it.",
+              "detail": "scripts/install_test.go:83:16 — strings.SplitN(content, \"\\n\", 2)[0] should be strings.Cut (modernize/stringscut). Introduced by a0bf228a, which adopted the linter; one-line fix.",
+              "files": [
+                "scripts/install_test.go"
+              ]
             }
           ],
           "completed_tasks": [
@@ -254,7 +264,8 @@
             "free-text-round-trip-1-2",
             "free-text-round-trip-1-3",
             "free-text-round-trip-1-4",
-            "free-text-round-trip-1-5"
+            "free-text-round-trip-1-5",
+            "free-text-round-trip-1-6"
           ]
         }
       }
