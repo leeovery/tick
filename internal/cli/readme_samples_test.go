@@ -23,6 +23,8 @@ const (
 	readmeFormatListAnchor       = "tasks[2]{id,title,status,priority,type}:"
 	readmeShowSampleAnchor       = "id: tick-a1b2"
 	readmeFieldSelectionAnchor   = "notes[2]{index,text,created}:"
+	readmeBareDescriptionAnchor  = "Full task description here."
+	readmeBareNoteAnchor         = "Blocked on the migration landing"
 	readmeTransitionAnchor       = "changed[1]{id,title,from,to,auto}:"
 	readmeCascadeAnchor          = "changed[2]{id,title,from,to,auto}:"
 	readmeDepTreeAnchor          = "dep_tree[2]{from,to}:"
@@ -39,8 +41,9 @@ const (
 )
 
 type readmeFence struct {
-	info string
-	body string
+	info   string
+	prompt string
+	body   string
 }
 
 func readmeContent(t *testing.T) string {
@@ -75,8 +78,8 @@ func readmeFences(t *testing.T) []readmeFence {
 			current = nil
 			continue
 		}
-		if body, ok := fenceBody(current); ok {
-			fences = append(fences, readmeFence{info: info, body: body})
+		if prompt, body, ok := fenceBody(current); ok {
+			fences = append(fences, readmeFence{info: info, prompt: prompt, body: body})
 		}
 		inBlock = false
 	}
@@ -93,20 +96,26 @@ func readmeToonBlocks(t *testing.T) map[string]string {
 		if fence.info != "" {
 			continue
 		}
-		anchor, _, _ := strings.Cut(fence.body, "\n")
-		blocks[anchor] = fence.body
+		blocks[firstLineOf(fence.body)] = fence.body
 	}
 	return blocks
 }
 
-func fenceBody(lines []string) (string, bool) {
+// fenceBody splits a fenced block into its leading shell prompt line, if any,
+// and the remaining body.
+func fenceBody(lines []string) (prompt string, body string, ok bool) {
 	if len(lines) > 0 && strings.HasPrefix(lines[0], readmeShellPromptLinePrefix) {
-		lines = lines[1:]
+		prompt, lines = lines[0], lines[1:]
 	}
 	if len(lines) == 0 {
-		return "", false
+		return "", "", false
 	}
-	return strings.Join(lines, "\n"), true
+	return prompt, strings.Join(lines, "\n"), true
+}
+
+func firstLineOf(body string) string {
+	first, _, _ := strings.Cut(body, "\n")
+	return first
 }
 
 func readmeChangedRows(t *testing.T, blocks map[string]string, anchor string) []map[string]any {
@@ -332,6 +341,18 @@ func readmeSampleGroups(t *testing.T) []readmeSampleGroup {
 			},
 		},
 		{
+			name: "it reproduces the README bare description sample",
+			samples: []readmeSample{
+				{name: "bare description", firstLine: readmeBareDescriptionAnchor, occurrence: 1, format: "--toon", args: []string{"show", "tick-a1b2", "--field", "description"}, tasks: fieldSelectionTasks},
+			},
+		},
+		{
+			name: "it reproduces the README bare note position sample",
+			samples: []readmeSample{
+				{name: "bare note position", firstLine: readmeBareNoteAnchor, occurrence: 1, format: "--toon", args: []string{"show", "tick-a1b2", "--field", "notes.2"}, tasks: fieldSelectionTasks},
+			},
+		},
+		{
 			name: "it reproduces the README list samples",
 			samples: []readmeSample{
 				{name: "list toon", firstLine: readmeListSampleAnchor, occurrence: 1, format: "--toon", args: []string{"list"}, tasks: threeTaskList},
@@ -369,7 +390,7 @@ func findREADMEBlock(fences []readmeFence, sample readmeSample) (string, error) 
 		if fence.info != sample.info {
 			continue
 		}
-		if first, _, _ := strings.Cut(fence.body, "\n"); first != sample.firstLine {
+		if firstLineOf(fence.body) != sample.firstLine {
 			continue
 		}
 		seen++
@@ -420,6 +441,96 @@ func TestREADMESamplesMatchRenderedOutput(t *testing.T) {
 		missing := readmeSample{firstLine: readmeMissingAnchorFixture, occurrence: 1}
 		if _, err := findREADMEBlock(fences, missing); err == nil {
 			t.Errorf("expected an error for first line %q, got nil", readmeMissingAnchorFixture)
+		}
+	})
+}
+
+// readmeSampleExemptions maps the prompt line of a prompted README fence that
+// no readmeSample renders to the reason it renders none.
+var readmeSampleExemptions = map[string]string{
+	"$ tick list --stauts open": "documents a flag error, not rendered sample output",
+}
+
+type readmeAnchor struct {
+	info      string
+	firstLine string
+}
+
+type readmeClaim struct {
+	anchor     readmeAnchor
+	occurrence int
+}
+
+// readmeCoverageErrors reports every prompted fence that no sample and no
+// exemption claims, and every exemption that claims no prompted fence.
+func readmeCoverageErrors(fences []readmeFence, samples []readmeSample, exemptions map[string]string) []error {
+	claimed := make(map[readmeClaim]bool, len(samples))
+	for _, sample := range samples {
+		anchor := readmeAnchor{info: sample.info, firstLine: sample.firstLine}
+		claimed[readmeClaim{anchor: anchor, occurrence: sample.occurrence}] = true
+	}
+
+	var errs []error
+	exempted := make(map[string]bool, len(exemptions))
+	occurrences := make(map[readmeAnchor]int, len(fences))
+	for _, fence := range fences {
+		anchor := readmeAnchor{info: fence.info, firstLine: firstLineOf(fence.body)}
+		occurrences[anchor]++
+		if fence.prompt == "" {
+			continue
+		}
+		if _, ok := exemptions[fence.prompt]; ok {
+			exempted[fence.prompt] = true
+			continue
+		}
+		if !claimed[readmeClaim{anchor: anchor, occurrence: occurrences[anchor]}] {
+			errs = append(errs, fmt.Errorf("README sample %q is rendered by no readmeSample", fence.prompt))
+		}
+	}
+
+	for _, prompt := range slices.Sorted(maps.Keys(exemptions)) {
+		if !exempted[prompt] {
+			errs = append(errs, fmt.Errorf("README sample exemption %q (%s) matches no prompted fence", prompt, exemptions[prompt]))
+		}
+	}
+	return errs
+}
+
+func allREADMESamples(t *testing.T) []readmeSample {
+	t.Helper()
+	var samples []readmeSample
+	for _, group := range readmeSampleGroups(t) {
+		samples = append(samples, group.samples...)
+	}
+	return samples
+}
+
+func TestREADMEPromptedSamplesAreClaimed(t *testing.T) {
+	t.Run("it claims every prompted README sample", func(t *testing.T) {
+		for _, err := range readmeCoverageErrors(readmeFences(t), allREADMESamples(t), readmeSampleExemptions) {
+			t.Error(err)
+		}
+	})
+
+	t.Run("it fails when a prompted sample is claimed by nothing", func(t *testing.T) {
+		fences := []readmeFence{{prompt: "$ tick list", body: readmeListSampleAnchor}}
+		errs := readmeCoverageErrors(fences, nil, nil)
+		if len(errs) != 1 {
+			t.Fatalf("got %d errors, want 1: %v", len(errs), errs)
+		}
+		if !strings.Contains(errs[0].Error(), "$ tick list") {
+			t.Errorf("error %q does not name the unclaimed prompt line", errs[0])
+		}
+	})
+
+	t.Run("it fails when an exemption names no fence", func(t *testing.T) {
+		exemptions := map[string]string{"$ tick list --stauts open": "documents a flag error"}
+		errs := readmeCoverageErrors(nil, nil, exemptions)
+		if len(errs) != 1 {
+			t.Fatalf("got %d errors, want 1: %v", len(errs), errs)
+		}
+		if !strings.Contains(errs[0].Error(), "$ tick list --stauts open") {
+			t.Errorf("error %q does not name the unused exemption", errs[0])
 		}
 	})
 }
