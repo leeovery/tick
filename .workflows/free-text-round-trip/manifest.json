@@ -238,7 +238,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 5,
-          "current_task": "free-text-round-trip-5-6",
+          "current_task": null,
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -282,7 +282,8 @@
             "free-text-round-trip-5-2",
             "free-text-round-trip-5-3",
             "free-text-round-trip-5-4",
-            "free-text-round-trip-5-5"
+            "free-text-round-trip-5-5",
+            "free-text-round-trip-5-6"
           ],
           "staging": {
             "p1": {
@@ -355,6 +356,19 @@
               "files": [
                 "internal/cli/migrate.go",
                 "internal/cli/app.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-5-6",
+              "source": "reviewer",
+              "summary": "No drift guard ties the global-flag registry to the three places that document it; the README already diverges.",
+              "failure": "A global flag added to globalFlagSet (or a spelling changed) ships undocumented, or documented wrong, in up to three hand-maintained lists with nothing failing. A user reading `tick help` or the README never learns the flag exists, or learns a spelling that does not work. It is already live: globalFlagSet registers -V, `tick help` prints `--version, -V`, and the README Global Flags block lists only --version — no test notices.",
+              "detail": "internal/cli/flags.go:21 (globalFlagSet), internal/cli/help.go:264-273 (printTopLevelHelp block), internal/cli/help.go:281 (printAllHelp line), README.md:623-632 (README block). Task 5-6 new agreement subtest (internal/cli/help_test.go:491) pins top-level → --all for long flags only; nothing checks either against globalFlagSet, and nothing checks the README at all. Per-command flags already have this guard (TestCommandFlagsMatchHelp); global flags do not. Independently found twice — a reviewer on task free-text-round-trip-4-9 reported the same gap before this phase bank existed.",
+              "files": [
+                "internal/cli/flags.go",
+                "internal/cli/help.go",
+                "internal/cli/help_test.go",
+                "README.md"
               ]
             }
           ]
