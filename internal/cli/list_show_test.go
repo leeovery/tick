@@ -1278,3 +1278,138 @@ func TestShowFieldPositions(t *testing.T) {
 		}
 	})
 }
+
+func TestShowFieldPositionOutOfRange(t *testing.T) {
+	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	notes := []task.Note{
+		{Text: "first note", Created: created},
+		{Text: "second note", Created: created.Add(time.Hour)},
+	}
+
+	richProject := func(t *testing.T) string {
+		t.Helper()
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-b1b1b1", Title: "Blocker", Status: task.StatusOpen, Priority: 2,
+				Created: created, Updated: created},
+			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2,
+				Created: created, Updated: created, Tags: []string{"api", "ui"},
+				Refs: []string{"https://example.com"}, Notes: notes,
+				BlockedBy: []string{"tick-b1b1b1"}},
+			{ID: "tick-c1c1c1", Title: "Child one", Status: task.StatusOpen, Priority: 2,
+				Parent: "tick-a1b2c3", Created: created, Updated: created},
+		})
+		return dir
+	}
+
+	bareProject := func(t *testing.T) string {
+		t.Helper()
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2,
+				Created: created, Updated: created},
+		})
+		return dir
+	}
+
+	assertRejected := func(t *testing.T, dir string, field string, want string) {
+		t.Helper()
+		stdout, stderr, code := runShow(t, dir, "tick-a1b2c3", "--field", field)
+		if code == 0 {
+			t.Fatalf("exit code = 0 for --field %s, want non-zero; stdout = %q", field, stdout)
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+		if stderr != "Error: "+want+"\n" {
+			t.Errorf("stderr = %q, want %q", stderr, "Error: "+want+"\n")
+		}
+	}
+
+	t.Run("it rejects a position past the end of the notes", func(t *testing.T) {
+		assertRejected(t, richProject(t), "notes.4", "notes.4 out of range: task has 2 note(s)")
+	})
+
+	t.Run("it rejects position zero", func(t *testing.T) {
+		assertRejected(t, richProject(t), "notes.0", "notes.0 out of range: task has 2 note(s)")
+	})
+
+	t.Run("it rejects a negative position", func(t *testing.T) {
+		assertRejected(t, richProject(t), "notes.-1", "notes.-1 out of range: task has 2 note(s)")
+	})
+
+	t.Run("it rejects a position on a section the task does not carry", func(t *testing.T) {
+		assertRejected(t, bareProject(t), "tags.1", "tags.1 out of range: task has 0 tag(s)")
+	})
+
+	t.Run("it rejects an out-of-range children position", func(t *testing.T) {
+		assertRejected(t, richProject(t), "children.2", "children.2 out of range: task has 1 child(ren)")
+	})
+
+	t.Run("it rejects an out-of-range blocked_by position", func(t *testing.T) {
+		assertRejected(t, richProject(t), "blocked_by.2", "blocked_by.2 out of range: task has 1 blocker(s)")
+	})
+
+	t.Run("it rejects an out-of-range refs position", func(t *testing.T) {
+		assertRejected(t, richProject(t), "refs.3", "refs.3 out of range: task has 1 ref(s)")
+	})
+
+	t.Run("it prints nothing on stdout when a position is out of range", func(t *testing.T) {
+		assertRejected(t, richProject(t), "title,notes.4", "notes.4 out of range: task has 2 note(s)")
+	})
+
+	t.Run("it reports the first failure deterministically", func(t *testing.T) {
+		dir := richProject(t)
+		for range 3 {
+			assertRejected(t, dir, "refs.9,notes.9", "refs.9 out of range: task has 1 ref(s)")
+		}
+	})
+
+	t.Run("it keeps the unrecognised-name error for a non-numeric suffix", func(t *testing.T) {
+		_, stderr, code := runShow(t, richProject(t), "tick-a1b2c3", "--field", "notes.x")
+		if code == 0 {
+			t.Fatalf("exit code = 0, want non-zero")
+		}
+		want := "Error: unknown field \"notes.x\" for \"show\". Run 'tick help show' for usage.\n"
+		if stderr != want {
+			t.Errorf("stderr = %q, want %q", stderr, want)
+		}
+	})
+
+	t.Run("it still succeeds for a whole section the task does not carry", func(t *testing.T) {
+		stdout, stderr, code := runShow(t, bareProject(t), "tick-a1b2c3", "--field", "tags")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+	})
+
+	t.Run("it still succeeds for a whole always-present section that is empty", func(t *testing.T) {
+		stdout, stderr, code := runShow(t, bareProject(t), "tick-a1b2c3", "--toon", "--field", "notes")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if stdout != "notes[0]{index,text,created}:\n" {
+			t.Errorf("stdout = %q, want the count-zero header", stdout)
+		}
+	})
+
+	t.Run("it renders an in-range position normally", func(t *testing.T) {
+		dir := richProject(t)
+
+		stdout, stderr, code := runShow(t, dir, "tick-a1b2c3", "--field", "notes.2")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if stdout != "second note\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "second note\n")
+		}
+
+		for _, format := range []string{"--toon", "--pretty", "--json"} {
+			_, stderr, code := runShow(t, dir, "tick-a1b2c3", format, "--field", "title,notes.2")
+			if code != 0 {
+				t.Fatalf("exit code = %d for %s, want 0; stderr = %q", code, format, stderr)
+			}
+		}
+	})
+}

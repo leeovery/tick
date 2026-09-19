@@ -64,6 +64,10 @@ func RunShow(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout 
 
 	detail := showDataToTaskDetail(data)
 
+	if err := selection.ValidatePositions(detail); err != nil {
+		return err
+	}
+
 	if value, ok := bareFieldValue(detail, selection); ok {
 		if value != "" {
 			fmt.Fprintln(stdout, value)

@@ -49,6 +49,20 @@ var showFields = map[string]showField{
 	"blocked_by":  {kind: showFieldList},
 }
 
+// showSections holds each list section's length and the noun an out-of-range
+// error spells it with, in the order the toon document renders them.
+var showSections = []struct {
+	name   string
+	noun   string
+	length func(TaskDetail) int
+}{
+	{"blocked_by", "blocker(s)", func(d TaskDetail) int { return len(d.BlockedBy) }},
+	{"children", "child(ren)", func(d TaskDetail) int { return len(d.Children) }},
+	{"tags", "tag(s)", func(d TaskDetail) int { return len(d.Tags) }},
+	{"refs", "ref(s)", func(d TaskDetail) int { return len(d.Refs) }},
+	{"notes", "note(s)", func(d TaskDetail) int { return len(d.Notes) }},
+}
+
 // selectedItems narrows a section's items to the requested 1-based positions,
 // returning the surviving items alongside the positions they hold in the whole
 // section. Nil positions keep every item. Positions are ordered ascending and
@@ -255,4 +269,22 @@ func parseShowArgs(args []string) (string, *FieldSelection, error) {
 	}
 
 	return id, selection, nil
+}
+
+// ValidatePositions returns an error for the first selected position falling
+// outside its section in detail, sections in document order and positions
+// ascending. A section named whole carries no position and cannot fail.
+func (s *FieldSelection) ValidatePositions(detail TaskDetail) error {
+	if s == nil {
+		return nil
+	}
+	for _, section := range showSections {
+		length := section.length(detail)
+		for _, pos := range slices.Sorted(slices.Values(s.Positions(section.name))) {
+			if pos < 1 || pos > length {
+				return fmt.Errorf("%s.%d out of range: task has %d %s", section.name, pos, length, section.noun)
+			}
+		}
+	}
+	return nil
 }

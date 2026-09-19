@@ -606,3 +606,99 @@ func TestSelectedItems(t *testing.T) {
 		}
 	})
 }
+
+func TestValidatePositions(t *testing.T) {
+	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	detail := TaskDetail{
+		Task:      task.Task{ID: "tick-a1b2c3", Title: "Add login"},
+		Tags:      []string{"api", "ui"},
+		Refs:      []string{"https://example.com"},
+		Notes:     []task.Note{{Text: "looked at it", Created: created}, {Text: "and again", Created: created}},
+		Children:  []RelatedTask{{ID: "tick-c1c1c1", Title: "Child one", Status: "open"}},
+		BlockedBy: []RelatedTask{{ID: "tick-b1b1b1", Title: "Blocker", Status: "open"}},
+	}
+
+	validate := func(t *testing.T, field string) error {
+		t.Helper()
+		_, sel := parseSelection(t, "tick-a1b2c3", "--field", field)
+		return sel.ValidatePositions(detail)
+	}
+
+	t.Run("it accepts a position within the section", func(t *testing.T) {
+		for _, field := range []string{"notes.2", "tags.1", "refs.1", "children.1", "blocked_by.1"} {
+			if err := validate(t, field); err != nil {
+				t.Errorf("ValidatePositions(%s) = %v, want nil", field, err)
+			}
+		}
+	})
+
+	t.Run("it accepts a whole section the task does not carry", func(t *testing.T) {
+		empty := TaskDetail{Task: task.Task{ID: "tick-a1b2c3"}}
+		_, sel := parseSelection(t, "tick-a1b2c3", "--field", "tags,notes,refs")
+		if err := sel.ValidatePositions(empty); err != nil {
+			t.Errorf("ValidatePositions = %v, want nil", err)
+		}
+	})
+
+	t.Run("it accepts a nil selection", func(t *testing.T) {
+		var sel *FieldSelection
+		if err := sel.ValidatePositions(detail); err != nil {
+			t.Errorf("ValidatePositions = %v, want nil", err)
+		}
+	})
+
+	messages := []struct {
+		field string
+		want  string
+	}{
+		{"notes.3", "notes.3 out of range: task has 2 note(s)"},
+		{"notes.0", "notes.0 out of range: task has 2 note(s)"},
+		{"notes.-1", "notes.-1 out of range: task has 2 note(s)"},
+		{"tags.3", "tags.3 out of range: task has 2 tag(s)"},
+		{"refs.2", "refs.2 out of range: task has 1 ref(s)"},
+		{"children.2", "children.2 out of range: task has 1 child(ren)"},
+		{"blocked_by.2", "blocked_by.2 out of range: task has 1 blocker(s)"},
+	}
+	for _, tc := range messages {
+		t.Run("it rejects "+tc.field, func(t *testing.T) {
+			err := validate(t, tc.field)
+			if err == nil {
+				t.Fatalf("ValidatePositions(%s) = nil, want an error", tc.field)
+			}
+			if err.Error() != tc.want {
+				t.Errorf("error = %q, want %q", err.Error(), tc.want)
+			}
+		})
+	}
+
+	t.Run("it rejects a position on a section the task does not carry", func(t *testing.T) {
+		empty := TaskDetail{Task: task.Task{ID: "tick-a1b2c3"}}
+		_, sel := parseSelection(t, "tick-a1b2c3", "--field", "tags.1")
+		err := sel.ValidatePositions(empty)
+		if err == nil || err.Error() != "tags.1 out of range: task has 0 tag(s)" {
+			t.Errorf("error = %v, want %q", err, "tags.1 out of range: task has 0 tag(s)")
+		}
+	})
+
+	t.Run("it reports the first failure in document order whatever the argument order", func(t *testing.T) {
+		for _, field := range []string{"refs.9,notes.9", "notes.9,refs.9"} {
+			err := validate(t, field)
+			if err == nil || err.Error() != "refs.9 out of range: task has 1 ref(s)" {
+				t.Errorf("ValidatePositions(%s) = %v, want the refs.9 error", field, err)
+			}
+		}
+	})
+
+	t.Run("it reports the lowest out-of-range position within a section", func(t *testing.T) {
+		err := validate(t, "notes.9,notes.3")
+		if err == nil || err.Error() != "notes.3 out of range: task has 2 note(s)" {
+			t.Errorf("error = %v, want the notes.3 error", err)
+		}
+	})
+
+	t.Run("it ignores positions on a section also named whole", func(t *testing.T) {
+		if err := validate(t, "notes,notes.9"); err != nil {
+			t.Errorf("ValidatePositions = %v, want nil", err)
+		}
+	})
+}
