@@ -16,8 +16,8 @@ type FlagDef struct {
 type CommandFlags map[string]map[string]FlagDef
 
 // globalFlagSet contains all global flags that are accepted by every command.
-// These are stripped by parseArgs before dispatch but may appear in subArgs
-// when validation runs before global stripping.
+// parseArgs applies and drops them wherever they appear before the end-of-flags
+// marker; after it they are ordinary text.
 var globalFlagSet = map[string]bool{
 	"--quiet":   true,
 	"-q":        true,

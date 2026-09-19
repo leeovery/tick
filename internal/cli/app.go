@@ -361,9 +361,9 @@ type globalFlags struct {
 // dropped from the returned args, no later argument sets a global flag, and each
 // argument appended to the returned args is counted in flags.literals. Command
 // resolution continues past the marker, so a marker before the subcommand still
-// leaves the next argument as the subcommand and does not count it. Returns the parsed global flags, the subcommand name, remaining
-// subcommand-specific args (non-global arguments only), and an error if an
-// unknown flag appears before the subcommand.
+// leaves the next argument as the subcommand and does not count it. Returns the
+// parsed global flags, the subcommand name, the remaining subcommand-specific
+// args, and an error if an unknown flag appears before the subcommand.
 func parseArgs(args []string) (globalFlags, string, []string, error) {
 	var flags globalFlags
 	var subcmd string
