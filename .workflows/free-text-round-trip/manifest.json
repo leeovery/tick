@@ -153,7 +153,8 @@
             "free-text-round-trip-2-8": "tick-8fcf09",
             "free-text-round-trip-3-7": "tick-98d2e0",
             "free-text-round-trip-3-8": "tick-aa98d9",
-            "free-text-round-trip-3-9": "tick-98c333"
+            "free-text-round-trip-3-9": "tick-98c333",
+            "free-text-round-trip-3-10": "tick-d05b7e"
           },
           "storage_paths": [
             ".tick/"
@@ -275,6 +276,12 @@
                 "1": "approved",
                 "2": "approved",
                 "3": "approved"
+              }
+            },
+            "ad-hoc-1": {
+              "gate_mode": "auto",
+              "tasks": {
+                "1": "approved"
               }
             }
           },
