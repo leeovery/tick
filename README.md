@@ -418,7 +418,7 @@ tick-d5c6   open          3     -         Update docs
 
 ### TOON (Token-Oriented Object Notation)
 
-Designed for AI consumption. Schema is declared once in the header; rows are compact CSV-like lines. Uses 30-60% fewer tokens than equivalent JSON.
+Designed for AI consumption. A list of same-shaped rows becomes a tabular section — a `name[N]{cols}:` header declaring the schema once, followed by compact CSV-like rows; a single object becomes named `key: value` fields; a collection of scalars becomes an inline `name[N]: a,b` list. Uses 30-60% fewer tokens than equivalent JSON.
 
 ```
 tasks[2]{id,title,status,priority,type}:
