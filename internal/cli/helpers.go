@@ -94,16 +94,10 @@ func validateRefsFlag(refs []string, emptyErr string) ([]string, error) {
 	return deduped, nil
 }
 
-// outputTransitionOrCascade writes a transition or cascade-transition to stdout.
-// When cr is nil or has no cascaded entries it uses FormatTransition; otherwise it
-// uses FormatCascadeTransition with the pre-built CascadeResult. Callers must build
+// outputStatusChanges writes a command's status changes to stdout. Callers must build
 // the CascadeResult inside the Mutate closure where the tasks slice is still valid.
-func outputTransitionOrCascade(stdout io.Writer, fmtr Formatter, id, oldStatus, newStatus string, cr *CascadeResult) {
-	if cr == nil || len(cr.Cascaded) == 0 {
-		fmt.Fprintln(stdout, fmtr.FormatTransition(id, oldStatus, newStatus))
-	} else {
-		fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(*cr))
-	}
+func outputStatusChanges(stdout io.Writer, fmtr Formatter, cr CascadeResult) {
+	fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
 }
 
 // validateAndReopenParent finds the parent task in tasks by parentID, validates that

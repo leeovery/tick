@@ -90,9 +90,17 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--toon",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					if !strings.Contains(stdout, "tick-aaa111: open \u2192 in_progress") {
-						t.Errorf("toon transition should be 'id: old \u2192 new', got %q", stdout)
+					rows := toonRows(t, decodeToonDoc(t, stdout), "changed")
+					if len(rows) != 1 {
+						t.Fatalf("changed has %d rows, want 1", len(rows))
 					}
+					assertToonFields(t, rows[0], map[string]any{
+						"id":    "tick-aaa111",
+						"title": "Open task",
+						"from":  "open",
+						"to":    "in_progress",
+						"auto":  false,
+					})
 				},
 			},
 			{
@@ -115,14 +123,18 @@ func TestFormatIntegration(t *testing.T) {
 						t.Errorf("json transition should be valid JSON, got error: %v, output: %q", err, stdout)
 						return
 					}
-					if obj["id"] != "tick-aaa111" {
-						t.Errorf("json transition id = %v, want tick-aaa111", obj["id"])
+					transition, ok := obj["transition"].(map[string]any)
+					if !ok {
+						t.Fatalf("json transition = %#v, want an object", obj["transition"])
 					}
-					if obj["from"] != "open" {
-						t.Errorf("json transition from = %v, want open", obj["from"])
+					if transition["id"] != "tick-aaa111" {
+						t.Errorf("json transition id = %v, want tick-aaa111", transition["id"])
 					}
-					if obj["to"] != "in_progress" {
-						t.Errorf("json transition to = %v, want in_progress", obj["to"])
+					if transition["from"] != "open" {
+						t.Errorf("json transition from = %v, want open", transition["from"])
+					}
+					if transition["to"] != "in_progress" {
+						t.Errorf("json transition to = %v, want in_progress", transition["to"])
 					}
 				},
 			},

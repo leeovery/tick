@@ -197,8 +197,6 @@ type Formatter interface {
 	FormatTaskList(tasks []task.Task) string
 	// FormatTaskDetail renders a single task with full details including related context.
 	FormatTaskDetail(detail TaskDetail) string
-	// FormatTransition renders a status transition (e.g., "open → in_progress").
-	FormatTransition(id string, oldStatus string, newStatus string) string
 	// FormatDepChange renders a dependency add/remove confirmation.
 	FormatDepChange(action string, taskID string, depID string) string
 	// FormatStats renders task statistics.
@@ -213,15 +211,10 @@ type Formatter interface {
 	FormatDepTree(result DepTreeResult) string
 }
 
-// baseFormatter provides shared implementations of FormatTransition, FormatDepChange,
-// and FormatRemoval for text-based formatters (Toon and Pretty).
+// baseFormatter provides shared implementations of FormatDepChange and FormatRemoval
+// for text-based formatters (Toon and Pretty).
 // Embedded by ToonFormatter and PrettyFormatter.
 type baseFormatter struct{}
-
-// FormatTransition renders a status transition as plain text with the Unicode right arrow.
-func (b *baseFormatter) FormatTransition(id string, oldStatus string, newStatus string) string {
-	return fmt.Sprintf("%s: %s → %s", id, oldStatus, newStatus)
-}
 
 // FormatDepChange renders a dependency add/remove confirmation as plain text.
 func (b *baseFormatter) FormatDepChange(action string, taskID string, depID string) string {
@@ -263,9 +256,6 @@ func (s *StubFormatter) FormatTaskList(_ []task.Task) string { return "" }
 
 // FormatTaskDetail returns an empty string (stub).
 func (s *StubFormatter) FormatTaskDetail(_ TaskDetail) string { return "" }
-
-// FormatTransition returns an empty string (stub).
-func (s *StubFormatter) FormatTransition(_, _, _ string) string { return "" }
 
 // FormatDepChange returns an empty string (stub).
 func (s *StubFormatter) FormatDepChange(_, _, _ string) string { return "" }

@@ -386,8 +386,7 @@ func TestTransitionCommands(t *testing.T) {
 		}
 	})
 
-	t.Run("it transitions single task with no cascades using FormatTransition", func(t *testing.T) {
-		// A standalone task (no children) should use FormatTransition output — same as before.
+	t.Run("it renders a single transition as the pretty arrow line", func(t *testing.T) {
 		openTask := task.Task{
 			ID: "tick-aaa111", Title: "Solo task", Status: task.StatusOpen,
 			Priority: 2, Created: now, Updated: now,
@@ -399,7 +398,6 @@ func TestTransitionCommands(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0", exitCode)
 		}
 
-		// FormatTransition output: "tick-aaa111: open → in_progress"
 		expected := "tick-aaa111: open → in_progress\n"
 		if stdout != expected {
 			t.Errorf("stdout = %q, want %q", stdout, expected)

@@ -9,62 +9,57 @@ import (
 )
 
 func TestToonFormatterCascadeTransition(t *testing.T) {
-	t.Run("it renders downward cancel cascade flat with ParentID present", func(t *testing.T) {
+	t.Run("it renders a downward cancel cascade as one changed table", func(t *testing.T) {
 		f := &ToonFormatter{}
-		result := f.FormatCascadeTransition(CascadeResult{
-			TaskID:    "tick-parent1",
-			TaskTitle: "Parent",
-			OldStatus: "in_progress",
-			NewStatus: "cancelled",
-			Cascaded: []CascadeEntry{
-				{ID: "tick-child1", Title: "Login", ParentID: "tick-parent1", OldStatus: "in_progress", NewStatus: "cancelled"},
-				{ID: "tick-child2", Title: "Signup", ParentID: "tick-parent1", OldStatus: "open", NewStatus: "cancelled"},
+		doc := f.FormatCascadeTransition(CascadeResult{
+			Changed: []StatusChange{
+				{ID: "tick-parent1", Title: "Parent", From: "in_progress", To: "cancelled"},
+				{ID: "tick-child1", Title: "Login", From: "in_progress", To: "cancelled", Auto: true},
+				{ID: "tick-child2", Title: "Signup", From: "open", To: "cancelled", Auto: true},
 			},
 		})
-		expected := "tick-parent1: in_progress \u2192 cancelled\n" +
-			"tick-child1: in_progress \u2192 cancelled (auto)\n" +
-			"tick-child2: open \u2192 cancelled (auto)"
-		if result != expected {
-			t.Errorf("result:\n%s\nwant:\n%s", result, expected)
+
+		rows := toonRows(t, decodeToonDoc(t, doc), "changed")
+		if len(rows) != 3 {
+			t.Fatalf("changed has %d rows, want 3", len(rows))
 		}
+		assertToonFields(t, rows[0], map[string]any{"id": "tick-parent1", "title": "Parent", "from": "in_progress", "to": "cancelled", "auto": false})
+		assertToonFields(t, rows[1], map[string]any{"id": "tick-child1", "title": "Login", "from": "in_progress", "to": "cancelled", "auto": true})
+		assertToonFields(t, rows[2], map[string]any{"id": "tick-child2", "title": "Signup", "from": "open", "to": "cancelled", "auto": true})
 	})
 
-	t.Run("it renders upward start cascade", func(t *testing.T) {
+	t.Run("it renders an upward start cascade as one changed table", func(t *testing.T) {
 		f := &ToonFormatter{}
-		result := f.FormatCascadeTransition(CascadeResult{
-			TaskID:    "tick-child1",
-			TaskTitle: "Child",
-			OldStatus: "open",
-			NewStatus: "in_progress",
-			Cascaded: []CascadeEntry{
-				{ID: "tick-parent1", Title: "Auth phase", ParentID: "tick-child1", OldStatus: "open", NewStatus: "in_progress"},
-				{ID: "tick-grand1", Title: "Sprint 3", ParentID: "tick-child1", OldStatus: "open", NewStatus: "in_progress"},
+		doc := f.FormatCascadeTransition(CascadeResult{
+			Changed: []StatusChange{
+				{ID: "tick-child1", Title: "Child", From: "open", To: "in_progress"},
+				{ID: "tick-parent1", Title: "Auth phase", From: "open", To: "in_progress", Auto: true},
+				{ID: "tick-grand1", Title: "Sprint 3", From: "open", To: "in_progress", Auto: true},
 			},
 		})
-		expected := "tick-child1: open \u2192 in_progress\n" +
-			"tick-parent1: open \u2192 in_progress (auto)\n" +
-			"tick-grand1: open \u2192 in_progress (auto)"
-		if result != expected {
-			t.Errorf("result:\n%s\nwant:\n%s", result, expected)
+
+		rows := toonRows(t, decodeToonDoc(t, doc), "changed")
+		if len(rows) != 3 {
+			t.Fatalf("changed has %d rows, want 3", len(rows))
 		}
+		assertToonFields(t, rows[0], map[string]any{"id": "tick-child1", "auto": false})
+		assertToonFields(t, rows[1], map[string]any{"id": "tick-parent1", "auto": true})
+		assertToonFields(t, rows[2], map[string]any{"id": "tick-grand1", "auto": true})
 	})
 
-	t.Run("it renders single cascade entry", func(t *testing.T) {
+	t.Run("it renders a single change as a one-row changed table", func(t *testing.T) {
 		f := &ToonFormatter{}
-		result := f.FormatCascadeTransition(CascadeResult{
-			TaskID:    "tick-abc123",
-			TaskTitle: "Task",
-			OldStatus: "in_progress",
-			NewStatus: "done",
-			Cascaded: []CascadeEntry{
-				{ID: "tick-def456", Title: "Child", ParentID: "tick-abc123", OldStatus: "open", NewStatus: "done"},
+		doc := f.FormatCascadeTransition(CascadeResult{
+			Changed: []StatusChange{
+				{ID: "tick-abc123", Title: "Task", From: "in_progress", To: "done"},
 			},
 		})
-		expected := "tick-abc123: in_progress \u2192 done\n" +
-			"tick-def456: open \u2192 done (auto)"
-		if result != expected {
-			t.Errorf("result:\n%s\nwant:\n%s", result, expected)
+
+		rows := toonRows(t, decodeToonDoc(t, doc), "changed")
+		if len(rows) != 1 {
+			t.Fatalf("changed has %d rows, want 1", len(rows))
 		}
+		assertToonFields(t, rows[0], map[string]any{"id": "tick-abc123", "title": "Task", "from": "in_progress", "to": "done", "auto": false})
 	})
 }
 
@@ -270,17 +265,19 @@ func TestAllFormattersCascadeEmptyArrays(t *testing.T) {
 			OldStatus: "open",
 			NewStatus: "done",
 			Cascaded:  nil,
+			Changed:   []StatusChange{{ID: "tick-abc123", Title: "Task", From: "open", To: "done"}},
 		}
 
-		// Toon: should just show primary transition
-		toon := (&ToonFormatter{}).FormatCascadeTransition(result)
-		expected := "tick-abc123: open \u2192 done"
-		if toon != expected {
-			t.Errorf("ToonFormatter result = %q, want %q", toon, expected)
+		// Toon: the changed table carries only the requested row.
+		rows := toonRows(t, decodeToonDoc(t, (&ToonFormatter{}).FormatCascadeTransition(result)), "changed")
+		if len(rows) != 1 {
+			t.Fatalf("changed has %d rows, want 1", len(rows))
 		}
+		assertToonFields(t, rows[0], map[string]any{"id": "tick-abc123", "title": "Task", "from": "open", "to": "done", "auto": false})
 
 		// Pretty: should just show primary transition (no Cascaded: header)
 		pretty := (&PrettyFormatter{}).FormatCascadeTransition(result)
+		expected := "tick-abc123: open \u2192 done"
 		if pretty != expected {
 			t.Errorf("PrettyFormatter result = %q, want %q", pretty, expected)
 		}

@@ -27,7 +27,6 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 		return err
 	}
 
-	var result task.TransitionResult
 	var cascadeResult *CascadeResult
 	var sm task.StateMachine
 
@@ -38,7 +37,6 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 				if mutErr != nil {
 					return nil, mutErr
 				}
-				result = r
 				cr := buildCascadeResult(id, tasks[i].Title, r, c, tasks, false)
 				cascadeResult = &cr
 				return tasks, nil
@@ -51,7 +49,7 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 	}
 
 	if !fc.Quiet {
-		outputTransitionOrCascade(stdout, fmtr, id, string(result.OldStatus), string(result.NewStatus), cascadeResult)
+		outputStatusChanges(stdout, fmtr, *cascadeResult)
 	}
 
 	return nil

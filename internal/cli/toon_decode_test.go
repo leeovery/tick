@@ -2,7 +2,9 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -255,5 +257,110 @@ func TestToonTaskDetailConformance(t *testing.T) {
 
 		assertToonFields(t, doc, map[string]any{"id": "tick-aaa111"})
 		assertToonNoteRows(t, doc, notes[1:])
+	})
+}
+
+// changedHeader is the schema line every status command's changed table carries.
+const changedHeader = "{id,title,from,to,auto}:"
+
+func assertChangedHeader(t *testing.T, doc string, count int) {
+	t.Helper()
+	want := fmt.Sprintf("changed[%d]%s", count, changedHeader)
+	if got, _, _ := strings.Cut(doc, "\n"); got != want {
+		t.Errorf("header = %q, want %q", got, want)
+	}
+}
+
+func TestToonStatusChangeConformance(t *testing.T) {
+	now := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
+	solo := task.Task{ID: "tick-aaa111", Title: "Solo task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now}
+	parent := task.Task{ID: "tick-ppp111", Title: "Parse, the header", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now}
+	child := task.Task{ID: "tick-ccc111", Title: "Child task", Status: task.StatusOpen, Priority: 2, Parent: "tick-ppp111", Created: now, Updated: now}
+
+	t.Run("it renders a single transition as a one-row changed table", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{solo})
+
+		doc := runToonCommand(t, dir, "start", "tick-aaa111")
+
+		assertChangedHeader(t, doc, 1)
+		rows := toonRows(t, decodeToonDoc(t, doc), "changed")
+		if len(rows) != 1 {
+			t.Fatalf("changed has %d rows, want 1", len(rows))
+		}
+		assertToonFields(t, rows[0], map[string]any{
+			"id":    "tick-aaa111",
+			"title": "Solo task",
+			"from":  "open",
+			"to":    "in_progress",
+			"auto":  false,
+		})
+	})
+
+	t.Run("it renders a cascade as one table with the requested row first", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent, child})
+
+		doc := runToonCommand(t, dir, "done", "tick-ppp111")
+
+		assertChangedHeader(t, doc, 2)
+		rows := toonRows(t, decodeToonDoc(t, doc), "changed")
+		if len(rows) != 2 {
+			t.Fatalf("changed has %d rows, want 2", len(rows))
+		}
+		assertToonFields(t, rows[0], map[string]any{"id": "tick-ppp111", "from": "in_progress", "to": "done"})
+		assertToonFields(t, rows[1], map[string]any{"id": "tick-ccc111", "from": "open", "to": "done"})
+	})
+
+	t.Run("it marks cascaded rows auto true", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent, child})
+
+		rows := toonRows(t, decodeToonDoc(t, runToonCommand(t, dir, "done", "tick-ppp111")), "changed")
+
+		if len(rows) != 2 {
+			t.Fatalf("changed has %d rows, want 2", len(rows))
+		}
+		assertToonFields(t, rows[0], map[string]any{"auto": false})
+		assertToonFields(t, rows[1], map[string]any{"auto": true})
+	})
+
+	t.Run("it quotes a title containing a comma", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent, child})
+
+		rows := toonRows(t, decodeToonDoc(t, runToonCommand(t, dir, "done", "tick-ppp111")), "changed")
+
+		assertToonFields(t, rows[0], map[string]any{"title": "Parse, the header"})
+	})
+
+	t.Run("it decodes auto as a boolean", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{solo})
+
+		rows := toonRows(t, decodeToonDoc(t, runToonCommand(t, dir, "start", "tick-aaa111")), "changed")
+
+		if _, ok := rows[0]["auto"].(bool); !ok {
+			t.Errorf("auto is %T, want bool", rows[0]["auto"])
+		}
+	})
+
+	t.Run("it renders an empty changed set as a count-zero header", func(t *testing.T) {
+		section := buildChangedSection(nil)
+
+		if section != "changed[0]"+changedHeader {
+			t.Fatalf("section = %q, want %q", section, "changed[0]"+changedHeader)
+		}
+		if rows := toonRows(t, decodeToonDoc(t, section), "changed"); len(rows) != 0 {
+			t.Errorf("changed has %d rows, want 0", len(rows))
+		}
+	})
+
+	t.Run("it prints nothing under --quiet", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent, child})
+
+		stdout, stderr, exitCode := runTransition(t, dir, "done", "tick-ppp111", "--quiet")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
 	})
 }

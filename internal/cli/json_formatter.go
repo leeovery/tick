@@ -131,22 +131,6 @@ func toJSONRelated(related []RelatedTask) []jsonRelatedTask {
 	return result
 }
 
-// jsonTransition represents a status transition in JSON output.
-type jsonTransition struct {
-	ID   string `json:"id"`
-	From string `json:"from"`
-	To   string `json:"to"`
-}
-
-// FormatTransition renders a status transition as a JSON object with id, from, to.
-func (f *JSONFormatter) FormatTransition(id string, oldStatus string, newStatus string) string {
-	return marshalIndentJSON(jsonTransition{
-		ID:   id,
-		From: oldStatus,
-		To:   newStatus,
-	})
-}
-
 // jsonDepChange represents a dependency change in JSON output.
 type jsonDepChange struct {
 	Action    string `json:"action"`

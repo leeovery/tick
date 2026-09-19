@@ -177,7 +177,6 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 	var createdTask task.Task
 	var parentReopened bool
-	var parentResult task.TransitionResult
 	var parentCascadeResult *CascadeResult
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
@@ -229,7 +228,6 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			}
 			if reopened {
 				parentReopened = true
-				parentResult = r
 				// Find parent title and build cascade result while tasks slice is valid.
 				normalizedParent := task.NormalizeID(opts.parent)
 				var parentTitle string
@@ -280,7 +278,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 	// Output cascade info if parent was reopened (and not quiet mode).
 	if parentReopened && !fc.Quiet {
-		outputTransitionOrCascade(stdout, fmtr, opts.parent, string(parentResult.OldStatus), string(parentResult.NewStatus), parentCascadeResult)
+		outputStatusChanges(stdout, fmtr, *parentCascadeResult)
 	}
 
 	return nil

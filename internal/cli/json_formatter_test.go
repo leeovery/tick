@@ -456,24 +456,8 @@ func TestJSONFormatter(t *testing.T) {
 		}
 	})
 
-	t.Run("it formats transition/dep/message as JSON objects", func(t *testing.T) {
+	t.Run("it formats dep/message as JSON objects", func(t *testing.T) {
 		f := &JSONFormatter{}
-
-		// Transition
-		transResult := f.FormatTransition("tick-a1b2", "open", "in_progress")
-		var transObj map[string]any
-		if err := json.Unmarshal([]byte(transResult), &transObj); err != nil {
-			t.Fatalf("transition invalid JSON: %v\nresult: %s", err, transResult)
-		}
-		if transObj["id"] != "tick-a1b2" {
-			t.Errorf("transition id = %v, want %q", transObj["id"], "tick-a1b2")
-		}
-		if transObj["from"] != "open" {
-			t.Errorf("transition from = %v, want %q", transObj["from"], "open")
-		}
-		if transObj["to"] != "in_progress" {
-			t.Errorf("transition to = %v, want %q", transObj["to"], "in_progress")
-		}
 
 		// Dep change - added
 		depAddResult := f.FormatDepChange("added", "tick-c3d4", "tick-a1b2")
@@ -534,7 +518,6 @@ func TestJSONFormatter(t *testing.T) {
 				BlockedBy: []RelatedTask{{ID: "tick-c3d4", Title: "B", Status: "open"}},
 				Children:  []RelatedTask{{ID: "tick-g7h8", Title: "C", Status: "done"}},
 			})},
-			{"transition", f.FormatTransition("tick-a1b2", "open", "done")},
 			{"dep add", f.FormatDepChange("added", "tick-c3d4", "tick-a1b2")},
 			{"dep remove", f.FormatDepChange("removed", "tick-c3d4", "tick-a1b2")},
 			{"message", f.FormatMessage("Hello world")},

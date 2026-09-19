@@ -269,12 +269,9 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	// Rule 6: reopen of done parent when reparenting to it.
 	var r6Triggered bool
 	var r6ParentID string
-	var r6Result task.TransitionResult
 	var r6CascadeResult *CascadeResult
 
 	// Rule 3: auto-completion of original parent when reparenting away.
-	var r3Result task.TransitionResult
-	var r3ParentID string
 	var r3CascadeResult *CascadeResult
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
@@ -302,7 +299,6 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			}
 			if reopened {
 				r6Triggered = true
-				r6Result = r
 				// Find parent title and build cascade result while tasks slice is valid.
 				normalizedParent := task.NormalizeID(*opts.parent)
 				var parentTitle string
@@ -373,8 +369,6 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			if opts.parent != nil && originalParent != *opts.parent && originalParent != "" {
 				r3 := autoCompleteParentIfTerminal(tasks, originalParent, &sm)
 				if r3 != nil {
-					r3ParentID = r3.parentID
-					r3Result = r3.result
 					cr := buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, tasks, true)
 					r3CascadeResult = &cr
 				}
@@ -412,12 +406,12 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 	// Output Rule 6 cascade info (reopen of done parent).
 	if r6Triggered && !fc.Quiet {
-		outputTransitionOrCascade(stdout, fmtr, r6ParentID, string(r6Result.OldStatus), string(r6Result.NewStatus), r6CascadeResult)
+		outputStatusChanges(stdout, fmtr, *r6CascadeResult)
 	}
 
 	// Output Rule 3 cascade info (auto-completion of original parent).
 	if r3CascadeResult != nil && !fc.Quiet {
-		outputTransitionOrCascade(stdout, fmtr, r3ParentID, string(r3Result.OldStatus), string(r3Result.NewStatus), r3CascadeResult)
+		outputStatusChanges(stdout, fmtr, *r3CascadeResult)
 	}
 
 	return nil

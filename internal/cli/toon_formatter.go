@@ -134,18 +134,30 @@ func (f *ToonFormatter) FormatMessage(msg string) string {
 	return msg
 }
 
-// FormatCascadeTransition renders a cascade transition in flat-line toon format.
-// Primary transition on first line, cascaded entries with (auto).
+// toonChangedRow is a TOON-serializable row of the changed status table.
+type toonChangedRow struct {
+	ID    string `toon:"id"`
+	Title string `toon:"title"`
+	From  string `toon:"from"`
+	To    string `toon:"to"`
+	Auto  bool   `toon:"auto"`
+}
+
+// buildChangedSection builds the changed section listing every task whose status moved.
+func buildChangedSection(changes []StatusChange) string {
+	if len(changes) == 0 {
+		return "changed[0]{id,title,from,to,auto}:"
+	}
+	rows := make([]toonChangedRow, len(changes))
+	for i, c := range changes {
+		rows[i] = toonChangedRow(c)
+	}
+	return encodeToonSection("changed", rows)
+}
+
+// FormatCascadeTransition renders every status change the command made as one changed table.
 func (f *ToonFormatter) FormatCascadeTransition(result CascadeResult) string {
-	if result.TaskID == "" {
-		return ""
-	}
-	var lines []string
-	lines = append(lines, fmt.Sprintf("%s: %s \u2192 %s", result.TaskID, result.OldStatus, result.NewStatus))
-	for _, c := range result.Cascaded {
-		lines = append(lines, fmt.Sprintf("%s: %s \u2192 %s (auto)", c.ID, c.OldStatus, c.NewStatus))
-	}
-	return strings.Join(lines, "\n")
+	return buildChangedSection(result.Changed)
 }
 
 // toonEdgeRow is a TOON-serializable row for dep tree edge list output.

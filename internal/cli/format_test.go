@@ -204,12 +204,6 @@ func TestFormatterInterface(t *testing.T) {
 			t.Errorf("FormatTaskDetail = %q, want empty string", result)
 		}
 
-		// FormatTransition
-		result = f.FormatTransition("tick-abc123", "open", "in_progress")
-		if result != "" {
-			t.Errorf("FormatTransition = %q, want empty string", result)
-		}
-
 		// FormatDepChange
 		result = f.FormatDepChange("added", "tick-abc123", "tick-def456")
 		if result != "" {
@@ -409,7 +403,6 @@ func TestCascadeTypes(t *testing.T) {
 	t.Run("it handles empty CascadeResult", func(t *testing.T) {
 		formatters := []Formatter{
 			&StubFormatter{},
-			&ToonFormatter{},
 			&PrettyFormatter{},
 			&JSONFormatter{},
 		}
@@ -419,6 +412,9 @@ func TestCascadeTypes(t *testing.T) {
 			if got != "" {
 				t.Errorf("FormatCascadeTransition on empty result = %q, want empty string", got)
 			}
+		}
+		if got := (&ToonFormatter{}).FormatCascadeTransition(empty); got != "changed[0]{id,title,from,to,auto}:" {
+			t.Errorf("ToonFormatter.FormatCascadeTransition on empty result = %q, want a count-zero changed table", got)
 		}
 	})
 }
