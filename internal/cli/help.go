@@ -278,16 +278,27 @@ func printAllHelp(w io.Writer) {
 	for i, cmd := range commands {
 		fmt.Fprintln(w, cmd.Usage)
 		fmt.Fprintf(w, "  %s\n", cmd.Summary)
-		for _, f := range cmd.Flags {
-			label := f.Name
-			if f.Arg != "" {
-				label += " " + f.Arg
-			}
-			fmt.Fprintf(w, "  %-24s%s\n", label, f.Desc)
-		}
+		printFlagBlock(w, cmd.Flags)
 		if i < len(commands)-1 {
 			fmt.Fprintln(w)
 		}
+	}
+}
+
+// printFlagBlock writes one line per flag, descriptions aligned two spaces past
+// the widest label in flags.
+func printFlagBlock(w io.Writer, flags []flagInfo) {
+	labels := make([]string, len(flags))
+	column := 0
+	for i, f := range flags {
+		labels[i] = f.Name
+		if f.Arg != "" {
+			labels[i] += " " + f.Arg
+		}
+		column = max(column, len(labels[i])+2)
+	}
+	for i, f := range flags {
+		fmt.Fprintf(w, "  %-*s%s\n", column, labels[i], f.Desc)
 	}
 }
 
@@ -300,12 +311,6 @@ func printCommandHelp(w io.Writer, cmd *commandInfo) {
 	if len(cmd.Flags) > 0 {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Flags:")
-		for _, f := range cmd.Flags {
-			label := f.Name
-			if f.Arg != "" {
-				label += " " + f.Arg
-			}
-			fmt.Fprintf(w, "  %-24s%s\n", label, f.Desc)
-		}
+		printFlagBlock(w, cmd.Flags)
 	}
 }
