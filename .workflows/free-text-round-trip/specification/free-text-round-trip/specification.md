@@ -106,7 +106,7 @@ Each note also carries its 1-based index, for the reason the toon table does (§
 
 Pretty being unchanged while toon and JSON move is not free — the code is shared in two places, and editing it in place would change pretty by accident:
 
-- **The single transition line** comes from `baseFormatter.FormatTransition` (`grep -n 'func (b \*baseFormatter) FormatTransition' internal/cli/format.go` → `format.go:211`), embedded by both the toon and pretty formatters, so the two emit byte-identical text today. Restructuring the toon form requires splitting that method.
+- **The single transition line** comes from `baseFormatter.FormatTransition` (`grep -n 'func (b \*baseFormatter) FormatTransition' internal/cli/format.go` → `format.go:211`), embedded by both the toon and pretty formatters, so the two emit byte-identical text today. The sharing is redundant rather than load-bearing: `PrettyFormatter.FormatCascadeTransition` already produces that exact line on its zero-cascade branch, so restructuring the toon form removes the shared method outright rather than splitting it, and pretty's bytes are unaffected.
 - **The dep-tree empty messages** are not produced by a formatter at all. They are set on the result in the shared graph builder (`grep -n 'No dependencies' internal/cli/dep_tree_graph.go` → `dep_tree_graph.go:177`, `dep_tree_graph.go:255`) and consumed by all three formatters, so removing them at source would strip pretty's message too.
 
   On the nothing-blocked branch they never reach a dep-tree formatter at all: `runFullDepTree` returns as soon as the root set is empty, printing the sentence through `FormatMessage` (`sed -n '34,44p' internal/cli/dep_tree.go` → `dep_tree.go:38-41`). The guards that look like they handle it — `json_formatter.go:366` and `toon_formatter.go:180-182` — are dead code. **The change therefore lands in the handler, not in the formatters**, and it has a consequence for pretty: `PrettyFormatter.formatFullDepTree` returns `""` for zero roots (`sed -n '316,319p' internal/cli/pretty_formatter.go`), so once that branch routes through the formatters pretty must be handed its sentence explicitly or it silently prints nothing. The named-task branch already reaches the formatters (`runFocusedDepTree` calls `FormatDepTree` unconditionally) and needs no handler change.
@@ -248,7 +248,7 @@ tick-9f3c: open → done (auto)
 tick-77ab: in_progress → done (auto)
 ```
 
-Reading it requires knowing that the ID precedes the colon, that the arrow separates old state from new, and that `(auto)` marks a knock-on rather than the requested change. It is a bespoke line format, shared with pretty (§4.3), and `ToonFormatter.FormatCascadeTransition` is the same construction with ` (auto)` appended (`grep -n 'func (f \*ToonFormatter) FormatCascadeTransition' internal/cli/toon_formatter.go` → `toon_formatter.go:145`).
+Reading it requires knowing that the ID precedes the colon, that the arrow separates old state from new, and that `(auto)` marks a knock-on rather than the requested change. It is a bespoke line format, produced today by a method pretty also embeds though pretty does not depend on it (§4.3), and `ToonFormatter.FormatCascadeTransition` is the same construction with ` (auto)` appended (`grep -n 'func (f \*ToonFormatter) FormatCascadeTransition' internal/cli/toon_formatter.go` → `toon_formatter.go:145`).
 
 #### 7.2 One table, always
 
@@ -523,3 +523,7 @@ Both documents carry a point that is plainly and load-bearingly wrong, so both a
 ---
 
 ## Working Notes
+
+## Corrigenda
+
+> **Corrigendum 2026-09-19** (from `implementation/free-text-round-trip`): "Restructuring the toon form requires splitting that method" (§4.3, first bullet; echoed by §7.1's "a bespoke line format, shared with pretty") — corrected: the method was removed outright rather than split, and pretty's bytes are unchanged because `PrettyFormatter.FormatCascadeTransition` already produced that exact line on its zero-cascade branch before this work. The sharing the claim identified was redundant, not load-bearing. §4.3's second bullet (dep-tree empty messages) is unaffected and still governs later phases.
