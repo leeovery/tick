@@ -144,8 +144,7 @@ func autoCompleteParentIfTerminal(tasks []task.Task, origParentID string, sm *ta
 		return nil
 	}
 
-	oldStatus := tasks[parentIdx].Status
-	_, cascades, err := sm.ApplySystemTransition(tasks, &tasks[parentIdx], action)
+	result, cascades, err := sm.ApplySystemTransition(tasks, &tasks[parentIdx], action)
 	if err != nil {
 		return nil
 	}
@@ -153,11 +152,8 @@ func autoCompleteParentIfTerminal(tasks []task.Task, origParentID string, sm *ta
 	return &rule3Result{
 		parentID:    tasks[parentIdx].ID,
 		parentTitle: tasks[parentIdx].Title,
-		result: task.TransitionResult{
-			OldStatus: oldStatus,
-			NewStatus: tasks[parentIdx].Status,
-		},
-		cascades: cascades,
+		result:      result,
+		cascades:    cascades,
 	}
 }
 
@@ -304,7 +300,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 						break
 					}
 				}
-				blocks = append(blocks, buildCascadeResult(parentID, parentTitle, r, c, tasks, true))
+				blocks = append(blocks, buildCascadeResult(parentID, parentTitle, r, c, tasks))
 			}
 		}
 		for _, blockID := range opts.blocks {
@@ -363,7 +359,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			if opts.parent != nil && originalParent != *opts.parent && originalParent != "" {
 				r3 := autoCompleteParentIfTerminal(tasks, originalParent, &sm)
 				if r3 != nil {
-					blocks = append(blocks, buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, tasks, true))
+					blocks = append(blocks, buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, tasks))
 				}
 			}
 

@@ -316,7 +316,7 @@ func TestOutputStatusChanges(t *testing.T) {
 			{Task: &tasks[1], Action: "cancel", OldStatus: task.StatusOpen, NewStatus: task.StatusCancelled},
 		}
 
-		outputStatusChanges(&buf, &PrettyFormatter{}, buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks, false))
+		outputStatusChanges(&buf, &PrettyFormatter{}, buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks))
 
 		expected := "tick-parent1: in_progress \u2192 cancelled\n\nCascaded:\n\u2514\u2500 tick-child1 \"Child\": open \u2192 cancelled\n"
 		if buf.String() != expected {

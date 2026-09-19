@@ -37,7 +37,7 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 				if mutErr != nil {
 					return nil, mutErr
 				}
-				cr := buildCascadeResult(id, tasks[i].Title, r, c, tasks, false)
+				cr := buildCascadeResult(id, tasks[i].Title, r, c, tasks)
 				cascadeResult = &cr
 				return tasks, nil
 			}
@@ -57,15 +57,14 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 
 // buildCascadeResult constructs a CascadeResult from the primary transition, cascade
 // changes, and the full task list. It populates ParentID on each cascade entry from the
-// task's Parent field. primaryAuto is false only when the caller asked for the primary
-// transition; cascades are always auto.
-func buildCascadeResult(id, title string, result task.TransitionResult, cascades []task.CascadeChange, tasks []task.Task, primaryAuto bool) CascadeResult {
+// task's Parent field.
+func buildCascadeResult(id, title string, result task.TransitionResult, cascades []task.CascadeChange, tasks []task.Task) CascadeResult {
 	cr := CascadeResult{
 		TaskID:      id,
 		TaskTitle:   title,
 		OldStatus:   string(result.OldStatus),
 		NewStatus:   string(result.NewStatus),
-		PrimaryAuto: primaryAuto,
+		PrimaryAuto: result.Auto,
 	}
 
 	// Detect upward cascade: if any cascaded task is the primary task's parent,

@@ -55,11 +55,12 @@ func (sm StateMachine) applyWithCascades(tasks []Task, target *Task, action stri
 	}
 
 	// Step 2: Record transition history on the primary task.
+	result.Auto = auto
 	target.Transitions = append(target.Transitions, TransitionRecord{
 		From: result.OldStatus,
 		To:   result.NewStatus,
 		At:   target.Updated,
-		Auto: auto,
+		Auto: result.Auto,
 	})
 
 	// Step 3: Compute initial cascade list.

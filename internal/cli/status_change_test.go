@@ -40,12 +40,13 @@ func TestStatusChanges(t *testing.T) {
 	}
 	allTasks := []task.Task{parent, child}
 	primaryResult := task.TransitionResult{OldStatus: task.StatusOpen, NewStatus: task.StatusInProgress}
+	autoPrimaryResult := task.TransitionResult{OldStatus: task.StatusOpen, NewStatus: task.StatusInProgress, Auto: true}
 	cascades := []task.CascadeChange{
 		{Task: &parent, OldStatus: task.StatusOpen, NewStatus: task.StatusInProgress},
 	}
 
 	t.Run("it records the requested change with auto false", func(t *testing.T) {
-		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks, false)
+		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks)
 
 		want := StatusChange{ID: "tick-ccc111", Title: "Child", From: "open", To: "in_progress", Auto: false}
 		if len(cr.Changed()) != 2 {
@@ -57,7 +58,7 @@ func TestStatusChanges(t *testing.T) {
 	})
 
 	t.Run("it marks cascaded changes auto true", func(t *testing.T) {
-		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks, false)
+		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks)
 
 		want := StatusChange{ID: "tick-ppp111", Title: "Parent", From: "open", To: "in_progress", Auto: true}
 		if len(cr.Changed()) != 2 {
@@ -69,7 +70,7 @@ func TestStatusChanges(t *testing.T) {
 	})
 
 	t.Run("it marks every row auto true when the primary was system-initiated", func(t *testing.T) {
-		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks, true)
+		cr := buildCascadeResult("tick-ccc111", "Child", autoPrimaryResult, cascades, allTasks)
 
 		for _, row := range cr.Changed() {
 			if !row.Auto {
@@ -79,7 +80,7 @@ func TestStatusChanges(t *testing.T) {
 	})
 
 	t.Run("it builds a cascade result for a transition with no cascades", func(t *testing.T) {
-		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, nil, allTasks, false)
+		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, nil, allTasks)
 
 		if len(cr.Cascaded) != 0 {
 			t.Fatalf("Cascaded = %d entries, want 0", len(cr.Cascaded))
@@ -171,7 +172,7 @@ func TestStatusChanges(t *testing.T) {
 	})
 
 	t.Run("it leaves a single block's rows unchanged", func(t *testing.T) {
-		b := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks, false)
+		b := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks)
 
 		got := mergeStatusChanges(b)
 

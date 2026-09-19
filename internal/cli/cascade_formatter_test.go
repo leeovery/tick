@@ -246,7 +246,7 @@ func TestBuildCascadeResult(t *testing.T) {
 		}
 
 		result := task.TransitionResult{OldStatus: task.StatusInProgress, NewStatus: task.StatusCancelled}
-		cr := buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks, false)
+		cr := buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks)
 
 		if len(cr.Cascaded) != 2 {
 			t.Fatalf("cascaded length = %d, want 2", len(cr.Cascaded))

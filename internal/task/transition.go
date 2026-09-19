@@ -4,9 +4,12 @@ import "slices"
 
 // TransitionResult holds the old and new status after a successful transition,
 // enabling the caller to format output like "tick-a3f2b7: open -> in_progress".
+// Auto carries the same flag as the transition's TransitionRecord: false when the
+// caller asked for the change, true when the system produced it.
 type TransitionResult struct {
 	OldStatus Status
 	NewStatus Status
+	Auto      bool
 }
 
 // Transition applies a status transition to the given task by command name.

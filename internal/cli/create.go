@@ -235,7 +235,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 						break
 					}
 				}
-				blocks = append(blocks, buildCascadeResult(opts.parent, parentTitle, r, c, tasks, true))
+				blocks = append(blocks, buildCascadeResult(opts.parent, parentTitle, r, c, tasks))
 			}
 		}
 
