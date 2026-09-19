@@ -268,7 +268,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 
-	changes := &StatusChanges{Rows: mergeStatusChanges(blocks...), Blocks: blocks}
+	changes := &StatusChanges{Blocks: blocks}
 	return outputMutationResult(store, createdTask.ID, fc, fmtr, stdout, changes)
 }
 

@@ -14,10 +14,10 @@ func TestToonFormatterCascadeTransition(t *testing.T) {
 	t.Run("it renders a downward cancel cascade as one changed table", func(t *testing.T) {
 		f := &ToonFormatter{}
 		doc := f.FormatCascadeTransition(CascadeResult{
-			Changed: []StatusChange{
-				{ID: "tick-parent1", Title: "Parent", From: "in_progress", To: "cancelled"},
-				{ID: "tick-child1", Title: "Login", From: "in_progress", To: "cancelled", Auto: true},
-				{ID: "tick-child2", Title: "Signup", From: "open", To: "cancelled", Auto: true},
+			TaskID: "tick-parent1", TaskTitle: "Parent", OldStatus: "in_progress", NewStatus: "cancelled",
+			Cascaded: []CascadeEntry{
+				{ID: "tick-child1", Title: "Login", OldStatus: "in_progress", NewStatus: "cancelled"},
+				{ID: "tick-child2", Title: "Signup", OldStatus: "open", NewStatus: "cancelled"},
 			},
 		})
 
@@ -33,10 +33,10 @@ func TestToonFormatterCascadeTransition(t *testing.T) {
 	t.Run("it renders an upward start cascade as one changed table", func(t *testing.T) {
 		f := &ToonFormatter{}
 		doc := f.FormatCascadeTransition(CascadeResult{
-			Changed: []StatusChange{
-				{ID: "tick-child1", Title: "Child", From: "open", To: "in_progress"},
-				{ID: "tick-parent1", Title: "Auth phase", From: "open", To: "in_progress", Auto: true},
-				{ID: "tick-grand1", Title: "Sprint 3", From: "open", To: "in_progress", Auto: true},
+			TaskID: "tick-child1", TaskTitle: "Child", OldStatus: "open", NewStatus: "in_progress",
+			Cascaded: []CascadeEntry{
+				{ID: "tick-parent1", Title: "Auth phase", OldStatus: "open", NewStatus: "in_progress"},
+				{ID: "tick-grand1", Title: "Sprint 3", OldStatus: "open", NewStatus: "in_progress"},
 			},
 		})
 
@@ -52,9 +52,7 @@ func TestToonFormatterCascadeTransition(t *testing.T) {
 	t.Run("it renders a single change as a one-row changed table", func(t *testing.T) {
 		f := &ToonFormatter{}
 		doc := f.FormatCascadeTransition(CascadeResult{
-			Changed: []StatusChange{
-				{ID: "tick-abc123", Title: "Task", From: "in_progress", To: "done"},
-			},
+			TaskID: "tick-abc123", TaskTitle: "Task", OldStatus: "in_progress", NewStatus: "done",
 		})
 
 		rows := toonRows(t, decodeToonDoc(t, doc), "changed")
@@ -185,9 +183,7 @@ func TestJSONFormatterCascadeTransition(t *testing.T) {
 	t.Run("it renders a single transition as a one-element changed list", func(t *testing.T) {
 		f := &JSONFormatter{}
 		rows := changedRows(t, f.FormatCascadeTransition(CascadeResult{
-			Changed: []StatusChange{
-				{ID: "tick-abc123", Title: "Solo", From: "open", To: "in_progress"},
-			},
+			TaskID: "tick-abc123", TaskTitle: "Solo", OldStatus: "open", NewStatus: "in_progress",
 		}))
 
 		if len(rows) != 1 {
@@ -201,9 +197,9 @@ func TestJSONFormatterCascadeTransition(t *testing.T) {
 	t.Run("it renders a cascade as one changed list", func(t *testing.T) {
 		f := &JSONFormatter{}
 		rows := changedRows(t, f.FormatCascadeTransition(CascadeResult{
-			Changed: []StatusChange{
-				{ID: "tick-abc123", Title: "Parent", From: "in_progress", To: "done"},
-				{ID: "tick-def456", Title: "Child", From: "open", To: "done", Auto: true},
+			TaskID: "tick-abc123", TaskTitle: "Parent", OldStatus: "in_progress", NewStatus: "done",
+			Cascaded: []CascadeEntry{
+				{ID: "tick-def456", Title: "Child", OldStatus: "open", NewStatus: "done"},
 			},
 		}))
 
@@ -273,7 +269,6 @@ func TestAllFormattersCascadeEmptyArrays(t *testing.T) {
 			OldStatus: "open",
 			NewStatus: "done",
 			Cascaded:  nil,
-			Changed:   []StatusChange{{ID: "tick-abc123", Title: "Task", From: "open", To: "done"}},
 		}
 
 		// Toon: the changed table carries only the requested row.

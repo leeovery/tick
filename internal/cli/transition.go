@@ -57,14 +57,15 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 
 // buildCascadeResult constructs a CascadeResult from the primary transition, cascade
 // changes, and the full task list. It populates ParentID on each cascade entry from the
-// task's Parent field, and Changed with one merged row per task that moved. primaryAuto
-// is false only when the caller asked for the primary transition; cascades are always auto.
+// task's Parent field. primaryAuto is false only when the caller asked for the primary
+// transition; cascades are always auto.
 func buildCascadeResult(id, title string, result task.TransitionResult, cascades []task.CascadeChange, tasks []task.Task, primaryAuto bool) CascadeResult {
 	cr := CascadeResult{
-		TaskID:    id,
-		TaskTitle: title,
-		OldStatus: string(result.OldStatus),
-		NewStatus: string(result.NewStatus),
+		TaskID:      id,
+		TaskTitle:   title,
+		OldStatus:   string(result.OldStatus),
+		NewStatus:   string(result.NewStatus),
+		PrimaryAuto: primaryAuto,
 	}
 
 	// Detect upward cascade: if any cascaded task is the primary task's parent,
@@ -99,25 +100,6 @@ func buildCascadeResult(id, title string, result task.TransitionResult, cascades
 			NewStatus: string(c.NewStatus),
 		})
 	}
-
-	var set statusChangeSet
-	set.add(StatusChange{
-		ID:    id,
-		Title: title,
-		From:  string(result.OldStatus),
-		To:    string(result.NewStatus),
-		Auto:  primaryAuto,
-	})
-	for _, c := range cascades {
-		set.add(StatusChange{
-			ID:    c.Task.ID,
-			Title: c.Task.Title,
-			From:  string(c.OldStatus),
-			To:    string(c.NewStatus),
-			Auto:  true,
-		})
-	}
-	cr.Changed = set.rows()
 
 	return cr
 }
@@ -162,13 +144,13 @@ func (s *statusChangeSet) rows() []StatusChange {
 	return rows
 }
 
-// mergeStatusChanges collapses the Changed rows of several blocks into one set in which
-// each task appears at most once. Rows hold only copied values, so blocks built inside a
+// mergeStatusChanges collapses the rows of several blocks into one set in which each
+// task appears at most once. Rows hold only copied values, so blocks built inside a
 // Mutate closure can be merged after it returns.
 func mergeStatusChanges(blocks ...CascadeResult) []StatusChange {
 	var set statusChangeSet
 	for _, b := range blocks {
-		for _, c := range b.Changed {
+		for _, c := range b.Changed() {
 			set.add(c)
 		}
 	}

@@ -9,14 +9,22 @@ import (
 )
 
 func statusChangeBlock(primaryAuto bool, primary StatusChange, cascades ...StatusChange) CascadeResult {
-	set := statusChangeSet{}
-	primary.Auto = primaryAuto
-	set.add(primary)
-	for _, c := range cascades {
-		c.Auto = true
-		set.add(c)
+	cr := CascadeResult{
+		TaskID:      primary.ID,
+		TaskTitle:   primary.Title,
+		OldStatus:   primary.From,
+		NewStatus:   primary.To,
+		PrimaryAuto: primaryAuto,
 	}
-	return CascadeResult{Changed: set.rows()}
+	for _, c := range cascades {
+		cr.Cascaded = append(cr.Cascaded, CascadeEntry{
+			ID:        c.ID,
+			Title:     c.Title,
+			OldStatus: c.From,
+			NewStatus: c.To,
+		})
+	}
+	return cr
 }
 
 func TestStatusChanges(t *testing.T) {
@@ -40,11 +48,11 @@ func TestStatusChanges(t *testing.T) {
 		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks, false)
 
 		want := StatusChange{ID: "tick-ccc111", Title: "Child", From: "open", To: "in_progress", Auto: false}
-		if len(cr.Changed) != 2 {
-			t.Fatalf("Changed rows = %d, want 2", len(cr.Changed))
+		if len(cr.Changed()) != 2 {
+			t.Fatalf("Changed rows = %d, want 2", len(cr.Changed()))
 		}
-		if cr.Changed[0] != want {
-			t.Errorf("Changed[0] = %+v, want %+v", cr.Changed[0], want)
+		if cr.Changed()[0] != want {
+			t.Errorf("Changed[0] = %+v, want %+v", cr.Changed()[0], want)
 		}
 	})
 
@@ -52,18 +60,18 @@ func TestStatusChanges(t *testing.T) {
 		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks, false)
 
 		want := StatusChange{ID: "tick-ppp111", Title: "Parent", From: "open", To: "in_progress", Auto: true}
-		if len(cr.Changed) != 2 {
-			t.Fatalf("Changed rows = %d, want 2", len(cr.Changed))
+		if len(cr.Changed()) != 2 {
+			t.Fatalf("Changed rows = %d, want 2", len(cr.Changed()))
 		}
-		if cr.Changed[1] != want {
-			t.Errorf("Changed[1] = %+v, want %+v", cr.Changed[1], want)
+		if cr.Changed()[1] != want {
+			t.Errorf("Changed[1] = %+v, want %+v", cr.Changed()[1], want)
 		}
 	})
 
 	t.Run("it marks every row auto true when the primary was system-initiated", func(t *testing.T) {
 		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks, true)
 
-		for _, row := range cr.Changed {
+		for _, row := range cr.Changed() {
 			if !row.Auto {
 				t.Errorf("row %s has Auto=false, want every row auto", row.ID)
 			}
@@ -76,8 +84,8 @@ func TestStatusChanges(t *testing.T) {
 		if len(cr.Cascaded) != 0 {
 			t.Fatalf("Cascaded = %d entries, want 0", len(cr.Cascaded))
 		}
-		if len(cr.Changed) != 1 {
-			t.Fatalf("Changed rows = %d, want 1", len(cr.Changed))
+		if len(cr.Changed()) != 1 {
+			t.Fatalf("Changed rows = %d, want 1", len(cr.Changed()))
 		}
 	})
 
@@ -154,11 +162,11 @@ func TestStatusChanges(t *testing.T) {
 		}
 
 		noop := statusChangeBlock(true, StatusChange{ID: "tick-ppp111", Title: "Parent", From: "done", To: "done"})
-		if noop.Changed == nil {
+		if noop.Changed() == nil {
 			t.Fatal("rows() = nil, want empty non-nil slice")
 		}
-		if len(noop.Changed) != 0 {
-			t.Errorf("rows() = %+v, want no rows", noop.Changed)
+		if len(noop.Changed()) != 0 {
+			t.Errorf("rows() = %+v, want no rows", noop.Changed())
 		}
 	})
 
@@ -167,8 +175,8 @@ func TestStatusChanges(t *testing.T) {
 
 		got := mergeStatusChanges(b)
 
-		if !reflect.DeepEqual(got, b.Changed) {
-			t.Errorf("merged = %+v, want %+v", got, b.Changed)
+		if !reflect.DeepEqual(got, b.Changed()) {
+			t.Errorf("merged = %+v, want %+v", got, b.Changed())
 		}
 	})
 }

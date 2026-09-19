@@ -97,7 +97,7 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 	sections = append(sections, buildNotesSection(detail.Notes))
 
 	if detail.Changes != nil {
-		sections = append(sections, buildChangedSection(detail.Changes.Rows))
+		sections = append(sections, buildChangedSection(detail.Changes.Rows()))
 	}
 
 	if detail.Task.Description != "" {
@@ -161,7 +161,7 @@ func buildChangedSection(changes []StatusChange) string {
 
 // FormatCascadeTransition renders every status change the command made as one changed table.
 func (f *ToonFormatter) FormatCascadeTransition(result CascadeResult) string {
-	return buildChangedSection(result.Changed)
+	return buildChangedSection(result.Changed())
 }
 
 // toonEdgeRow is a TOON-serializable row for dep tree edge list output.

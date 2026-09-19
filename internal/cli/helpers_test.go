@@ -296,9 +296,7 @@ func TestOutputStatusChanges(t *testing.T) {
 		var buf strings.Builder
 
 		outputStatusChanges(&buf, &ToonFormatter{}, CascadeResult{
-			Changed: []StatusChange{
-				{ID: "tick-abc123", Title: "My Task", From: "open", To: "in_progress"},
-			},
+			TaskID: "tick-abc123", TaskTitle: "My Task", OldStatus: "open", NewStatus: "in_progress",
 		})
 
 		expected := "changed[1]{id,title,from,to,auto}:\n  tick-abc123,My Task,open,in_progress,false\n"

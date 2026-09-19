@@ -106,12 +106,15 @@ type TaskDetail struct {
 	Changes *StatusChanges
 }
 
-// StatusChanges holds a command's status changes in both shapes the formatters need:
-// Rows is the merged table rendered by toon and JSON, Blocks the per-transition
-// cascade results rendered by pretty.
+// StatusChanges holds a command's status changes as the per-transition cascade results
+// rendered by pretty; Rows flattens them into the merged table rendered by toon and JSON.
 type StatusChanges struct {
-	Rows   []StatusChange
 	Blocks []CascadeResult
+}
+
+// Rows merges the blocks into one table in which each task appears at most once.
+func (c StatusChanges) Rows() []StatusChange {
+	return mergeStatusChanges(c.Blocks...)
 }
 
 // Stats holds typed task statistics for rendering by formatters.
@@ -158,14 +161,37 @@ type StatusChange struct {
 	Auto  bool
 }
 
-// CascadeResult holds all data needed to render a cascade transition.
+// CascadeResult holds all data needed to render a cascade transition. PrimaryAuto is
+// false only when the caller asked for the primary transition.
 type CascadeResult struct {
-	TaskID    string
-	TaskTitle string
-	OldStatus string
-	NewStatus string
-	Cascaded  []CascadeEntry
-	Changed   []StatusChange
+	TaskID      string
+	TaskTitle   string
+	OldStatus   string
+	NewStatus   string
+	PrimaryAuto bool
+	Cascaded    []CascadeEntry
+}
+
+// Changed flattens the result into one merged row per task that moved.
+func (c CascadeResult) Changed() []StatusChange {
+	var set statusChangeSet
+	set.add(StatusChange{
+		ID:    c.TaskID,
+		Title: c.TaskTitle,
+		From:  c.OldStatus,
+		To:    c.NewStatus,
+		Auto:  c.PrimaryAuto,
+	})
+	for _, e := range c.Cascaded {
+		set.add(StatusChange{
+			ID:    e.ID,
+			Title: e.Title,
+			From:  e.OldStatus,
+			To:    e.NewStatus,
+			Auto:  true,
+		})
+	}
+	return set.rows()
 }
 
 // DepTreeTask holds the minimal task data needed for dependency tree rendering.

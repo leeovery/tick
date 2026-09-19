@@ -122,7 +122,7 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 	}
 
 	if detail.Changes != nil {
-		changed := toJSONStatusChanges(detail.Changes.Rows)
+		changed := toJSONStatusChanges(detail.Changes.Rows())
 		obj.Changed = &changed
 	}
 
@@ -276,7 +276,7 @@ type jsonChangedList struct {
 
 // FormatCascadeTransition renders every status change the command made as one changed list.
 func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) string {
-	return marshalIndentJSON(jsonChangedList{Changed: toJSONStatusChanges(result.Changed)})
+	return marshalIndentJSON(jsonChangedList{Changed: toJSONStatusChanges(result.Changed())})
 }
 
 // jsonDepTreeTask represents a task in dep tree JSON output.

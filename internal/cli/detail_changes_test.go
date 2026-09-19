@@ -47,11 +47,17 @@ func TestTaskDetailChangedSection(t *testing.T) {
 		{ID: "tick-aaa111", Title: "Parent task", From: "open", To: "in_progress", Auto: false},
 		{ID: "tick-bbb222", Title: "Child task", From: "open", To: "in_progress", Auto: true},
 	}
+	changes := &StatusChanges{Blocks: []CascadeResult{{
+		TaskID: "tick-aaa111", TaskTitle: "Parent task", OldStatus: "open", NewStatus: "in_progress",
+		Cascaded: []CascadeEntry{
+			{ID: "tick-bbb222", Title: "Child task", OldStatus: "open", NewStatus: "in_progress"},
+		},
+	}}}
 
 	t.Run("it carries a changed section when the detail carries changes", func(t *testing.T) {
 		f := &ToonFormatter{}
 
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWithChanges(&StatusChanges{Rows: rows})))
+		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWithChanges(changes)))
 
 		got := toonRows(t, doc, "changed")
 		if len(got) != 2 {
@@ -89,7 +95,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 	t.Run("it places the changed section after notes and before description", func(t *testing.T) {
 		f := &ToonFormatter{}
 
-		keys := toonSectionKeys(t, f.FormatTaskDetail(detailWithChanges(&StatusChanges{Rows: rows})))
+		keys := toonSectionKeys(t, f.FormatTaskDetail(detailWithChanges(changes)))
 
 		want := []string{"id", "blocked_by", "children", "notes", "changed", "description"}
 		if !slices.Equal(keys, want) {
@@ -122,7 +128,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 		f := &JSONFormatter{}
 
 		var parsed map[string]any
-		if err := json.Unmarshal([]byte(f.FormatTaskDetail(detailWithChanges(&StatusChanges{Rows: rows}))), &parsed); err != nil {
+		if err := json.Unmarshal([]byte(f.FormatTaskDetail(detailWithChanges(changes))), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v", err)
 		}
 
@@ -167,18 +173,6 @@ func TestTaskDetailChangedSectionPretty(t *testing.T) {
 	f := &PrettyFormatter{}
 	blockOne := CascadeResult{TaskID: "tick-aaa111", TaskTitle: "Parent task", OldStatus: "done", NewStatus: "open"}
 	blockTwo := CascadeResult{TaskID: "tick-bbb222", TaskTitle: "Other task", OldStatus: "open", NewStatus: "done"}
-
-	t.Run("it appends nothing in pretty when the detail carries no blocks", func(t *testing.T) {
-		want := f.FormatTaskDetail(detailWithChanges(nil))
-
-		got := f.FormatTaskDetail(detailWithChanges(&StatusChanges{Rows: []StatusChange{
-			{ID: "tick-aaa111", Title: "Parent task", From: "open", To: "in_progress"},
-		}}))
-
-		if got != want {
-			t.Errorf("result = %q, want %q", got, want)
-		}
-	})
 
 	t.Run("it appends one block in pretty exactly as the handler printed it", func(t *testing.T) {
 		body := f.FormatTaskDetail(detailWithChanges(nil))
@@ -246,9 +240,9 @@ func TestOutputMutationResultChanges(t *testing.T) {
 		defer store.Close()
 
 		var buf bytes.Buffer
-		changes := &StatusChanges{Rows: []StatusChange{
-			{ID: "tick-aaa111", Title: "Solo task", From: "open", To: "in_progress"},
-		}}
+		changes := &StatusChanges{Blocks: []CascadeResult{{
+			TaskID: "tick-aaa111", TaskTitle: "Solo task", OldStatus: "open", NewStatus: "in_progress",
+		}}}
 		if err := outputMutationResult(store, "tick-aaa111", FormatConfig{}, &ToonFormatter{}, &buf, changes); err != nil {
 			t.Fatalf("outputMutationResult: %v", err)
 		}
