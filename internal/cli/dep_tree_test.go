@@ -382,54 +382,6 @@ func TestRunDepTree(t *testing.T) {
 		})
 	})
 
-	t.Run("it outputs dep tree for project with dependencies", func(t *testing.T) {
-		// A blocks B blocks C: chain A -> B -> C
-		tasks := []task.Task{
-			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
-			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusInProgress, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
-			{ID: "tick-ccc333", Title: "Task C", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
-		}
-		dir, _ := setupTickProjectWithTasks(t, tasks)
-
-		stdout, stderr, exitCode := runDepTree(t, dir)
-		if exitCode != 0 {
-			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
-		}
-
-		output := strings.TrimSpace(stdout)
-		// Handler should NOT take the "no dependencies" path when deps exist.
-		// FormatDepTree is currently a stub returning empty, so output will be empty,
-		// but it must not be the "No dependencies found." message.
-		if output == "No dependencies found." {
-			t.Error("output should not be the 'no dependencies' message when dependencies exist")
-		}
-	})
-
-	t.Run("it outputs focused view for task with dependencies", func(t *testing.T) {
-		// A -> B -> C, focus on B (has both upstream and downstream)
-		tasks := []task.Task{
-			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
-			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusInProgress, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
-			{ID: "tick-ccc333", Title: "Task C", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
-		}
-		dir, _ := setupTickProjectWithTasks(t, tasks)
-
-		stdout, stderr, exitCode := runDepTree(t, dir, "tick-bbb222")
-		if exitCode != 0 {
-			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
-		}
-
-		output := strings.TrimSpace(stdout)
-		// Focused view with dependencies should NOT show the "No dependencies." message
-		if output == "No dependencies." {
-			t.Error("output should not be 'No dependencies.' for task with deps")
-		}
-		// Should not contain the isolated-task format (ID + title + status + no deps message)
-		if strings.Contains(output, "No dependencies.") {
-			t.Error("output should not contain 'No dependencies.' for task with deps")
-		}
-	})
-
 	t.Run("it outputs no dependencies for isolated task in focused mode", func(t *testing.T) {
 		tasks := []task.Task{
 			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},

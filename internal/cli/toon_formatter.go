@@ -183,7 +183,7 @@ func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
 		),
 	}
 
-	return strings.Join(sections, "\n\n")
+	return joinToonSections(sections)
 }
 
 // formatFocusedDepTree renders focused mode as the target's id, title and status
@@ -199,7 +199,7 @@ func (f *ToonFormatter) formatFocusedDepTree(result DepTreeResult) string {
 		buildEdgeSection("blocks", collectDownstreamEdges(result.Target.ID, result.Blocks)),
 	}
 
-	return strings.Join(sections, "\n\n")
+	return joinToonSections(sections)
 }
 
 // collectDownstreamEdges recursively collects edges from parent to each child node.
