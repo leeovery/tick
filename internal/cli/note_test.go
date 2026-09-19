@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"slices"
 	"strconv"
 	"strings"
@@ -660,4 +661,102 @@ func notesTextsOf(t *testing.T, tasks []task.Task, id string) []string {
 	}
 	t.Fatalf("task %q not found", id)
 	return nil
+}
+
+func TestNoteAddFreeText(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	existingTask := task.Task{
+		ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+		Priority: 2, Created: now, Updated: now,
+	}
+
+	addedNoteText := func(t *testing.T, tickDir string) string {
+		t.Helper()
+		tasks := readPersistedTasks(t, tickDir)
+		for _, tk := range tasks {
+			if tk.ID == existingTask.ID {
+				if len(tk.Notes) != 1 {
+					t.Fatalf("notes count = %d, want 1", len(tk.Notes))
+				}
+				return tk.Notes[0].Text
+			}
+		}
+		t.Fatalf("task %s not found", existingTask.ID)
+		return ""
+	}
+
+	t.Run("it accepts dash-leading note text without the marker", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		_, stderr, exitCode := runNote(t, dir, "add", existingTask.ID, "- read the header")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if got := addedNoteText(t, tickDir); got != "- read the header" {
+			t.Errorf("note text = %q, want %q", got, "- read the header")
+		}
+	})
+
+	t.Run("it accepts note text beginning with two dashes", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		_, stderr, exitCode := runNote(t, dir, "add", existingTask.ID, "--not-a-flag")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if got := addedNoteText(t, tickDir); got != "--not-a-flag" {
+			t.Errorf("note text = %q, want %q", got, "--not-a-flag")
+		}
+	})
+
+	t.Run("it still rejects a flag before the task id", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		_, stderr, exitCode := runNote(t, dir, "add", "--bogus", existingTask.ID, "text")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		want := "Error: unknown flag \"--bogus\" for \"note add\". Run 'tick help note' for usage.\n"
+		if stderr != want {
+			t.Errorf("stderr = %q, want %q", stderr, want)
+		}
+	})
+
+	t.Run("it still resolves a global flag after the text", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		stdout, stderr, exitCode := runNote(t, dir, "add", existingTask.ID, "text", "--json")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		var doc map[string]any
+		if err := json.Unmarshal([]byte(stdout), &doc); err != nil {
+			t.Fatalf("stdout is not JSON: %v (stdout = %q)", err, stdout)
+		}
+	})
+
+	t.Run("it needs the marker for text that spells a global flag", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		_, stderr, exitCode := runNote(t, dir, "add", existingTask.ID, "--", "--json")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if got := addedNoteText(t, tickDir); got != "--json" {
+			t.Errorf("note text = %q, want %q", got, "--json")
+		}
+	})
+
+	t.Run("it keeps full validation on note remove", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		_, stderr, exitCode := runNote(t, dir, "remove", existingTask.ID, "--bogus", "1")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		want := "Error: unknown flag \"--bogus\" for \"note remove\". Run 'tick help note' for usage.\n"
+		if stderr != want {
+			t.Errorf("stderr = %q, want %q", stderr, want)
+		}
+	})
 }

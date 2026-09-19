@@ -96,6 +96,13 @@ var commandFlags = CommandFlags{
 	},
 }
 
+// flagScanLimit caps how many leading arguments ValidateFlags inspects for a
+// command whose remaining arguments are free text by definition. A command
+// absent from the map is scanned in full.
+var flagScanLimit = map[string]int{
+	"note add": 1,
+}
+
 func init() {
 	commandFlags["ready"] = copyFlagsExcept(commandFlags["list"], "--ready", "--blocked")
 	commandFlags["blocked"] = copyFlagsExcept(commandFlags["list"], "--blocked", "--ready")
@@ -117,10 +124,16 @@ func copyFlagsExcept(source map[string]FlagDef, exclude ...string) map[string]Fl
 //	unknown flag "{flag}" for "{command}". Run 'tick help {helpCmd}' for usage.
 //
 // For two-level commands (e.g. "dep add"), the help reference uses the parent command.
+// Commands listed in flagScanLimit have only their leading arguments inspected.
 func ValidateFlags(command string, args []string, flags CommandFlags) error {
 	cmdFlags := flags[command]
 
-	for i := 0; i < len(args); i++ {
+	scanEnd := len(args)
+	if limit, capped := flagScanLimit[command]; capped {
+		scanEnd = min(limit, scanEnd)
+	}
+
+	for i := 0; i < scanEnd; i++ {
 		arg := args[i]
 		if !strings.HasPrefix(arg, "-") {
 			continue

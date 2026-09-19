@@ -381,3 +381,34 @@ func TestCommandFlagsMatchHelp(t *testing.T) {
 		})
 	}
 }
+
+func TestFlagScanLimit(t *testing.T) {
+	t.Run("it stops inspecting note add after the task id", func(t *testing.T) {
+		err := ValidateFlags("note add", []string{"tick-aaa111", "--bogus", "- text"}, commandFlags)
+		if err != nil {
+			t.Errorf("expected nil for flag-shaped note text, got %v", err)
+		}
+	})
+
+	t.Run("it still inspects the first note add argument", func(t *testing.T) {
+		err := ValidateFlags("note add", []string{"--bogus", "tick-aaa111"}, commandFlags)
+		if err == nil {
+			t.Fatal("expected error for --bogus in first position on note add, got nil")
+		}
+	})
+
+	t.Run("it applies the scan limit to note add alone", func(t *testing.T) {
+		if len(flagScanLimit) != 1 {
+			t.Fatalf("flagScanLimit has %d entries, want 1", len(flagScanLimit))
+		}
+		for command := range commandFlags {
+			if command == "note add" {
+				continue
+			}
+			err := ValidateFlags(command, []string{"positional", "--bogus"}, commandFlags)
+			if err == nil {
+				t.Errorf("expected error for --bogus in second position on %q, got nil", command)
+			}
+		}
+	})
+}
