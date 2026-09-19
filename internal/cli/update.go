@@ -266,13 +266,9 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 
 	var updatedID string
 
-	// Rule 6: reopen of done parent when reparenting to it.
-	var r6Triggered bool
-	var r6ParentID string
-	var r6CascadeResult *CascadeResult
-
-	// Rule 3: auto-completion of original parent when reparenting away.
-	var r3CascadeResult *CascadeResult
+	// Order matters: the reopen of a done new parent is rendered before the
+	// auto-completion of the original parent.
+	var blocks []CascadeResult
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Build ID set for reference validation with normalized keys.
@@ -298,19 +294,17 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 				return nil, valErr
 			}
 			if reopened {
-				r6Triggered = true
 				// Find parent title and build cascade result while tasks slice is valid.
 				normalizedParent := task.NormalizeID(*opts.parent)
-				var parentTitle string
+				var parentID, parentTitle string
 				for _, tk := range tasks {
 					if task.NormalizeID(tk.ID) == normalizedParent {
-						r6ParentID = tk.ID
+						parentID = tk.ID
 						parentTitle = tk.Title
 						break
 					}
 				}
-				cr := buildCascadeResult(r6ParentID, parentTitle, r, c, tasks, true)
-				r6CascadeResult = &cr
+				blocks = append(blocks, buildCascadeResult(parentID, parentTitle, r, c, tasks, true))
 			}
 		}
 		for _, blockID := range opts.blocks {
@@ -369,8 +363,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 			if opts.parent != nil && originalParent != *opts.parent && originalParent != "" {
 				r3 := autoCompleteParentIfTerminal(tasks, originalParent, &sm)
 				if r3 != nil {
-					cr := buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, tasks, true)
-					r3CascadeResult = &cr
+					blocks = append(blocks, buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, tasks, true))
 				}
 			}
 
@@ -399,20 +392,6 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 
-	// Output updated task detail.
-	if err := outputMutationResult(store, updatedID, fc, fmtr, stdout, nil); err != nil {
-		return err
-	}
-
-	// Output Rule 6 cascade info (reopen of done parent).
-	if r6Triggered && !fc.Quiet {
-		outputStatusChanges(stdout, fmtr, *r6CascadeResult)
-	}
-
-	// Output Rule 3 cascade info (auto-completion of original parent).
-	if r3CascadeResult != nil && !fc.Quiet {
-		outputStatusChanges(stdout, fmtr, *r3CascadeResult)
-	}
-
-	return nil
+	changes := &StatusChanges{Rows: mergeStatusChanges(blocks...), Blocks: blocks}
+	return outputMutationResult(store, updatedID, fc, fmtr, stdout, changes)
 }

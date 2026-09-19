@@ -176,8 +176,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	var createdTask task.Task
-	var parentReopened bool
-	var parentCascadeResult *CascadeResult
+	var blocks []CascadeResult
 
 	err = store.Mutate(func(tasks []task.Task) ([]task.Task, error) {
 		// Build an ID existence checker with normalized keys.
@@ -227,7 +226,6 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 				return nil, err
 			}
 			if reopened {
-				parentReopened = true
 				// Find parent title and build cascade result while tasks slice is valid.
 				normalizedParent := task.NormalizeID(opts.parent)
 				var parentTitle string
@@ -237,8 +235,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 						break
 					}
 				}
-				cr := buildCascadeResult(opts.parent, parentTitle, r, c, tasks, true)
-				parentCascadeResult = &cr
+				blocks = append(blocks, buildCascadeResult(opts.parent, parentTitle, r, c, tasks, true))
 			}
 		}
 
@@ -271,17 +268,8 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 		return err
 	}
 
-	// Output created task detail first.
-	if err := outputMutationResult(store, createdTask.ID, fc, fmtr, stdout, nil); err != nil {
-		return err
-	}
-
-	// Output cascade info if parent was reopened (and not quiet mode).
-	if parentReopened && !fc.Quiet {
-		outputStatusChanges(stdout, fmtr, *parentCascadeResult)
-	}
-
-	return nil
+	changes := &StatusChanges{Rows: mergeStatusChanges(blocks...), Blocks: blocks}
+	return outputMutationResult(store, createdTask.ID, fc, fmtr, stdout, changes)
 }
 
 // validateRefs checks that all referenced IDs (blocked-by, blocks, parent) exist

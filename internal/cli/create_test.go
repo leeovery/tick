@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1365,6 +1366,143 @@ func TestCreate(t *testing.T) {
 		}
 		if parent.Transitions[0].Auto != true {
 			t.Errorf("transition auto = %v, want true", parent.Transitions[0].Auto)
+		}
+	})
+}
+
+func TestCreateChangedSection(t *testing.T) {
+	now := time.Date(2026, 4, 1, 9, 0, 0, 0, time.UTC)
+	doneParent := func() []task.Task {
+		closedAt := now
+		return []task.Task{
+			{ID: "tick-ppp111", Title: "Done parent", Status: task.StatusDone, Priority: 2, Created: now, Updated: now, Closed: &closedAt},
+		}
+	}
+
+	t.Run("it emits one document for create under a done parent", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, doneParent())
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111", "--description", "Some description", "--toon")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		keys := toonSectionKeys(t, stdout)
+		wantKeys := []string{"id", "blocked_by", "children", "notes", "changed", "description"}
+		if !slices.Equal(keys, wantKeys) {
+			t.Fatalf("section keys = %#v, want %#v\n%s", keys, wantKeys, stdout)
+		}
+		doc := decodeToonDoc(t, stdout)
+		assertToonFields(t, doc, map[string]any{"title": "Child task", "status": "open"})
+		rows := toonRows(t, doc, "changed")
+		if len(rows) != 1 {
+			t.Fatalf("changed has %d rows, want 1: %#v", len(rows), rows)
+		}
+		assertToonFields(t, rows[0], map[string]any{
+			"id": "tick-ppp111", "title": "Done parent", "from": "done", "to": "open", "auto": true,
+		})
+	})
+
+	t.Run("it emits changed[0] for create with no parent", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Lone task", "--toon")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "changed[0]{id,title,from,to,auto}:") {
+			t.Fatalf("document does not carry a count-zero changed header:\n%s", stdout)
+		}
+		if rows := toonRows(t, decodeToonDoc(t, stdout), "changed"); len(rows) != 0 {
+			t.Errorf("changed has %d rows, want 0", len(rows))
+		}
+	})
+
+	t.Run("it cascades a reopen to a done grandparent in one table", func(t *testing.T) {
+		closedAt := now
+		tasks := []task.Task{
+			{ID: "tick-ggg111", Title: "Done grandparent", Status: task.StatusDone, Priority: 2, Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-ppp111", Title: "Done parent", Status: task.StatusDone, Priority: 2, Parent: "tick-ggg111", Created: now, Updated: now, Closed: &closedAt},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111", "--description", "Some description", "--toon")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if keys := toonSectionKeys(t, stdout); !slices.Equal(keys, []string{"id", "blocked_by", "children", "notes", "changed", "description"}) {
+			t.Fatalf("section keys = %#v, want one document ending in description\n%s", keys, stdout)
+		}
+		rows := toonRows(t, decodeToonDoc(t, stdout), "changed")
+		if len(rows) != 2 {
+			t.Fatalf("changed has %d rows, want 2: %#v", len(rows), rows)
+		}
+		assertToonFields(t, rows[0], map[string]any{
+			"id": "tick-ppp111", "from": "done", "to": "open", "auto": true,
+		})
+		assertToonFields(t, rows[1], map[string]any{
+			"id": "tick-ggg111", "from": "done", "to": "open", "auto": true,
+		})
+	})
+
+	t.Run("it emits one JSON object", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, doneParent())
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111", "--json")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		var parsed map[string]any
+		if err := json.Unmarshal([]byte(stdout), &parsed); err != nil {
+			t.Fatalf("stdout is not one JSON object: %v\n%s", err, stdout)
+		}
+		changed, ok := parsed["changed"].([]any)
+		if !ok {
+			t.Fatalf("changed = %#v, want a list", parsed["changed"])
+		}
+		if len(changed) != 1 {
+			t.Fatalf("changed has %d entries, want 1", len(changed))
+		}
+		row, ok := changed[0].(map[string]any)
+		if !ok {
+			t.Fatalf("changed[0] = %#v, want an object", changed[0])
+		}
+		want := map[string]any{"id": "tick-ppp111", "title": "Done parent", "from": "done", "to": "open", "auto": true}
+		for key, wantValue := range want {
+			if row[key] != wantValue {
+				t.Errorf("changed[0][%q] = %#v, want %#v", key, row[key], wantValue)
+			}
+		}
+	})
+
+	t.Run("it prints only the task ID under --quiet", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, doneParent())
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111", "--quiet")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		id := strings.TrimSuffix(stdout, "\n")
+		if stdout != id+"\n" || !strings.HasPrefix(id, "tick-") || strings.Contains(id, "\n") {
+			t.Errorf("stdout = %q, want a single task ID line", stdout)
+		}
+	})
+
+	t.Run("it leaves pretty create output unchanged", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, doneParent())
+
+		stdout, stderr, exitCode := runCreate(t, dir, "Child task", "--parent", "tick-ppp111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		want := "\ntick-ppp111: done \u2192 open\n"
+		if !strings.HasSuffix(stdout, want) {
+			t.Errorf("stdout does not end with %q:\n%s", want, stdout)
 		}
 	})
 }

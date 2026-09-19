@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1313,6 +1315,140 @@ func TestUpdate(t *testing.T) {
 		}
 		if origParent.Transitions[0].Auto != true {
 			t.Errorf("transition auto = %v, want true", origParent.Transitions[0].Auto)
+		}
+	})
+}
+
+func TestUpdateChangedSection(t *testing.T) {
+	now := time.Date(2026, 4, 1, 9, 0, 0, 0, time.UTC)
+	closedAt := now
+
+	// Moving tick-ccc333 from tick-aaa111 to tick-ddd444 fires Rule 6 on the new
+	// parent and Rule 3 on the original one.
+	bothRules := func() []task.Task {
+		return []task.Task{
+			{ID: "tick-aaa111", Title: "Original parent", Status: task.StatusInProgress, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Child done", Status: task.StatusDone, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-ccc333", Title: "Child moving", Status: task.StatusOpen, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now},
+			{ID: "tick-ddd444", Title: "New parent", Status: task.StatusDone, Priority: 2, Created: now, Updated: now, Closed: &closedAt},
+		}
+	}
+
+	t.Run("it collapses update's rule 6 and rule 3 blocks into one table", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, bothRules())
+
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-ddd444", "--description", "Some description", "--toon")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		keys := toonSectionKeys(t, stdout)
+		wantKeys := []string{"id", "blocked_by", "children", "notes", "changed", "description"}
+		if !slices.Equal(keys, wantKeys) {
+			t.Fatalf("section keys = %#v, want %#v\n%s", keys, wantKeys, stdout)
+		}
+		rows := toonRows(t, decodeToonDoc(t, stdout), "changed")
+		if len(rows) != 2 {
+			t.Fatalf("changed has %d rows, want 2: %#v", len(rows), rows)
+		}
+		assertToonFields(t, rows[0], map[string]any{
+			"id": "tick-ddd444", "title": "New parent", "from": "done", "to": "open", "auto": true,
+		})
+		assertToonFields(t, rows[1], map[string]any{
+			"id": "tick-aaa111", "title": "Original parent", "from": "in_progress", "to": "done", "auto": true,
+		})
+	})
+
+	t.Run("it drops a shared ancestor that ends where it started", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-ggg111", Title: "Grandparent", Status: task.StatusDone, Priority: 2, Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-bbb222", Title: "New parent", Status: task.StatusDone, Priority: 2, Parent: "tick-ggg111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-aaa111", Title: "Original parent", Status: task.StatusInProgress, Priority: 2, Parent: "tick-bbb222", Created: now, Updated: now},
+			{ID: "tick-ccc333", Title: "Child moving", Status: task.StatusDone, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+			{ID: "tick-yyy555", Title: "Child staying", Status: task.StatusDone, Priority: 2, Parent: "tick-aaa111", Created: now, Updated: now, Closed: &closedAt},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-bbb222", "--toon")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		rows := toonRows(t, decodeToonDoc(t, stdout), "changed")
+		for _, row := range rows {
+			if row["id"] == "tick-ggg111" {
+				t.Errorf("grandparent carries a row %#v, want none (it ends where it started)", row)
+			}
+		}
+		if len(rows) != 1 {
+			t.Fatalf("changed has %d rows, want 1: %#v", len(rows), rows)
+		}
+		assertToonFields(t, rows[0], map[string]any{
+			"id": "tick-aaa111", "from": "in_progress", "to": "done", "auto": true,
+		})
+	})
+
+	t.Run("it emits one JSON object", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, bothRules())
+
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-ddd444", "--json")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		var parsed map[string]any
+		if err := json.Unmarshal([]byte(stdout), &parsed); err != nil {
+			t.Fatalf("stdout is not one JSON object: %v\n%s", err, stdout)
+		}
+		changed, ok := parsed["changed"].([]any)
+		if !ok {
+			t.Fatalf("changed = %#v, want a list", parsed["changed"])
+		}
+		if len(changed) != 2 {
+			t.Fatalf("changed has %d entries, want 2", len(changed))
+		}
+	})
+
+	t.Run("it emits changed[0] when no status moved", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--title", "Renamed", "--toon")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if !strings.Contains(stdout, "changed[0]{id,title,from,to,auto}:") {
+			t.Fatalf("document does not carry a count-zero changed header:\n%s", stdout)
+		}
+	})
+
+	t.Run("it prints only the task ID under --quiet", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, bothRules())
+
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-ddd444", "--quiet")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if stdout != "tick-ccc333\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "tick-ccc333\n")
+		}
+	})
+
+	t.Run("it leaves pretty update output unchanged with both blocks", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, bothRules())
+
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-ccc333", "--parent", "tick-ddd444")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		want := "\ntick-ddd444: done \u2192 open\ntick-aaa111: in_progress \u2192 done\n"
+		if !strings.HasSuffix(stdout, want) {
+			t.Errorf("stdout does not end with %q:\n%s", want, stdout)
 		}
 	})
 }
