@@ -169,6 +169,57 @@ func runDepTreeJSON(t *testing.T, dir string, args ...string) map[string]any {
 	return parsed
 }
 
+// jsonDepTreeRoot returns the single root node of a full-graph dep tree JSON document.
+func jsonDepTreeRoot(t *testing.T, doc map[string]any) map[string]any {
+	t.Helper()
+	roots, ok := doc["roots"].([]any)
+	if !ok || len(roots) != 1 {
+		t.Fatalf("roots = %#v, want one node", doc["roots"])
+	}
+	node, ok := roots[0].(map[string]any)
+	if !ok {
+		t.Fatalf("root = %#v, want an object", roots[0])
+	}
+	return node
+}
+
+// jsonDepTreeOnlyChild returns the single child of a dep tree JSON node.
+func jsonDepTreeOnlyChild(t *testing.T, node map[string]any) map[string]any {
+	t.Helper()
+	children, ok := node["children"].([]any)
+	if !ok || len(children) != 1 {
+		t.Fatalf("children = %#v, want one node", node["children"])
+	}
+	child, ok := children[0].(map[string]any)
+	if !ok {
+		t.Fatalf("child = %#v, want an object", children[0])
+	}
+	return child
+}
+
+// assertJSONDepTreeTask asserts the task fields carried by a dep tree JSON node.
+func assertJSONDepTreeTask(t *testing.T, node map[string]any, id string, title string, status string) {
+	t.Helper()
+	got, ok := node["task"].(map[string]any)
+	if !ok {
+		t.Fatalf("task = %#v, want an object", node["task"])
+	}
+	want := map[string]any{"id": id, "title": title, "status": status}
+	for key, wantValue := range want {
+		if got[key] != wantValue {
+			t.Errorf("task %s = %v, want %q", key, got[key], wantValue)
+		}
+	}
+}
+
+// cycleTasks returns two tasks that block each other, so no participant is a root.
+func cycleTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now, Updated: now},
+		{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+	}
+}
+
 // unconnectedTasks returns two tasks that carry no dependencies in either direction.
 func unconnectedTasks(now time.Time) []task.Task {
 	return []task.Task{
@@ -232,21 +283,82 @@ func TestRunDepTree(t *testing.T) {
 		})
 	})
 
-	t.Run("it reports real counts when a cycle leaves no roots", func(t *testing.T) {
+	t.Run("it emits the cycle's edges beside its counts", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, cycleTasks(now))
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
+
+		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
+			{From: "tick-aaa111", To: "tick-bbb222"},
+			{From: "tick-bbb222", To: "tick-aaa111"},
+		})
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(1),
+			"longest": float64(2),
+			"blocked": float64(2),
+		})
+	})
+
+	t.Run("it emits an edge from a blocker no task carries", func(t *testing.T) {
 		tasks := []task.Task{
-			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now, Updated: now},
-			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ghost1"}, Created: now, Updated: now},
 		}
 		dir, _ := setupTickProjectWithTasks(t, tasks)
 
 		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
 
-		assertToonRowsEmpty(t, doc, "dep_tree")
+		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
+			{From: "tick-ghost1", To: "tick-aaa111"},
+		})
 		assertToonFields(t, doc, map[string]any{
 			"chains":  float64(1),
-			"longest": float64(0),
-			"blocked": float64(2),
+			"longest": float64(1),
+			"blocked": float64(1),
 		})
+	})
+
+	t.Run("it fills the JSON roots when no participant is a root", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, cycleTasks(now))
+
+		doc := runDepTreeJSON(t, dir)
+
+		root := jsonDepTreeRoot(t, doc)
+		assertJSONDepTreeTask(t, root, "tick-aaa111", "Task A", "open")
+		child := jsonDepTreeOnlyChild(t, root)
+		assertJSONDepTreeTask(t, child, "tick-bbb222", "Task B", "open")
+		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, child), "tick-aaa111", "Task A", "open")
+
+		for key, want := range map[string]float64{"chains": 1, "longest": 2, "blocked": 2} {
+			if got := doc[key]; got != want {
+				t.Errorf("%s = %v, want %v", key, got, want)
+			}
+		}
+	})
+
+	t.Run("it carries a bare id for a blocker no task carries in JSON", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ghost1"}, Created: now, Updated: now},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		doc := runDepTreeJSON(t, dir)
+
+		root := jsonDepTreeRoot(t, doc)
+		assertJSONDepTreeTask(t, root, "tick-ghost1", "", "")
+		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, root), "tick-aaa111", "Task A", "open")
+	})
+
+	t.Run("it still prints the no-dependencies sentence in pretty when every participant is blocked", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, cycleTasks(now))
+
+		stdout, stderr, exitCode := runDepTree(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		if stdout != "No dependencies found.\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "No dependencies found.\n")
+		}
 	})
 
 	t.Run("it still renders the populated graph", func(t *testing.T) {

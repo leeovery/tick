@@ -170,8 +170,8 @@ func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
 
 func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
 	var edges []toonEdgeRow
-	for _, root := range result.Roots {
-		edges = append(edges, collectDownstreamEdges(root.Task.ID, root.Children)...)
+	for _, tree := range result.fullGraphTrees() {
+		edges = append(edges, collectDownstreamEdges(tree.Task.ID, tree.Children)...)
 	}
 
 	sections := []string{

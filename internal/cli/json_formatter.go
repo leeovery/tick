@@ -342,7 +342,7 @@ func (f *JSONFormatter) FormatDepTree(result DepTreeResult) string {
 func (f *JSONFormatter) formatFullDepTreeJSON(result DepTreeResult) string {
 	return marshalIndentJSON(jsonDepTreeFull{
 		Mode:    "full",
-		Roots:   toJSONDepTreeNodes(result.Roots),
+		Roots:   toJSONDepTreeNodes(result.fullGraphTrees()),
 		Chains:  result.ChainCount,
 		Longest: result.LongestChain,
 		Blocked: result.BlockedCount,

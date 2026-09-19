@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/leeovery/tick/internal/task"
 )
@@ -113,21 +114,11 @@ func longestPath(node DepTreeNode) int {
 
 // BuildFullDepTree builds a dependency tree for all tasks that participate in dependencies.
 // Tasks with no dependency relationships (neither blocking nor blocked) are omitted.
-// Returns a DepTreeResult with Roots (top-level trees) and a Summary line.
 func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 	blocks := buildBlocksIndex(tasks)
 	taskIdx := buildTaskIndex(tasks)
 
-	// Identify tasks that participate in dependency relationships
-	participants := make(map[string]bool)
-	for _, t := range tasks {
-		if len(t.BlockedBy) > 0 {
-			participants[t.ID] = true
-			for _, dep := range t.BlockedBy {
-				participants[dep] = true
-			}
-		}
-	}
+	orderedParticipants, participants := collectParticipants(tasks)
 
 	// Roots are tasks that block others but are not themselves blocked
 	var roots []DepTreeNode
@@ -148,6 +139,10 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 		}
 	}
 
+	emitted := make(map[string]bool)
+	collectTreeIDs(roots, emitted)
+	unrooted := buildUnrootedTrees(orderedParticipants, emitted, blocks, taskIdx)
+
 	// Count blocked tasks (tasks with at least one BlockedBy entry)
 	blocked := 0
 	for _, t := range tasks {
@@ -159,10 +154,9 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 	// Count connected components (chains) using union-find over participants
 	chains := countChains(tasks, participants)
 
-	// Compute longest path across all roots
 	longest := 0
-	for _, root := range roots {
-		longest = max(longest, longestPath(root))
+	for _, tree := range slices.Concat(roots, unrooted) {
+		longest = max(longest, longestPath(tree))
 	}
 
 	// Build summary
@@ -179,12 +173,69 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 
 	return DepTreeResult{
 		Roots:        roots,
+		Unrooted:     unrooted,
 		Summary:      summary,
 		ChainCount:   chains,
 		LongestChain: longest,
 		BlockedCount: blocked,
 		Message:      message,
 	}
+}
+
+// collectParticipants returns the IDs of every task that participates in a dependency
+// relationship, in first-seen order, alongside the same IDs as a set. A blocker ID that
+// no task record matches participates like any other.
+func collectParticipants(tasks []task.Task) ([]string, map[string]bool) {
+	var ordered []string
+	seen := make(map[string]bool)
+	add := func(id string) {
+		if seen[id] {
+			return
+		}
+		seen[id] = true
+		ordered = append(ordered, id)
+	}
+	for _, t := range tasks {
+		if len(t.BlockedBy) == 0 {
+			continue
+		}
+		add(t.ID)
+		for _, dep := range t.BlockedBy {
+			add(dep)
+		}
+	}
+	return ordered, seen
+}
+
+// collectTreeIDs adds the ID of every node in the given trees to seen.
+func collectTreeIDs(nodes []DepTreeNode, seen map[string]bool) {
+	for _, n := range nodes {
+		seen[n.Task.ID] = true
+		collectTreeIDs(n.Children, seen)
+	}
+}
+
+// buildUnrootedTrees seeds a downstream walk from each participant the walk from the roots
+// left unemitted, so the edges of a cycle or of a dangling blocker still reach the output.
+// Participants that block nothing need no seed: each is reached as the target of a blocker's edge.
+func buildUnrootedTrees(participants []string, emitted map[string]bool, blocks map[string][]string, taskIdx map[string]task.Task) []DepTreeNode {
+	var unrooted []DepTreeNode
+	for _, id := range participants {
+		if emitted[id] || len(blocks[id]) == 0 {
+			continue
+		}
+		node := DepTreeNode{
+			Task:     DepTreeTask{ID: id},
+			Children: walkDownstream(id, blocks, taskIdx, make(map[string]bool)),
+		}
+		if t, exists := taskIdx[id]; exists {
+			node.Task = toDepTreeTask(t)
+		}
+		unrooted = append(unrooted, node)
+		emitted[id] = true
+		collectTreeIDs(node.Children, emitted)
+	}
+	return unrooted
 }
 
 // countChains counts connected components among tasks that participate in dependencies.
