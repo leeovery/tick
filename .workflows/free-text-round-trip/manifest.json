@@ -229,7 +229,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 3,
-          "current_task": "free-text-round-trip-3-4",
+          "current_task": "free-text-round-trip-3-5",
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -248,7 +248,8 @@
             "free-text-round-trip-2-8",
             "free-text-round-trip-3-1",
             "free-text-round-trip-3-2",
-            "free-text-round-trip-3-3"
+            "free-text-round-trip-3-3",
+            "free-text-round-trip-3-4"
           ],
           "staging": {
             "p1": {
@@ -270,6 +271,18 @@
           "completed_phases": [
             1,
             2
+          ],
+          "bank": [
+            {
+              "task": "free-text-round-trip-3-4",
+              "source": "reviewer",
+              "summary": "The legacy pretty subtest this task's new populated-graph subtest supersedes is a guard that passes while checking nothing, and its comment asserts the formatter is an unimplemented stub.",
+              "failure": "A handler-level regression on the populated full-graph branch under pretty — e.g. the handler printing an empty string instead of the rendered tree — passes that subtest, because it only asserts the output is not the string \"No dependencies found.\". The formatter unit tests in TestPrettyFormatDepTree cover the formatter, not the handler's routing, so nothing catches it. Separately, a maintainer reading the comment is told FormatDepTree is a stub returning empty, which has been false since the dep-tree work completed, and acts on that belief.",
+              "detail": "internal/cli/dep_tree_test.go:251-272 — subtest \"it outputs dep tree for project with dependencies\"; the false comment is at lines 266-268 (// FormatDepTree is currently a stub returning empty, so output will be empty,). The new subtest \"it still renders the populated graph\" (dep_tree_test.go:230-249) already asserts the same branch by decoded edges and counts. The remedy is deleting the superseded subtest with its comment, or converting it into a byte-exact pretty golden for the populated branch alongside phase 6's assertion sweep — either way it touches a pre-existing test the task did not name.",
+              "files": [
+                "internal/cli/dep_tree_test.go"
+              ]
+            }
           ]
         }
       }
