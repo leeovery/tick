@@ -202,7 +202,6 @@ type DepTreeResult struct {
 }
 
 // Formatter defines the interface for rendering CLI output in different formats.
-// Concrete implementations (Toon, Pretty, JSON) are provided by tasks 4-2 through 4-4.
 type Formatter interface {
 	// FormatTaskList renders a list of tasks.
 	FormatTaskList(tasks []task.Task) string
@@ -216,7 +215,7 @@ type Formatter interface {
 	FormatMessage(msg string) string
 	// FormatRemoval renders the result of a task removal operation.
 	FormatRemoval(result RemovalResult) string
-	// FormatCascadeTransition renders a status transition with cascaded child changes.
+	// FormatCascadeTransition renders the status changes a command made.
 	FormatCascadeTransition(result CascadeResult) string
 	// FormatDepTree renders a dependency tree visualization.
 	FormatDepTree(result DepTreeResult) string
@@ -256,7 +255,7 @@ func (b *baseFormatter) FormatRemoval(result RemovalResult) string {
 }
 
 // StubFormatter is a placeholder implementation of Formatter.
-// It returns empty strings for all methods. Replaced by concrete formatters in tasks 4-2 through 4-4.
+// It returns empty strings for all methods.
 type StubFormatter struct{}
 
 // Compile-time interface verification.

@@ -96,8 +96,7 @@ func validateRefsFlag(refs []string, emptyErr string) ([]string, error) {
 	return deduped, nil
 }
 
-// outputStatusChanges writes a command's status changes to stdout. Callers must build
-// the CascadeResult inside the Mutate closure where the tasks slice is still valid.
+// outputStatusChanges writes a command's status changes to stdout.
 func outputStatusChanges(stdout io.Writer, fmtr Formatter, cr CascadeResult) {
 	fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
 }
