@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1069,13 +1070,15 @@ func TestShowFilteredDocument(t *testing.T) {
 		}
 	})
 
-	t.Run("it keeps json key order stable across runs", func(t *testing.T) {
+	t.Run("it keeps json key order in document order across runs", func(t *testing.T) {
 		dir := richProject(t)
 
-		first := show(t, dir, "tick-a1b2c3", "--json", "--field", "status,title,notes")
-		second := show(t, dir, "tick-a1b2c3", "--json", "--field", "status,title,notes")
-		if first != second {
-			t.Errorf("repeated runs differ:\n%s\n%s", first, second)
+		want := []string{"title", "status", "notes"}
+		for range 2 {
+			stdout := show(t, dir, "tick-a1b2c3", "--json", "--field", "status,title,notes")
+			if got := jsonKeyOrder(t, stdout); !slices.Equal(got, want) {
+				t.Errorf("key order = %v, want %v", got, want)
+			}
 		}
 	})
 }

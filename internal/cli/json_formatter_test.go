@@ -1771,6 +1771,96 @@ func TestJSONFilteredTaskDetail(t *testing.T) {
 		assertJSONKeySet(t, doc, "id", "title", "status", "priority", "type", "tags", "refs",
 			"notes", "description", "parent", "created", "updated", "closed", "blocked_by", "children")
 	})
+
+	t.Run("it returns a filtered document's keys in document order", func(t *testing.T) {
+		for _, tc := range []struct {
+			selection string
+			want      []string
+		}{
+			{"type,tags", []string{"type", "tags"}},
+			{"title,notes.2", []string{"title", "notes"}},
+			{"status,title,id", []string{"id", "title", "status"}},
+		} {
+			got := jsonKeyOrder(t, filtered(t, richDetail(), tc.selection))
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("%s: key order = %v, want %v", tc.selection, got, tc.want)
+			}
+		}
+	})
+
+	t.Run("it orders a filtered document as the full document restricted to the selection", func(t *testing.T) {
+		full := jsonKeyOrder(t, f.FormatTaskDetail(richDetail()))
+
+		for _, selection := range []string{
+			"closed,created,id",
+			"children,blocked_by,description",
+			"refs,notes,tags,title",
+			"updated,priority,parent,status,type",
+		} {
+			got := jsonKeyOrder(t, filtered(t, richDetail(), selection))
+			want := slices.DeleteFunc(slices.Clone(full), func(key string) bool {
+				return !slices.Contains(got, key)
+			})
+			if !slices.Equal(got, want) {
+				t.Errorf("%s: key order = %v, want %v", selection, got, want)
+			}
+		}
+	})
+
+	t.Run("it renders a full document's keys in the declared order", func(t *testing.T) {
+		want := []string{"id", "title", "status", "priority", "type", "tags", "refs", "notes",
+			"description", "parent", "created", "updated", "closed", "blocked_by", "children"}
+		if got := jsonKeyOrder(t, f.FormatTaskDetail(richDetail())); !slices.Equal(got, want) {
+			t.Errorf("key order = %v, want %v", got, want)
+		}
+
+		detail := richDetail()
+		detail.Changes = &StatusChanges{}
+		withChanged := append(slices.Clone(want), "changed")
+		if got := jsonKeyOrder(t, f.FormatTaskDetail(detail)); !slices.Equal(got, withChanged) {
+			t.Errorf("key order with changes = %v, want %v", got, withChanged)
+		}
+	})
+
+	t.Run("it omits parent and closed from a filtered document when the task does not carry them", func(t *testing.T) {
+		got := jsonKeyOrder(t, filtered(t, detailWithDescription(""), "title,parent,closed,status"))
+		if want := []string{"title", "status"}; !slices.Equal(got, want) {
+			t.Errorf("key order = %v, want %v", got, want)
+		}
+	})
+}
+
+// jsonKeyOrder returns the document's top-level keys in the order they were
+// emitted, which unmarshalling into a map loses.
+func jsonKeyOrder(t *testing.T, document string) []string {
+	t.Helper()
+	decoder := json.NewDecoder(strings.NewReader(document))
+	opening, err := decoder.Token()
+	if err != nil {
+		t.Fatalf("reading document: %v\ndocument: %s", err, document)
+	}
+	if delim, ok := opening.(json.Delim); !ok || delim != '{' {
+		t.Fatalf("document opens with %v, want an object", opening)
+	}
+
+	keys := make([]string, 0, 16)
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			t.Fatalf("reading key: %v\ndocument: %s", err, document)
+		}
+		key, ok := token.(string)
+		if !ok {
+			t.Fatalf("key token = %v, want a string", token)
+		}
+		keys = append(keys, key)
+
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			t.Fatalf("reading value for %q: %v\ndocument: %s", key, err, document)
+		}
+	}
+	return keys
 }
 
 func assertJSONKeySet(t *testing.T, doc map[string]any, want ...string) {

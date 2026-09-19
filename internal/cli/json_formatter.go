@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/leeovery/tick/internal/task"
@@ -52,109 +53,94 @@ type jsonNote struct {
 	Created string `json:"created"`
 }
 
-// jsonTaskDetail represents the full task detail in JSON output.
-// parent and closed use omitempty to omit when zero/nil.
-// blocked_by, children, tags, refs, and notes are always present as arrays.
-// description is always present (empty string, not null/omitted).
-type jsonTaskDetail struct {
-	ID          string            `json:"id"`
-	Title       string            `json:"title"`
-	Status      string            `json:"status"`
-	Priority    int               `json:"priority"`
-	Type        string            `json:"type"`
-	Tags        []string          `json:"tags"`
-	Refs        []string          `json:"refs"`
-	Notes       []jsonNote        `json:"notes"`
-	Description string            `json:"description"`
-	Parent      string            `json:"parent,omitempty"`
-	Created     string            `json:"created"`
-	Updated     string            `json:"updated"`
-	Closed      string            `json:"closed,omitempty"`
-	BlockedBy   []jsonRelatedTask `json:"blocked_by"`
-	Children    []jsonRelatedTask `json:"children"`
-	// Changed is a pointer so that a present-but-empty list survives omitempty,
-	// which drops an empty slice.
-	Changed *[]jsonStatusChange `json:"changed,omitempty"`
+// jsonMember is one key of a JSON object, paired with the value it carries.
+type jsonMember struct {
+	key   string
+	value any
+}
+
+// jsonObject is a JSON object that marshals its members in slice order rather
+// than the alphabetical order a map yields.
+type jsonObject []jsonMember
+
+func (o jsonObject) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	for i, member := range o {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		key, err := json.Marshal(member.key)
+		if err != nil {
+			return nil, err
+		}
+		value, err := json.Marshal(member.value)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(key)
+		buf.WriteByte(':')
+		buf.Write(value)
+	}
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 
 // FormatTaskDetail renders a single task as a JSON object, narrowed to
-// detail.Fields when it is set. Of the keys it carries: parent/closed are
-// omitted when absent, blocked_by/children are arrays, and description is an
-// empty string when not set.
+// detail.Fields when it is set, and "" when a selection leaves no key. Of the
+// keys it carries: parent/closed are omitted when absent, the list sections are
+// arrays, and description is an empty string when not set.
 func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
-	if detail.Fields != nil {
-		return formatFilteredTaskDetailJSON(detail)
+	obj := taskDetailJSONObject(detail)
+	if len(obj) == 0 {
+		return ""
 	}
-
-	t := detail.Task
-
-	obj := jsonTaskDetail{
-		ID:          t.ID,
-		Title:       t.Title,
-		Status:      string(t.Status),
-		Priority:    t.Priority,
-		Type:        t.Type,
-		Tags:        toJSONStrings(detail.Tags),
-		Refs:        toJSONStrings(detail.Refs),
-		Notes:       toJSONNotes(selectedItems(detail.Notes, nil)),
-		Description: t.Description,
-		Parent:      t.Parent,
-		Created:     task.FormatTimestamp(t.Created),
-		Updated:     task.FormatTimestamp(t.Updated),
-		Closed:      jsonClosedTimestamp(t),
-		BlockedBy:   toJSONRelated(detail.BlockedBy),
-		Children:    toJSONRelated(detail.Children),
-	}
-
-	if detail.Changes != nil {
-		changed := toJSONStatusChanges(detail.Changes.Rows())
-		obj.Changed = &changed
-	}
-
 	return marshalIndentJSON(obj)
 }
 
-// formatFilteredTaskDetailJSON renders only the selected keys as a JSON object,
-// each carrying what full output carries for it, and "" when no key survives.
-func formatFilteredTaskDetailJSON(detail TaskDetail) string {
+// taskDetailJSONObject lays out the detail document's keys in the order it
+// renders them, each gated through the selection. A nil selection keeps every
+// key and every item of the list sections.
+func taskDetailJSONObject(detail TaskDetail) jsonObject {
 	t := detail.Task
-	obj := make(map[string]any)
+	fields := detail.Fields
+
+	obj := make(jsonObject, 0, 16)
 	add := func(key string, value any) {
-		if detail.Fields.Selected(key) {
-			obj[key] = value
+		if fields.includes(key) {
+			obj = append(obj, jsonMember{key: key, value: value})
 		}
 	}
+
+	tags, _ := selectedItems(detail.Tags, fields.Positions("tags"))
+	refs, _ := selectedItems(detail.Refs, fields.Positions("refs"))
+	blockedBy, _ := selectedItems(detail.BlockedBy, fields.Positions("blocked_by"))
+	children, _ := selectedItems(detail.Children, fields.Positions("children"))
 
 	add("id", t.ID)
 	add("title", t.Title)
 	add("status", string(t.Status))
 	add("priority", t.Priority)
 	add("type", t.Type)
-	tags, _ := selectedItems(detail.Tags, detail.Fields.Positions("tags"))
-	refs, _ := selectedItems(detail.Refs, detail.Fields.Positions("refs"))
-	blockedBy, _ := selectedItems(detail.BlockedBy, detail.Fields.Positions("blocked_by"))
-	children, _ := selectedItems(detail.Children, detail.Fields.Positions("children"))
-
 	add("tags", toJSONStrings(tags))
 	add("refs", toJSONStrings(refs))
-	add("notes", toJSONNotes(selectedItems(detail.Notes, detail.Fields.Positions("notes"))))
+	add("notes", toJSONNotes(selectedItems(detail.Notes, fields.Positions("notes"))))
 	add("description", t.Description)
-	add("created", task.FormatTimestamp(t.Created))
-	add("updated", task.FormatTimestamp(t.Updated))
-	add("blocked_by", toJSONRelated(blockedBy))
-	add("children", toJSONRelated(children))
-
 	if t.Parent != "" {
 		add("parent", t.Parent)
 	}
+	add("created", task.FormatTimestamp(t.Created))
+	add("updated", task.FormatTimestamp(t.Updated))
 	if closed := jsonClosedTimestamp(t); closed != "" {
 		add("closed", closed)
 	}
-
-	if len(obj) == 0 {
-		return ""
+	add("blocked_by", toJSONRelated(blockedBy))
+	add("children", toJSONRelated(children))
+	if detail.Changes != nil {
+		add("changed", toJSONStatusChanges(detail.Changes.Rows()))
 	}
-	return marshalIndentJSON(obj)
+
+	return obj
 }
 
 // jsonClosedTimestamp formats the task's closed time, empty when it is not closed.
