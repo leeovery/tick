@@ -80,29 +80,22 @@ func (f *ToonFormatter) FormatTaskList(tasks []task.Task) string {
 func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 	var sections []string
 
-	// Section 1: the task's own fields as top-level named fields
 	sections = append(sections, buildTaskSection(detail.Task))
 
-	// Section 2: blocked_by (always present, even with count 0)
 	sections = append(sections, buildRelatedSection("blocked_by", detail.BlockedBy))
 
-	// Section 3: children (always present, even with count 0)
 	sections = append(sections, buildRelatedSection("children", detail.Children))
 
-	// Section 4: tags (omitted when empty)
 	if len(detail.Tags) > 0 {
 		sections = append(sections, encodeToonSection("tags", detail.Tags))
 	}
 
-	// Section 5: refs (omitted when empty)
 	if len(detail.Refs) > 0 {
 		sections = append(sections, encodeToonSection("refs", detail.Refs))
 	}
 
-	// Section 6: notes (always present, even with count 0)
 	sections = append(sections, buildNotesSection(detail.Notes))
 
-	// Section 7: description (omitted when empty)
 	if detail.Task.Description != "" {
 		sections = append(sections, encodeToonFields(toon.Field{Key: "description", Value: detail.Task.Description}))
 	}
@@ -341,7 +334,6 @@ func buildNotesSection(notes []task.Note) string {
 // encodeToonSection encodes a slice as a named TOON section using toon-go: structs
 // become a tabular section, scalars an inline list. Quoting is the encoder's.
 func encodeToonSection[T any](name string, rows []T) string {
-	// Build an Object with the named array field
 	obj := toon.NewObject(toon.Field{Key: name, Value: rows})
 	s, err := toon.MarshalString(obj)
 	if err != nil {
