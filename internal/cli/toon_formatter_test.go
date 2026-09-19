@@ -337,7 +337,7 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 
-	t.Run("it formats stats with all counts", func(t *testing.T) {
+	t.Run("it emits stats counts as top-level named fields", func(t *testing.T) {
 		f := &ToonFormatter{}
 		stats := Stats{
 			Total:      47,
@@ -349,20 +349,62 @@ func TestToonFormatter(t *testing.T) {
 			Blocked:    4,
 			ByPriority: [5]int{2, 8, 25, 7, 5},
 		}
-		result := f.FormatStats(stats)
-		sections := strings.Split(result, "\n\n")
-		if len(sections) != 2 {
-			t.Fatalf("expected 2 sections, got %d: %q", len(sections), result)
+		doc := decodeToonDoc(t, f.FormatStats(stats))
+		assertToonFields(t, doc, map[string]any{
+			"total":       float64(47),
+			"open":        float64(12),
+			"in_progress": float64(3),
+			"done":        float64(28),
+			"cancelled":   float64(4),
+			"ready":       float64(8),
+			"blocked":     float64(4),
+		})
+		assertToonKeysAbsent(t, doc, "stats")
+	})
+
+	t.Run("it emits the counts in their established order", func(t *testing.T) {
+		f := &ToonFormatter{}
+		result := f.FormatStats(Stats{Total: 47, Open: 12, Done: 28, Ready: 8, Blocked: 4})
+		want := []string{"total", "open", "in_progress", "done", "cancelled", "ready", "blocked"}
+		lines := strings.Split(strings.Split(result, "\n\n")[0], "\n")
+		if len(lines) != len(want) {
+			t.Fatalf("counts section = %q, want %d lines", lines, len(want))
 		}
-		// Section 1: stats summary
-		summaryLines := strings.Split(sections[0], "\n")
-		expectedHeader := "stats{total,open,in_progress,done,cancelled,ready,blocked}:"
-		if summaryLines[0] != expectedHeader {
-			t.Errorf("stats header = %q, want %q", summaryLines[0], expectedHeader)
+		for i, key := range want {
+			if !strings.HasPrefix(lines[i], key+": ") {
+				t.Errorf("line %d = %q, want field %q", i, lines[i], key)
+			}
 		}
-		expectedRow := "  47,12,3,28,4,8,4"
-		if summaryLines[1] != expectedRow {
-			t.Errorf("stats row = %q, want %q", summaryLines[1], expectedRow)
+	})
+
+	t.Run("it emits a zero count rather than omitting it", func(t *testing.T) {
+		f := &ToonFormatter{}
+		doc := decodeToonDoc(t, f.FormatStats(Stats{Total: 1, Open: 1, InProgress: 0}))
+		assertToonFields(t, doc, map[string]any{"in_progress": float64(0)})
+	})
+
+	t.Run("it decodes counts as numbers", func(t *testing.T) {
+		f := &ToonFormatter{}
+		doc := decodeToonDoc(t, f.FormatStats(Stats{Total: 47}))
+		if _, ok := doc["total"].(float64); !ok {
+			t.Errorf("total = %#v, want a float64", doc["total"])
+		}
+	})
+
+	t.Run("it keeps the by_priority table unchanged", func(t *testing.T) {
+		f := &ToonFormatter{}
+		stats := Stats{Total: 47, ByPriority: [5]int{2, 8, 25, 7, 5}}
+		rows := toonRows(t, decodeToonDoc(t, f.FormatStats(stats)), "by_priority")
+		if len(rows) != 5 {
+			t.Fatalf("by_priority has %d rows, want 5", len(rows))
+		}
+		for i, row := range rows {
+			if row["priority"] != float64(i) {
+				t.Errorf("by_priority[%d].priority = %#v, want %d", i, row["priority"], i)
+			}
+			if row["count"] != float64(stats.ByPriority[i]) {
+				t.Errorf("by_priority[%d].count = %#v, want %d", i, row["count"], stats.ByPriority[i])
+			}
 		}
 	})
 

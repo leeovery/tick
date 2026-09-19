@@ -260,37 +260,55 @@ func TestStats(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		output := strings.TrimRight(stdout, "\n")
-		sections := strings.Split(output, "\n\n")
-		if len(sections) != 2 {
-			t.Fatalf("expected 2 sections, got %d: %q", len(sections), output)
+		doc := decodeToonDoc(t, stdout)
+		assertToonFields(t, doc, map[string]any{
+			"total":       float64(2),
+			"open":        float64(1),
+			"in_progress": float64(0),
+			"done":        float64(1),
+			"cancelled":   float64(0),
+			"ready":       float64(1),
+			"blocked":     float64(0),
+		})
+		assertToonKeysAbsent(t, doc, "stats")
+
+		rows := toonRows(t, doc, "by_priority")
+		wantCounts := []float64{0, 1, 1, 0, 0}
+		if len(rows) != len(wantCounts) {
+			t.Fatalf("by_priority has %d rows, want %d", len(rows), len(wantCounts))
+		}
+		for i, row := range rows {
+			if row["priority"] != float64(i) {
+				t.Errorf("by_priority[%d].priority = %#v, want %d", i, row["priority"], i)
+			}
+			if row["count"] != wantCounts[i] {
+				t.Errorf("by_priority[%d].count = %#v, want %v", i, row["count"], wantCounts[i])
+			}
+		}
+	})
+
+	t.Run("it decodes stats for a project with no tasks", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		stdout, stderr, exitCode := runStats(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		// Section 1: stats summary
-		summaryLines := strings.Split(sections[0], "\n")
-		expectedHeader := "stats{total,open,in_progress,done,cancelled,ready,blocked}:"
-		if summaryLines[0] != expectedHeader {
-			t.Errorf("stats header = %q, want %q", summaryLines[0], expectedHeader)
-		}
-		// Total=2, Open=1, InProgress=0, Done=1, Cancelled=0, Ready=1, Blocked=0
-		expectedRow := "  2,1,0,1,0,1,0"
-		if summaryLines[1] != expectedRow {
-			t.Errorf("stats row = %q, want %q", summaryLines[1], expectedRow)
+		doc := decodeToonDoc(t, stdout)
+		for _, key := range []string{"total", "open", "in_progress", "done", "cancelled", "ready", "blocked"} {
+			if doc[key] != float64(0) {
+				t.Errorf("%s = %#v, want 0", key, doc[key])
+			}
 		}
 
-		// Section 2: by_priority
-		priorityLines := strings.Split(sections[1], "\n")
-		expectedPriorityHeader := "by_priority[5]{priority,count}:"
-		if priorityLines[0] != expectedPriorityHeader {
-			t.Errorf("by_priority header = %q, want %q", priorityLines[0], expectedPriorityHeader)
+		rows := toonRows(t, doc, "by_priority")
+		if len(rows) != 5 {
+			t.Fatalf("by_priority has %d rows, want 5", len(rows))
 		}
-		if len(priorityLines) != 6 {
-			t.Fatalf("expected 6 priority lines (header + 5 rows), got %d: %q", len(priorityLines), sections[1])
-		}
-		expectedPriRows := []string{"  0,0", "  1,1", "  2,1", "  3,0", "  4,0"}
-		for i, expected := range expectedPriRows {
-			if priorityLines[i+1] != expected {
-				t.Errorf("priority row %d = %q, want %q", i, priorityLines[i+1], expected)
+		for i, row := range rows {
+			if row["priority"] != float64(i) || row["count"] != float64(0) {
+				t.Errorf("by_priority[%d] = %#v, want priority %d and count 0", i, row, i)
 			}
 		}
 	})

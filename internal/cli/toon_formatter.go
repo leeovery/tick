@@ -34,17 +34,6 @@ type toonRelatedRow struct {
 	Status string `toon:"status"`
 }
 
-// toonStatsSummary is a TOON-serializable row for the stats summary section.
-type toonStatsSummary struct {
-	Total      int `toon:"total"`
-	Open       int `toon:"open"`
-	InProgress int `toon:"in_progress"`
-	Done       int `toon:"done"`
-	Cancelled  int `toon:"cancelled"`
-	Ready      int `toon:"ready"`
-	Blocked    int `toon:"blocked"`
-}
-
 // toonNoteRow is a TOON-serializable row for the notes section in show output.
 type toonNoteRow struct {
 	Index   int    `toon:"index"`
@@ -111,26 +100,23 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 func (f *ToonFormatter) FormatStats(stats Stats) string {
 	var sections []string
 
-	// Section 1: stats summary (single-object scope)
-	summary := toonStatsSummary{
-		Total:      stats.Total,
-		Open:       stats.Open,
-		InProgress: stats.InProgress,
-		Done:       stats.Done,
-		Cancelled:  stats.Cancelled,
-		Ready:      stats.Ready,
-		Blocked:    stats.Blocked,
-	}
-	sections = append(sections, encodeToonSingleObject("stats", summary))
+	sections = append(sections, encodeToonFields(
+		toon.Field{Key: "total", Value: stats.Total},
+		toon.Field{Key: "open", Value: stats.Open},
+		toon.Field{Key: "in_progress", Value: stats.InProgress},
+		toon.Field{Key: "done", Value: stats.Done},
+		toon.Field{Key: "cancelled", Value: stats.Cancelled},
+		toon.Field{Key: "ready", Value: stats.Ready},
+		toon.Field{Key: "blocked", Value: stats.Blocked},
+	))
 
-	// Section 2: by_priority (always 5 rows, 0-4)
 	rows := make([]toonPriorityRow, 5)
 	for i := range 5 {
 		rows[i] = toonPriorityRow{Priority: i, Count: stats.ByPriority[i]}
 	}
 	sections = append(sections, encodeToonSection("by_priority", rows))
 
-	return strings.Join(sections, "\n\n")
+	return joinToonSections(sections)
 }
 
 // FormatMessage renders a general-purpose message as plain text.
