@@ -83,7 +83,7 @@ func RunNoteAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdo
 		return err
 	}
 
-	return outputMutationResult(store, id, fc, fmtr, stdout)
+	return outputMutationResult(store, id, fc, fmtr, stdout, nil)
 }
 
 // RunNoteRemove executes the note remove command: parses args (task ID and 1-based index),
@@ -139,5 +139,5 @@ func RunNoteRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, s
 		return err
 	}
 
-	return outputMutationResult(store, id, fc, fmtr, stdout)
+	return outputMutationResult(store, id, fc, fmtr, stdout, nil)
 }

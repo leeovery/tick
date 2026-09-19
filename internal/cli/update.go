@@ -400,7 +400,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	// Output updated task detail.
-	if err := outputMutationResult(store, updatedID, fc, fmtr, stdout); err != nil {
+	if err := outputMutationResult(store, updatedID, fc, fmtr, stdout, nil); err != nil {
 		return err
 	}
 

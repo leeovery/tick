@@ -72,6 +72,9 @@ type jsonTaskDetail struct {
 	Closed      string            `json:"closed,omitempty"`
 	BlockedBy   []jsonRelatedTask `json:"blocked_by"`
 	Children    []jsonRelatedTask `json:"children"`
+	// Changed is a pointer so that a present-but-empty list survives omitempty,
+	// which drops an empty slice.
+	Changed *[]jsonStatusChange `json:"changed,omitempty"`
 }
 
 // FormatTaskDetail renders a single task with full details as a JSON object.
@@ -116,6 +119,11 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 		Closed:      closedStr,
 		BlockedBy:   toJSONRelated(detail.BlockedBy),
 		Children:    toJSONRelated(detail.Children),
+	}
+
+	if detail.Changes != nil {
+		changed := toJSONStatusChanges(detail.Changes.Rows)
+		obj.Changed = &changed
 	}
 
 	return marshalIndentJSON(obj)

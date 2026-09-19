@@ -101,6 +101,17 @@ type TaskDetail struct {
 	Tags        []string
 	Refs        []string
 	Notes       []task.Note
+	// Changes is nil when the document carries no changed section, and non-nil —
+	// possibly with no rows — when it always carries one.
+	Changes *StatusChanges
+}
+
+// StatusChanges holds a command's status changes in both shapes the formatters need:
+// Rows is the merged table rendered by toon and JSON, Blocks the per-transition
+// cascade results rendered by pretty.
+type StatusChanges struct {
+	Rows   []StatusChange
+	Blocks []CascadeResult
 }
 
 // Stats holds typed task statistics for rendering by formatters.

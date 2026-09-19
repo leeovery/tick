@@ -96,6 +96,10 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 
 	sections = append(sections, buildNotesSection(detail.Notes))
 
+	if detail.Changes != nil {
+		sections = append(sections, buildChangedSection(detail.Changes.Rows))
+	}
+
 	if detail.Task.Description != "" {
 		sections = append(sections, encodeToonFields(toon.Field{Key: "description", Value: detail.Task.Description}))
 	}

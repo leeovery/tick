@@ -180,6 +180,12 @@ func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
 		}
 	}
 
+	if detail.Changes != nil {
+		for _, block := range detail.Changes.Blocks {
+			fmt.Fprintf(&b, "\n%s", f.FormatCascadeTransition(block))
+		}
+	}
+
 	return b.String()
 }
 

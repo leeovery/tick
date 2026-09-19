@@ -218,7 +218,7 @@ func TestOutputMutationResult(t *testing.T) {
 		fc := FormatConfig{Quiet: true}
 		fmtr := &PrettyFormatter{}
 
-		err = outputMutationResult(store, "tick-aaa111", fc, fmtr, &buf)
+		err = outputMutationResult(store, "tick-aaa111", fc, fmtr, &buf, nil)
 		if err != nil {
 			t.Fatalf("outputMutationResult error: %v", err)
 		}
@@ -246,7 +246,7 @@ func TestOutputMutationResult(t *testing.T) {
 		fc := FormatConfig{Quiet: false}
 		fmtr := &PrettyFormatter{}
 
-		err = outputMutationResult(store, "tick-aaa111", fc, fmtr, &buf)
+		err = outputMutationResult(store, "tick-aaa111", fc, fmtr, &buf, nil)
 		if err != nil {
 			t.Fatalf("outputMutationResult error: %v", err)
 		}
@@ -279,7 +279,7 @@ func TestOutputMutationResult(t *testing.T) {
 		fc := FormatConfig{Quiet: false}
 		fmtr := &PrettyFormatter{}
 
-		err = outputMutationResult(store, "tick-nonexist", fc, fmtr, &buf)
+		err = outputMutationResult(store, "tick-nonexist", fc, fmtr, &buf, nil)
 		if err == nil {
 			t.Fatal("expected error for non-existent task ID")
 		}

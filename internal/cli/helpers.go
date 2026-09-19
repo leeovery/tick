@@ -10,10 +10,11 @@ import (
 	"github.com/leeovery/tick/internal/task"
 )
 
-// outputMutationResult handles post-mutation output for create and update commands.
-// In quiet mode it prints only the task ID; otherwise it queries the full task detail
-// from the store and formats it via the Formatter.
-func outputMutationResult(store *storage.Store, id string, fc FormatConfig, fmtr Formatter, stdout io.Writer) error {
+// outputMutationResult handles post-mutation output for the commands that render a task
+// detail. In quiet mode it prints only the task ID; otherwise it queries the full task
+// detail from the store and formats it via the Formatter. A nil changes leaves the
+// document without a changed section.
+func outputMutationResult(store *storage.Store, id string, fc FormatConfig, fmtr Formatter, stdout io.Writer, changes *StatusChanges) error {
 	if fc.Quiet {
 		fmt.Fprintln(stdout, id)
 		return nil
@@ -25,6 +26,7 @@ func outputMutationResult(store *storage.Store, id string, fc FormatConfig, fmtr
 	}
 
 	detail := showDataToTaskDetail(data)
+	detail.Changes = changes
 	fmt.Fprintln(stdout, fmtr.FormatTaskDetail(detail))
 	return nil
 }

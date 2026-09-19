@@ -272,7 +272,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	}
 
 	// Output created task detail first.
-	if err := outputMutationResult(store, createdTask.ID, fc, fmtr, stdout); err != nil {
+	if err := outputMutationResult(store, createdTask.ID, fc, fmtr, stdout, nil); err != nil {
 		return err
 	}
 
