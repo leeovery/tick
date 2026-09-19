@@ -158,9 +158,8 @@ type toonEdgeRow struct {
 
 // FormatDepTree renders a dependency tree in TOON edge-list format.
 // Full graph: dep_tree[N]{from,to}: section + chains, longest and blocked named fields.
-// Focused mode: separate blocked_by[N]{from,to}: and blocks[N]{from,to}: sections,
-// omitting empty directions entirely. When the target has no dependencies, renders
-// the target task info followed by the message.
+// Focused mode: the target's id, title and status as named fields, followed by
+// blocked_by[N]{from,to}: and blocks[N]{from,to}: sections, both always present.
 func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
 	if result.Target != nil {
 		return f.formatFocusedDepTree(result)
@@ -192,23 +191,17 @@ func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
 	return strings.Join(sections, "\n\n")
 }
 
-// formatFocusedDepTree renders focused mode with blocked_by and blocks sections.
-// When both directions are empty, renders the target task info followed by the message.
+// formatFocusedDepTree renders focused mode as the target's id, title and status
+// followed by its blocked_by and blocks sections.
 func (f *ToonFormatter) formatFocusedDepTree(result DepTreeResult) string {
-	if len(result.BlockedBy) == 0 && len(result.Blocks) == 0 && result.Message != "" {
-		return fmt.Sprintf("%s  %s (%s)\n%s", result.Target.ID, result.Target.Title, result.Target.Status, result.Message)
-	}
-
-	var sections []string
-
-	if len(result.BlockedBy) > 0 {
-		edges := collectUpstreamEdges(result.Target.ID, result.BlockedBy)
-		sections = append(sections, buildEdgeSection("blocked_by", edges))
-	}
-
-	if len(result.Blocks) > 0 {
-		edges := collectDownstreamEdges(result.Target.ID, result.Blocks)
-		sections = append(sections, buildEdgeSection("blocks", edges))
+	sections := []string{
+		encodeToonFields(
+			toon.Field{Key: "id", Value: result.Target.ID},
+			toon.Field{Key: "title", Value: result.Target.Title},
+			toon.Field{Key: "status", Value: result.Target.Status},
+		),
+		buildEdgeSection("blocked_by", collectUpstreamEdges(result.Target.ID, result.BlockedBy)),
+		buildEdgeSection("blocks", collectDownstreamEdges(result.Target.ID, result.Blocks)),
 	}
 
 	return strings.Join(sections, "\n\n")

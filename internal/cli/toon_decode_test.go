@@ -364,3 +364,76 @@ func TestToonStatusChangeConformance(t *testing.T) {
 		}
 	})
 }
+
+// assertToonEdgeRows asserts that an edge section decodes to the given from/to pairs in order.
+func assertToonEdgeRows(t *testing.T, doc map[string]any, key string, want []toonEdgeRow) {
+	t.Helper()
+	rows := toonRows(t, doc, key)
+	if len(rows) != len(want) {
+		t.Fatalf("key %q has %d rows, want %d", key, len(rows), len(want))
+	}
+	for i, row := range rows {
+		assertToonFields(t, row, map[string]any{"from": want[i].From, "to": want[i].To})
+	}
+}
+
+func TestToonDepTreeFocusedConformance(t *testing.T) {
+	now := time.Date(2026, 4, 2, 9, 0, 0, 0, time.UTC)
+	upstream := task.Task{ID: "tick-aaa111", Title: "Upstream", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now}
+	middle := task.Task{ID: "tick-bbb222", Title: "Middle, with a comma", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now, Updated: now}
+	downstream := task.Task{ID: "tick-ccc333", Title: "Downstream", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now, Updated: now}
+	lone := task.Task{ID: "tick-ddd444", Title: "Lone", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now}
+
+	seed := []task.Task{upstream, middle, downstream, lone}
+
+	t.Run("it decodes dep tree output for a task with both directions", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, seed)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree", "tick-bbb222"))
+
+		assertToonFields(t, doc, map[string]any{
+			"id":     "tick-bbb222",
+			"title":  "Middle, with a comma",
+			"status": "open",
+		})
+		assertToonEdgeRows(t, doc, "blocked_by", []toonEdgeRow{{From: "tick-aaa111", To: "tick-bbb222"}})
+		assertToonEdgeRows(t, doc, "blocks", []toonEdgeRow{{From: "tick-bbb222", To: "tick-ccc333"}})
+	})
+
+	t.Run("it decodes dep tree output for a task with only upstream", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, seed)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree", "tick-ccc333"))
+
+		assertToonFields(t, doc, map[string]any{"id": "tick-ccc333", "status": "open"})
+		assertToonRowsEmpty(t, doc, "blocks")
+		if rows := toonRows(t, doc, "blocked_by"); len(rows) == 0 {
+			t.Error("blocked_by should carry edges")
+		}
+	})
+
+	t.Run("it decodes dep tree output for a task with only downstream", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, seed)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree", "tick-aaa111"))
+
+		assertToonFields(t, doc, map[string]any{"id": "tick-aaa111", "status": "open"})
+		assertToonRowsEmpty(t, doc, "blocked_by")
+		if rows := toonRows(t, doc, "blocks"); len(rows) == 0 {
+			t.Error("blocks should carry edges")
+		}
+	})
+
+	t.Run("it decodes dep tree output for a task with no dependencies", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, seed)
+
+		out := runToonCommand(t, dir, "dep", "tree", "tick-ddd444")
+
+		if strings.Contains(out, "No dependencies.") {
+			t.Errorf("output should carry no prose, got:\n%s", out)
+		}
+		doc := decodeToonDoc(t, out)
+		assertToonFields(t, doc, map[string]any{"id": "tick-ddd444", "title": "Lone", "status": "open"})
+		assertToonRowsEmpty(t, doc, "blocked_by", "blocks")
+	})
+}

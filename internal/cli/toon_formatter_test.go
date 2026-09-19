@@ -1131,8 +1131,8 @@ func TestToonFormatDepTree(t *testing.T) {
 		})
 	})
 
-	t.Run("it renders focused view with both directions", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+	t.Run("it names the target as top-level fields on the populated branch", func(t *testing.T) {
+		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
 			BlockedBy: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"}},
@@ -1140,65 +1140,74 @@ func TestToonFormatDepTree(t *testing.T) {
 			Blocks: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"}},
 			},
-		})
-		sections := strings.Split(result, "\n\n")
-		if len(sections) != 2 {
-			t.Fatalf("expected 2 sections, got %d: %q", len(sections), result)
-		}
-		// blocked_by section: edges from blocker to target
-		blockedByLines := strings.Split(sections[0], "\n")
-		if blockedByLines[0] != "blocked_by[1]{from,to}:" {
-			t.Errorf("blocked_by header = %q, want %q", blockedByLines[0], "blocked_by[1]{from,to}:")
-		}
-		if blockedByLines[1] != "  tick-aaa111,tick-bbb222" {
-			t.Errorf("blocked_by edge = %q, want %q", blockedByLines[1], "  tick-aaa111,tick-bbb222")
-		}
-		// blocks section: edges from target to blocked
-		blocksLines := strings.Split(sections[1], "\n")
-		if blocksLines[0] != "blocks[1]{from,to}:" {
-			t.Errorf("blocks header = %q, want %q", blocksLines[0], "blocks[1]{from,to}:")
-		}
-		if blocksLines[1] != "  tick-bbb222,tick-ccc333" {
-			t.Errorf("blocks edge = %q, want %q", blocksLines[1], "  tick-bbb222,tick-ccc333")
-		}
+		}))
+
+		assertToonFields(t, doc, map[string]any{"id": "tick-bbb222", "title": "B", "status": "open"})
+		assertToonEdgeRows(t, doc, "blocked_by", []toonEdgeRow{{From: "tick-aaa111", To: "tick-bbb222"}})
+		assertToonEdgeRows(t, doc, "blocks", []toonEdgeRow{{From: "tick-bbb222", To: "tick-ccc333"}})
 	})
 
-	t.Run("it omits blocked_by section when only downstream exists", func(t *testing.T) {
+	t.Run("it names the target as top-level fields on the no-dependencies branch", func(t *testing.T) {
+		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
+			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+			Message: "No dependencies.",
+		}))
+
+		assertToonFields(t, doc, map[string]any{"id": "tick-aaa111", "title": "Task A", "status": "open"})
+		assertToonRowsEmpty(t, doc, "blocked_by", "blocks")
+	})
+
+	t.Run("it carries a count-zero blocked_by when only downstream exists", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 			Blocks: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
 			},
 		})
-		if strings.Contains(result, "blocked_by") {
-			t.Errorf("should not contain blocked_by section, got: %q", result)
+
+		if !strings.Contains(result, "blocked_by[0]{from,to}:") {
+			t.Errorf("output should carry a count-zero blocked_by header, got:\n%s", result)
 		}
-		lines := strings.Split(result, "\n")
-		if lines[0] != "blocks[1]{from,to}:" {
-			t.Errorf("header = %q, want %q", lines[0], "blocks[1]{from,to}:")
-		}
-		if lines[1] != "  tick-aaa111,tick-bbb222" {
-			t.Errorf("edge = %q, want %q", lines[1], "  tick-aaa111,tick-bbb222")
-		}
+		doc := decodeToonDoc(t, result)
+		assertToonRowsEmpty(t, doc, "blocked_by")
+		assertToonEdgeRows(t, doc, "blocks", []toonEdgeRow{{From: "tick-aaa111", To: "tick-bbb222"}})
 	})
 
-	t.Run("it omits blocks section when only upstream exists", func(t *testing.T) {
+	t.Run("it carries a count-zero blocks when only upstream exists", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
 			BlockedBy: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"}},
 			},
 		})
-		if strings.Contains(result, "blocks[") || strings.Contains(result, "blocks{") {
-			t.Errorf("should not contain blocks section, got: %q", result)
+
+		if !strings.Contains(result, "blocks[0]{from,to}:") {
+			t.Errorf("output should carry a count-zero blocks header, got:\n%s", result)
 		}
-		lines := strings.Split(result, "\n")
-		if lines[0] != "blocked_by[1]{from,to}:" {
-			t.Errorf("header = %q, want %q", lines[0], "blocked_by[1]{from,to}:")
+		doc := decodeToonDoc(t, result)
+		assertToonRowsEmpty(t, doc, "blocks")
+		assertToonEdgeRows(t, doc, "blocked_by", []toonEdgeRow{{From: "tick-aaa111", To: "tick-bbb222"}})
+	})
+
+	t.Run("it quotes a target title containing a comma", func(t *testing.T) {
+		title := "Parse, the header"
+		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
+			Target: &DepTreeTask{ID: "tick-aaa111", Title: title, Status: "open"},
+		}))
+
+		assertToonFields(t, doc, map[string]any{"title": title})
+	})
+
+	t.Run("it emits no prose on the no-dependencies branch", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+			Message: "No dependencies.",
+		})
+
+		if strings.Contains(result, "No dependencies.") {
+			t.Errorf("output should carry no prose, got:\n%s", result)
 		}
-		if lines[1] != "  tick-aaa111,tick-bbb222" {
-			t.Errorf("edge = %q, want %q", lines[1], "  tick-aaa111,tick-bbb222")
-		}
+		decodeToonDoc(t, result)
 	})
 
 	t.Run("it renders wide graph with many edges", func(t *testing.T) {
@@ -1236,9 +1245,8 @@ func TestToonFormatDepTree(t *testing.T) {
 		}
 	})
 
-	t.Run("it duplicates edges in focused downstream for diamond", func(t *testing.T) {
-		// Target blocks B and C, both of which block D
-		result := f.FormatDepTree(DepTreeResult{
+	t.Run("it keeps diamond duplication in the blocks direction", func(t *testing.T) {
+		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 			Blocks: []DepTreeNode{
 				{
@@ -1254,45 +1262,13 @@ func TestToonFormatDepTree(t *testing.T) {
 					},
 				},
 			},
-		})
-		lines := strings.Split(result, "\n")
-		if lines[0] != "blocks[4]{from,to}:" {
-			t.Errorf("header = %q, want %q", lines[0], "blocks[4]{from,to}:")
-		}
-		expectedEdges := []string{
-			"  tick-aaa111,tick-bbb222",
-			"  tick-bbb222,tick-ddd444",
-			"  tick-aaa111,tick-ccc333",
-			"  tick-ccc333,tick-ddd444",
-		}
-		for i, want := range expectedEdges {
-			if lines[i+1] != want {
-				t.Errorf("edge %d = %q, want %q", i, lines[i+1], want)
-			}
-		}
-	})
+		}))
 
-	t.Run("it renders focused no-deps with task info and message", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
-			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
-			Message: "No dependencies.",
+		assertToonEdgeRows(t, doc, "blocks", []toonEdgeRow{
+			{From: "tick-aaa111", To: "tick-bbb222"},
+			{From: "tick-bbb222", To: "tick-ddd444"},
+			{From: "tick-aaa111", To: "tick-ccc333"},
+			{From: "tick-ccc333", To: "tick-ddd444"},
 		})
-
-		// Must contain task ID
-		if !strings.Contains(result, "tick-aaa111") {
-			t.Errorf("output should contain task ID, got:\n%s", result)
-		}
-		// Must contain task title
-		if !strings.Contains(result, "Task A") {
-			t.Errorf("output should contain task title, got:\n%s", result)
-		}
-		// Must contain task status
-		if !strings.Contains(result, "open") {
-			t.Errorf("output should contain task status, got:\n%s", result)
-		}
-		// Must contain the message
-		if !strings.Contains(result, "No dependencies.") {
-			t.Errorf("output should contain 'No dependencies.', got:\n%s", result)
-		}
 	})
 }
