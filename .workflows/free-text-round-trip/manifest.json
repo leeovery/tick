@@ -196,7 +196,7 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "auto",
           "analysis_gate_mode": "gated",
-          "consolidation_gate_mode": "auto",
+          "consolidation_gate_mode": "gated",
           "fix_attempts": 0,
           "analysis_cycle_total": 0,
           "linters": [
@@ -232,8 +232,8 @@
             ".claude/skills/golang-dependency-management",
             ".claude/skills/golang-continuous-integration"
           ],
-          "current_phase": 3,
-          "current_task": "free-text-round-trip-4-1",
+          "current_phase": 4,
+          "current_task": "free-text-round-trip-4-2",
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -259,7 +259,8 @@
             "free-text-round-trip-3-7",
             "free-text-round-trip-3-8",
             "free-text-round-trip-3-9",
-            "free-text-round-trip-3-10"
+            "free-text-round-trip-3-10",
+            "free-text-round-trip-4-1"
           ],
           "staging": {
             "p1": {
@@ -296,6 +297,28 @@
             1,
             2,
             3
+          ],
+          "bank": [
+            {
+              "task": "free-text-round-trip-4-1",
+              "source": "executor",
+              "summary": "printCommandHelp pads flag labels to a fixed 24 columns, so a longer label runs into its description with no separator.",
+              "failure": "A user running `tick help create` reads `--type <bug|feature|task|chore>Task type` — flag name and description fused with no gap, so the description looks like part of the flag argument. Same for `tick help show`. Noticed the first time anyone reads help for a command with a long flag label.",
+              "detail": "internal/cli/help.go:308 formats with \"  %-24s%s\\n\". Pre-existing for create/update `--type <bug|feature|task|chore>` (31 chars); this task adds `--field, --fields <name,...>` (28 chars) as the second instance. Fix is one format string (widen, or compute width from the longest label) but it shifts every command help output, touching help expectations across the suite.",
+              "files": [
+                "internal/cli/help.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-4-1",
+              "source": "reviewer",
+              "summary": "printCommandHelp fixed-width flag column has no minimum gap, so a long flag label runs straight into its description.",
+              "failure": "A user or agent running `tick help show` reads `--field, --fields <name,...>Select fields by name; a section may be narrowed with .N (e.g. notes.2)` — argument spec and description glued together with no separator. show's only flag entry is the whole Flags block, so the command help reads as garbled. Noticed by eye the first time anyone runs `tick help show`, and §12.1 makes the help text a deliverable of this work.",
+              "detail": "internal/cli/help.go:308 formats with \"  %-24s%s\\n\"; any label longer than 24 columns loses the gap entirely. The new show entry label is 28 columns (internal/cli/help.go:74). Pre-existing, not introduced here — `tick help create` already prints `--type <bug|feature|task|chore>Task type` from internal/cli/help.go:44. Out of this task scope on both counts: the task fixed Name and Arg verbatim (no in-scope shortening fits 24 columns while keeping both spellings the drift test requires), and the remedy — a two-space minimum gap, or widening the column to the longest label — changes the rendered help of create, list, remove and migrate too.",
+              "files": [
+                "internal/cli/help.go"
+              ]
+            }
           ]
         }
       }
