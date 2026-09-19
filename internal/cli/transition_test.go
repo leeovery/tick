@@ -572,7 +572,7 @@ func TestTransitionCommands(t *testing.T) {
 		}
 		allTasks := []task.Task{grandparent, parent, child}
 
-		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks)
+		cr := buildCascadeResult("tick-ccc111", "Child", primaryResult, cascades, allTasks, false)
 
 		if len(cr.Cascaded) != 2 {
 			t.Fatalf("expected 2 cascaded entries, got %d", len(cr.Cascaded))

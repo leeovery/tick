@@ -339,7 +339,7 @@ func TestOutputTransitionOrCascade(t *testing.T) {
 			{Task: &tasks[1], Action: "cancel", OldStatus: task.StatusOpen, NewStatus: task.StatusCancelled},
 		}
 
-		cr := buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks)
+		cr := buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks, false)
 
 		outputTransitionOrCascade(&buf, fmtr, "tick-parent1", string(result.OldStatus), string(result.NewStatus), &cr)
 
@@ -382,7 +382,7 @@ func TestOutputTransitionOrCascade(t *testing.T) {
 
 		// Inline pattern
 		var inlineBuf strings.Builder
-		cr := buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks)
+		cr := buildCascadeResult("tick-parent1", "Parent", result, cascades, tasks, false)
 		fmt.Fprintln(&inlineBuf, fmtr.FormatCascadeTransition(cr))
 
 		// Helper function

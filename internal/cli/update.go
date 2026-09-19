@@ -313,7 +313,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 						break
 					}
 				}
-				cr := buildCascadeResult(r6ParentID, parentTitle, r, c, tasks)
+				cr := buildCascadeResult(r6ParentID, parentTitle, r, c, tasks, true)
 				r6CascadeResult = &cr
 			}
 		}
@@ -375,7 +375,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 				if r3 != nil {
 					r3ParentID = r3.parentID
 					r3Result = r3.result
-					cr := buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, tasks)
+					cr := buildCascadeResult(r3.parentID, r3.parentTitle, r3.result, r3.cascades, tasks, true)
 					r3CascadeResult = &cr
 				}
 			}

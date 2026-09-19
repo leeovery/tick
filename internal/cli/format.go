@@ -136,14 +136,25 @@ type CascadeEntry struct {
 	NewStatus string
 }
 
-// CascadeResult holds all data needed to render a cascade transition:
-// the primary transition and cascaded changes.
+// StatusChange is one row of a command's status-change table: a task that moved,
+// read from the status it held before the command to the status it holds after.
+// Auto is false only for a change the caller asked for.
+type StatusChange struct {
+	ID    string
+	Title string
+	From  string
+	To    string
+	Auto  bool
+}
+
+// CascadeResult holds all data needed to render a cascade transition.
 type CascadeResult struct {
 	TaskID    string
 	TaskTitle string
 	OldStatus string
 	NewStatus string
 	Cascaded  []CascadeEntry
+	Changed   []StatusChange
 }
 
 // DepTreeTask holds the minimal task data needed for dependency tree rendering.

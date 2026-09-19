@@ -239,7 +239,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 						break
 					}
 				}
-				cr := buildCascadeResult(opts.parent, parentTitle, r, c, tasks)
+				cr := buildCascadeResult(opts.parent, parentTitle, r, c, tasks, true)
 				parentCascadeResult = &cr
 			}
 		}
