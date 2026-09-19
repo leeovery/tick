@@ -242,51 +242,33 @@ func (f *JSONFormatter) FormatRemoval(result RemovalResult) string {
 	})
 }
 
-// jsonCascadeTransition represents the primary transition in cascade JSON output.
-type jsonCascadeTransition struct {
-	ID   string `json:"id"`
-	From string `json:"from"`
-	To   string `json:"to"`
-}
-
-// jsonCascadeEntry represents a cascaded status change in JSON output.
-type jsonCascadeEntry struct {
+// jsonStatusChange represents one row of a command's status-change list in JSON output.
+type jsonStatusChange struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
 	From  string `json:"from"`
 	To    string `json:"to"`
+	Auto  bool   `json:"auto"`
 }
 
-// jsonCascadeResult represents the full cascade result in JSON output.
-type jsonCascadeResult struct {
-	Transition jsonCascadeTransition `json:"transition"`
-	Cascaded   []jsonCascadeEntry    `json:"cascaded"`
+// toJSONStatusChanges converts status changes to JSON-serializable structs.
+// Always returns a non-nil empty slice to ensure JSON "[]" instead of "null".
+func toJSONStatusChanges(changes []StatusChange) []jsonStatusChange {
+	result := make([]jsonStatusChange, 0, len(changes))
+	for _, c := range changes {
+		result = append(result, jsonStatusChange(c))
+	}
+	return result
 }
 
-// FormatCascadeTransition renders a cascade transition as structured JSON.
-// cascaded is always [] not null.
+// jsonChangedList represents every status change a command made in JSON output.
+type jsonChangedList struct {
+	Changed []jsonStatusChange `json:"changed"`
+}
+
+// FormatCascadeTransition renders every status change the command made as one changed list.
 func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) string {
-	if result.TaskID == "" {
-		return ""
-	}
-	cascaded := make([]jsonCascadeEntry, 0, len(result.Cascaded))
-	for _, c := range result.Cascaded {
-		cascaded = append(cascaded, jsonCascadeEntry{
-			ID:    c.ID,
-			Title: c.Title,
-			From:  c.OldStatus,
-			To:    c.NewStatus,
-		})
-	}
-
-	return marshalIndentJSON(jsonCascadeResult{
-		Transition: jsonCascadeTransition{
-			ID:   result.TaskID,
-			From: result.OldStatus,
-			To:   result.NewStatus,
-		},
-		Cascaded: cascaded,
-	})
+	return marshalIndentJSON(jsonChangedList{Changed: toJSONStatusChanges(result.Changed)})
 }
 
 // jsonDepTreeTask represents a task in dep tree JSON output.

@@ -2,6 +2,8 @@ package cli
 
 import (
 	"encoding/json"
+	"maps"
+	"slices"
 	"testing"
 	"time"
 
@@ -141,88 +143,94 @@ func TestPrettyFormatterCascadeTransition(t *testing.T) {
 
 }
 
+func decodeChangedDoc(t *testing.T, doc string) map[string]any {
+	t.Helper()
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(doc), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v\ndocument: %s", err, doc)
+	}
+	if len(parsed) != 1 {
+		t.Errorf("document has keys %v, want changed only", slices.Sorted(maps.Keys(parsed)))
+	}
+	return parsed
+}
+
+func changedRows(t *testing.T, doc string) []any {
+	t.Helper()
+	parsed := decodeChangedDoc(t, doc)
+	rows, ok := parsed["changed"].([]any)
+	if !ok {
+		t.Fatalf("changed = %#v, want an array", parsed["changed"])
+	}
+	return rows
+}
+
+func assertChangedRow(t *testing.T, row any, want map[string]any) {
+	t.Helper()
+	got, ok := row.(map[string]any)
+	if !ok {
+		t.Fatalf("row = %#v, want an object", row)
+	}
+	for key, wantValue := range want {
+		if got[key] != wantValue {
+			t.Errorf("row[%q] = %#v, want %#v", key, got[key], wantValue)
+		}
+	}
+	if _, isBool := got["auto"].(bool); !isBool {
+		t.Errorf("row auto = %#v (%T), want a JSON boolean", got["auto"], got["auto"])
+	}
+}
+
 func TestJSONFormatterCascadeTransition(t *testing.T) {
-	t.Run("it renders cascade as structured object", func(t *testing.T) {
+	t.Run("it renders a single transition as a one-element changed list", func(t *testing.T) {
 		f := &JSONFormatter{}
-		result := f.FormatCascadeTransition(CascadeResult{
-			TaskID:    "tick-abc123",
-			TaskTitle: "Parent",
-			OldStatus: "in_progress",
-			NewStatus: "done",
-			Cascaded: []CascadeEntry{
-				{ID: "tick-def456", Title: "Child", OldStatus: "open", NewStatus: "done"},
+		rows := changedRows(t, f.FormatCascadeTransition(CascadeResult{
+			Changed: []StatusChange{
+				{ID: "tick-abc123", Title: "Solo", From: "open", To: "in_progress"},
 			},
+		}))
+
+		if len(rows) != 1 {
+			t.Fatalf("changed has %d rows, want 1", len(rows))
+		}
+		assertChangedRow(t, rows[0], map[string]any{
+			"id": "tick-abc123", "title": "Solo", "from": "open", "to": "in_progress", "auto": false,
 		})
-
-		var parsed map[string]any
-		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
-			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
-		}
-
-		// Verify transition object
-		transition, ok := parsed["transition"].(map[string]any)
-		if !ok {
-			t.Fatalf("transition should be object, got %T: %v", parsed["transition"], parsed["transition"])
-		}
-		if transition["id"] != "tick-abc123" {
-			t.Errorf("transition.id = %v, want %q", transition["id"], "tick-abc123")
-		}
-		if transition["from"] != "in_progress" {
-			t.Errorf("transition.from = %v, want %q", transition["from"], "in_progress")
-		}
-		if transition["to"] != "done" {
-			t.Errorf("transition.to = %v, want %q", transition["to"], "done")
-		}
-
-		// Verify cascaded array
-		cascaded, ok := parsed["cascaded"].([]any)
-		if !ok {
-			t.Fatalf("cascaded should be array, got %T: %v", parsed["cascaded"], parsed["cascaded"])
-		}
-		if len(cascaded) != 1 {
-			t.Fatalf("cascaded length = %d, want 1", len(cascaded))
-		}
-		entry := cascaded[0].(map[string]any)
-		if entry["id"] != "tick-def456" {
-			t.Errorf("cascaded[0].id = %v, want %q", entry["id"], "tick-def456")
-		}
-		if entry["title"] != "Child" {
-			t.Errorf("cascaded[0].title = %v, want %q", entry["title"], "Child")
-		}
-		if entry["from"] != "open" {
-			t.Errorf("cascaded[0].from = %v, want %q", entry["from"], "open")
-		}
-		if entry["to"] != "done" {
-			t.Errorf("cascaded[0].to = %v, want %q", entry["to"], "done")
-		}
-
-		// Verify no "unchanged" key in JSON output
-		if _, exists := parsed["unchanged"]; exists {
-			t.Errorf("JSON output should not contain 'unchanged' key, got: %s", result)
-		}
 	})
 
-	t.Run("it renders empty cascaded array as []", func(t *testing.T) {
+	t.Run("it renders a cascade as one changed list", func(t *testing.T) {
 		f := &JSONFormatter{}
-		result := f.FormatCascadeTransition(CascadeResult{
-			TaskID:    "tick-abc123",
-			TaskTitle: "Task",
-			OldStatus: "open",
-			NewStatus: "done",
-			Cascaded:  nil,
+		rows := changedRows(t, f.FormatCascadeTransition(CascadeResult{
+			Changed: []StatusChange{
+				{ID: "tick-abc123", Title: "Parent", From: "in_progress", To: "done"},
+				{ID: "tick-def456", Title: "Child", From: "open", To: "done", Auto: true},
+			},
+		}))
+
+		if len(rows) != 2 {
+			t.Fatalf("changed has %d rows, want 2", len(rows))
+		}
+		assertChangedRow(t, rows[0], map[string]any{
+			"id": "tick-abc123", "title": "Parent", "from": "in_progress", "to": "done", "auto": false,
 		})
+		assertChangedRow(t, rows[1], map[string]any{
+			"id": "tick-def456", "title": "Child", "from": "open", "to": "done", "auto": true,
+		})
+	})
 
-		var parsed map[string]any
-		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
-			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
-		}
+	t.Run("it emits changed as an empty array never null", func(t *testing.T) {
+		f := &JSONFormatter{}
+		parsed := decodeChangedDoc(t, f.FormatCascadeTransition(CascadeResult{}))
 
-		cascaded, ok := parsed["cascaded"].([]any)
+		rows, ok := parsed["changed"].([]any)
 		if !ok {
-			t.Fatalf("cascaded should be array (not null), got %T: %v", parsed["cascaded"], parsed["cascaded"])
+			t.Fatalf("changed = %#v, want an array", parsed["changed"])
 		}
-		if len(cascaded) != 0 {
-			t.Errorf("cascaded should be empty, got %d items", len(cascaded))
+		if rows == nil {
+			t.Error("changed decoded to a nil slice, want a non-nil empty slice")
+		}
+		if len(rows) != 0 {
+			t.Errorf("changed has %d rows, want 0", len(rows))
 		}
 	})
 }
@@ -282,19 +290,12 @@ func TestAllFormattersCascadeEmptyArrays(t *testing.T) {
 			t.Errorf("PrettyFormatter result = %q, want %q", pretty, expected)
 		}
 
-		// JSON: should have empty cascaded array
-		jsonResult := (&JSONFormatter{}).FormatCascadeTransition(result)
-		var parsed map[string]any
-		if err := json.Unmarshal([]byte(jsonResult), &parsed); err != nil {
-			t.Fatalf("invalid JSON: %v\nresult: %s", err, jsonResult)
+		jsonRows := changedRows(t, (&JSONFormatter{}).FormatCascadeTransition(result))
+		if len(jsonRows) != 1 {
+			t.Fatalf("changed has %d rows, want 1", len(jsonRows))
 		}
-
-		cascaded, ok := parsed["cascaded"].([]any)
-		if !ok {
-			t.Fatalf("cascaded should be array, got %T: %v", parsed["cascaded"], parsed["cascaded"])
-		}
-		if len(cascaded) != 0 {
-			t.Errorf("cascaded should be empty, got %d", len(cascaded))
-		}
+		assertChangedRow(t, jsonRows[0], map[string]any{
+			"id": "tick-abc123", "title": "Task", "from": "open", "to": "done", "auto": false,
+		})
 	})
 }

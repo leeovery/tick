@@ -118,24 +118,17 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--json",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					var obj map[string]any
-					if err := json.Unmarshal([]byte(stdout), &obj); err != nil {
-						t.Errorf("json transition should be valid JSON, got error: %v, output: %q", err, stdout)
-						return
+					rows := changedRows(t, stdout)
+					if len(rows) != 1 {
+						t.Fatalf("changed has %d rows, want 1", len(rows))
 					}
-					transition, ok := obj["transition"].(map[string]any)
-					if !ok {
-						t.Fatalf("json transition = %#v, want an object", obj["transition"])
-					}
-					if transition["id"] != "tick-aaa111" {
-						t.Errorf("json transition id = %v, want tick-aaa111", transition["id"])
-					}
-					if transition["from"] != "open" {
-						t.Errorf("json transition from = %v, want open", transition["from"])
-					}
-					if transition["to"] != "in_progress" {
-						t.Errorf("json transition to = %v, want in_progress", transition["to"])
-					}
+					assertChangedRow(t, rows[0], map[string]any{
+						"id":    "tick-aaa111",
+						"title": "Open task",
+						"from":  "open",
+						"to":    "in_progress",
+						"auto":  false,
+					})
 				},
 			},
 		}

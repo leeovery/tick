@@ -404,7 +404,6 @@ func TestCascadeTypes(t *testing.T) {
 		formatters := []Formatter{
 			&StubFormatter{},
 			&PrettyFormatter{},
-			&JSONFormatter{},
 		}
 		empty := CascadeResult{}
 		for _, f := range formatters {
@@ -415,6 +414,9 @@ func TestCascadeTypes(t *testing.T) {
 		}
 		if got := (&ToonFormatter{}).FormatCascadeTransition(empty); got != "changed[0]{id,title,from,to,auto}:" {
 			t.Errorf("ToonFormatter.FormatCascadeTransition on empty result = %q, want a count-zero changed table", got)
+		}
+		if got := (&JSONFormatter{}).FormatCascadeTransition(empty); len(changedRows(t, got)) != 0 {
+			t.Errorf("JSONFormatter.FormatCascadeTransition on empty result = %q, want an empty changed list", got)
 		}
 	})
 }

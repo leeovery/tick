@@ -647,3 +647,118 @@ func TestTransitionCommands(t *testing.T) {
 		}
 	})
 }
+
+func TestTransitionJSONOutput(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+
+	parentAndOpenChild := func(t *testing.T, parentStatus task.Status) string {
+		t.Helper()
+		parent := task.Task{
+			ID: "tick-ppp111", Title: "Parent task", Status: parentStatus,
+			Priority: 2, Created: now, Updated: now,
+		}
+		child := task.Task{
+			ID: "tick-ccc111", Title: "Child task", Status: task.StatusOpen,
+			Priority: 2, Parent: "tick-ppp111", Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{parent, child})
+		return dir
+	}
+
+	t.Run("it renders a single transition as a one-element changed list", func(t *testing.T) {
+		openTask := task.Task{
+			ID: "tick-aaa111", Title: "Solo task", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{openTask})
+
+		stdout, _, exitCode := runTransition(t, dir, "start", "tick-aaa111", "--json")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		rows := changedRows(t, stdout)
+		if len(rows) != 1 {
+			t.Fatalf("changed has %d rows, want 1", len(rows))
+		}
+		assertChangedRow(t, rows[0], map[string]any{
+			"id": "tick-aaa111", "title": "Solo task", "from": "open", "to": "in_progress", "auto": false,
+		})
+	})
+
+	t.Run("it renders a cascade as one changed list", func(t *testing.T) {
+		dir := parentAndOpenChild(t, task.StatusOpen)
+
+		stdout, _, exitCode := runTransition(t, dir, "start", "tick-ccc111", "--json")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		rows := changedRows(t, stdout)
+		if len(rows) != 2 {
+			t.Fatalf("changed has %d rows, want 2", len(rows))
+		}
+		assertChangedRow(t, rows[0], map[string]any{
+			"id": "tick-ccc111", "title": "Child task", "from": "open", "to": "in_progress", "auto": false,
+		})
+		assertChangedRow(t, rows[1], map[string]any{
+			"id": "tick-ppp111", "title": "Parent task", "from": "open", "to": "in_progress", "auto": true,
+		})
+	})
+
+	t.Run("it carries the title on every row", func(t *testing.T) {
+		dir := parentAndOpenChild(t, task.StatusInProgress)
+
+		stdout, _, exitCode := runTransition(t, dir, "done", "tick-ppp111", "--json")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0", exitCode)
+		}
+
+		titles := map[string]string{"tick-ppp111": "Parent task", "tick-ccc111": "Child task"}
+		rows := changedRows(t, stdout)
+		if len(rows) != len(titles) {
+			t.Fatalf("changed has %d rows, want %d", len(rows), len(titles))
+		}
+		for _, row := range rows {
+			fields := row.(map[string]any)
+			id, _ := fields["id"].(string)
+			if fields["title"] != titles[id] {
+				t.Errorf("row %q title = %#v, want %q", id, fields["title"], titles[id])
+			}
+		}
+	})
+
+	t.Run("it matches the toon table row for row", func(t *testing.T) {
+		commands := map[string]task.Status{
+			"start":  task.StatusOpen,
+			"done":   task.StatusInProgress,
+			"cancel": task.StatusInProgress,
+		}
+		for command, parentStatus := range commands {
+			t.Run(command, func(t *testing.T) {
+				jsonDir := parentAndOpenChild(t, parentStatus)
+				jsonOut, _, code := runTransition(t, jsonDir, command, "tick-ppp111", "--json")
+				if code != 0 {
+					t.Fatalf("json exit code = %d, want 0", code)
+				}
+				toonDir := parentAndOpenChild(t, parentStatus)
+				toonOut, _, code := runTransition(t, toonDir, command, "tick-ppp111", "--toon")
+				if code != 0 {
+					t.Fatalf("toon exit code = %d, want 0", code)
+				}
+
+				jsonRows := changedRows(t, jsonOut)
+				toonTable := toonRows(t, decodeToonDoc(t, toonOut), "changed")
+				if len(jsonRows) != len(toonTable) {
+					t.Fatalf("json has %d rows, toon has %d", len(jsonRows), len(toonTable))
+				}
+				for i, toonRow := range toonTable {
+					want := map[string]any{
+						"id": toonRow["id"], "from": toonRow["from"], "to": toonRow["to"], "auto": toonRow["auto"],
+					}
+					assertChangedRow(t, jsonRows[i], want)
+				}
+			})
+		}
+	})
+}
