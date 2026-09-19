@@ -462,13 +462,23 @@ tick-c3d4   open          1     task      Login endpoint
 
 ### Transition & Cascade Output
 
-When you run `start`, `done`, `cancel`, or `reopen`, the output confirms the transition. If the change cascades to related tasks, those are shown too.
+When you run `start`, `done`, `cancel`, or `reopen`, the output lists every task whose status changed: the task you named first, then any task the change cascaded to. The `auto` column marks the cascaded ones.
 
 <table>
 <tr>
 <td>
 
-**Simple transition** (TOON / Pretty)
+**Simple transition** (TOON)
+```
+$ tick start tick-a1b2
+changed[1]{id,title,from,to,auto}:
+  tick-a1b2,Setup auth,open,in_progress,false
+```
+
+</td>
+<td>
+
+**Simple transition** (Pretty)
 ```
 $ tick start tick-a1b2
 tick-a1b2: open → in_progress
@@ -480,9 +490,15 @@ tick-a1b2: open → in_progress
 **Simple transition** (JSON)
 ```json
 {
-  "id": "tick-a1b2",
-  "from": "open",
-  "to": "in_progress"
+  "changed": [
+    {
+      "id": "tick-a1b2",
+      "title": "Setup auth",
+      "from": "open",
+      "to": "in_progress",
+      "auto": false
+    }
+  ]
 }
 ```
 
@@ -496,12 +512,12 @@ tick-a1b2: open → in_progress
 <tr>
 <td>
 
-**TOON** (flat lines)
+**TOON** (`changed` table)
 ```
 $ tick done tick-a1b2
-tick-a1b2: in_progress → done
-tick-c3d4: open → done (auto)
-tick-f3e4: done (unchanged)
+changed[2]{id,title,from,to,auto}:
+  tick-a1b2,Setup auth,in_progress,done,false
+  tick-c3d4,Subtask one,open,done,true
 ```
 
 </td>
@@ -513,8 +529,7 @@ $ tick done tick-a1b2
 tick-a1b2: in_progress → done
 
 Cascaded:
-├─ tick-c3d4 "Subtask one": open → done
-└─ tick-f3e4 "Subtask two": done (unchanged)
+└─ tick-c3d4 "Subtask one": open → done
 ```
 
 </td>
