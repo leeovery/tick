@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1589,4 +1590,210 @@ func parseFocusedNoDepsJSON(t *testing.T, f *JSONFormatter) map[string]any {
 		t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 	}
 	return parsed
+}
+
+func TestJSONFilteredTaskDetail(t *testing.T) {
+	f := &JSONFormatter{}
+
+	filtered := func(t *testing.T, detail TaskDetail, value string) string {
+		t.Helper()
+		detail.Fields = fieldSelection(t, value)
+		return f.FormatTaskDetail(detail)
+	}
+
+	parse := func(t *testing.T, document string) map[string]any {
+		t.Helper()
+		var parsed map[string]any
+		if err := json.Unmarshal([]byte(document), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\ndocument: %s", err, document)
+		}
+		return parsed
+	}
+
+	t.Run("it renders only the selected keys", func(t *testing.T) {
+		doc := parse(t, filtered(t, richDetail(), "title,status"))
+
+		assertJSONKeySet(t, doc, "title", "status")
+		if doc["title"] != "Add retry to the sync worker" {
+			t.Errorf("title = %v, want %q", doc["title"], "Add retry to the sync worker")
+		}
+		if doc["status"] != "in_progress" {
+			t.Errorf("status = %v, want %q", doc["status"], "in_progress")
+		}
+	})
+
+	t.Run("it does not carry id unless asked", func(t *testing.T) {
+		assertJSONKeySet(t, parse(t, filtered(t, richDetail(), "title")), "title")
+	})
+
+	t.Run("it renders the selected scalars with their own types", func(t *testing.T) {
+		doc := parse(t, filtered(t, richDetail(), "id,priority,type,parent,created,updated,closed"))
+
+		assertJSONKeySet(t, doc, "id", "priority", "type", "parent", "created", "updated", "closed")
+		for key, want := range map[string]any{
+			"id":       "tick-a1b2",
+			"priority": float64(1),
+			"type":     "bug",
+			"parent":   "tick-p4r3",
+			"created":  "2026-03-01T09:00:00Z",
+			"updated":  "2026-03-01T09:00:00Z",
+			"closed":   "2026-03-02T09:00:00Z",
+		} {
+			if doc[key] != want {
+				t.Errorf("%s = %v, want %v", key, doc[key], want)
+			}
+		}
+	})
+
+	t.Run("it keeps the index on selected notes", func(t *testing.T) {
+		created := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
+		detail := detailWithNotes([]task.Note{
+			{Text: "first", Created: created},
+			{Text: "second", Created: created},
+		})
+		doc := parse(t, filtered(t, detail, "notes"))
+
+		assertJSONKeySet(t, doc, "notes")
+		notes, ok := doc["notes"].([]any)
+		if !ok || len(notes) != 2 {
+			t.Fatalf("notes = %v, want 2 entries", doc["notes"])
+		}
+		for i, want := range []string{"first", "second"} {
+			note, ok := notes[i].(map[string]any)
+			if !ok {
+				t.Fatalf("note %d = %v, want an object", i, notes[i])
+			}
+			if note["index"] != float64(i+1) {
+				t.Errorf("note %d index = %v, want %d", i, note["index"], i+1)
+			}
+			if note["text"] != want {
+				t.Errorf("note %d text = %v, want %q", i, note["text"], want)
+			}
+			if note["created"] != "2026-03-01T09:00:00Z" {
+				t.Errorf("note %d created = %v, want %q", i, note["created"], "2026-03-01T09:00:00Z")
+			}
+		}
+	})
+
+	t.Run("it renders the selected related sections as arrays", func(t *testing.T) {
+		doc := parse(t, filtered(t, richDetail(), "blocked_by,children"))
+
+		assertJSONKeySet(t, doc, "blocked_by", "children")
+		for _, key := range []string{"blocked_by", "children"} {
+			rows, ok := doc[key].([]any)
+			if !ok || len(rows) != 1 {
+				t.Fatalf("%s = %v, want 1 entry", key, doc[key])
+			}
+		}
+	})
+
+	t.Run("it renders empty related sections as empty arrays", func(t *testing.T) {
+		doc := parse(t, filtered(t, detailWithDescription(""), "blocked_by,children"))
+
+		assertJSONKeySet(t, doc, "blocked_by", "children")
+		for _, key := range []string{"blocked_by", "children"} {
+			assertJSONEmptyArray(t, doc, key)
+		}
+	})
+
+	t.Run("it renders selected empty tags as an empty array", func(t *testing.T) {
+		doc := parse(t, filtered(t, detailWithDescription(""), "tags,title"))
+
+		assertJSONKeySet(t, doc, "tags", "title")
+		assertJSONEmptyArray(t, doc, "tags")
+	})
+
+	t.Run("it renders selected empty refs as an empty array", func(t *testing.T) {
+		doc := parse(t, filtered(t, detailWithDescription(""), "refs,title"))
+
+		assertJSONKeySet(t, doc, "refs", "title")
+		assertJSONEmptyArray(t, doc, "refs")
+	})
+
+	t.Run("it renders selected empty notes as an empty array", func(t *testing.T) {
+		doc := parse(t, filtered(t, detailWithNotes(nil), "notes"))
+
+		assertJSONKeySet(t, doc, "notes")
+		assertJSONEmptyArray(t, doc, "notes")
+	})
+
+	t.Run("it renders a selected empty description as an empty string", func(t *testing.T) {
+		doc := parse(t, filtered(t, detailWithDescription(""), "description"))
+
+		assertJSONKeySet(t, doc, "description")
+		if doc["description"] != "" {
+			t.Errorf("description = %v, want %q", doc["description"], "")
+		}
+	})
+
+	t.Run("it renders a selected empty type as an empty string", func(t *testing.T) {
+		doc := parse(t, filtered(t, detailWithDescription(""), "type"))
+
+		assertJSONKeySet(t, doc, "type")
+		if doc["type"] != "" {
+			t.Errorf("type = %v, want %q", doc["type"], "")
+		}
+	})
+
+	t.Run("it omits a selected absent parent", func(t *testing.T) {
+		assertJSONKeySet(t, parse(t, filtered(t, detailWithDescription(""), "parent,title")), "title")
+	})
+
+	t.Run("it omits a selected absent closed", func(t *testing.T) {
+		assertJSONKeySet(t, parse(t, filtered(t, detailWithDescription(""), "closed,title")), "title")
+	})
+
+	t.Run("it renders nothing when no selected key survives", func(t *testing.T) {
+		if result := filtered(t, detailWithDescription(""), "parent,closed"); result != "" {
+			t.Errorf("result = %q, want empty", result)
+		}
+	})
+
+	t.Run("it keeps key order stable", func(t *testing.T) {
+		first := filtered(t, richDetail(), "status,title,notes")
+		second := filtered(t, richDetail(), "status,title,notes")
+		if first != second {
+			t.Errorf("repeated renders differ:\n%s\n%s", first, second)
+		}
+	})
+
+	t.Run("it never carries the changed key", func(t *testing.T) {
+		detail := richDetail()
+		detail.Changes = &StatusChanges{}
+		detail.Fields = fieldSelection(t, "title")
+
+		assertJSONKeySet(t, parse(t, f.FormatTaskDetail(detail)), "title")
+	})
+
+	t.Run("it leaves unfiltered output unchanged", func(t *testing.T) {
+		doc := parse(t, f.FormatTaskDetail(richDetail()))
+
+		assertJSONKeySet(t, doc, "id", "title", "status", "priority", "type", "tags", "refs",
+			"notes", "description", "parent", "created", "updated", "closed", "blocked_by", "children")
+	})
+}
+
+func assertJSONKeySet(t *testing.T, doc map[string]any, want ...string) {
+	t.Helper()
+	got := make([]string, 0, len(doc))
+	for key := range doc {
+		got = append(got, key)
+	}
+	slices.Sort(got)
+	sorted := slices.Clone(want)
+	slices.Sort(sorted)
+	if !slices.Equal(got, sorted) {
+		t.Errorf("document keys = %v, want %v", got, sorted)
+	}
+}
+
+func assertJSONEmptyArray(t *testing.T, doc map[string]any, key string) {
+	t.Helper()
+	value, ok := doc[key].([]any)
+	if !ok {
+		t.Fatalf("%s = %v, want an array", key, doc[key])
+	}
+	if value == nil || len(value) != 0 {
+		t.Errorf("%s = %v, want an empty array", key, value)
+	}
 }

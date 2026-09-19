@@ -77,31 +77,16 @@ type jsonTaskDetail struct {
 	Changed *[]jsonStatusChange `json:"changed,omitempty"`
 }
 
-// FormatTaskDetail renders a single task with full details as a JSON object.
-// parent/closed are omitted when absent. blocked_by/children are always present as arrays.
-// description is always present (empty string when not set).
+// FormatTaskDetail renders a single task as a JSON object, narrowed to
+// detail.Fields when it is set. Of the keys it carries: parent/closed are
+// omitted when absent, blocked_by/children are arrays, and description is an
+// empty string when not set.
 func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
+	if detail.Fields != nil {
+		return formatFilteredTaskDetailJSON(detail)
+	}
+
 	t := detail.Task
-
-	var closedStr string
-	if t.Closed != nil {
-		closedStr = task.FormatTimestamp(*t.Closed)
-	}
-
-	tags := make([]string, 0, len(detail.Tags))
-	tags = append(tags, detail.Tags...)
-
-	refs := make([]string, 0, len(detail.Refs))
-	refs = append(refs, detail.Refs...)
-
-	notes := make([]jsonNote, 0, len(detail.Notes))
-	for i, n := range detail.Notes {
-		notes = append(notes, jsonNote{
-			Index:   i + 1,
-			Text:    n.Text,
-			Created: task.FormatTimestamp(n.Created),
-		})
-	}
 
 	obj := jsonTaskDetail{
 		ID:          t.ID,
@@ -109,14 +94,14 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 		Status:      string(t.Status),
 		Priority:    t.Priority,
 		Type:        t.Type,
-		Tags:        tags,
-		Refs:        refs,
-		Notes:       notes,
+		Tags:        toJSONStrings(detail.Tags),
+		Refs:        toJSONStrings(detail.Refs),
+		Notes:       toJSONNotes(detail.Notes),
 		Description: t.Description,
 		Parent:      t.Parent,
 		Created:     task.FormatTimestamp(t.Created),
 		Updated:     task.FormatTimestamp(t.Updated),
-		Closed:      closedStr,
+		Closed:      jsonClosedTimestamp(t),
 		BlockedBy:   toJSONRelated(detail.BlockedBy),
 		Children:    toJSONRelated(detail.Children),
 	}
@@ -127,6 +112,73 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 	}
 
 	return marshalIndentJSON(obj)
+}
+
+// formatFilteredTaskDetailJSON renders only the selected keys as a JSON object,
+// each carrying what full output carries for it, and "" when no key survives.
+func formatFilteredTaskDetailJSON(detail TaskDetail) string {
+	t := detail.Task
+	obj := make(map[string]any)
+	add := func(key string, value any) {
+		if detail.Fields.Selected(key) {
+			obj[key] = value
+		}
+	}
+
+	add("id", t.ID)
+	add("title", t.Title)
+	add("status", string(t.Status))
+	add("priority", t.Priority)
+	add("type", t.Type)
+	add("tags", toJSONStrings(detail.Tags))
+	add("refs", toJSONStrings(detail.Refs))
+	add("notes", toJSONNotes(detail.Notes))
+	add("description", t.Description)
+	add("created", task.FormatTimestamp(t.Created))
+	add("updated", task.FormatTimestamp(t.Updated))
+	add("blocked_by", toJSONRelated(detail.BlockedBy))
+	add("children", toJSONRelated(detail.Children))
+
+	if t.Parent != "" {
+		add("parent", t.Parent)
+	}
+	if closed := jsonClosedTimestamp(t); closed != "" {
+		add("closed", closed)
+	}
+
+	if len(obj) == 0 {
+		return ""
+	}
+	return marshalIndentJSON(obj)
+}
+
+// jsonClosedTimestamp formats the task's closed time, empty when it is not closed.
+func jsonClosedTimestamp(t task.Task) string {
+	if t.Closed == nil {
+		return ""
+	}
+	return task.FormatTimestamp(*t.Closed)
+}
+
+// toJSONStrings copies a string list, always returning a non-nil empty slice to
+// ensure JSON "[]" instead of "null".
+func toJSONStrings(values []string) []string {
+	result := make([]string, 0, len(values))
+	return append(result, values...)
+}
+
+// toJSONNotes converts notes to JSON-serializable structs, each carrying its
+// 1-based position. Always returns a non-nil empty slice.
+func toJSONNotes(notes []task.Note) []jsonNote {
+	result := make([]jsonNote, 0, len(notes))
+	for i, n := range notes {
+		result = append(result, jsonNote{
+			Index:   i + 1,
+			Text:    n.Text,
+			Created: task.FormatTimestamp(n.Created),
+		})
+	}
+	return result
 }
 
 // toJSONRelated converts a slice of RelatedTask to JSON-serializable structs.

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -946,5 +947,75 @@ func TestShowFilteredDocument(t *testing.T) {
 		stdout := show(t, richProject(t), "tick-a1b2c3", "--toon", "--field", "title,status")
 
 		assertToonKeySet(t, decodeToonDoc(t, stdout), "title", "status")
+	})
+
+	parseJSON := func(t *testing.T, stdout string) map[string]any {
+		t.Helper()
+		var parsed map[string]any
+		if err := json.Unmarshal([]byte(stdout), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nstdout: %s", err, stdout)
+		}
+		return parsed
+	}
+
+	t.Run("it renders the selected keys as one json object", func(t *testing.T) {
+		stdout := show(t, richProject(t), "tick-a1b2c3", "--json", "--field", "title,status")
+
+		doc := parseJSON(t, stdout)
+		assertJSONKeySet(t, doc, "title", "status")
+		if doc["title"] != "Add login" {
+			t.Errorf("title = %v, want %q", doc["title"], "Add login")
+		}
+		if doc["status"] != "open" {
+			t.Errorf("status = %v, want %q", doc["status"], "open")
+		}
+	})
+
+	t.Run("it keeps the index on selected json notes", func(t *testing.T) {
+		stdout := show(t, richProject(t), "tick-a1b2c3", "--json", "--field", "notes")
+
+		doc := parseJSON(t, stdout)
+		assertJSONKeySet(t, doc, "notes")
+		notes, ok := doc["notes"].([]any)
+		if !ok || len(notes) != 1 {
+			t.Fatalf("notes = %v, want 1 entry", doc["notes"])
+		}
+		note, ok := notes[0].(map[string]any)
+		if !ok {
+			t.Fatalf("note = %v, want an object", notes[0])
+		}
+		if note["index"] != float64(1) {
+			t.Errorf("note index = %v, want 1", note["index"])
+		}
+		if note["text"] != "looked at it" {
+			t.Errorf("note text = %v, want %q", note["text"], "looked at it")
+		}
+	})
+
+	t.Run("it renders selected empty json lists as empty arrays", func(t *testing.T) {
+		stdout := show(t, bareProject(t), "tick-a1b2c3", "--json", "--field", "tags,refs")
+
+		doc := parseJSON(t, stdout)
+		assertJSONKeySet(t, doc, "tags", "refs")
+		assertJSONEmptyArray(t, doc, "tags")
+		assertJSONEmptyArray(t, doc, "refs")
+	})
+
+	t.Run("it prints nothing in json when no selected key survives", func(t *testing.T) {
+		stdout := show(t, bareProject(t), "tick-a1b2c3", "--json", "--field", "parent,closed")
+
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+	})
+
+	t.Run("it keeps json key order stable across runs", func(t *testing.T) {
+		dir := richProject(t)
+
+		first := show(t, dir, "tick-a1b2c3", "--json", "--field", "status,title,notes")
+		second := show(t, dir, "tick-a1b2c3", "--json", "--field", "status,title,notes")
+		if first != second {
+			t.Errorf("repeated runs differ:\n%s\n%s", first, second)
+		}
 	})
 }
