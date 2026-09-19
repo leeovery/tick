@@ -168,7 +168,6 @@ func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
 	return f.formatFullDepTree(result)
 }
 
-// formatFullDepTree renders the full graph as a dep_tree edge list with summary.
 func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
 	var edges []toonEdgeRow
 	for _, root := range result.Roots {
