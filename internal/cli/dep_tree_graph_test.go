@@ -606,7 +606,6 @@ func TestCycleGuard(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		// No roots (all tasks are blocked), so should get "No dependencies found."
 		if len(result.Roots) != 0 {
 			t.Errorf("Roots = %d, want 0 (all tasks in cycle have BlockedBy)", len(result.Roots))
 		}

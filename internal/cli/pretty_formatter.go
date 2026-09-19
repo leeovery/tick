@@ -318,19 +318,21 @@ func (f *PrettyFormatter) FormatDepTree(result DepTreeResult) string {
 	return f.formatFullDepTree(result)
 }
 
-// formatFullDepTree renders root tasks with their downstream dependency trees and a summary line.
+// formatFullDepTree renders every full-graph tree with its downstream dependencies and a summary line.
+// The no-dependencies message stands in only when the graph holds no participant at all.
 func (f *PrettyFormatter) formatFullDepTree(result DepTreeResult) string {
-	if len(result.Roots) == 0 {
+	trees := result.fullGraphTrees()
+	if len(trees) == 0 {
 		return result.Message
 	}
 
 	var b strings.Builder
-	for i, root := range result.Roots {
+	for i, tree := range trees {
 		if i > 0 {
 			b.WriteString("\n")
 		}
-		writeDepTreeTaskLine(&b, root.Task, "", 0)
-		writeDepTreeNodes(&b, root.Children, "", 1)
+		writeDepTreeTaskLine(&b, tree.Task, "", 0)
+		writeDepTreeNodes(&b, tree.Children, "", 1)
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")

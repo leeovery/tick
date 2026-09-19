@@ -167,7 +167,7 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 	summary := fmt.Sprintf("%d %s, longest: %d, %d blocked", chains, chainWord, longest, blocked)
 
 	var message string
-	if len(roots) == 0 {
+	if len(roots) == 0 && len(unrooted) == 0 {
 		message = "No dependencies found."
 	}
 

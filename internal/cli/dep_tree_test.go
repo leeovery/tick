@@ -220,6 +220,22 @@ func cycleTasks(now time.Time) []task.Task {
 	}
 }
 
+// danglingBlockerTasks returns a single task blocked by an ID no task record matches.
+func danglingBlockerTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ghost1"}, Created: now, Updated: now},
+	}
+}
+
+// chainTasks returns a linear A -> B -> C chain rooted at an unblocked task.
+func chainTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		{ID: "tick-ccc333", Title: "Task C", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+	}
+}
+
 // unconnectedTasks returns two tasks that carry no dependencies in either direction.
 func unconnectedTasks(now time.Time) []task.Task {
 	return []task.Task{
@@ -300,10 +316,7 @@ func TestRunDepTree(t *testing.T) {
 	})
 
 	t.Run("it emits an edge from a blocker no task carries", func(t *testing.T) {
-		tasks := []task.Task{
-			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ghost1"}, Created: now, Updated: now},
-		}
-		dir, _ := setupTickProjectWithTasks(t, tasks)
+		dir, _ := setupTickProjectWithTasks(t, danglingBlockerTasks(now))
 
 		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
 
@@ -336,10 +349,7 @@ func TestRunDepTree(t *testing.T) {
 	})
 
 	t.Run("it carries a bare id for a blocker no task carries in JSON", func(t *testing.T) {
-		tasks := []task.Task{
-			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ghost1"}, Created: now, Updated: now},
-		}
-		dir, _ := setupTickProjectWithTasks(t, tasks)
+		dir, _ := setupTickProjectWithTasks(t, danglingBlockerTasks(now))
 
 		doc := runDepTreeJSON(t, dir)
 
@@ -348,7 +358,7 @@ func TestRunDepTree(t *testing.T) {
 		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, root), "tick-aaa111", "Task A", "open")
 	})
 
-	t.Run("it still prints the no-dependencies sentence in pretty when every participant is blocked", func(t *testing.T) {
+	t.Run("it renders a cycle in the terminal", func(t *testing.T) {
 		dir, _ := setupTickProjectWithTasks(t, cycleTasks(now))
 
 		stdout, stderr, exitCode := runDepTree(t, dir)
@@ -356,18 +366,56 @@ func TestRunDepTree(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		if stdout != "No dependencies found.\n" {
-			t.Errorf("stdout = %q, want %q", stdout, "No dependencies found.\n")
+		want := "" +
+			"tick-aaa111  Task A (open)\n" +
+			"└── tick-bbb222  Task B (open)\n" +
+			"    └── tick-aaa111  Task A (open)\n" +
+			"\n" +
+			"1 chain, longest: 2, 2 blocked\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it renders a dangling blocker in the terminal", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, danglingBlockerTasks(now))
+
+		stdout, stderr, exitCode := runDepTree(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		want := "" +
+			"tick-ghost1   ()\n" +
+			"└── tick-aaa111  Task A (open)\n" +
+			"\n" +
+			"1 chain, longest: 1, 1 blocked\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it leaves rooted terminal output unchanged", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, chainTasks(now))
+
+		stdout, stderr, exitCode := runDepTree(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		want := "" +
+			"tick-aaa111  Task A (open)\n" +
+			"└── tick-bbb222  Task B (open)\n" +
+			"    └── tick-ccc333  Task C (open)\n" +
+			"\n" +
+			"1 chain, longest: 2, 2 blocked\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
 		}
 	})
 
 	t.Run("it still renders the populated graph", func(t *testing.T) {
-		tasks := []task.Task{
-			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
-			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
-			{ID: "tick-ccc333", Title: "Task C", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
-		}
-		dir, _ := setupTickProjectWithTasks(t, tasks)
+		dir, _ := setupTickProjectWithTasks(t, chainTasks(now))
 
 		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
 
