@@ -147,6 +147,28 @@ func runDepTree(t *testing.T, dir string, args ...string) (stdout string, stderr
 	return stdoutBuf.String(), stderrBuf.String(), code
 }
 
+// runDepTreeJSON runs dep tree with --json and returns the unmarshalled document.
+func runDepTreeJSON(t *testing.T, dir string, args ...string) map[string]any {
+	t.Helper()
+	var stdoutBuf, stderrBuf bytes.Buffer
+	app := &App{
+		Stdout: &stdoutBuf,
+		Stderr: &stderrBuf,
+		Getwd:  func() (string, error) { return dir, nil },
+	}
+	fullArgs := append([]string{"tick", "--json", "dep", "tree"}, args...)
+	if code := app.Run(fullArgs); code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderrBuf.String())
+	}
+
+	output := strings.TrimSpace(stdoutBuf.String())
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(output), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v\noutput: %s", err, output)
+	}
+	return parsed
+}
+
 // unconnectedTasks returns two tasks that carry no dependencies in either direction.
 func unconnectedTasks(now time.Time) []task.Task {
 	return []task.Task{
@@ -381,44 +403,70 @@ func TestRunDepTree(t *testing.T) {
 		}
 	})
 
-	t.Run("it outputs valid JSON for focused no-deps case", func(t *testing.T) {
+	t.Run("it emits both directions on a focused document with no dependencies", func(t *testing.T) {
 		tasks := []task.Task{
 			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
 		}
 		dir, _ := setupTickProjectWithTasks(t, tasks)
 
-		var stdoutBuf, stderrBuf bytes.Buffer
-		app := &App{
-			Stdout: &stdoutBuf,
-			Stderr: &stderrBuf,
-			Getwd:  func() (string, error) { return dir, nil },
+		parsed := runDepTreeJSON(t, dir, "tick-aaa111")
+
+		if parsed["mode"] != "focused" {
+			t.Errorf("mode = %v, want %q", parsed["mode"], "focused")
 		}
-		exitCode := app.Run([]string{"tick", "--json", "dep", "tree", "tick-aaa111"})
-		if exitCode != 0 {
-			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderrBuf.String())
+		if _, exists := parsed["message"]; exists {
+			t.Errorf("message key should be absent, got %v", parsed["message"])
 		}
 
-		output := strings.TrimSpace(stdoutBuf.String())
-		// Must be valid JSON (not raw text + JSON mixed)
-		if !json.Valid([]byte(output)) {
-			t.Fatalf("output is not valid JSON:\n%s", output)
-		}
-
-		var parsed map[string]any
-		if err := json.Unmarshal([]byte(output), &parsed); err != nil {
-			t.Fatalf("failed to parse JSON: %v", err)
-		}
-
-		// Must contain target info and message
 		target, ok := parsed["target"].(map[string]any)
 		if !ok {
-			t.Fatalf("target field missing or not an object, got %v", parsed["target"])
+			t.Fatalf("target should be object, got %T: %v", parsed["target"], parsed["target"])
 		}
 		if target["id"] != "tick-aaa111" {
 			t.Errorf("target.id = %v, want %q", target["id"], "tick-aaa111")
 		}
-		if parsed["message"] != "No dependencies." {
-			t.Errorf("message = %v, want %q", parsed["message"], "No dependencies.")
+		if target["title"] != "Task A" {
+			t.Errorf("target.title = %v, want %q", target["title"], "Task A")
+		}
+		if target["status"] != "open" {
+			t.Errorf("target.status = %v, want %q", target["status"], "open")
+		}
+
+		for _, key := range []string{"blocked_by", "blocks"} {
+			nodes, ok := parsed[key].([]any)
+			if !ok {
+				t.Fatalf("%s should be array (not null), got %T: %v", key, parsed[key], parsed[key])
+			}
+			if len(nodes) != 0 {
+				t.Errorf("%s should be empty, got %d items", key, len(nodes))
+			}
+		}
+	})
+
+	t.Run("it emits the emptied full document instead of a message", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, unconnectedTasks(now))
+
+		parsed := runDepTreeJSON(t, dir)
+
+		if parsed["mode"] != "full" {
+			t.Errorf("mode = %v, want %q", parsed["mode"], "full")
+		}
+		if _, exists := parsed["message"]; exists {
+			t.Errorf("message key should be absent, got %v", parsed["message"])
+		}
+
+		roots, ok := parsed["roots"].([]any)
+		if !ok {
+			t.Fatalf("roots should be array (not null), got %T: %v", parsed["roots"], parsed["roots"])
+		}
+		if len(roots) != 0 {
+			t.Errorf("roots should be empty, got %d items", len(roots))
+		}
+
+		for _, key := range []string{"chains", "longest", "blocked"} {
+			if parsed[key] != float64(0) {
+				t.Errorf("%s = %v, want 0", key, parsed[key])
+			}
 		}
 	})
 

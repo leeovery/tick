@@ -302,14 +302,12 @@ type jsonDepTreeFull struct {
 }
 
 // jsonDepTreeFocused represents the focused mode JSON output.
-// BlockedBy and Blocks use omitempty to omit empty directions entirely.
-// Message is included when the target has no dependencies.
+// Both directions are always present, empty ones rendering as [].
 type jsonDepTreeFocused struct {
 	Mode      string            `json:"mode"`
 	Target    jsonDepTreeTask   `json:"target"`
-	BlockedBy []jsonDepTreeNode `json:"blocked_by,omitempty"`
-	Blocks    []jsonDepTreeNode `json:"blocks,omitempty"`
-	Message   string            `json:"message,omitempty"`
+	BlockedBy []jsonDepTreeNode `json:"blocked_by"`
+	Blocks    []jsonDepTreeNode `json:"blocks"`
 }
 
 // toJSONDepTreeNodes recursively converts []DepTreeNode to []jsonDepTreeNode.
@@ -331,15 +329,10 @@ func toJSONDepTreeNodes(nodes []DepTreeNode) []jsonDepTreeNode {
 
 // FormatDepTree renders a dependency tree as structured JSON.
 // Full graph: {mode, roots, chains, longest, blocked}.
-// Focused: {mode, target, blocked_by?, blocks?, message?} with omitempty on directions.
-// Message-only (no target): {message}.
+// Focused: {mode, target, blocked_by, blocks}.
 func (f *JSONFormatter) FormatDepTree(result DepTreeResult) string {
 	if result.Target != nil {
 		return f.formatFocusedDepTreeJSON(result)
-	}
-
-	if result.Message != "" {
-		return marshalIndentJSON(jsonMessage{Message: result.Message})
 	}
 
 	return f.formatFullDepTreeJSON(result)
@@ -356,31 +349,18 @@ func (f *JSONFormatter) formatFullDepTreeJSON(result DepTreeResult) string {
 	})
 }
 
-// formatFocusedDepTreeJSON renders focused mode as JSON with optional directions.
-// When both BlockedBy and Blocks are empty, includes the message field.
+// formatFocusedDepTreeJSON renders focused mode as JSON.
 func (f *JSONFormatter) formatFocusedDepTreeJSON(result DepTreeResult) string {
-	obj := jsonDepTreeFocused{
+	return marshalIndentJSON(jsonDepTreeFocused{
 		Mode: "focused",
 		Target: jsonDepTreeTask{
 			ID:     result.Target.ID,
 			Title:  result.Target.Title,
 			Status: result.Target.Status,
 		},
-	}
-
-	if len(result.BlockedBy) > 0 {
-		obj.BlockedBy = toJSONDepTreeNodes(result.BlockedBy)
-	}
-
-	if len(result.Blocks) > 0 {
-		obj.Blocks = toJSONDepTreeNodes(result.Blocks)
-	}
-
-	if len(result.BlockedBy) == 0 && len(result.Blocks) == 0 {
-		obj.Message = result.Message
-	}
-
-	return marshalIndentJSON(obj)
+		BlockedBy: toJSONDepTreeNodes(result.BlockedBy),
+		Blocks:    toJSONDepTreeNodes(result.Blocks),
+	})
 }
 
 // marshalIndentJSON marshals v as 2-space indented JSON.

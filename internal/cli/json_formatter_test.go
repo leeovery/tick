@@ -1287,7 +1287,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 		}
 	})
 
-	t.Run("it omits blocked_by key when only downstream exists", func(t *testing.T) {
+	t.Run("it emits an empty blocked_by when only downstream exists", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
 			Target:    &DepTreeTask{ID: "tick-aaa111", Title: "Root blocker", Status: "open"},
 			BlockedBy: nil,
@@ -1301,8 +1301,12 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		if _, exists := parsed["blocked_by"]; exists {
-			t.Errorf("blocked_by should be omitted when empty, got %v", parsed["blocked_by"])
+		blockedBy, ok := parsed["blocked_by"].([]any)
+		if !ok {
+			t.Fatalf("blocked_by should be array (not null), got %T: %v", parsed["blocked_by"], parsed["blocked_by"])
+		}
+		if len(blockedBy) != 0 {
+			t.Errorf("blocked_by should be empty, got %d items", len(blockedBy))
 		}
 
 		blocks, ok := parsed["blocks"].([]any)
@@ -1314,7 +1318,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 		}
 	})
 
-	t.Run("it omits blocks key when only upstream exists", func(t *testing.T) {
+	t.Run("it emits an empty blocks when only upstream exists", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-bbb222", Title: "Leaf", Status: "open"},
 			BlockedBy: []DepTreeNode{
@@ -1328,8 +1332,12 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		if _, exists := parsed["blocks"]; exists {
-			t.Errorf("blocks should be omitted when empty, got %v", parsed["blocks"])
+		blocks, ok := parsed["blocks"].([]any)
+		if !ok {
+			t.Fatalf("blocks should be array (not null), got %T: %v", parsed["blocks"], parsed["blocks"])
+		}
+		if len(blocks) != 0 {
+			t.Errorf("blocks should be empty, got %d items", len(blocks))
 		}
 
 		blockedBy, ok := parsed["blocked_by"].([]any)
@@ -1460,32 +1468,40 @@ func TestJSONFormatDepTree(t *testing.T) {
 		}
 	})
 
-	t.Run("it renders focused no-deps as valid JSON with target and message", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
-			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
-			Message: "No dependencies.",
-		})
+	t.Run("it emits both directions on a focused document with no dependencies", func(t *testing.T) {
+		parsed := parseFocusedNoDepsJSON(t, f)
 
-		// Must be valid JSON
-		if !json.Valid([]byte(result)) {
-			t.Fatalf("output is not valid JSON:\n%s", result)
+		if _, exists := parsed["message"]; exists {
+			t.Errorf("message key should be absent, got %v", parsed["message"])
 		}
-
-		// Parse and verify fields
-		var parsed map[string]any
-		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
-			t.Fatalf("failed to parse JSON: %v", err)
+		if _, exists := parsed["blocked_by"]; !exists {
+			t.Error("blocked_by key should be present")
 		}
-
-		// Must have mode = "focused"
-		if parsed["mode"] != "focused" {
-			t.Errorf("mode = %v, want %q", parsed["mode"], "focused")
+		if _, exists := parsed["blocks"]; !exists {
+			t.Error("blocks key should be present")
 		}
+	})
 
-		// Must have target with task info
+	t.Run("it emits blocked_by and blocks as empty arrays never null", func(t *testing.T) {
+		parsed := parseFocusedNoDepsJSON(t, f)
+
+		for _, key := range []string{"blocked_by", "blocks"} {
+			nodes, ok := parsed[key].([]any)
+			if !ok {
+				t.Fatalf("%s should be array (not null), got %T: %v", key, parsed[key], parsed[key])
+			}
+			if len(nodes) != 0 {
+				t.Errorf("%s should be empty, got %d items", key, len(nodes))
+			}
+		}
+	})
+
+	t.Run("it keeps target as a nested object", func(t *testing.T) {
+		parsed := parseFocusedNoDepsJSON(t, f)
+
 		target, ok := parsed["target"].(map[string]any)
 		if !ok {
-			t.Fatalf("target field missing or not an object, got %v", parsed["target"])
+			t.Fatalf("target should be object, got %T: %v", parsed["target"], parsed["target"])
 		}
 		if target["id"] != "tick-aaa111" {
 			t.Errorf("target.id = %v, want %q", target["id"], "tick-aaa111")
@@ -1496,10 +1512,81 @@ func TestJSONFormatDepTree(t *testing.T) {
 		if target["status"] != "open" {
 			t.Errorf("target.status = %v, want %q", target["status"], "open")
 		}
+	})
 
-		// Must have message field
-		if parsed["message"] != "No dependencies." {
-			t.Errorf("message = %v, want %q", parsed["message"], "No dependencies.")
+	t.Run("it emits the emptied full document instead of a message", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{Message: "No dependencies found."})
+
+		var parsed map[string]any
+		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+		}
+
+		if _, exists := parsed["message"]; exists {
+			t.Errorf("message key should be absent, got %v", parsed["message"])
+		}
+
+		roots, ok := parsed["roots"].([]any)
+		if !ok {
+			t.Fatalf("roots should be array (not null), got %T: %v", parsed["roots"], parsed["roots"])
+		}
+		if len(roots) != 0 {
+			t.Errorf("roots should be empty, got %d items", len(roots))
+		}
+
+		for _, key := range []string{"chains", "longest", "blocked"} {
+			if parsed[key] != float64(0) {
+				t.Errorf("%s = %v, want 0", key, parsed[key])
+			}
 		}
 	})
+
+	t.Run("it keeps mode on both documents", func(t *testing.T) {
+		full := f.FormatDepTree(DepTreeResult{Message: "No dependencies found."})
+		focused := f.FormatDepTree(DepTreeResult{
+			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+			Message: "No dependencies.",
+		})
+
+		for _, tc := range []struct{ output, want string }{
+			{full, "full"},
+			{focused, "focused"},
+		} {
+			var parsed map[string]any
+			if err := json.Unmarshal([]byte(tc.output), &parsed); err != nil {
+				t.Fatalf("invalid JSON: %v\nresult: %s", err, tc.output)
+			}
+			if parsed["mode"] != tc.want {
+				t.Errorf("mode = %v, want %q", parsed["mode"], tc.want)
+			}
+		}
+	})
+
+	t.Run("it still renders a message for init", func(t *testing.T) {
+		var parsed map[string]any
+		output := f.FormatMessage("Initialized tick project")
+		if err := json.Unmarshal([]byte(output), &parsed); err != nil {
+			t.Fatalf("invalid JSON: %v\nresult: %s", err, output)
+		}
+		if parsed["message"] != "Initialized tick project" {
+			t.Errorf("message = %v, want %q", parsed["message"], "Initialized tick project")
+		}
+	})
+}
+
+// parseFocusedNoDepsJSON formats a focused dep-tree result with no dependencies
+// either way and returns the unmarshalled document.
+func parseFocusedNoDepsJSON(t *testing.T, f *JSONFormatter) map[string]any {
+	t.Helper()
+
+	result := f.FormatDepTree(DepTreeResult{
+		Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
+		Message: "No dependencies.",
+	})
+
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
+	}
+	return parsed
 }
