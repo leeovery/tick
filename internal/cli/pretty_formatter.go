@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/leeovery/tick/internal/task"
@@ -112,73 +113,118 @@ func (f *PrettyFormatter) FormatTaskList(tasks []task.Task) string {
 	return b.String()
 }
 
-// FormatTaskDetail renders a single task with full details in key-value format.
-// Sections (Blocked by, Children, Description) are omitted when empty.
-func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
-	t := detail.Task
+// prettyDetailLine renders one header line of the detail document, padding the
+// label to the column the widest label ("Priority:") sets.
+func prettyDetailLine(label, value string) string {
+	return fmt.Sprintf("%-9s %s", label+":", value)
+}
+
+func prettyDetailBlock(label string, entries []string) string {
 	var b strings.Builder
+	b.WriteString(label + ":")
+	for _, entry := range entries {
+		fmt.Fprintf(&b, "\n  %s", entry)
+	}
+	return b.String()
+}
 
-	fmt.Fprintf(&b, "ID:       %s\n", t.ID)
-	fmt.Fprintf(&b, "Title:    %s\n", t.Title)
-	fmt.Fprintf(&b, "Status:   %s\n", string(t.Status))
-	fmt.Fprintf(&b, "Priority: %d\n", t.Priority)
+func prettyRelatedEntries(related []RelatedTask) []string {
+	entries := make([]string, len(related))
+	for i, r := range related {
+		entries[i] = fmt.Sprintf("%s  %s (%s)", r.ID, r.Title, r.Status)
+	}
+	return entries
+}
 
-	fmt.Fprintf(&b, "Type:     %s\n", typeOrDash(t.Type))
+// prettyDetailHeader returns the header lines the selection keeps, in document order.
+func prettyDetailHeader(detail TaskDetail) []string {
+	t := detail.Task
+	sel := detail.Fields
+
+	var lines []string
+	add := func(name, label, value string) {
+		if sel.includes(name) {
+			lines = append(lines, prettyDetailLine(label, value))
+		}
+	}
+
+	add("id", "ID", t.ID)
+	add("title", "Title", t.Title)
+	add("status", "Status", string(t.Status))
+	add("priority", "Priority", strconv.Itoa(t.Priority))
+	add("type", "Type", typeOrDash(t.Type))
 
 	if len(detail.Tags) > 0 {
-		fmt.Fprintf(&b, "Tags:     %s\n", strings.Join(detail.Tags, ", "))
+		add("tags", "Tags", strings.Join(detail.Tags, ", "))
 	}
 
 	if t.Parent != "" {
+		parent := t.Parent
 		if detail.ParentTitle != "" {
-			fmt.Fprintf(&b, "Parent:   %s (%s)\n", t.Parent, detail.ParentTitle)
-		} else {
-			fmt.Fprintf(&b, "Parent:   %s\n", t.Parent)
+			parent = fmt.Sprintf("%s (%s)", t.Parent, detail.ParentTitle)
 		}
+		add("parent", "Parent", parent)
 	}
 
-	fmt.Fprintf(&b, "Created:  %s\n", task.FormatTimestamp(t.Created))
-	fmt.Fprintf(&b, "Updated:  %s", task.FormatTimestamp(t.Updated))
+	add("created", "Created", task.FormatTimestamp(t.Created))
+	add("updated", "Updated", task.FormatTimestamp(t.Updated))
 
 	if t.Closed != nil {
-		fmt.Fprintf(&b, "\nClosed:   %s", task.FormatTimestamp(*t.Closed))
+		add("closed", "Closed", task.FormatTimestamp(*t.Closed))
 	}
 
-	if len(detail.BlockedBy) > 0 {
-		b.WriteString("\n\nBlocked by:")
-		for _, r := range detail.BlockedBy {
-			fmt.Fprintf(&b, "\n  %s  %s (%s)", r.ID, r.Title, r.Status)
-		}
+	return lines
+}
+
+// prettyDetailBlocks returns the blocks the selection keeps, in document order.
+// A block the task has nothing for is omitted whether or not it was selected.
+func prettyDetailBlocks(detail TaskDetail) []string {
+	sel := detail.Fields
+	var blocks []string
+
+	if len(detail.BlockedBy) > 0 && sel.includes("blocked_by") {
+		blocks = append(blocks, prettyDetailBlock("Blocked by", prettyRelatedEntries(detail.BlockedBy)))
 	}
 
-	if len(detail.Children) > 0 {
-		b.WriteString("\n\nChildren:")
-		for _, r := range detail.Children {
-			fmt.Fprintf(&b, "\n  %s  %s (%s)", r.ID, r.Title, r.Status)
-		}
+	if len(detail.Children) > 0 && sel.includes("children") {
+		blocks = append(blocks, prettyDetailBlock("Children", prettyRelatedEntries(detail.Children)))
 	}
 
-	if len(detail.Refs) > 0 {
-		b.WriteString("\n\nRefs:")
-		for _, ref := range detail.Refs {
-			fmt.Fprintf(&b, "\n  %s", ref)
-		}
+	if len(detail.Refs) > 0 && sel.includes("refs") {
+		blocks = append(blocks, prettyDetailBlock("Refs", detail.Refs))
 	}
 
-	if len(detail.Notes) > 0 {
-		b.WriteString("\n\nNotes:")
-		for _, note := range detail.Notes {
-			fmt.Fprintf(&b, "\n  %s  %s", note.Created.Format("2006-01-02 15:04"), note.Text)
+	if len(detail.Notes) > 0 && sel.includes("notes") {
+		entries := make([]string, len(detail.Notes))
+		for i, note := range detail.Notes {
+			entries[i] = fmt.Sprintf("%s  %s", note.Created.Format("2006-01-02 15:04"), note.Text)
 		}
+		blocks = append(blocks, prettyDetailBlock("Notes", entries))
 	}
 
-	if t.Description != "" {
-		b.WriteString("\n\nDescription:")
-		lines := strings.SplitSeq(t.Description, "\n")
-		for line := range lines {
-			fmt.Fprintf(&b, "\n  %s", line)
-		}
+	if detail.Task.Description != "" && sel.includes("description") {
+		blocks = append(blocks, prettyDetailBlock("Description", strings.Split(detail.Task.Description, "\n")))
 	}
+
+	return blocks
+}
+
+// FormatTaskDetail renders a single task in key-value format, narrowed to
+// detail.Fields when it is set. A section the task has nothing for is omitted,
+// and the whole document is empty when the selection keeps nothing.
+func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
+	var groups []string
+	if header := prettyDetailHeader(detail); len(header) > 0 {
+		groups = append(groups, strings.Join(header, "\n"))
+	}
+	groups = append(groups, prettyDetailBlocks(detail)...)
+
+	if len(groups) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	b.WriteString(strings.Join(groups, "\n\n"))
 
 	if detail.Changes != nil {
 		for _, block := range detail.Changes.Blocks {

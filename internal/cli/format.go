@@ -242,7 +242,8 @@ func (r DepTreeResult) fullGraphTrees() []DepTreeNode {
 type Formatter interface {
 	// FormatTaskList renders a list of tasks.
 	FormatTaskList(tasks []task.Task) string
-	// FormatTaskDetail renders a single task with full details including related context.
+	// FormatTaskDetail renders a single task with its related context, narrowed
+	// to detail.Fields when the caller set a selection.
 	FormatTaskDetail(detail TaskDetail) string
 	// FormatDepChange renders a dependency add/remove confirmation.
 	FormatDepChange(action string, taskID string, depID string) string

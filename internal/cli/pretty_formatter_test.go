@@ -1095,3 +1095,167 @@ func TestPrettyFormatDepTree(t *testing.T) {
 		}
 	})
 }
+
+func TestPrettyFilteredTaskDetail(t *testing.T) {
+	f := &PrettyFormatter{}
+
+	filtered := func(t *testing.T, detail TaskDetail, value string) string {
+		t.Helper()
+		detail.Fields = fieldSelection(t, value)
+		return f.FormatTaskDetail(detail)
+	}
+
+	plainDetail := func() TaskDetail {
+		created := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
+		return TaskDetail{
+			Task: task.Task{
+				ID:       "tick-a1b2",
+				Title:    "Add retry to the sync worker",
+				Status:   task.StatusOpen,
+				Priority: 2,
+				Created:  created,
+				Updated:  created,
+			},
+		}
+	}
+
+	t.Run("it renders only the selected header lines", func(t *testing.T) {
+		got := filtered(t, richDetail(), "title,status")
+
+		want := "Title:    Add retry to the sync worker\n" +
+			"Status:   in_progress"
+		if got != want {
+			t.Errorf("result = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it renders only the selected block", func(t *testing.T) {
+		got := filtered(t, richDetail(), "notes")
+
+		want := "Notes:\n  2026-03-01 09:00  Retried twice before it stuck"
+		if got != want {
+			t.Errorf("result = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it renders only the selected children block", func(t *testing.T) {
+		got := filtered(t, richDetail(), "children")
+
+		want := "Children:\n  tick-e5f6  Child (open)"
+		if got != want {
+			t.Errorf("result = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it renders only the selected blocked_by block", func(t *testing.T) {
+		got := filtered(t, richDetail(), "blocked_by")
+
+		want := "Blocked by:\n  tick-c3d4  Blocker (open)"
+		if got != want {
+			t.Errorf("result = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it mixes a header line and a block", func(t *testing.T) {
+		got := filtered(t, richDetail(), "title,notes")
+
+		want := "Title:    Add retry to the sync worker\n" +
+			"\n" +
+			"Notes:\n  2026-03-01 09:00  Retried twice before it stuck"
+		if got != want {
+			t.Errorf("result = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it renders a dash for a selected empty type", func(t *testing.T) {
+		got := filtered(t, plainDetail(), "type")
+
+		if got != "Type:     -" {
+			t.Errorf("result = %q, want %q", got, "Type:     -")
+		}
+	})
+
+	t.Run("it renders nothing for a selected field pretty omits", func(t *testing.T) {
+		got := filtered(t, plainDetail(), "tags")
+
+		if got != "" {
+			t.Errorf("result = %q, want empty", got)
+		}
+	})
+
+	t.Run("it renders nothing when every selected field is empty", func(t *testing.T) {
+		got := filtered(t, plainDetail(), "tags,refs,notes,description,parent,closed,children,blocked_by")
+
+		if got != "" {
+			t.Errorf("result = %q, want empty", got)
+		}
+	})
+
+	t.Run("it has no leading blank line when no header line survives", func(t *testing.T) {
+		got := filtered(t, richDetail(), "notes,description")
+
+		want := "Notes:\n  2026-03-01 09:00  Retried twice before it stuck\n" +
+			"\n" +
+			"Description:\n" +
+			"  Fix the parser.\n" +
+			"  \n" +
+			"  Steps:\n" +
+			"    - read the header"
+		if got != want {
+			t.Errorf("result = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it leaves unfiltered pretty detail unchanged", func(t *testing.T) {
+		got := f.FormatTaskDetail(richDetail())
+
+		want := "ID:       tick-a1b2\n" +
+			"Title:    Add retry to the sync worker\n" +
+			"Status:   in_progress\n" +
+			"Priority: 1\n" +
+			"Type:     bug\n" +
+			"Tags:     api\n" +
+			"Parent:   tick-p4r3\n" +
+			"Created:  2026-03-01T09:00:00Z\n" +
+			"Updated:  2026-03-01T09:00:00Z\n" +
+			"Closed:   2026-03-02T09:00:00Z\n" +
+			"\n" +
+			"Blocked by:\n  tick-c3d4  Blocker (open)\n" +
+			"\n" +
+			"Children:\n  tick-e5f6  Child (open)\n" +
+			"\n" +
+			"Refs:\n  https://example.com\n" +
+			"\n" +
+			"Notes:\n  2026-03-01 09:00  Retried twice before it stuck\n" +
+			"\n" +
+			"Description:\n" +
+			"  Fix the parser.\n" +
+			"  \n" +
+			"  Steps:\n" +
+			"    - read the header"
+		if got != want {
+			t.Errorf("result = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it leaves unfiltered pretty detail with cascades unchanged", func(t *testing.T) {
+		detail := plainDetail()
+		detail.Changes = &StatusChanges{Blocks: []CascadeResult{
+			{TaskID: "tick-a1b2", TaskTitle: "Add retry to the sync worker", OldStatus: "open", NewStatus: "in_progress"},
+		}}
+
+		got := f.FormatTaskDetail(detail)
+
+		want := "ID:       tick-a1b2\n" +
+			"Title:    Add retry to the sync worker\n" +
+			"Status:   open\n" +
+			"Priority: 2\n" +
+			"Type:     -\n" +
+			"Created:  2026-03-01T09:00:00Z\n" +
+			"Updated:  2026-03-01T09:00:00Z\n" +
+			"tick-a1b2: open → in_progress"
+		if got != want {
+			t.Errorf("result = %q, want %q", got, want)
+		}
+	})
+}

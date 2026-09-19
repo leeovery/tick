@@ -864,14 +864,16 @@ func TestShowBareField(t *testing.T) {
 		}
 	})
 
-	for _, field := range []string{"notes", "tags", "refs", "children", "blocked_by", "title,status"} {
-		t.Run("it does not print "+field+" bare", func(t *testing.T) {
-			dir := newProject(t)
-
-			plain := bare(t, dir, "tick-a1b2c3")
-			selected := bare(t, dir, "tick-a1b2c3", "--field", field)
-			if selected != plain {
-				t.Errorf("stdout with --field %s = %q, want the full document %q", field, selected, plain)
+	for _, tc := range []struct{ field, want string }{
+		{"notes", "Notes:\n  2026-02-10 12:00  looked at it\n"},
+		{"tags", "Tags:     api\n"},
+		{"refs", "Refs:\n  https://example.com\n"},
+		{"title,status", "Title:    Add login\nStatus:   open\n"},
+	} {
+		t.Run("it renders "+tc.field+" as a document not a bare value", func(t *testing.T) {
+			got := bare(t, newProject(t), "tick-a1b2c3", "--field", tc.field)
+			if got != tc.want {
+				t.Errorf("stdout with --field %s = %q, want %q", tc.field, got, tc.want)
 			}
 		})
 	}
@@ -947,6 +949,64 @@ func TestShowFilteredDocument(t *testing.T) {
 		stdout := show(t, richProject(t), "tick-a1b2c3", "--toon", "--field", "title,status")
 
 		assertToonKeySet(t, decodeToonDoc(t, stdout), "title", "status")
+	})
+
+	t.Run("it renders only the selected header lines in pretty", func(t *testing.T) {
+		stdout := show(t, richProject(t), "tick-a1b2c3", "--field", "title,status")
+
+		want := "Title:    Add login\nStatus:   open\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it renders a pretty list section as a labelled document not a bare value", func(t *testing.T) {
+		stdout := show(t, richProject(t), "tick-a1b2c3", "--field", "tags")
+
+		want := "Tags:     api\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it mixes a pretty header line and a block", func(t *testing.T) {
+		stdout := show(t, richProject(t), "tick-a1b2c3", "--field", "title,notes")
+
+		want := "Title:    Add login\n\nNotes:\n  2026-02-10 12:00  looked at it\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it renders a dash for a selected empty type in pretty", func(t *testing.T) {
+		stdout := show(t, bareProject(t), "tick-a1b2c3", "--field", "type,tags")
+
+		if stdout != "Type:     -\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "Type:     -\n")
+		}
+	})
+
+	t.Run("it prints nothing in pretty for a field the task does not carry", func(t *testing.T) {
+		for _, field := range []string{"tags", "refs", "parent", "closed", "blocked_by", "children", "notes", "description"} {
+			if stdout := show(t, bareProject(t), "tick-a1b2c3", "--field", field); stdout != "" {
+				t.Errorf("stdout for --field %s = %q, want empty", field, stdout)
+			}
+		}
+	})
+
+	t.Run("it has no leading blank line in pretty when no header line survives", func(t *testing.T) {
+		stdout := show(t, richProject(t), "tick-a1b2c3", "--field", "notes,description")
+
+		want := "Notes:\n  2026-02-10 12:00  looked at it\n" +
+			"\n" +
+			"Description:\n" +
+			"  Fix the parser.\n" +
+			"  \n" +
+			"  Steps:\n" +
+			"    - read the header\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
 	})
 
 	parseJSON := func(t *testing.T, stdout string) map[string]any {

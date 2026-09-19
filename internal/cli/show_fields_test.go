@@ -236,19 +236,16 @@ func TestShowFieldFlag(t *testing.T) {
 		return dir
 	}
 
-	t.Run("it renders full output for a recognised selection", func(t *testing.T) {
+	t.Run("it renders the named fields for a recognised selection", func(t *testing.T) {
 		dir := newProject(t)
 
-		plain, _, code := runShow(t, dir, "tick-a1b2c3")
+		selected, stderr, code := runShow(t, dir, "tick-a1b2c3", "--field", "title,status")
 		if code != 0 {
-			t.Fatalf("exit code = %d, want 0", code)
+			t.Fatalf("exit code with --field = %d, want 0; stderr = %q", code, stderr)
 		}
-		selected, _, code := runShow(t, dir, "tick-a1b2c3", "--field", "title,status")
-		if code != 0 {
-			t.Fatalf("exit code with --field = %d, want 0", code)
-		}
-		if selected != plain {
-			t.Errorf("output with --field = %q, want %q", selected, plain)
+		want := "Title:    Add login\nStatus:   open\n"
+		if selected != want {
+			t.Errorf("output with --field = %q, want %q", selected, want)
 		}
 	})
 
