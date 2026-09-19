@@ -278,7 +278,7 @@ tick dep tree                          # full graph: all dependency chains
 tick dep tree tick-a1b2                # focused: upstream + downstream from a task
 ```
 
-Full graph shows root tasks (tasks that block others but aren't blocked themselves) with their downstream chains, plus a summary line. Focused view walks both directions from the target — what blocks it and what it unblocks. Diamond dependencies are duplicated at each path.
+Full graph covers every task that participates in a dependency, plus a summary line. The pretty tree draws root tasks (tasks that block others but aren't blocked themselves) with their downstream chains; the TOON edge list and the JSON `roots` array also carry the tasks no root reaches — a cycle's members, or a task blocked by an ID that no longer exists. Focused view walks both directions from the target — what blocks it and what it unblocks. Diamond dependencies are duplicated at each path.
 
 <table>
 <tr>
@@ -407,10 +407,10 @@ tasks[3]{id,title,status,priority,type}:
 **Terminal** (Pretty)
 ```
 $ tick list
-ID          STATUS        PRI   TYPE      TITLE
-tick-a1b2   in_progress   1     feature   Auth middleware
-tick-f3e4   open          2     task      Write tests
-tick-d5c6   open          3     -         Update docs
+ID          STATUS       PRI  TYPE     TITLE
+tick-a1b2   in_progress  1    feature  Auth middleware
+tick-f3e4   open         2    task     Write tests
+tick-d5c6   open         3    -        Update docs
 ```
 
 </td>
@@ -456,9 +456,9 @@ description: "Full task description here.\nCan be multiple lines."
 Clean aligned columns for terminals. No borders, no colors, no icons.
 
 ```
-ID          STATUS        PRI   TYPE      TITLE
-tick-a1b2   in_progress   1     feature   Setup auth
-tick-c3d4   open          1     task      Login endpoint
+ID          STATUS  PRI  TYPE     TITLE
+tick-a1b2   done    1    feature  Setup auth
+tick-c3d4   open    1    task     Login endpoint
 ```
 
 ### Transition & Cascade Output
@@ -547,7 +547,8 @@ Standard 2-space indented JSON with snake_case keys.
     "id": "tick-a1b2",
     "title": "Setup auth",
     "status": "in_progress",
-    "priority": 1
+    "priority": 1,
+    "type": "feature"
   }
 ]
 ```
