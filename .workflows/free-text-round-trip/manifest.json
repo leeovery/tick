@@ -188,7 +188,7 @@
         "free-text-round-trip": {
           "status": "in-progress",
           "task_gate_mode": "auto",
-          "fix_gate_mode": "gated",
+          "fix_gate_mode": "auto",
           "analysis_gate_mode": "gated",
           "consolidation_gate_mode": "auto",
           "fix_attempts": 0,
@@ -227,7 +227,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 2,
-          "current_task": "free-text-round-trip-2-3",
+          "current_task": "free-text-round-trip-2-4",
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -237,7 +237,8 @@
             "free-text-round-trip-1-6",
             "free-text-round-trip-1-7",
             "free-text-round-trip-2-1",
-            "free-text-round-trip-2-2"
+            "free-text-round-trip-2-2",
+            "free-text-round-trip-2-3"
           ],
           "staging": {
             "p1": {
@@ -265,6 +266,32 @@
                 "internal/cli/pretty_formatter.go",
                 "internal/cli/toon_formatter.go",
                 "internal/cli/json_formatter.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-2-3",
+              "source": "executor",
+              "summary": "Pretty status output is still built from CascadeResult.Cascaded while toon and JSON are built from CascadeResult.Changed, so the two can silently disagree about what moved.",
+              "failure": "A user reading tick done <id> in a terminal sees a different set of movements than an agent reading the same command's --toon/--json output — Changed drops no-op rows and merges a task that moved twice, Cascaded does neither, and the primary row is separate there. Nothing fails; it is noticed only when a human compares pretty output against an agent's transcript.",
+              "detail": "buildCascadeResult (internal/cli/transition.go:62-118) populates two parallel representations of one event — the isUpward/ParentID block for Cascaded and the statusChangeSet for Changed. Only PrettyFormatter.FormatCascadeTransition (internal/cli/pretty_formatter.go:234) still consumes Cascaded; deriving pretty from Changed would let CascadeEntry and the TaskID/TaskTitle/OldStatus/NewStatus/Cascaded fields of CascadeResult (internal/cli/format.go:130-158) be deleted. Phase 2 has no task covering the pretty formatter.",
+              "files": [
+                "internal/cli/transition.go",
+                "internal/cli/pretty_formatter.go",
+                "internal/cli/format.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-2-3",
+              "source": "reviewer",
+              "summary": "The FormatCascadeTransition name and its interface doc no longer describe what any formatter does for toon or JSON.",
+              "failure": "A maintainer adding a fourth formatter, or editing an existing one, reads format.go:208 (\"renders a status transition with cascaded child changes\") and builds the superseded primary-plus-knock-ons shape instead of the flat changed list. Nothing fails — the interface compiles either way — and it is noticed only in review, after the shape has been written.",
+              "detail": "internal/cli/format.go:208-209 still documents the pre-§7.2 contract, and internal/cli/format.go:227-228's baseFormatter stub comment calls it a cascade. The method now renders a merged changed list in toon (toon_formatter.go:147) and JSON (json_formatter.go:270), and only pretty still renders a cascade tree. A rename to FormatStatusChanges plus a corrected interface doc touches the interface, all three formatters, baseFormatter, StubFormatter and every call site — the output of tasks 2-1 through 2-5 — so it cannot land inside this task.",
+              "files": [
+                "internal/cli/format.go",
+                "internal/cli/toon_formatter.go",
+                "internal/cli/json_formatter.go",
+                "internal/cli/pretty_formatter.go",
+                "internal/cli/helpers.go"
               ]
             }
           ]
