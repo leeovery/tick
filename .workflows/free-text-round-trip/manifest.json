@@ -237,8 +237,8 @@
             ".claude/skills/golang-dependency-management",
             ".claude/skills/golang-continuous-integration"
           ],
-          "current_phase": 4,
-          "current_task": "free-text-round-trip-5-1",
+          "current_phase": 5,
+          "current_task": "free-text-round-trip-5-2",
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -277,7 +277,8 @@
             "free-text-round-trip-4-10",
             "free-text-round-trip-4-11",
             "free-text-round-trip-4-12",
-            "free-text-round-trip-4-13"
+            "free-text-round-trip-4-13",
+            "free-text-round-trip-5-1"
           ],
           "staging": {
             "p1": {
@@ -325,6 +326,22 @@
             2,
             3,
             4
+          ],
+          "bank": [
+            {
+              "task": "free-text-round-trip-5-1",
+              "source": "reviewer",
+              "summary": "A value-taking flag whose value is exactly `--` became unwritable, leaving a new hole in §2.2 byte-identity bar that no command can now close.",
+              "failure": "An agent reads a task whose description is exactly `--` out of `tick show` and writes it back with `tick update <id> --description --`; the marker is consumed by parseArgs and the command fails with `Error: --description requires a value` (verified against the working tree; before this change the same invocation stored the two-dash description). Noticed by the phase own round-trip fixture task (free-text-round-trip-5-5, The Awkward-Task Fixture Round-Trips Byte-Identically) if it covers a dash-only value, otherwise by a user whose text is silently unwritable. Task 5-2 split does not fix it — post-marker arguments become positionals, so the value can never re-attach to --description.",
+              "detail": "Marker recognition at internal/cli/app.go:374-377 consumes a bare `--` wherever it appears, including the slot a value-taking flag value occupies; the parsers that then find no value are parseCreateArgs (internal/cli/create.go:46-51), parseUpdateArgs, parseListFlags and parseShowArgs. The same family already exists pre-existing for values that spell a global flag (`--description --json` fails today because applyGlobalFlag strips the value at any position), which is why a fix belongs at the phase level rather than in either task: supporting the `--flag=value` form for value-taking flags closes both at once. The task body accepts this as its single documented regression.",
+              "files": [
+                "internal/cli/app.go",
+                "internal/cli/create.go",
+                "internal/cli/update.go",
+                "internal/cli/list.go",
+                "internal/cli/show.go"
+              ]
+            }
           ]
         }
       }
