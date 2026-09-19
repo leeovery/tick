@@ -1,0 +1,69 @@
+# Consolidation Tasks: Free Text Round Trip (Phase 2)
+
+## Task 1: Derive Each View Of A Command's Status Movements Instead Of Storing Both
+placement: phase 2
+severity: duplication
+
+**Problem**: One command's status movements are now held in three hand-synchronised representations. `StatusChanges{Rows, Blocks}` (`internal/cli/format.go:109-115`) and `CascadeResult{Cascaded, Changed}` (`internal/cli/format.go:161-169`) each carry two independent statements of what moved, and `internal/cli/create.go:271` and `internal/cli/update.go:395` are the identical hand-written line `changes := &StatusChanges{Rows: mergeStatusChanges(blocks...), Blocks: blocks}` — where `Rows` is nothing but a function of `Blocks`. Pretty reads `Blocks`/`Cascaded`; toon and JSON read `Rows`/`Changed`. Nothing forces a producer to populate both, nothing fails to compile if one is filled and the other is not, and no test compares the two views. A future path that moves a task's status fills one and not the other, and a user reading `tick done` in a terminal sees a different set of movements than an agent reading the same command's machine output — noticed only when someone compares the two. `internal/cli/detail_changes_test.go:171-181` already pins that divergent state (rows populated, blocks empty, terminal prints nothing) as acceptable. The phase-2 review predicted this exact failure before task 2-5 landed, and task 2-5 then built both by hand at two sites.
+
+**Solution**: Make each derived view a method so the divergent state cannot be constructed. Derive the flat table from the cascade shape, never the reverse — §4.1 requires the terminal bytes to be identical, and the flat rows carry no parent link, so the tree cannot be rebuilt from them without re-deriving what `buildCascadeResult` already computed. Two steps, either landable alone, both behaviour-preserving with the terminal output untouched at every point.
+
+1. `StatusChanges` holds `Blocks []CascadeResult` only, with `func (c StatusChanges) Rows() []StatusChange { return mergeStatusChanges(c.Blocks...) }`. `create.go:271` and `update.go:395` become `&StatusChanges{Blocks: blocks}`; `toon_formatter.go:100` and `json_formatter.go:125` call `detail.Changes.Rows()`.
+2. `CascadeResult` stores the cascade shape plus `PrimaryAuto bool` and derives the flat rows: `func (c CascadeResult) Changed() []StatusChange` builds the primary row from `TaskID`/`TaskTitle`/`OldStatus`/`NewStatus`/`PrimaryAuto` and one row per `Cascaded` entry with `Auto: true`, through the existing `statusChangeSet`. The `Changed` field and the second loop at `transition.go:103-120` go, and `TaskTitle` gains its first production reader.
+
+Accepted deliberately: `detail_changes_test.go:171-181` pins a state that becomes unrepresentable and is deleted rather than rewritten, and the four remaining `StatusChanges{Rows: …}` test constructions become `StatusChanges{Blocks: []CascadeResult{…}}`.
+
+**Outcome**: The terminal tree and the machine table are two views of one stored value, so a future status-moving path cannot populate one and leave the other stale. No production path changes what it prints.
+
+**Do**:
+- Step 1, `internal/cli/format.go:109-115`: leave `StatusChanges` holding `Blocks []CascadeResult` alone and add `func (c StatusChanges) Rows() []StatusChange { return mergeStatusChanges(c.Blocks...) }`; replace the type's "both shapes the formatters need" doc sentence with one naming `Blocks` as what is stored and `Rows` as its flattening. Point the two readers at the method — `toon_formatter.go:100` and `json_formatter.go:125` call `detail.Changes.Rows()` — and the two producers become `changes := &StatusChanges{Blocks: blocks}` (`create.go:271`, `update.go:395`).
+- Step 2, `internal/cli/format.go:161-169`: `CascadeResult` drops `Changed []StatusChange` and gains `PrimaryAuto bool`; add `func (c CascadeResult) Changed() []StatusChange` that feeds a `statusChangeSet` the primary row (`TaskID`, `TaskTitle`, `OldStatus`, `NewStatus`, `Auto: c.PrimaryAuto`) then one row per `Cascaded` entry with `Auto: true`, returning `set.rows()`.
+- Step 2, `internal/cli/transition.go`: `buildCascadeResult` sets `PrimaryAuto: primaryAuto` in the literal at `:63-68` and loses its second loop at `:103-120`; `mergeStatusChanges` (`:168-176`) ranges `b.Changed()`; the doc comments at `:58-61` and `:165-167` drop their description of a stored `Changed`. Move the last two production readers to the method: `toon_formatter.go:164` and `json_formatter.go:279` call `result.Changed()`.
+- Convert every construction of the two collapsed fields — the measured set, not a subset. `grep -rn 'StatusChanges{Rows:' internal/cli` → 7 (`create.go:271`, `update.go:395`, `detail_changes_test.go:54`, `:92`, `:125`, `:174`, `:249`). `grep -rn 'Changed:' internal/cli` → 9, of which `json_formatter.go:279` is the unrelated `jsonChangedList` literal and the other 8 are `CascadeResult{Changed: …}` in tests (`cascade_formatter_test.go:17`, `:36`, `:55`, `:188`, `:204`, `:276`; `helpers_test.go:299`; `status_change_test.go:19`). Each becomes the cascade-shaped value whose derived rows are today's literal: the auto-false row is the primary, each auto-true row a `Cascaded` entry. `grep -rn '\.Changed\b' internal/cli` → 19 before the change (the write at `transition.go:120`, three production reads, 15 in `status_change_test.go`); afterwards every surviving occurrence is a `Changed()` call.
+- `status_change_test.go:11-20`: `statusChangeBlock(primaryAuto, primary, cascades...)` builds `CascadeResult{TaskID/TaskTitle/OldStatus/NewStatus from primary, PrimaryAuto: primaryAuto, Cascaded: one entry per cascade}` and stops calling `set.rows()` itself. Delete `detail_changes_test.go:171-181` outright rather than rewriting it.
+
+**Acceptance Criteria**:
+- [ ] `StatusChanges` has exactly one field, `Blocks`, and a `Rows()` method; `grep -rn 'StatusChanges{Rows:' internal/cli` returns nothing.
+- [ ] `CascadeResult` has no `Changed` field; `Changed()` derives its rows through `statusChangeSet`, and `PrimaryAuto` is the only field added.
+- [ ] `buildCascadeResult` walks `cascades` once — the loop that was at `transition.go:103-120` is gone and nothing else populates a flat row set by hand.
+- [ ] `CascadeResult.TaskTitle` has a production reader for the first time: the title in the toon and JSON `changed` tables comes from it.
+- [ ] A zero-value `CascadeResult{}` derives an empty, non-nil row set, so toon still emits `changed[0]{id,title,from,to,auto}:` and JSON still emits `[]` rather than `null`.
+- [ ] Pretty is byte-identical: its input is still the cascade-shaped value, `PrettyFormatter.FormatCascadeTransition` and `FormatTaskDetail` are untouched, and the README samples still match the built binary.
+- [ ] `go build ./...`, `go vet ./...`, `go test ./...` clean and `gofmt -l internal cmd` empty.
+
+**Tests**:
+- Pure refactor: no test names are added and no surviving assertion changes. The existing suite is the guard.
+- Deleted deliberately, as the Solution accepts: `detail_changes_test.go:171-181` `"it appends nothing in pretty when the detail carries no blocks"` — it constructs a `StatusChanges` with rows and no blocks, a state the collapse makes unrepresentable.
+- Converted mechanically, assertions verbatim: `status_change_test.go` (the `statusChangeBlock` helper and the 15 `.Changed` reads), `cascade_formatter_test.go:14-65`, `:184-235`, `:268-299`, `helpers_test.go:295-308`, `detail_changes_test.go:54`, `:92`, `:125`, `:249`.
+- Must pass unmodified, pinning that no output moved: `readme_samples_test.go`, `detail_changes_test.go:183-203` (pretty blocks), `create_test.go:1397`, `:1417`, `:1438`, `update_test.go:1350`, `:1377`, `transition_test.go:680-760` (toon and JSON agree row for row), `toon_decode_test.go:286-349`, `format_test.go:404-419` (empty-result shapes).
+
+## Task 2: Read The Auto Flag From The Transition The Domain Applied
+placement: phase 2
+severity: duplication
+
+**Problem**: §7.2 justifies the `auto` column by it reusing the flag the transition history already records — false when a user or agent asked for the change, true when the system produced it. The implementation does not read that flag. `buildCascadeResult` takes a `primaryAuto bool` sixth parameter (`internal/cli/transition.go:62`) which four call sites hand-match to whichever of `ApplyUserTransition`/`ApplySystemTransition` the caller chose: `transition.go:40` passes false, and `create.go:238`, `update.go:307` and `update.go:366` pass true — the last three several frames away from the `ApplySystemTransition` call they are matched to. Every pairing is correct today and nothing enforces any of them. A new status-moving path, or a caller switched from one entry point to the other, prints an `auto` value that contradicts the flag persisted for the same transition. Nothing fails; an agent reading the output believes it asked for a change it did not, or vice versa.
+
+**Solution**: Carry the flag out of the domain rather than re-asserting it in the CLI. Add `Auto bool` to `task.TransitionResult`, set by `applyWithCascades` from the same value it already writes onto the primary target's `TransitionRecord`, and drop `buildCascadeResult`'s `primaryAuto` parameter in favour of `result.Auto` — or of the `PrimaryAuto` field fed from it, if Task 1 step 2 has landed. All four call sites lose their literal. The four `buildCascadeResult` calls in tests follow mechanically. No output changes: every pairing is correct today, so this preserves behaviour while removing the way it could stop being.
+
+**Outcome**: The rendered `auto` and the persisted `auto` are one value by construction, which is what §7.2 claims they already are.
+
+**Do**:
+- `internal/task/transition.go:5-10`: add `Auto bool` to `TransitionResult`, documented as the flag the same transition's `TransitionRecord` carries — false when the caller asked for the change, true when the system produced it.
+- `internal/task/apply_cascades.go:51-63`: `applyWithCascades` sets `result.Auto = auto` beside the `TransitionRecord{…, Auto: auto}` it appends to the primary target, so the returned result and the persisted record take the value from one place. `sm.Transition` (`state_machine.go:35-66`) stays as it is — it has no caller outside the domain, and the zero `Auto` it returns is overwritten on the only path that reaches the CLI.
+- `internal/cli/transition.go:62`: drop the `primaryAuto bool` parameter and read `result.Auto` where it was stamped (`:109`, or `PrimaryAuto` if Task 1 step 2 has landed); rewrite the last sentence of the doc comment at `:58-61`, which describes the dropped parameter.
+- `internal/cli/update.go:147-161`: `autoCompleteParentIfTerminal` discards the `TransitionResult` from `sm.ApplySystemTransition` at `:148` and hand-builds one at `:156-159`. Capture it instead and store it in `rule3Result.result`; its `OldStatus`/`NewStatus` equal the hand-built values, so the local `oldStatus` capture at `:147` goes with the literal.
+- Drop the boolean at every call site — the measured set, not a subset. `grep -rn 'buildCascadeResult(' internal/cli` → 13 hits: the definition at `transition.go:62`, four production calls (`transition.go:40` false, `create.go:238` true, `update.go:307` true, `update.go:366` true) and eight in tests (`status_change_test.go:40`, `:52`, `:64`, `:74`, `:166`, `transition_test.go:573`, `cascade_formatter_test.go:253`, `helpers_test.go:321`). No call passes a sixth argument afterwards; the one auto-true test case (`status_change_test.go:63-71`) sets `Auto: true` on the `task.TransitionResult` fixture it passes.
+
+**Acceptance Criteria**:
+- [ ] `task.TransitionResult` carries `Auto`, and `applyWithCascades` is the only place that sets it, from the same `auto` value it writes onto the primary target's `TransitionRecord`.
+- [ ] `buildCascadeResult` takes five parameters and no caller passes a boolean literal for the primary's auto-ness.
+- [ ] `autoCompleteParentIfTerminal` returns the `TransitionResult` the domain produced, and no production code builds a `task.TransitionResult` literal carrying statuses: the only production hits of `grep -rn 'task\.TransitionResult{' internal/cli` are the four zero-value returns at `helpers.go:115`, `:120`, `:124`, `:126`.
+- [ ] Rendered auto still matches persisted auto on every existing path: `start`/`done`/`cancel`/`reopen` print `auto=false` for the requested change and `true` for its cascades; create with a done parent, update re-parenting onto a done parent, and rule-3 auto-completion of the vacated parent all print `auto=true`.
+- [ ] No output changes anywhere — toon, JSON and pretty bytes are what they are today.
+- [ ] `go build ./...`, `go vet ./...`, `go test ./...` clean and `gofmt -l internal cmd` empty.
+
+**Tests**:
+- Pure refactor: no test names are added and no surviving assertion changes.
+- Converted mechanically: the eight `buildCascadeResult` calls lose their trailing boolean, and `status_change_test.go:34` gains a second `task.TransitionResult` fixture carrying `Auto: true` for `"it marks every row auto true when the primary was system-initiated"` (`:63-71`).
+- Must pass unmodified, pinning that the four pairings still render as they did: `transition_test.go:680-760` (user-initiated row auto=false, cascades auto=true; toon and JSON agree row for row), `create_test.go:1397-1403` and `:1438` (parent reopen, auto=true), `update_test.go:1350-1359` (re-parent onto a done parent plus rule-3 auto-completion, both auto=true), `toon_decode_test.go:286-349`, `status_change_test.go:39-82`, `readme_samples_test.go`.
+- `internal/task` suite stays green as the guard that `Auto` rides on the same value as the `TransitionRecord`: `go test ./internal/task` covers both entry points through the existing cascade and transition-history tests.

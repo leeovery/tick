@@ -148,7 +148,9 @@
             "free-text-round-trip-6-4": "tick-ae3897",
             "free-text-round-trip-6-5": "tick-2974b8",
             "free-text-round-trip-6-6": "tick-f9b5f3",
-            "free-text-round-trip-1-7": "tick-ca8507"
+            "free-text-round-trip-1-7": "tick-ca8507",
+            "free-text-round-trip-2-7": "tick-30886c",
+            "free-text-round-trip-2-8": "tick-8fcf09"
           },
           "storage_paths": [
             ".tick/"
@@ -248,68 +250,20 @@
               "tasks": {
                 "1": "approved"
               }
+            },
+            "p2": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved"
+              }
             }
           },
           "consolidated_phases": [
-            1
+            1,
+            2
           ],
           "completed_phases": [
             1
-          ],
-          "bank": [
-            {
-              "task": "free-text-round-trip-2-1",
-              "source": "reviewer",
-              "summary": "CascadeResult will carry two parallel representations of the same status movements once phase 2 rendering lands — Cascaded (pretty tree) and Changed (toon/JSON table) — with nothing forcing a producer to populate both.",
-              "failure": "A future path that moves a task status populates one representation and not the other. Nothing fails to compile and no test necessarily covers the new path, so toon and JSON report a row that pretty tree omits (or the reverse), and the divergence is noticed only when a user compares two formats of the same command. The risk exists only because §4.1 deliberately keeps pretty on the old tree while §7.2 moves toon and JSON to the table, so the two must be kept in sync by hand.",
-              "detail": "CascadeResult (internal/cli/format.go:152-159) now holds TaskID/TaskTitle/OldStatus/NewStatus/Cascaded for PrettyFormatter.FormatCascadeTransition (internal/cli/pretty_formatter.go:234-275) and Changed for the table. buildCascadeResult (internal/cli/transition.go:64-125) is currently the only thing populating both from one input, which is what keeps them consistent today; the consolidation is to make that the enforced single entry point (or derive pretty tree from Changed plus parent links) once tasks 2-2 through 2-4 have landed. Not actionable inside this task.",
-              "files": [
-                "internal/cli/format.go",
-                "internal/cli/transition.go",
-                "internal/cli/pretty_formatter.go",
-                "internal/cli/toon_formatter.go",
-                "internal/cli/json_formatter.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-2-3",
-              "source": "executor",
-              "summary": "Pretty status output is still built from CascadeResult.Cascaded while toon and JSON are built from CascadeResult.Changed, so the two can silently disagree about what moved.",
-              "failure": "A user reading tick done <id> in a terminal sees a different set of movements than an agent reading the same command's --toon/--json output — Changed drops no-op rows and merges a task that moved twice, Cascaded does neither, and the primary row is separate there. Nothing fails; it is noticed only when a human compares pretty output against an agent's transcript.",
-              "detail": "buildCascadeResult (internal/cli/transition.go:62-118) populates two parallel representations of one event — the isUpward/ParentID block for Cascaded and the statusChangeSet for Changed. Only PrettyFormatter.FormatCascadeTransition (internal/cli/pretty_formatter.go:234) still consumes Cascaded; deriving pretty from Changed would let CascadeEntry and the TaskID/TaskTitle/OldStatus/NewStatus/Cascaded fields of CascadeResult (internal/cli/format.go:130-158) be deleted. Phase 2 has no task covering the pretty formatter.",
-              "files": [
-                "internal/cli/transition.go",
-                "internal/cli/pretty_formatter.go",
-                "internal/cli/format.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-2-3",
-              "source": "reviewer",
-              "summary": "The FormatCascadeTransition name and its interface doc no longer describe what any formatter does for toon or JSON.",
-              "failure": "A maintainer adding a fourth formatter, or editing an existing one, reads format.go:208 (\"renders a status transition with cascaded child changes\") and builds the superseded primary-plus-knock-ons shape instead of the flat changed list. Nothing fails — the interface compiles either way — and it is noticed only in review, after the shape has been written.",
-              "detail": "internal/cli/format.go:208-209 still documents the pre-§7.2 contract, and internal/cli/format.go:227-228's baseFormatter stub comment calls it a cascade. The method now renders a merged changed list in toon (toon_formatter.go:147) and JSON (json_formatter.go:270), and only pretty still renders a cascade tree. A rename to FormatStatusChanges plus a corrected interface doc touches the interface, all three formatters, baseFormatter, StubFormatter and every call site — the output of tasks 2-1 through 2-5 — so it cannot land inside this task.",
-              "files": [
-                "internal/cli/format.go",
-                "internal/cli/toon_formatter.go",
-                "internal/cli/json_formatter.go",
-                "internal/cli/pretty_formatter.go",
-                "internal/cli/helpers.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-2-4",
-              "source": "reviewer",
-              "summary": "StatusChanges carries Rows and Blocks as independent fields where Rows is fully derivable from Blocks, and Task 5 is the task that populates both.",
-              "failure": "Task 5 (or a later edit) builds Rows from a different source than Blocks, or updates one and not the other; toon/JSON then report a changed table that pretty cascade tree contradicts for the same tick create/tick update invocation. Nothing fails to compile and no test compares the two views, so it ships and is noticed only by a user or agent that reads both formats of the same command.",
-              "detail": "mergeStatusChanges(blocks ...CascadeResult) []StatusChange at internal/cli/transition.go:168 already performs exactly this derivation, and the merge is safe outside the Mutate closure (its own doc notes the rows hold only copied values). StatusChanges at internal/cli/format.go:112-115 could hold Blocks alone and expose rows as a method, making the toon/JSON table and pretty tree two views of one value. The change reaches Task 5 construction sites (create.go around the parent-cascade result, update.go around the Rule 6 / Rule 3 results), which is why it is not an issue against this task.",
-              "files": [
-                "internal/cli/format.go",
-                "internal/cli/transition.go",
-                "internal/cli/create.go",
-                "internal/cli/update.go"
-              ]
-            }
           ]
         }
       }
