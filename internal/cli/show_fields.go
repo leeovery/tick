@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/leeovery/tick/internal/task"
 )
 
 type showFieldKind int
@@ -16,25 +18,57 @@ const (
 	showFieldList
 )
 
+// showField describes one recognised field name. bare renders the field's
+// single value and is nil for the list sections, which have no bare form.
+type showField struct {
+	kind showFieldKind
+	bare func(TaskDetail) string
+}
+
 // showFields is the registry of field names `tick show --field` recognises,
 // spelled as the detail document spells them. Only list sections accept a
 // positional suffix.
-var showFields = map[string]showFieldKind{
-	"id":          showFieldScalar,
-	"title":       showFieldScalar,
-	"status":      showFieldScalar,
-	"priority":    showFieldScalar,
-	"type":        showFieldScalar,
-	"parent":      showFieldScalar,
-	"created":     showFieldScalar,
-	"updated":     showFieldScalar,
-	"closed":      showFieldScalar,
-	"description": showFieldDescription,
-	"notes":       showFieldList,
-	"tags":        showFieldList,
-	"refs":        showFieldList,
-	"children":    showFieldList,
-	"blocked_by":  showFieldList,
+var showFields = map[string]showField{
+	"id":          {kind: showFieldScalar, bare: func(d TaskDetail) string { return d.Task.ID }},
+	"title":       {kind: showFieldScalar, bare: func(d TaskDetail) string { return d.Task.Title }},
+	"status":      {kind: showFieldScalar, bare: func(d TaskDetail) string { return string(d.Task.Status) }},
+	"priority":    {kind: showFieldScalar, bare: func(d TaskDetail) string { return strconv.Itoa(d.Task.Priority) }},
+	"type":        {kind: showFieldScalar, bare: func(d TaskDetail) string { return d.Task.Type }},
+	"parent":      {kind: showFieldScalar, bare: func(d TaskDetail) string { return d.Task.Parent }},
+	"created":     {kind: showFieldScalar, bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Created) }},
+	"updated":     {kind: showFieldScalar, bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Updated) }},
+	"closed":      {kind: showFieldScalar, bare: bareClosed},
+	"description": {kind: showFieldDescription, bare: func(d TaskDetail) string { return d.Task.Description }},
+	"notes":       {kind: showFieldList},
+	"tags":        {kind: showFieldList},
+	"refs":        {kind: showFieldList},
+	"children":    {kind: showFieldList},
+	"blocked_by":  {kind: showFieldList},
+}
+
+func bareClosed(d TaskDetail) string {
+	if d.Task.Closed == nil {
+		return ""
+	}
+	return task.FormatTimestamp(*d.Task.Closed)
+}
+
+// bareFieldValue returns the value of a selection that names exactly one field
+// resolving to a single value, with ok false for every other selection. A field
+// the task does not carry yields the empty string with ok true.
+func bareFieldValue(detail TaskDetail, sel *FieldSelection) (string, bool) {
+	if sel == nil {
+		return "", false
+	}
+	name, ok := sel.Only()
+	if !ok {
+		return "", false
+	}
+	field := showFields[name]
+	if field.bare == nil {
+		return "", false
+	}
+	return field.bare(detail), true
 }
 
 // FieldSelection is a validated set of field names requested via --field,
@@ -106,13 +140,13 @@ func (s *FieldSelection) addValue(value string) error {
 		name := strings.TrimSpace(part)
 		base, suffix, hasSuffix := strings.Cut(name, ".")
 		if !hasSuffix {
-			if showFields[name] == showFieldUnknown {
+			if showFields[name].kind == showFieldUnknown {
 				return unknownFieldError(name)
 			}
 			s.addWhole(name)
 			continue
 		}
-		if showFields[base] != showFieldList {
+		if showFields[base].kind != showFieldList {
 			return unknownFieldError(name)
 		}
 		pos, err := strconv.Atoi(suffix)

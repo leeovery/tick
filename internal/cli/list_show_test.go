@@ -741,3 +741,137 @@ func TestShow(t *testing.T) {
 		}
 	})
 }
+
+func TestShowBareField(t *testing.T) {
+	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	description := "Fix the parser.\n\nSteps:\n  - read the header\n  - validate"
+
+	newProject := func(t *testing.T) string {
+		t.Helper()
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2,
+				Description: description, Created: created, Updated: created,
+				Tags: []string{"api"}, Refs: []string{"https://example.com"},
+				Notes: []task.Note{{Text: "looked at it", Created: created}}},
+		})
+		return dir
+	}
+
+	bare := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+		stdout, stderr, code := runShow(t, dir, args...)
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		return stdout
+	}
+
+	t.Run("it prints a single field's value bare", func(t *testing.T) {
+		got := bare(t, newProject(t), "tick-a1b2c3", "--field", "title")
+		if got != "Add login\n" {
+			t.Errorf("stdout = %q, want %q", got, "Add login\n")
+		}
+	})
+
+	t.Run("it prints a multi-line description raw", func(t *testing.T) {
+		got := bare(t, newProject(t), "tick-a1b2c3", "--field", "description")
+		if got != description+"\n" {
+			t.Errorf("stdout = %q, want %q", got, description+"\n")
+		}
+	})
+
+	t.Run("it prints a dash-leading value unescaped", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-a1b2c3", Title: "- read the header", Status: task.StatusOpen, Priority: 2,
+				Created: created, Updated: created},
+		})
+
+		got := bare(t, dir, "tick-a1b2c3", "--field", "title")
+		if got != "- read the header\n" {
+			t.Errorf("stdout = %q, want %q", got, "- read the header\n")
+		}
+	})
+
+	t.Run("it prints a header-shaped value unescaped", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2,
+				Description: "Steps:\nDescription: nested", Created: created, Updated: created},
+		})
+
+		got := bare(t, dir, "tick-a1b2c3", "--field", "description")
+		if got != "Steps:\nDescription: nested\n" {
+			t.Errorf("stdout = %q, want %q", got, "Steps:\nDescription: nested\n")
+		}
+	})
+
+	for _, format := range []string{"--json", "--pretty", "--toon"} {
+		t.Run("it ignores "+format+" for a bare value", func(t *testing.T) {
+			dir := newProject(t)
+
+			plain := bare(t, dir, "tick-a1b2c3", "--field", "description")
+			formatted := bare(t, dir, "tick-a1b2c3", format, "--field", "description")
+			if formatted != plain {
+				t.Errorf("stdout with %s = %q, want %q", format, formatted, plain)
+			}
+		})
+	}
+
+	t.Run("it prints nothing for an absent value", func(t *testing.T) {
+		got := bare(t, newProject(t), "tick-a1b2c3", "--field", "closed")
+		if got != "" {
+			t.Errorf("stdout = %q, want empty", got)
+		}
+	})
+
+	t.Run("it prints nothing for an absent type", func(t *testing.T) {
+		got := bare(t, newProject(t), "tick-a1b2c3", "--field", "type")
+		if got != "" {
+			t.Errorf("stdout = %q, want empty", got)
+		}
+	})
+
+	t.Run("it prints nothing for an empty description", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2,
+				Created: created, Updated: created},
+		})
+
+		got := bare(t, dir, "tick-a1b2c3", "--field", "description")
+		if got != "" {
+			t.Errorf("stdout = %q, want empty", got)
+		}
+	})
+
+	t.Run("it prints the resolved id for a partial id request", func(t *testing.T) {
+		got := bare(t, newProject(t), "a1b2", "--field", "id")
+		if got != "tick-a1b2c3\n" {
+			t.Errorf("stdout = %q, want %q", got, "tick-a1b2c3\n")
+		}
+	})
+
+	t.Run("it prints the priority as a number", func(t *testing.T) {
+		got := bare(t, newProject(t), "tick-a1b2c3", "--field", "priority")
+		if got != "2\n" {
+			t.Errorf("stdout = %q, want %q", got, "2\n")
+		}
+	})
+
+	t.Run("it treats a repeated name as one field", func(t *testing.T) {
+		got := bare(t, newProject(t), "tick-a1b2c3", "--field", "title,title")
+		if got != "Add login\n" {
+			t.Errorf("stdout = %q, want %q", got, "Add login\n")
+		}
+	})
+
+	for _, field := range []string{"notes", "tags", "refs", "children", "blocked_by", "title,status"} {
+		t.Run("it does not print "+field+" bare", func(t *testing.T) {
+			dir := newProject(t)
+
+			plain := bare(t, dir, "tick-a1b2c3")
+			selected := bare(t, dir, "tick-a1b2c3", "--field", field)
+			if selected != plain {
+				t.Errorf("stdout with --field %s = %q, want the full document %q", field, selected, plain)
+			}
+		})
+	}
+}

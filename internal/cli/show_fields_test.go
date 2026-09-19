@@ -259,8 +259,8 @@ func TestShowFieldFlag(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
 		}
-		if !strings.Contains(stdout, "tick-a1b2c3") {
-			t.Errorf("stdout should name the task, got %q", stdout)
+		if stdout != "Add login\n" {
+			t.Errorf("stdout = %q, want the resolved task's title", stdout)
 		}
 	})
 
@@ -402,6 +402,108 @@ func TestShowFieldFlag(t *testing.T) {
 		}
 		if !strings.Contains(stderr, `unknown flag "--field"`) {
 			t.Errorf("stderr = %q, want the unknown-flag error", stderr)
+		}
+	})
+}
+
+func TestBareFieldValue(t *testing.T) {
+	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	updated := time.Date(2026, 2, 11, 9, 30, 0, 0, time.UTC)
+	closed := time.Date(2026, 2, 12, 8, 0, 0, 0, time.UTC)
+	detail := TaskDetail{
+		Task: task.Task{
+			ID:          "tick-a1b2c3",
+			Title:       "Add login",
+			Status:      task.StatusDone,
+			Priority:    2,
+			Type:        "feature",
+			Description: "Fix the parser.\n\nSteps:\n  - read the header",
+			Parent:      "tick-ffee00",
+			Created:     created,
+			Updated:     updated,
+			Closed:      &closed,
+		},
+		Tags:  []string{"api"},
+		Refs:  []string{"https://example.com"},
+		Notes: []task.Note{{Text: "looked at it", Created: created}},
+	}
+
+	bare := func(t *testing.T, field string) (string, bool) {
+		t.Helper()
+		_, sel := parseSelection(t, "tick-a1b2c3", "--field", field)
+		return bareFieldValue(detail, sel)
+	}
+
+	scalars := []struct {
+		field string
+		want  string
+	}{
+		{"id", "tick-a1b2c3"},
+		{"title", "Add login"},
+		{"status", "done"},
+		{"priority", "2"},
+		{"type", "feature"},
+		{"parent", "tick-ffee00"},
+		{"created", task.FormatTimestamp(created)},
+		{"updated", task.FormatTimestamp(updated)},
+		{"closed", task.FormatTimestamp(closed)},
+		{"description", "Fix the parser.\n\nSteps:\n  - read the header"},
+	}
+	for _, tc := range scalars {
+		t.Run("it returns the bare value for "+tc.field, func(t *testing.T) {
+			got, ok := bare(t, tc.field)
+			if !ok {
+				t.Fatalf("bareFieldValue(%q) reported not bare", tc.field)
+			}
+			if got != tc.want {
+				t.Errorf("bareFieldValue(%q) = %q, want %q", tc.field, got, tc.want)
+			}
+		})
+	}
+
+	t.Run("it returns an empty value for an absent optional", func(t *testing.T) {
+		open := detail
+		open.Task.Closed = nil
+		_, sel := parseSelection(t, "tick-a1b2c3", "--field", "closed")
+		got, ok := bareFieldValue(open, sel)
+		if !ok {
+			t.Fatal("bareFieldValue(closed) reported not bare")
+		}
+		if got != "" {
+			t.Errorf("bareFieldValue(closed) = %q, want empty", got)
+		}
+	})
+
+	t.Run("it treats a repeated name as one field", func(t *testing.T) {
+		got, ok := bare(t, "title,title")
+		if !ok || got != "Add login" {
+			t.Errorf("bareFieldValue = %q, %v; want \"Add login\", true", got, ok)
+		}
+	})
+
+	for _, field := range []string{"notes", "tags", "refs", "children", "blocked_by"} {
+		t.Run("it is not bare for the list section "+field, func(t *testing.T) {
+			if _, ok := bare(t, field); ok {
+				t.Errorf("bareFieldValue(%q) reported bare, want not bare", field)
+			}
+		})
+	}
+
+	t.Run("it is not bare for a position within a list section", func(t *testing.T) {
+		if _, ok := bare(t, "notes.1"); ok {
+			t.Error("bareFieldValue(notes.1) reported bare, want not bare")
+		}
+	})
+
+	t.Run("it is not bare for two names", func(t *testing.T) {
+		if _, ok := bare(t, "title,status"); ok {
+			t.Error("bareFieldValue(title,status) reported bare, want not bare")
+		}
+	})
+
+	t.Run("it is not bare without a selection", func(t *testing.T) {
+		if _, ok := bareFieldValue(detail, nil); ok {
+			t.Error("bareFieldValue(nil) reported bare, want not bare")
 		}
 	})
 }
