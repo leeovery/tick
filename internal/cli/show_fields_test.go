@@ -109,7 +109,7 @@ func TestParseShowArgs(t *testing.T) {
 		if id != "tick-a1b2" {
 			t.Errorf("id = %q, want %q", id, "tick-a1b2")
 		}
-		if !sel.Selected("title") {
+		if !sel.includes("title") {
 			t.Error("title should be selected")
 		}
 	})
@@ -126,7 +126,7 @@ func TestParseShowArgs(t *testing.T) {
 				t.Errorf("parseShowArgs for %q returned error: %v", name, err)
 				continue
 			}
-			if !sel.Selected(name) {
+			if !sel.includes(name) {
 				t.Errorf("%q should be selected", name)
 			}
 		}
@@ -134,7 +134,7 @@ func TestParseShowArgs(t *testing.T) {
 
 	t.Run("it narrows a list section to a position", func(t *testing.T) {
 		_, sel := parseSelection(t, "tick-a1b2", "--field", "notes.2")
-		if !sel.Selected("notes") {
+		if !sel.includes("notes") {
 			t.Fatal("notes should be selected")
 		}
 		if got := sel.Positions("notes"); !slices.Equal(got, []int{2}) {
@@ -164,7 +164,7 @@ func TestParseShowArgs(t *testing.T) {
 		if got := sel.Positions("title"); got != nil {
 			t.Errorf("Positions(title) = %v, want nil", got)
 		}
-		if sel.Selected("status") {
+		if sel.includes("status") {
 			t.Error("status should not be selected")
 		}
 	})
@@ -607,6 +607,21 @@ func TestSelectedItems(t *testing.T) {
 	})
 }
 
+func TestShowListSectionsMatchRegistry(t *testing.T) {
+	var registered []string
+	for name, field := range showFields {
+		if field.isList() {
+			registered = append(registered, name)
+		}
+	}
+	slices.Sort(registered)
+
+	ordered := slices.Sorted(slices.Values(showListSections))
+	if !slices.Equal(registered, ordered) {
+		t.Errorf("list sections in showFields = %v, in showListSections = %v; every list entry must appear in both", registered, ordered)
+	}
+}
+
 func TestValidatePositions(t *testing.T) {
 	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
 	detail := TaskDetail{
@@ -701,4 +716,47 @@ func TestValidatePositions(t *testing.T) {
 			t.Errorf("ValidatePositions = %v, want nil", err)
 		}
 	})
+}
+
+func TestTaskDetailWithoutFieldSelection(t *testing.T) {
+	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	detail := TaskDetail{
+		Task: task.Task{
+			ID:          "tick-a1b2c3",
+			Title:       "Add login",
+			Status:      task.StatusOpen,
+			Type:        "feature",
+			Description: "a login form",
+			Created:     created,
+			Updated:     created,
+		},
+		Tags:      []string{"api"},
+		Refs:      []string{"https://example.com"},
+		Notes:     []task.Note{{Text: "looked at it", Created: created}},
+		Children:  []RelatedTask{{ID: "tick-c1c1c1", Title: "Child one", Status: "open"}},
+		BlockedBy: []RelatedTask{{ID: "tick-b1b1b1", Title: "Blocker", Status: "open"}},
+	}
+	want := []string{
+		"tick-a1b2c3", "Add login", "a login form", "api",
+		"https://example.com", "looked at it", "tick-c1c1c1", "tick-b1b1b1",
+	}
+
+	formatters := map[string]Formatter{
+		"toon":   &ToonFormatter{},
+		"pretty": &PrettyFormatter{},
+		"json":   &JSONFormatter{},
+	}
+	for name, formatter := range formatters {
+		t.Run("it renders a document with no field selection in "+name, func(t *testing.T) {
+			if detail.Fields != nil {
+				t.Fatal("detail.Fields should be nil")
+			}
+			got := formatter.FormatTaskDetail(detail)
+			for _, substring := range want {
+				if !strings.Contains(got, substring) {
+					t.Errorf("output is missing %q:\n%s", substring, got)
+				}
+			}
+		})
+	}
 }

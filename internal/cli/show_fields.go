@@ -9,59 +9,46 @@ import (
 	"github.com/leeovery/tick/internal/task"
 )
 
-type showFieldKind int
-
-const (
-	showFieldUnknown showFieldKind = iota
-	showFieldScalar
-	showFieldDescription
-	showFieldList
-)
-
 // showField describes one recognised field name. bare renders the field's
-// single value and is nil for the list sections.
-// items renders a list section's values and is nil for a section whose items
-// are rows rather than values.
+// single value and is nil for the list sections. A list section carries the
+// noun an out-of-range error spells it with and the length that error reports;
+// items renders its values and is nil for a section whose items are rows
+// rather than values.
 type showField struct {
-	kind  showFieldKind
-	bare  func(TaskDetail) string
-	items func(TaskDetail) []string
+	bare   func(TaskDetail) string
+	items  func(TaskDetail) []string
+	noun   string
+	length func(TaskDetail) int
+}
+
+func (f showField) isList() bool {
+	return f.length != nil
 }
 
 // showFields is the registry of field names `tick show --field` recognises,
 // spelled as the detail document spells them. Only list sections accept a
 // positional suffix.
 var showFields = map[string]showField{
-	"id":          {kind: showFieldScalar, bare: func(d TaskDetail) string { return d.Task.ID }},
-	"title":       {kind: showFieldScalar, bare: func(d TaskDetail) string { return d.Task.Title }},
-	"status":      {kind: showFieldScalar, bare: func(d TaskDetail) string { return string(d.Task.Status) }},
-	"priority":    {kind: showFieldScalar, bare: func(d TaskDetail) string { return strconv.Itoa(d.Task.Priority) }},
-	"type":        {kind: showFieldScalar, bare: func(d TaskDetail) string { return d.Task.Type }},
-	"parent":      {kind: showFieldScalar, bare: func(d TaskDetail) string { return d.Task.Parent }},
-	"created":     {kind: showFieldScalar, bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Created) }},
-	"updated":     {kind: showFieldScalar, bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Updated) }},
-	"closed":      {kind: showFieldScalar, bare: bareClosed},
-	"description": {kind: showFieldDescription, bare: func(d TaskDetail) string { return d.Task.Description }},
-	"notes":       {kind: showFieldList, items: noteTexts},
-	"tags":        {kind: showFieldList, items: func(d TaskDetail) []string { return d.Tags }},
-	"refs":        {kind: showFieldList, items: func(d TaskDetail) []string { return d.Refs }},
-	"children":    {kind: showFieldList},
-	"blocked_by":  {kind: showFieldList},
+	"id":          {bare: func(d TaskDetail) string { return d.Task.ID }},
+	"title":       {bare: func(d TaskDetail) string { return d.Task.Title }},
+	"status":      {bare: func(d TaskDetail) string { return string(d.Task.Status) }},
+	"priority":    {bare: func(d TaskDetail) string { return strconv.Itoa(d.Task.Priority) }},
+	"type":        {bare: func(d TaskDetail) string { return d.Task.Type }},
+	"parent":      {bare: func(d TaskDetail) string { return d.Task.Parent }},
+	"created":     {bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Created) }},
+	"updated":     {bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Updated) }},
+	"closed":      {bare: bareClosed},
+	"description": {bare: func(d TaskDetail) string { return d.Task.Description }},
+	"blocked_by":  {noun: "blocker(s)", length: func(d TaskDetail) int { return len(d.BlockedBy) }},
+	"children":    {noun: "child(ren)", length: func(d TaskDetail) int { return len(d.Children) }},
+	"tags":        {noun: "tag(s)", length: func(d TaskDetail) int { return len(d.Tags) }, items: func(d TaskDetail) []string { return d.Tags }},
+	"refs":        {noun: "ref(s)", length: func(d TaskDetail) int { return len(d.Refs) }, items: func(d TaskDetail) []string { return d.Refs }},
+	"notes":       {noun: "note(s)", length: func(d TaskDetail) int { return len(d.Notes) }, items: noteTexts},
 }
 
-// showSections holds each list section's length and the noun an out-of-range
-// error spells it with, in the order the toon document renders them.
-var showSections = []struct {
-	name   string
-	noun   string
-	length func(TaskDetail) int
-}{
-	{"blocked_by", "blocker(s)", func(d TaskDetail) int { return len(d.BlockedBy) }},
-	{"children", "child(ren)", func(d TaskDetail) int { return len(d.Children) }},
-	{"tags", "tag(s)", func(d TaskDetail) int { return len(d.Tags) }},
-	{"refs", "ref(s)", func(d TaskDetail) int { return len(d.Refs) }},
-	{"notes", "note(s)", func(d TaskDetail) int { return len(d.Notes) }},
-}
+// showListSections names the list sections in the order the toon document
+// renders them, the order an out-of-range error reports the first failure in.
+var showListSections = []string{"blocked_by", "children", "tags", "refs", "notes"}
 
 // selectedItems narrows a section's items to the requested 1-based positions,
 // returning the surviving items alongside the positions they hold in the whole
@@ -156,15 +143,10 @@ func newFieldSelection() *FieldSelection {
 	}
 }
 
-// Selected reports whether the name was requested.
-func (s *FieldSelection) Selected(name string) bool {
-	return s.whole[name] || len(s.positions[name]) > 0
-}
-
 // includes reports whether name belongs in the document. A nil selection is the
 // whole document and includes every name.
 func (s *FieldSelection) includes(name string) bool {
-	return s == nil || s.Selected(name)
+	return s == nil || s.whole[name] || len(s.positions[name]) > 0
 }
 
 // Positions returns the 1-based positions requested for name, or nil when the
@@ -217,13 +199,13 @@ func (s *FieldSelection) addValue(value string) error {
 		name := strings.TrimSpace(part)
 		base, suffix, hasSuffix := strings.Cut(name, ".")
 		if !hasSuffix {
-			if showFields[name].kind == showFieldUnknown {
+			if _, ok := showFields[name]; !ok {
 				return unknownFieldError(name)
 			}
 			s.addWhole(name)
 			continue
 		}
-		if showFields[base].kind != showFieldList {
+		if field, ok := showFields[base]; !ok || !field.isList() {
 			return unknownFieldError(name)
 		}
 		pos, err := strconv.Atoi(suffix)
@@ -278,11 +260,12 @@ func (s *FieldSelection) ValidatePositions(detail TaskDetail) error {
 	if s == nil {
 		return nil
 	}
-	for _, section := range showSections {
-		length := section.length(detail)
-		for _, pos := range slices.Sorted(slices.Values(s.Positions(section.name))) {
+	for _, name := range showListSections {
+		field := showFields[name]
+		length := field.length(detail)
+		for _, pos := range slices.Sorted(slices.Values(s.Positions(name))) {
 			if pos < 1 || pos > length {
-				return fmt.Errorf("%s.%d out of range: task has %d %s", section.name, pos, length, section.noun)
+				return fmt.Errorf("%s.%d out of range: task has %d %s", name, pos, length, field.noun)
 			}
 		}
 	}
