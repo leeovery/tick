@@ -95,6 +95,14 @@ func TestFlagValidationAllCommands(t *testing.T) {
 			flagCount: 2,
 		},
 		{
+			command: "show",
+			validArgs: []string{
+				"--field", "title",
+				"--fields", "notes.2",
+			},
+			flagCount: 2,
+		},
+		{
 			command: "migrate",
 			validArgs: []string{
 				"--from", "beads",
@@ -134,7 +142,7 @@ func TestFlagValidationAllCommands(t *testing.T) {
 
 	// Commands with no flags — every unknown flag must be rejected.
 	noFlagCommands := []string{
-		"init", "show", "start", "done", "cancel", "reopen",
+		"init", "start", "done", "cancel", "reopen",
 		"dep add", "dep remove", "dep tree", "note add", "note remove",
 		"stats", "doctor", "rebuild",
 	}

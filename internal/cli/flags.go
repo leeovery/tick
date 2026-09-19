@@ -69,7 +69,10 @@ var commandFlags = CommandFlags{
 		"--tag":      {TakesValue: true},
 		"--count":    {TakesValue: true},
 	},
-	"show":        {},
+	"show": {
+		"--field":  {TakesValue: true},
+		"--fields": {TakesValue: true},
+	},
 	"start":       {},
 	"done":        {},
 	"cancel":      {},

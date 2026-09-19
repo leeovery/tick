@@ -69,8 +69,11 @@ var commands = []commandInfo{
 	{
 		Name:        "show",
 		Summary:     "Show full task detail",
-		Usage:       "tick show <task-id>",
+		Usage:       "tick show <task-id> [flags]",
 		Description: "Displays complete details for a single task including description,\ndependencies, subtasks, and timestamps.",
+		Flags: []flagInfo{
+			{"--field, --fields", "<name,...>", "Select fields by name; a section may be narrowed with .N (e.g. notes.2)", false},
+		},
 	},
 	{
 		Name:    "update",

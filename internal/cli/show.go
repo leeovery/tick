@@ -34,8 +34,15 @@ type showData struct {
 // RunShow executes the show command: queries a single task by ID from SQLite and
 // outputs its full details via the Formatter, including blocked_by, children, and description sections.
 func RunShow(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	if len(args) == 0 {
+	rawID, selection, err := parseShowArgs(args)
+	if err != nil {
+		return err
+	}
+	if rawID == "" {
 		return fmt.Errorf("task ID is required. Usage: tick show <id>")
+	}
+	if fc.Quiet && selection != nil {
+		return fmt.Errorf("--quiet cannot be combined with --field")
 	}
 
 	store, err := openStore(dir, fc)
@@ -44,7 +51,7 @@ func RunShow(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout 
 	}
 	defer store.Close()
 
-	id, err := store.ResolveID(args[0])
+	id, err := store.ResolveID(rawID)
 	if err != nil {
 		return err
 	}

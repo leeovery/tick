@@ -1,0 +1,407 @@
+package cli
+
+import (
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/leeovery/tick/internal/task"
+)
+
+// parseSelection parses args and fails the test if parsing returns an error.
+func parseSelection(t *testing.T, args ...string) (string, *FieldSelection) {
+	t.Helper()
+	id, sel, err := parseShowArgs(args)
+	if err != nil {
+		t.Fatalf("parseShowArgs(%v) returned error: %v", args, err)
+	}
+	return id, sel
+}
+
+// selectedNames returns the selected names in first-seen order.
+func selectedNames(sel *FieldSelection) []string {
+	if sel == nil {
+		return nil
+	}
+	return sel.names
+}
+
+func TestParseShowArgs(t *testing.T) {
+	t.Run("it returns a nil selection when no flag is present", func(t *testing.T) {
+		id, sel := parseSelection(t, "tick-a1b2")
+		if id != "tick-a1b2" {
+			t.Errorf("id = %q, want %q", id, "tick-a1b2")
+		}
+		if sel != nil {
+			t.Errorf("selection = %v, want nil", sel)
+		}
+	})
+
+	t.Run("it accepts a comma-separated list of field names", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "title,status")
+		want := []string{"title", "status"}
+		if got := selectedNames(sel); !slices.Equal(got, want) {
+			t.Errorf("names = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("it accepts the plural spelling", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--fields", "title")
+		if got := selectedNames(sel); !slices.Equal(got, []string{"title"}) {
+			t.Errorf("names = %v, want [title]", got)
+		}
+	})
+
+	t.Run("it composes repeated flags", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "title", "--fields", "status")
+		want := []string{"title", "status"}
+		if got := selectedNames(sel); !slices.Equal(got, want) {
+			t.Errorf("names = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("it trims whitespace around names", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "title, status")
+		want := []string{"title", "status"}
+		if got := selectedNames(sel); !slices.Equal(got, want) {
+			t.Errorf("names = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("it collapses a repeated name", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "title,title")
+		if sel.Len() != 1 {
+			t.Errorf("Len() = %d, want 1", sel.Len())
+		}
+		only, ok := sel.Only()
+		if !ok || only != "title" {
+			t.Errorf("Only() = %q, %v; want \"title\", true", only, ok)
+		}
+	})
+
+	t.Run("it collapses a repeated position", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "notes.2,notes.3,notes.2")
+		if got := sel.Positions("notes"); !slices.Equal(got, []int{2, 3}) {
+			t.Errorf("Positions(notes) = %v, want [2 3]", got)
+		}
+	})
+
+	t.Run("it collapses a repeated position across flags", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "notes.3", "--field", "notes.3")
+		if got := sel.Positions("notes"); !slices.Equal(got, []int{3}) {
+			t.Errorf("Positions(notes) = %v, want [3]", got)
+		}
+	})
+
+	t.Run("it reports several names as not a single selection", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "title,status")
+		if sel.Len() != 2 {
+			t.Errorf("Len() = %d, want 2", sel.Len())
+		}
+		if _, ok := sel.Only(); ok {
+			t.Error("Only() reported a single name for a two-name selection")
+		}
+	})
+
+	t.Run("it reads the task ID past the flag value", func(t *testing.T) {
+		id, sel := parseSelection(t, "--field", "title", "tick-a1b2")
+		if id != "tick-a1b2" {
+			t.Errorf("id = %q, want %q", id, "tick-a1b2")
+		}
+		if !sel.Selected("title") {
+			t.Error("title should be selected")
+		}
+	})
+
+	t.Run("it recognises every registered name", func(t *testing.T) {
+		names := []string{
+			"id", "title", "status", "priority", "type", "parent",
+			"created", "updated", "closed", "description",
+			"notes", "tags", "refs", "children", "blocked_by",
+		}
+		for _, name := range names {
+			_, sel, err := parseShowArgs([]string{"tick-a1b2", "--field", name})
+			if err != nil {
+				t.Errorf("parseShowArgs for %q returned error: %v", name, err)
+				continue
+			}
+			if !sel.Selected(name) {
+				t.Errorf("%q should be selected", name)
+			}
+		}
+	})
+
+	t.Run("it narrows a list section to a position", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "notes.2")
+		if !sel.Selected("notes") {
+			t.Fatal("notes should be selected")
+		}
+		if got := sel.Positions("notes"); !slices.Equal(got, []int{2}) {
+			t.Errorf("Positions(notes) = %v, want [2]", got)
+		}
+	})
+
+	t.Run("it takes a section whole when named both whole and by position", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "notes,notes.2")
+		if got := sel.Positions("notes"); got != nil {
+			t.Errorf("Positions(notes) = %v, want nil", got)
+		}
+		if sel.Len() != 1 {
+			t.Errorf("Len() = %d, want 1", sel.Len())
+		}
+	})
+
+	t.Run("it discards positions recorded before the section is named whole", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "notes.2,notes")
+		if got := sel.Positions("notes"); got != nil {
+			t.Errorf("Positions(notes) = %v, want nil", got)
+		}
+	})
+
+	t.Run("it reports nil positions for a name taken whole", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "title")
+		if got := sel.Positions("title"); got != nil {
+			t.Errorf("Positions(title) = %v, want nil", got)
+		}
+		if sel.Selected("status") {
+			t.Error("status should not be selected")
+		}
+	})
+
+	t.Run("it accepts out-of-range positions", func(t *testing.T) {
+		_, sel := parseSelection(t, "tick-a1b2", "--field", "notes.0,notes.-1")
+		if got := sel.Positions("notes"); !slices.Equal(got, []int{0, -1}) {
+			t.Errorf("Positions(notes) = %v, want [0 -1]", got)
+		}
+	})
+
+	t.Run("it rejects unrecognised names", func(t *testing.T) {
+		cases := []struct {
+			args []string
+			name string
+		}{
+			{[]string{"tick-a1b2", "--field", "titel"}, "titel"},
+			{[]string{"tick-a1b2", "--field", ""}, ""},
+			{[]string{"tick-a1b2", "--field", "title,,status"}, ""},
+			{[]string{"tick-a1b2", "--field", "title,"}, ""},
+			{[]string{"tick-a1b2", "--field", "notes.x"}, "notes.x"},
+			{[]string{"tick-a1b2", "--field", "notes.1.2"}, "notes.1.2"},
+			{[]string{"tick-a1b2", "--field", "title.1"}, "title.1"},
+			{[]string{"tick-a1b2", "--field", "titel.1"}, "titel.1"},
+		}
+		for _, tc := range cases {
+			_, _, err := parseShowArgs(tc.args)
+			if err == nil {
+				t.Errorf("parseShowArgs(%v) returned nil error", tc.args)
+				continue
+			}
+			want := `unknown field "` + tc.name + `" for "show". Run 'tick help show' for usage.`
+			if err.Error() != want {
+				t.Errorf("error = %q, want %q", err.Error(), want)
+			}
+		}
+	})
+
+	t.Run("it rejects a flag with no value", func(t *testing.T) {
+		for _, flag := range []string{"--field", "--fields"} {
+			_, _, err := parseShowArgs([]string{"tick-a1b2", flag})
+			if err == nil {
+				t.Fatalf("parseShowArgs with bare %s returned nil error", flag)
+			}
+			if err.Error() != "--field requires a value" {
+				t.Errorf("error = %q, want %q", err.Error(), "--field requires a value")
+			}
+		}
+	})
+
+	t.Run("it returns an empty ID when none is given", func(t *testing.T) {
+		id, sel := parseSelection(t, "--field", "title")
+		if id != "" {
+			t.Errorf("id = %q, want empty", id)
+		}
+		if sel == nil {
+			t.Fatal("selection should not be nil")
+		}
+	})
+}
+
+func TestShowFieldFlag(t *testing.T) {
+	now := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	newProject := func(t *testing.T) string {
+		t.Helper()
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		})
+		return dir
+	}
+
+	t.Run("it renders full output for a recognised selection", func(t *testing.T) {
+		dir := newProject(t)
+
+		plain, _, code := runShow(t, dir, "tick-a1b2c3")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0", code)
+		}
+		selected, _, code := runShow(t, dir, "tick-a1b2c3", "--field", "title,status")
+		if code != 0 {
+			t.Fatalf("exit code with --field = %d, want 0", code)
+		}
+		if selected != plain {
+			t.Errorf("output with --field = %q, want %q", selected, plain)
+		}
+	})
+
+	t.Run("it resolves the task with the flag before the ID", func(t *testing.T) {
+		dir := newProject(t)
+
+		stdout, stderr, code := runShow(t, dir, "--field", "title", "tick-a1b2c3")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if !strings.Contains(stdout, "tick-a1b2c3") {
+			t.Errorf("stdout should name the task, got %q", stdout)
+		}
+	})
+
+	t.Run("it recognises a name the task does not carry", func(t *testing.T) {
+		dir := newProject(t)
+
+		_, stderr, code := runShow(t, dir, "tick-a1b2c3", "--field", "closed")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+	})
+
+	t.Run("it rejects an unrecognised field name", func(t *testing.T) {
+		dir := newProject(t)
+
+		stdout, stderr, code := runShow(t, dir, "tick-a1b2c3", "--field", "titel")
+		if code == 0 {
+			t.Fatal("exit code = 0, want non-zero")
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+		if !strings.Contains(stderr, `unknown field "titel"`) {
+			t.Errorf("stderr should name titel, got %q", stderr)
+		}
+	})
+
+	t.Run("it rejects a blank name from an empty value", func(t *testing.T) {
+		dir := newProject(t)
+
+		stdout, stderr, code := runShow(t, dir, "tick-a1b2c3", "--field", "")
+		if code == 0 {
+			t.Fatal("exit code = 0, want non-zero")
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+		if !strings.Contains(stderr, `unknown field ""`) {
+			t.Errorf("stderr should carry the unrecognised-name error, got %q", stderr)
+		}
+	})
+
+	t.Run("it rejects a blank name from a doubled comma", func(t *testing.T) {
+		dir := newProject(t)
+
+		stdout, _, code := runShow(t, dir, "tick-a1b2c3", "--field", "title,,status")
+		if code == 0 {
+			t.Fatal("exit code = 0, want non-zero")
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+	})
+
+	t.Run("it rejects a trailing comma", func(t *testing.T) {
+		dir := newProject(t)
+
+		stdout, _, code := runShow(t, dir, "tick-a1b2c3", "--field", "title,")
+		if code == 0 {
+			t.Fatal("exit code = 0, want non-zero")
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+	})
+
+	t.Run("it rejects a flag with no value", func(t *testing.T) {
+		dir := newProject(t)
+
+		stdout, stderr, code := runShow(t, dir, "tick-a1b2c3", "--field")
+		if code == 0 {
+			t.Fatal("exit code = 0, want non-zero")
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+		if !strings.Contains(stderr, "--field requires a value") {
+			t.Errorf("stderr = %q, want the requires-a-value error", stderr)
+		}
+	})
+
+	t.Run("it reports a missing value when a global flag follows the flag", func(t *testing.T) {
+		dir := newProject(t)
+
+		_, stderr, code := runShow(t, dir, "tick-a1b2c3", "--field", "--json")
+		if code == 0 {
+			t.Fatal("exit code = 0, want non-zero")
+		}
+		if !strings.Contains(stderr, "--field requires a value") {
+			t.Errorf("stderr = %q, want the requires-a-value error", stderr)
+		}
+	})
+
+	t.Run("it refuses quiet alongside a selection", func(t *testing.T) {
+		dir := newProject(t)
+
+		stdout, stderr, code := runShow(t, dir, "tick-a1b2c3", "--quiet", "--field", "title")
+		if code == 0 {
+			t.Fatal("exit code = 0, want non-zero")
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+		if !strings.Contains(stderr, "--quiet cannot be combined with --field") {
+			t.Errorf("stderr = %q, want the quiet refusal", stderr)
+		}
+	})
+
+	t.Run("it still prints the ID under quiet with no selection", func(t *testing.T) {
+		dir := newProject(t)
+
+		stdout, stderr, code := runShow(t, dir, "tick-a1b2c3", "--quiet")
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if stdout != "tick-a1b2c3\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "tick-a1b2c3\n")
+		}
+	})
+
+	t.Run("it requires a task ID", func(t *testing.T) {
+		dir := newProject(t)
+
+		_, stderr, code := runShow(t, dir, "--field", "title")
+		if code == 0 {
+			t.Fatal("exit code = 0, want non-zero")
+		}
+		if !strings.Contains(stderr, "task ID is required") {
+			t.Errorf("stderr = %q, want the missing-ID error", stderr)
+		}
+	})
+
+	t.Run("it keeps the flag off other commands", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		_, stderr, code := runCreate(t, dir, "New task", "--field", "title")
+		if code == 0 {
+			t.Fatal("exit code = 0, want non-zero")
+		}
+		if !strings.Contains(stderr, `unknown flag "--field"`) {
+			t.Errorf("stderr = %q, want the unknown-flag error", stderr)
+		}
+	})
+}
