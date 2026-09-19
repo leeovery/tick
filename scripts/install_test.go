@@ -80,7 +80,7 @@ func TestInstallScript(t *testing.T) {
 
 	t.Run("script has correct shebang", func(t *testing.T) {
 		content := loadScript(t)
-		firstLine := strings.SplitN(content, "\n", 2)[0]
+		firstLine, _, _ := strings.Cut(content, "\n")
 		if firstLine != "#!/usr/bin/env bash" {
 			t.Errorf("expected shebang '#!/usr/bin/env bash', got %q", firstLine)
 		}
