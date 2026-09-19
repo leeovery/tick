@@ -96,7 +96,7 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
 		Type:        t.Type,
 		Tags:        toJSONStrings(detail.Tags),
 		Refs:        toJSONStrings(detail.Refs),
-		Notes:       toJSONNotes(detail.Notes),
+		Notes:       toJSONNotes(selectedItems(detail.Notes, nil)),
 		Description: t.Description,
 		Parent:      t.Parent,
 		Created:     task.FormatTimestamp(t.Created),
@@ -130,14 +130,19 @@ func formatFilteredTaskDetailJSON(detail TaskDetail) string {
 	add("status", string(t.Status))
 	add("priority", t.Priority)
 	add("type", t.Type)
-	add("tags", toJSONStrings(detail.Tags))
-	add("refs", toJSONStrings(detail.Refs))
-	add("notes", toJSONNotes(detail.Notes))
+	tags, _ := selectedItems(detail.Tags, detail.Fields.Positions("tags"))
+	refs, _ := selectedItems(detail.Refs, detail.Fields.Positions("refs"))
+	blockedBy, _ := selectedItems(detail.BlockedBy, detail.Fields.Positions("blocked_by"))
+	children, _ := selectedItems(detail.Children, detail.Fields.Positions("children"))
+
+	add("tags", toJSONStrings(tags))
+	add("refs", toJSONStrings(refs))
+	add("notes", toJSONNotes(selectedItems(detail.Notes, detail.Fields.Positions("notes"))))
 	add("description", t.Description)
 	add("created", task.FormatTimestamp(t.Created))
 	add("updated", task.FormatTimestamp(t.Updated))
-	add("blocked_by", toJSONRelated(detail.BlockedBy))
-	add("children", toJSONRelated(detail.Children))
+	add("blocked_by", toJSONRelated(blockedBy))
+	add("children", toJSONRelated(children))
 
 	if t.Parent != "" {
 		add("parent", t.Parent)
@@ -167,13 +172,13 @@ func toJSONStrings(values []string) []string {
 	return append(result, values...)
 }
 
-// toJSONNotes converts notes to JSON-serializable structs, each carrying its
-// 1-based position. Always returns a non-nil empty slice.
-func toJSONNotes(notes []task.Note) []jsonNote {
+// toJSONNotes converts notes to JSON-serializable structs, each carrying the
+// position it holds in the whole section. Always returns a non-nil empty slice.
+func toJSONNotes(notes []task.Note, positions []int) []jsonNote {
 	result := make([]jsonNote, 0, len(notes))
 	for i, n := range notes {
 		result = append(result, jsonNote{
-			Index:   i + 1,
+			Index:   positions[i],
 			Text:    n.Text,
 			Created: task.FormatTimestamp(n.Created),
 		})

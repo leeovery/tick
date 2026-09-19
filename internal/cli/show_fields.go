@@ -19,10 +19,13 @@ const (
 )
 
 // showField describes one recognised field name. bare renders the field's
-// single value and is nil for the list sections, which have no bare form.
+// single value and is nil for the list sections.
+// items renders a list section's values and is nil for a section whose items
+// are rows rather than values.
 type showField struct {
-	kind showFieldKind
-	bare func(TaskDetail) string
+	kind  showFieldKind
+	bare  func(TaskDetail) string
+	items func(TaskDetail) []string
 }
 
 // showFields is the registry of field names `tick show --field` recognises,
@@ -39,11 +42,47 @@ var showFields = map[string]showField{
 	"updated":     {kind: showFieldScalar, bare: func(d TaskDetail) string { return task.FormatTimestamp(d.Task.Updated) }},
 	"closed":      {kind: showFieldScalar, bare: bareClosed},
 	"description": {kind: showFieldDescription, bare: func(d TaskDetail) string { return d.Task.Description }},
-	"notes":       {kind: showFieldList},
-	"tags":        {kind: showFieldList},
-	"refs":        {kind: showFieldList},
+	"notes":       {kind: showFieldList, items: noteTexts},
+	"tags":        {kind: showFieldList, items: func(d TaskDetail) []string { return d.Tags }},
+	"refs":        {kind: showFieldList, items: func(d TaskDetail) []string { return d.Refs }},
 	"children":    {kind: showFieldList},
 	"blocked_by":  {kind: showFieldList},
+}
+
+// selectedItems narrows a section's items to the requested 1-based positions,
+// returning the surviving items alongside the positions they hold in the whole
+// section. Nil positions keep every item. Positions are ordered ascending and
+// deduplicated, and one outside the section's range is skipped.
+func selectedItems[T any](items []T, positions []int) ([]T, []int) {
+	if positions == nil {
+		all := make([]int, len(items))
+		for i := range items {
+			all[i] = i + 1
+		}
+		return items, all
+	}
+
+	ordered := slices.Sorted(slices.Values(positions))
+	ordered = slices.Compact(ordered)
+
+	kept := make([]T, 0, len(ordered))
+	keptPositions := make([]int, 0, len(ordered))
+	for _, pos := range ordered {
+		if pos < 1 || pos > len(items) {
+			continue
+		}
+		kept = append(kept, items[pos-1])
+		keptPositions = append(keptPositions, pos)
+	}
+	return kept, keptPositions
+}
+
+func noteTexts(d TaskDetail) []string {
+	texts := make([]string, len(d.Notes))
+	for i, n := range d.Notes {
+		texts[i] = n.Text
+	}
+	return texts
 }
 
 func bareClosed(d TaskDetail) string {
@@ -64,11 +103,28 @@ func bareFieldValue(detail TaskDetail, sel *FieldSelection) (string, bool) {
 	if !ok {
 		return "", false
 	}
+	if value, ok := barePositionValue(detail, name, sel.Positions(name)); ok {
+		return value, true
+	}
 	field := showFields[name]
 	if field.bare == nil {
 		return "", false
 	}
 	return field.bare(detail), true
+}
+
+// barePositionValue returns the value a single position names within a list
+// section that holds values, with ok false for every other selection.
+func barePositionValue(detail TaskDetail, name string, positions []int) (string, bool) {
+	items := showFields[name].items
+	if items == nil || len(positions) != 1 {
+		return "", false
+	}
+	values, _ := selectedItems(items(detail), positions)
+	if len(values) != 1 {
+		return "", false
+	}
+	return values[0], true
 }
 
 // FieldSelection is a validated set of field names requested via --field,
@@ -98,9 +154,10 @@ func (s *FieldSelection) includes(name string) bool {
 }
 
 // Positions returns the 1-based positions requested for name, or nil when the
-// name was taken whole or not requested at all.
+// name was taken whole or not requested at all. A nil selection requests no
+// position, the whole section being the whole document's.
 func (s *FieldSelection) Positions(name string) []int {
-	if s.whole[name] {
+	if s == nil || s.whole[name] {
 		return nil
 	}
 	return s.positions[name]

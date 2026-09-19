@@ -73,23 +73,27 @@ func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
 	sections = append(sections, buildTaskSection(detail.Task, sel))
 
 	if sel.includes("blocked_by") {
-		sections = append(sections, buildRelatedSection("blocked_by", detail.BlockedBy))
+		blockedBy, _ := selectedItems(detail.BlockedBy, sel.Positions("blocked_by"))
+		sections = append(sections, buildRelatedSection("blocked_by", blockedBy))
 	}
 
 	if sel.includes("children") {
-		sections = append(sections, buildRelatedSection("children", detail.Children))
+		children, _ := selectedItems(detail.Children, sel.Positions("children"))
+		sections = append(sections, buildRelatedSection("children", children))
 	}
 
 	if len(detail.Tags) > 0 && sel.includes("tags") {
-		sections = append(sections, encodeToonSection("tags", detail.Tags))
+		tags, _ := selectedItems(detail.Tags, sel.Positions("tags"))
+		sections = append(sections, encodeToonSection("tags", tags))
 	}
 
 	if len(detail.Refs) > 0 && sel.includes("refs") {
-		sections = append(sections, encodeToonSection("refs", detail.Refs))
+		refs, _ := selectedItems(detail.Refs, sel.Positions("refs"))
+		sections = append(sections, encodeToonSection("refs", refs))
 	}
 
 	if sel.includes("notes") {
-		sections = append(sections, buildNotesSection(detail.Notes))
+		sections = append(sections, buildNotesSection(selectedItems(detail.Notes, sel.Positions("notes"))))
 	}
 
 	if detail.Changes != nil && sel.includes("changed") {
@@ -310,15 +314,16 @@ func buildRelatedSection(name string, related []RelatedTask) string {
 	return encodeToonSection(name, rows)
 }
 
-// buildNotesSection builds the notes section as a TOON tabular section.
-func buildNotesSection(notes []task.Note) string {
+// buildNotesSection builds the notes section as a TOON tabular section, each
+// row carrying the position the note holds in the whole section.
+func buildNotesSection(notes []task.Note, positions []int) string {
 	if len(notes) == 0 {
 		return "notes[0]{index,text,created}:"
 	}
 	rows := make([]toonNoteRow, len(notes))
 	for i, n := range notes {
 		rows[i] = toonNoteRow{
-			Index:   i + 1,
+			Index:   positions[i],
 			Text:    n.Text,
 			Created: task.FormatTimestamp(n.Created),
 		}

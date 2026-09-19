@@ -420,9 +420,9 @@ func TestBareFieldValue(t *testing.T) {
 			Updated:     updated,
 			Closed:      &closed,
 		},
-		Tags:  []string{"api"},
-		Refs:  []string{"https://example.com"},
-		Notes: []task.Note{{Text: "looked at it", Created: created}},
+		Tags:  []string{"api", "ui"},
+		Refs:  []string{"https://example.com", "https://example.org"},
+		Notes: []task.Note{{Text: "looked at it", Created: created}, {Text: "and again", Created: created}},
 	}
 
 	bare := func(t *testing.T, field string) (string, bool) {
@@ -486,9 +486,50 @@ func TestBareFieldValue(t *testing.T) {
 		})
 	}
 
-	t.Run("it is not bare for a position within a list section", func(t *testing.T) {
-		if _, ok := bare(t, "notes.1"); ok {
-			t.Error("bareFieldValue(notes.1) reported bare, want not bare")
+	positions := []struct {
+		field string
+		want  string
+	}{
+		{"notes.2", "and again"},
+		{"tags.2", "ui"},
+		{"refs.1", "https://example.com"},
+	}
+	for _, tc := range positions {
+		t.Run("it returns the bare value for "+tc.field, func(t *testing.T) {
+			got, ok := bare(t, tc.field)
+			if !ok {
+				t.Fatalf("bareFieldValue(%q) reported not bare", tc.field)
+			}
+			if got != tc.want {
+				t.Errorf("bareFieldValue(%q) = %q, want %q", tc.field, got, tc.want)
+			}
+		})
+	}
+
+	t.Run("it is bare for a repeated position", func(t *testing.T) {
+		got, ok := bare(t, "notes.2,notes.2")
+		if !ok || got != "and again" {
+			t.Errorf("bareFieldValue = %q, %v; want \"and again\", true", got, ok)
+		}
+	})
+
+	t.Run("it is not bare for two positions in one section", func(t *testing.T) {
+		if _, ok := bare(t, "notes.1,notes.2"); ok {
+			t.Error("bareFieldValue(notes.1,notes.2) reported bare, want not bare")
+		}
+	})
+
+	for _, field := range []string{"children.1", "blocked_by.1"} {
+		t.Run("it is not bare for the row position "+field, func(t *testing.T) {
+			if _, ok := bare(t, field); ok {
+				t.Errorf("bareFieldValue(%q) reported bare, want not bare", field)
+			}
+		})
+	}
+
+	t.Run("it is not bare for a position outside the section", func(t *testing.T) {
+		if _, ok := bare(t, "notes.9"); ok {
+			t.Error("bareFieldValue(notes.9) reported bare, want not bare")
 		}
 	})
 
@@ -501,6 +542,67 @@ func TestBareFieldValue(t *testing.T) {
 	t.Run("it is not bare without a selection", func(t *testing.T) {
 		if _, ok := bareFieldValue(detail, nil); ok {
 			t.Error("bareFieldValue(nil) reported bare, want not bare")
+		}
+	})
+}
+
+func TestSelectedItems(t *testing.T) {
+	items := []string{"a", "b", "c"}
+
+	t.Run("it returns every item with its position for no positions", func(t *testing.T) {
+		got, positions := selectedItems(items, nil)
+		if !slices.Equal(got, items) {
+			t.Errorf("items = %#v, want %#v", got, items)
+		}
+		if !slices.Equal(positions, []int{1, 2, 3}) {
+			t.Errorf("positions = %#v, want [1 2 3]", positions)
+		}
+	})
+
+	t.Run("it returns the named item with its position", func(t *testing.T) {
+		got, positions := selectedItems(items, []int{2})
+		if !slices.Equal(got, []string{"b"}) {
+			t.Errorf("items = %#v, want [b]", got)
+		}
+		if !slices.Equal(positions, []int{2}) {
+			t.Errorf("positions = %#v, want [2]", positions)
+		}
+	})
+
+	t.Run("it orders several positions ascending", func(t *testing.T) {
+		got, positions := selectedItems(items, []int{3, 1})
+		if !slices.Equal(got, []string{"a", "c"}) {
+			t.Errorf("items = %#v, want [a c]", got)
+		}
+		if !slices.Equal(positions, []int{1, 3}) {
+			t.Errorf("positions = %#v, want [1 3]", positions)
+		}
+	})
+
+	t.Run("it collapses a repeated position", func(t *testing.T) {
+		got, positions := selectedItems(items, []int{2, 2})
+		if !slices.Equal(got, []string{"b"}) {
+			t.Errorf("items = %#v, want [b]", got)
+		}
+		if !slices.Equal(positions, []int{2}) {
+			t.Errorf("positions = %#v, want [2]", positions)
+		}
+	})
+
+	t.Run("it skips a position outside the range", func(t *testing.T) {
+		got, positions := selectedItems(items, []int{0, 2, 4, -1})
+		if !slices.Equal(got, []string{"b"}) {
+			t.Errorf("items = %#v, want [b]", got)
+		}
+		if !slices.Equal(positions, []int{2}) {
+			t.Errorf("positions = %#v, want [2]", positions)
+		}
+	})
+
+	t.Run("it returns nothing for an empty section", func(t *testing.T) {
+		got, positions := selectedItems([]string{}, []int{1})
+		if len(got) != 0 || len(positions) != 0 {
+			t.Errorf("selectedItems = %#v, %#v; want empty", got, positions)
 		}
 	})
 }

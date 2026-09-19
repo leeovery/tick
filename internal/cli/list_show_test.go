@@ -1079,3 +1079,202 @@ func TestShowFilteredDocument(t *testing.T) {
 		}
 	})
 }
+
+func TestShowFieldPositions(t *testing.T) {
+	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	notes := []task.Note{
+		{Text: "first note", Created: created},
+		{Text: "second note", Created: created.Add(time.Hour)},
+		{Text: "third note", Created: created.Add(2 * time.Hour)},
+	}
+	tags := []string{"api", "ui"}
+	refs := []string{"https://example.com", "https://example.org"}
+	firstChild := RelatedTask{ID: "tick-c1c1c1", Title: "Child one", Status: "open"}
+
+	newProject := func(t *testing.T) string {
+		t.Helper()
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2,
+				Created: created, Updated: created, Tags: tags, Refs: refs, Notes: notes},
+			{ID: "tick-c1c1c1", Title: "Child one", Status: task.StatusOpen, Priority: 2,
+				Parent: "tick-a1b2c3", Created: created, Updated: created},
+			{ID: "tick-c2c2c2", Title: "Child two", Status: task.StatusOpen, Priority: 2,
+				Parent: "tick-a1b2c3", Created: created, Updated: created},
+		})
+		return dir
+	}
+
+	show := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+		stdout, stderr, code := runShow(t, dir, args...)
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		return stdout
+	}
+
+	showToon := func(t *testing.T, field string) map[string]any {
+		t.Helper()
+		return decodeToonDoc(t, show(t, newProject(t), "tick-a1b2c3", "--toon", "--field", field))
+	}
+
+	assertNoteRows := func(t *testing.T, doc map[string]any, want []task.Note, wantPositions []int) {
+		t.Helper()
+		rows := toonRows(t, doc, "notes")
+		if len(rows) != len(want) {
+			t.Fatalf("notes rows = %d, want %d", len(rows), len(want))
+		}
+		for i, row := range rows {
+			assertToonFields(t, row, map[string]any{
+				"index":   float64(wantPositions[i]),
+				"text":    want[i].Text,
+				"created": task.FormatTimestamp(want[i].Created),
+			})
+		}
+	}
+
+	t.Run("it narrows the notes section to one position", func(t *testing.T) {
+		doc := showToon(t, "title,notes.2")
+
+		assertToonKeySet(t, doc, "title", "notes")
+		if rows := toonRows(t, doc, "notes"); len(rows) != 1 {
+			t.Fatalf("notes rows = %d, want 1", len(rows))
+		}
+	})
+
+	t.Run("it keeps the real index on a narrowed note", func(t *testing.T) {
+		assertNoteRows(t, showToon(t, "title,notes.2"), notes[1:2], []int{2})
+	})
+
+	t.Run("it narrows an inline list to one item", func(t *testing.T) {
+		assertToonStringList(t, showToon(t, "title,tags.2"), "tags", []string{"ui"})
+	})
+
+	t.Run("it narrows a refs list to one item", func(t *testing.T) {
+		assertToonStringList(t, showToon(t, "title,refs.2"), "refs", []string{"https://example.org"})
+	})
+
+	t.Run("it narrows a table to one row", func(t *testing.T) {
+		assertToonRelatedRow(t, showToon(t, "children.1"), "children", firstChild)
+	})
+
+	t.Run("it narrows to several positions in output order", func(t *testing.T) {
+		for _, field := range []string{"notes.1,notes.3", "notes.3,notes.1"} {
+			assertNoteRows(t, showToon(t, field), []task.Note{notes[0], notes[2]}, []int{1, 3})
+		}
+	})
+
+	t.Run("it collapses a repeated position", func(t *testing.T) {
+		assertNoteRows(t, showToon(t, "title,notes.2,notes.2"), notes[1:2], []int{2})
+
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--field", "notes.2,notes.2")
+		if stdout != "second note\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "second note\n")
+		}
+	})
+
+	t.Run("it returns the whole section when named both whole and by position", func(t *testing.T) {
+		assertNoteRows(t, showToon(t, "notes,notes.2"), notes, []int{1, 2, 3})
+	})
+
+	t.Run("it leaves other selected fields whole", func(t *testing.T) {
+		doc := showToon(t, "notes.2,tags")
+
+		assertNoteRows(t, doc, notes[1:2], []int{2})
+		assertToonStringList(t, doc, "tags", tags)
+	})
+
+	t.Run("it prints a note's text bare for a lone position", func(t *testing.T) {
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--field", "notes.2")
+
+		if stdout != "second note\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "second note\n")
+		}
+	})
+
+	t.Run("it prints a tag bare for a lone position", func(t *testing.T) {
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--field", "tags.1")
+
+		if stdout != "api\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "api\n")
+		}
+	})
+
+	t.Run("it prints a ref bare for a lone position", func(t *testing.T) {
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--field", "refs.2")
+
+		if stdout != "https://example.org\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "https://example.org\n")
+		}
+	})
+
+	t.Run("it returns a one-row section for a lone children position", func(t *testing.T) {
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--field", "children.1")
+
+		want := "Children:\n  tick-c1c1c1  Child one (open)\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it narrows notes in json with the real index", func(t *testing.T) {
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--json", "--field", "notes.2,title")
+
+		var doc map[string]any
+		if err := json.Unmarshal([]byte(stdout), &doc); err != nil {
+			t.Fatalf("invalid JSON: %v\nstdout: %s", err, stdout)
+		}
+		assertJSONKeySet(t, doc, "notes", "title")
+		entries, ok := doc["notes"].([]any)
+		if !ok || len(entries) != 1 {
+			t.Fatalf("notes = %v, want 1 entry", doc["notes"])
+		}
+		note, ok := entries[0].(map[string]any)
+		if !ok {
+			t.Fatalf("note = %v, want an object", entries[0])
+		}
+		if note["index"] != float64(2) {
+			t.Errorf("note index = %v, want 2", note["index"])
+		}
+		if note["text"] != "second note" {
+			t.Errorf("note text = %v, want %q", note["text"], "second note")
+		}
+	})
+
+	t.Run("it narrows notes in pretty", func(t *testing.T) {
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--pretty", "--field", "notes.2,title")
+
+		want := "Title:    Add login\n\nNotes:\n  2026-02-10 13:00  second note\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it narrows a pretty tags line", func(t *testing.T) {
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--pretty", "--field", "title,tags.2")
+
+		want := "Title:    Add login\nTags:     ui\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it narrows a pretty children block", func(t *testing.T) {
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--pretty", "--field", "title,children.2")
+
+		want := "Title:    Add login\n\nChildren:\n  tick-c2c2c2  Child two (open)\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it renders every item without positions", func(t *testing.T) {
+		doc := decodeToonDoc(t, show(t, newProject(t), "tick-a1b2c3", "--toon"))
+
+		assertNoteRows(t, doc, notes, []int{1, 2, 3})
+		assertToonStringList(t, doc, "tags", tags)
+		if rows := toonRows(t, doc, "children"); len(rows) != 2 {
+			t.Fatalf("children rows = %d, want 2", len(rows))
+		}
+	})
+}

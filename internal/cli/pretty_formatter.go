@@ -155,7 +155,8 @@ func prettyDetailHeader(detail TaskDetail) []string {
 	add("type", "Type", typeOrDash(t.Type))
 
 	if len(detail.Tags) > 0 {
-		add("tags", "Tags", strings.Join(detail.Tags, ", "))
+		tags, _ := selectedItems(detail.Tags, sel.Positions("tags"))
+		add("tags", "Tags", strings.Join(tags, ", "))
 	}
 
 	if t.Parent != "" {
@@ -183,20 +184,24 @@ func prettyDetailBlocks(detail TaskDetail) []string {
 	var blocks []string
 
 	if len(detail.BlockedBy) > 0 && sel.includes("blocked_by") {
-		blocks = append(blocks, prettyDetailBlock("Blocked by", prettyRelatedEntries(detail.BlockedBy)))
+		blockedBy, _ := selectedItems(detail.BlockedBy, sel.Positions("blocked_by"))
+		blocks = append(blocks, prettyDetailBlock("Blocked by", prettyRelatedEntries(blockedBy)))
 	}
 
 	if len(detail.Children) > 0 && sel.includes("children") {
-		blocks = append(blocks, prettyDetailBlock("Children", prettyRelatedEntries(detail.Children)))
+		children, _ := selectedItems(detail.Children, sel.Positions("children"))
+		blocks = append(blocks, prettyDetailBlock("Children", prettyRelatedEntries(children)))
 	}
 
 	if len(detail.Refs) > 0 && sel.includes("refs") {
-		blocks = append(blocks, prettyDetailBlock("Refs", detail.Refs))
+		refs, _ := selectedItems(detail.Refs, sel.Positions("refs"))
+		blocks = append(blocks, prettyDetailBlock("Refs", refs))
 	}
 
 	if len(detail.Notes) > 0 && sel.includes("notes") {
-		entries := make([]string, len(detail.Notes))
-		for i, note := range detail.Notes {
+		notes, _ := selectedItems(detail.Notes, sel.Positions("notes"))
+		entries := make([]string, len(notes))
+		for i, note := range notes {
 			entries[i] = fmt.Sprintf("%s  %s", note.Created.Format("2006-01-02 15:04"), note.Text)
 		}
 		blocks = append(blocks, prettyDetailBlock("Notes", entries))
