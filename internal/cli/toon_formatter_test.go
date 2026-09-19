@@ -1272,3 +1272,194 @@ func TestToonFormatDepTree(t *testing.T) {
 		})
 	})
 }
+
+func fieldSelection(t *testing.T, value string) *FieldSelection {
+	t.Helper()
+	sel := newFieldSelection()
+	if err := sel.addValue(value); err != nil {
+		t.Fatalf("addValue(%q) failed: %v", value, err)
+	}
+	return sel
+}
+
+// richDetail carries every section and every optional scalar.
+func richDetail() TaskDetail {
+	created := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
+	closed := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
+	return TaskDetail{
+		Task: task.Task{
+			ID:          "tick-a1b2",
+			Title:       "Add retry to the sync worker",
+			Status:      task.StatusInProgress,
+			Priority:    1,
+			Type:        "bug",
+			Parent:      "tick-p4r3",
+			Description: "Fix the parser.\n\nSteps:\n  - read the header",
+			Created:     created,
+			Updated:     created,
+			Closed:      &closed,
+		},
+		BlockedBy: []RelatedTask{{ID: "tick-c3d4", Title: "Blocker", Status: "open"}},
+		Children:  []RelatedTask{{ID: "tick-e5f6", Title: "Child", Status: "open"}},
+		Tags:      []string{"api"},
+		Refs:      []string{"https://example.com"},
+		Notes:     []task.Note{{Text: "Retried twice before it stuck", Created: created}},
+	}
+}
+
+func assertToonKeySet(t *testing.T, doc map[string]any, want ...string) {
+	t.Helper()
+	got := make([]string, 0, len(doc))
+	for key := range doc {
+		got = append(got, key)
+	}
+	slices.Sort(got)
+	sorted := slices.Clone(want)
+	slices.Sort(sorted)
+	if !slices.Equal(got, sorted) {
+		t.Errorf("document keys = %v, want %v", got, sorted)
+	}
+}
+
+func assertToonKeyOrder(t *testing.T, document string, first, second string) {
+	t.Helper()
+	firstAt := strings.Index(document, first)
+	secondAt := strings.Index(document, second)
+	if firstAt < 0 || secondAt < 0 {
+		t.Fatalf("document missing %q or %q:\n%s", first, second, document)
+	}
+	if firstAt > secondAt {
+		t.Errorf("%q should precede %q in:\n%s", first, second, document)
+	}
+}
+
+func TestToonFilteredTaskDetail(t *testing.T) {
+	f := &ToonFormatter{}
+
+	filtered := func(t *testing.T, detail TaskDetail, value string) string {
+		t.Helper()
+		detail.Fields = fieldSelection(t, value)
+		return f.FormatTaskDetail(detail)
+	}
+
+	t.Run("it renders only the selected scalars", func(t *testing.T) {
+		doc := decodeToonDoc(t, filtered(t, richDetail(), "title,status"))
+		assertToonKeySet(t, doc, "title", "status")
+		assertToonFields(t, doc, map[string]any{
+			"title":  "Add retry to the sync worker",
+			"status": "in_progress",
+		})
+	})
+
+	t.Run("it renders selected scalars in output order", func(t *testing.T) {
+		result := filtered(t, richDetail(), "status,title")
+		want := "title: Add retry to the sync worker\nstatus: in_progress"
+		if result != want {
+			t.Errorf("result = %q, want %q", result, want)
+		}
+	})
+
+	t.Run("it renders a selected section alone", func(t *testing.T) {
+		doc := decodeToonDoc(t, filtered(t, richDetail(), "notes"))
+		assertToonKeySet(t, doc, "notes")
+		if rows := toonRows(t, doc, "notes"); len(rows) != 1 {
+			t.Errorf("notes rows = %d, want 1", len(rows))
+		}
+	})
+
+	t.Run("it mixes scalars and sections in output order", func(t *testing.T) {
+		result := filtered(t, richDetail(), "description,notes,title")
+		doc := decodeToonDoc(t, result)
+		assertToonKeySet(t, doc, "title", "notes", "description")
+		assertToonKeyOrder(t, result, "title:", "notes[")
+		assertToonKeyOrder(t, result, "notes[", "description:")
+	})
+
+	t.Run("it separates the head block from the first section by one blank line", func(t *testing.T) {
+		result := filtered(t, richDetail(), "title,notes")
+		want := "title: Add retry to the sync worker\n\nnotes[1]{index,text,created}:"
+		if !strings.HasPrefix(result, want) {
+			t.Errorf("result = %q, want prefix %q", result, want)
+		}
+	})
+
+	t.Run("it does not carry id unless asked", func(t *testing.T) {
+		assertToonKeysAbsent(t, decodeToonDoc(t, filtered(t, richDetail(), "title")), "id")
+	})
+
+	t.Run("it renders a count-zero header for an always-present section", func(t *testing.T) {
+		for _, name := range []string{"notes", "children", "blocked_by"} {
+			result := filtered(t, detailWithDescription(""), name)
+			assertToonRowsEmpty(t, decodeToonDoc(t, result), name)
+		}
+	})
+
+	t.Run("it renders nothing for a carried-only field the task lacks", func(t *testing.T) {
+		for _, name := range []string{"tags", "refs", "description", "type", "parent", "closed"} {
+			if result := filtered(t, detailWithDescription(""), name); result != "" {
+				t.Errorf("--field %s = %q, want empty", name, result)
+			}
+		}
+	})
+
+	t.Run("it renders nothing when every selected name is empty", func(t *testing.T) {
+		if result := filtered(t, detailWithDescription(""), "tags,refs"); result != "" {
+			t.Errorf("result = %q, want empty", result)
+		}
+	})
+
+	t.Run("it has no leading blank line when the head block is empty", func(t *testing.T) {
+		result := filtered(t, richDetail(), "notes,description")
+		if !strings.HasPrefix(result, "notes[") {
+			t.Errorf("result = %q, want it to start with %q", result, "notes[")
+		}
+	})
+
+	t.Run("it has no trailing blank line when the last selected field is empty", func(t *testing.T) {
+		result := filtered(t, detailWithNotes(nil), "notes,description")
+		if result != "notes[0]{index,text,created}:" {
+			t.Errorf("result = %q, want %q", result, "notes[0]{index,text,created}:")
+		}
+	})
+
+	t.Run("it never carries the changed section", func(t *testing.T) {
+		detail := richDetail()
+		detail.Changes = &StatusChanges{}
+		detail.Fields = fieldSelection(t, "title")
+		assertToonKeysAbsent(t, decodeToonDoc(t, f.FormatTaskDetail(detail)), "changed")
+	})
+
+	t.Run("it leaves unfiltered output unchanged", func(t *testing.T) {
+		result := f.FormatTaskDetail(richDetail())
+		want := `id: tick-a1b2
+title: Add retry to the sync worker
+status: in_progress
+priority: 1
+type: bug
+parent: tick-p4r3
+created: "2026-03-01T09:00:00Z"
+updated: "2026-03-01T09:00:00Z"
+closed: "2026-03-02T09:00:00Z"
+
+blocked_by[1]{id,title,status}:
+  tick-c3d4,Blocker,open
+
+children[1]{id,title,status}:
+  tick-e5f6,Child,open
+
+tags[1]: api
+
+refs[1]: "https://example.com"
+
+notes[1]{index,text,created}:
+  1,Retried twice before it stuck,"2026-03-01T09:00:00Z"
+
+description: "Fix the parser.\n\nSteps:\n  - read the header"`
+		if result != want {
+			t.Errorf("document =\n%s\nwant\n%s", result, want)
+		}
+		doc := decodeToonDoc(t, result)
+		assertToonKeySet(t, doc, "id", "title", "status", "priority", "type", "parent",
+			"created", "updated", "closed", "blocked_by", "children", "tags", "refs", "notes", "description")
+	})
+}

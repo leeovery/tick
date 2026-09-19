@@ -65,31 +65,38 @@ func (f *ToonFormatter) FormatTaskList(tasks []task.Task) string {
 	return encodeToonSection("tasks", rows)
 }
 
-// FormatTaskDetail renders a single task with full details in multi-section TOON format.
+// FormatTaskDetail renders a single task in multi-section TOON format, narrowed to detail.Fields when it is set.
 func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
+	sel := detail.Fields
 	var sections []string
 
-	sections = append(sections, buildTaskSection(detail.Task))
+	sections = append(sections, buildTaskSection(detail.Task, sel))
 
-	sections = append(sections, buildRelatedSection("blocked_by", detail.BlockedBy))
+	if sel.includes("blocked_by") {
+		sections = append(sections, buildRelatedSection("blocked_by", detail.BlockedBy))
+	}
 
-	sections = append(sections, buildRelatedSection("children", detail.Children))
+	if sel.includes("children") {
+		sections = append(sections, buildRelatedSection("children", detail.Children))
+	}
 
-	if len(detail.Tags) > 0 {
+	if len(detail.Tags) > 0 && sel.includes("tags") {
 		sections = append(sections, encodeToonSection("tags", detail.Tags))
 	}
 
-	if len(detail.Refs) > 0 {
+	if len(detail.Refs) > 0 && sel.includes("refs") {
 		sections = append(sections, encodeToonSection("refs", detail.Refs))
 	}
 
-	sections = append(sections, buildNotesSection(detail.Notes))
+	if sel.includes("notes") {
+		sections = append(sections, buildNotesSection(detail.Notes))
+	}
 
-	if detail.Changes != nil {
+	if detail.Changes != nil && sel.includes("changed") {
 		sections = append(sections, buildChangedSection(detail.Changes.Rows()))
 	}
 
-	if detail.Task.Description != "" {
+	if detail.Task.Description != "" && sel.includes("description") {
 		sections = append(sections, encodeToonFields(toon.Field{Key: "description", Value: detail.Task.Description}))
 	}
 
@@ -232,33 +239,39 @@ func buildEdgeSection(name string, edges []toonEdgeRow) string {
 	return encodeToonSection(name, edges)
 }
 
-// buildTaskSection builds the task's own fields as top-level named fields,
-// omitting type, parent and closed when the task does not carry them.
-func buildTaskSection(t task.Task) string {
+// buildTaskSection builds the task's own selected fields as top-level named
+// fields, omitting type, parent and closed when the task does not carry them
+// and returning "" when no field survives.
+func buildTaskSection(t task.Task, sel *FieldSelection) string {
 	var fields []toon.Field
+	add := func(key string, value any) {
+		if sel.includes(key) {
+			fields = append(fields, toon.Field{Key: key, Value: value})
+		}
+	}
 
-	fields = append(fields,
-		toon.Field{Key: "id", Value: t.ID},
-		toon.Field{Key: "title", Value: t.Title},
-		toon.Field{Key: "status", Value: string(t.Status)},
-		toon.Field{Key: "priority", Value: t.Priority},
-	)
+	add("id", t.ID)
+	add("title", t.Title)
+	add("status", string(t.Status))
+	add("priority", t.Priority)
 
 	if t.Type != "" {
-		fields = append(fields, toon.Field{Key: "type", Value: t.Type})
+		add("type", t.Type)
 	}
 
 	if t.Parent != "" {
-		fields = append(fields, toon.Field{Key: "parent", Value: t.Parent})
+		add("parent", t.Parent)
 	}
 
-	fields = append(fields,
-		toon.Field{Key: "created", Value: task.FormatTimestamp(t.Created)},
-		toon.Field{Key: "updated", Value: task.FormatTimestamp(t.Updated)},
-	)
+	add("created", task.FormatTimestamp(t.Created))
+	add("updated", task.FormatTimestamp(t.Updated))
 
 	if t.Closed != nil {
-		fields = append(fields, toon.Field{Key: "closed", Value: task.FormatTimestamp(*t.Closed)})
+		add("closed", task.FormatTimestamp(*t.Closed))
+	}
+
+	if len(fields) == 0 {
+		return ""
 	}
 
 	return encodeToonFields(fields...)

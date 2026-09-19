@@ -32,8 +32,8 @@ type showData struct {
 }
 
 // RunShow executes the show command: queries a single task by ID from SQLite and
-// outputs the bare value of a single selected field, or the full detail document
-// via the Formatter.
+// outputs the bare value of a single selected field, or the detail document —
+// narrowed to the selected fields when one was given — via the Formatter.
 func RunShow(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
 	rawID, selection, err := parseShowArgs(args)
 	if err != nil {
@@ -76,7 +76,10 @@ func RunShow(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout 
 		return nil
 	}
 
-	fmt.Fprintln(stdout, fmtr.FormatTaskDetail(detail))
+	detail.Fields = selection
+	if document := fmtr.FormatTaskDetail(detail); document != "" {
+		fmt.Fprintln(stdout, document)
+	}
 	return nil
 }
 

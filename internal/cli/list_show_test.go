@@ -875,3 +875,76 @@ func TestShowBareField(t *testing.T) {
 		})
 	}
 }
+
+func TestShowFilteredDocument(t *testing.T) {
+	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	description := "Fix the parser.\n\nSteps:\n  - read the header"
+
+	richProject := func(t *testing.T) string {
+		t.Helper()
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2,
+				Description: description, Created: created, Updated: created,
+				Tags: []string{"api"}, Refs: []string{"https://example.com"},
+				Notes: []task.Note{{Text: "looked at it", Created: created}}},
+		})
+		return dir
+	}
+
+	bareProject := func(t *testing.T) string {
+		t.Helper()
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2,
+				Created: created, Updated: created},
+		})
+		return dir
+	}
+
+	show := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+		stdout, stderr, code := runShow(t, dir, args...)
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		return stdout
+	}
+
+	t.Run("it decodes a filtered document", func(t *testing.T) {
+		stdout := show(t, richProject(t), "tick-a1b2c3", "--toon", "--field", "description,notes")
+
+		doc := decodeToonDoc(t, stdout)
+		assertToonKeySet(t, doc, "description", "notes")
+		assertToonFields(t, doc, map[string]any{"description": description})
+		if rows := toonRows(t, doc, "notes"); len(rows) != 1 {
+			t.Fatalf("notes rows = %d, want 1", len(rows))
+		}
+	})
+
+	t.Run("it renders a list section as a document not a bare value", func(t *testing.T) {
+		stdout := show(t, richProject(t), "tick-a1b2c3", "--toon", "--field", "tags")
+
+		assertToonStringList(t, decodeToonDoc(t, stdout), "tags", []string{"api"})
+	})
+
+	t.Run("it renders a count-zero header for an always-present section", func(t *testing.T) {
+		stdout := show(t, bareProject(t), "tick-a1b2c3", "--toon", "--field", "notes")
+
+		if stdout != "notes[0]{index,text,created}:\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "notes[0]{index,text,created}:\n")
+		}
+	})
+
+	t.Run("it prints nothing when every selected name is empty", func(t *testing.T) {
+		stdout := show(t, bareProject(t), "tick-a1b2c3", "--toon", "--field", "tags,refs")
+
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+	})
+
+	t.Run("it does not carry unselected keys", func(t *testing.T) {
+		stdout := show(t, richProject(t), "tick-a1b2c3", "--toon", "--field", "title,status")
+
+		assertToonKeySet(t, decodeToonDoc(t, stdout), "title", "status")
+	})
+}

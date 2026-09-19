@@ -102,6 +102,8 @@ type TaskDetail struct {
 	Tags        []string
 	Refs        []string
 	Notes       []task.Note
+	// Fields narrows the document to the named fields; nil means the whole document.
+	Fields *FieldSelection
 	// Changes is nil when the document carries no changed section, and non-nil —
 	// possibly with no rows — when it always carries one.
 	Changes *StatusChanges

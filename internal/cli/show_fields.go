@@ -91,6 +91,12 @@ func (s *FieldSelection) Selected(name string) bool {
 	return s.whole[name] || len(s.positions[name]) > 0
 }
 
+// includes reports whether name belongs in the document. A nil selection is the
+// whole document and includes every name.
+func (s *FieldSelection) includes(name string) bool {
+	return s == nil || s.Selected(name)
+}
+
 // Positions returns the 1-based positions requested for name, or nil when the
 // name was taken whole or not requested at all.
 func (s *FieldSelection) Positions(name string) []int {
