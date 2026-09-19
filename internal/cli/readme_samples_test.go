@@ -22,6 +22,7 @@ const (
 	readmeListSampleAnchor       = "tasks[3]{id,title,status,priority,type}:"
 	readmeFormatListAnchor       = "tasks[2]{id,title,status,priority,type}:"
 	readmeShowSampleAnchor       = "id: tick-a1b2"
+	readmeFieldSelectionAnchor   = "notes[2]{index,text,created}:"
 	readmeTransitionAnchor       = "changed[1]{id,title,from,to,auto}:"
 	readmeCascadeAnchor          = "changed[2]{id,title,from,to,auto}:"
 	readmeDepTreeAnchor          = "dep_tree[2]{from,to}:"
@@ -292,6 +293,27 @@ func readmeSampleGroups(t *testing.T) []readmeSampleGroup {
 		{ID: "tick-c3d4", Title: "Subtask one", Status: task.StatusOpen, Priority: 1, Type: "task", Parent: "tick-a1b2", Created: at("2026-01-19T10:01:00Z"), Updated: at("2026-01-19T10:01:00Z")},
 	}
 
+	fieldSelectionTasks := []task.Task{
+		{
+			ID:          "tick-a1b2",
+			Title:       "Setup auth",
+			Status:      task.StatusInProgress,
+			Priority:    1,
+			Type:        "feature",
+			Tags:        []string{"auth", "backend"},
+			Refs:        []string{"https://github.com/org/repo/issues/42"},
+			Description: "Full task description here.\nCan be multiple lines.",
+			Notes: []task.Note{
+				{Text: "Discussed approach with team", Created: at("2026-01-19T14:00:00Z")},
+				{Text: "Blocked on the migration landing", Created: at("2026-01-19T15:00:00Z")},
+			},
+			BlockedBy: []string{"tick-c3d4"},
+			Created:   at("2026-01-19T10:00:00Z"),
+			Updated:   at("2026-01-19T14:30:00Z"),
+		},
+		{ID: "tick-c3d4", Title: "Database migrations", Status: task.StatusDone, Priority: 1, Type: "task", Created: at("2026-01-19T09:00:00Z"), Updated: at("2026-01-19T09:30:00Z")},
+	}
+
 	jsonListTasks := []task.Task{
 		{ID: "tick-a1b2", Title: "Setup auth", Status: task.StatusInProgress, Priority: 1, Type: "feature", Created: at("2026-01-19T10:00:00Z"), Updated: at("2026-01-19T10:00:00Z")},
 	}
@@ -301,6 +323,12 @@ func readmeSampleGroups(t *testing.T) []readmeSampleGroup {
 			name: "it reproduces the README show sample",
 			samples: []readmeSample{
 				{name: "show toon", firstLine: readmeShowSampleAnchor, occurrence: 1, format: "--toon", args: []string{"show", "tick-a1b2"}, tasks: showTasks},
+			},
+		},
+		{
+			name: "it reproduces the README field selection sample",
+			samples: []readmeSample{
+				{name: "show filtered toon", firstLine: readmeFieldSelectionAnchor, occurrence: 1, format: "--toon", args: []string{"show", "tick-a1b2", "--field", "description,notes"}, tasks: fieldSelectionTasks},
 			},
 		},
 		{
@@ -394,4 +422,60 @@ func TestREADMESamplesMatchRenderedOutput(t *testing.T) {
 			t.Errorf("expected an error for first line %q, got nil", readmeMissingAnchorFixture)
 		}
 	})
+}
+
+// readmeShowSection returns the body of the README's `### show` section.
+func readmeShowSection(t *testing.T) string {
+	t.Helper()
+	_, after, ok := strings.Cut(readmeContent(t), "\n### `show`\n")
+	if !ok {
+		t.Fatal("README has no `### show` section")
+	}
+	section, _, _ := strings.Cut(after, "\n### ")
+	return section
+}
+
+func TestREADMEDocumentsFieldSelection(t *testing.T) {
+	section := readmeShowSection(t)
+
+	t.Run("it documents both field flag spellings", func(t *testing.T) {
+		for _, spelling := range []string{"--field", "--fields"} {
+			if !strings.Contains(section, backticked(spelling)) {
+				t.Errorf("README `show` section does not document %s", spelling)
+			}
+		}
+	})
+
+	t.Run("it matches the help text for show", func(t *testing.T) {
+		for _, flag := range showHelpFlagNames(t) {
+			if !strings.Contains(section, backticked(flag)) {
+				t.Errorf("README `show` section does not document %s, which `tick help show` lists", flag)
+			}
+		}
+	})
+}
+
+func backticked(flag string) string {
+	return "`" + flag + "`"
+}
+
+// showHelpFlagNames returns every long flag name listed in show's help entry.
+func showHelpFlagNames(t *testing.T) []string {
+	t.Helper()
+	command := findCommand("show")
+	if command == nil {
+		t.Fatal("no help entry for show")
+	}
+	var names []string
+	for _, flag := range command.Flags {
+		for spelling := range strings.SplitSeq(flag.Name, ", ") {
+			if strings.HasPrefix(spelling, "--") {
+				names = append(names, spelling)
+			}
+		}
+	}
+	if len(names) == 0 {
+		t.Fatal("show's help entry lists no long flags")
+	}
+	return names
 }

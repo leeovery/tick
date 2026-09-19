@@ -170,7 +170,45 @@ Display full detail for a single task, including type, tags, refs, notes, blocke
 
 ```bash
 tick show <task-id>
+tick show <task-id> --field <name,...>
 ```
+
+| Flag | Type | Description |
+|---|---|---|
+| `--field` | strings | Select fields by name (comma-separated) |
+| `--fields` | strings | Alias of `--field` |
+
+The accepted names are the ones the output document uses: `id`, `title`, `status`, `priority`, `type`, `parent`, `created`, `updated`, `closed`, `description`, `notes`, `tags`, `refs`, `children`, `blocked_by`. Every list section — `notes`, `tags`, `refs`, `children`, `blocked_by` — also accepts a 1-based position, written `notes.2`.
+
+One name returns the bare value: no key, no quoting, nothing around it. The two lines below are the description's own bytes, not a formatted block.
+
+```
+$ tick show tick-a1b2 --field description
+Full task description here.
+Can be multiple lines.
+```
+
+Several names return the normal document with only those sections in it, in normal output order rather than the order they were typed.
+
+```
+$ tick show tick-a1b2 --field description,notes
+notes[2]{index,text,created}:
+  1,Discussed approach with team,"2026-01-19T14:00:00Z"
+  2,Blocked on the migration landing,"2026-01-19T15:00:00Z"
+
+description: "Full task description here.\nCan be multiple lines."
+```
+
+A lone name of a list section returns that whole section. A lone position on `notes`, `tags` or `refs` names one value and returns it bare.
+
+```
+$ tick show tick-a1b2 --field notes.2
+Blocked on the migration landing
+```
+
+A lone position on `children` or `blocked_by` returns its one-row section instead, because a row is not a value. Inside a multi-name selection a position always returns a section, narrowed to the items it names while the count follows the selection. A narrowed `notes` section keeps each row's real 1-based `index`, so `--field title,notes.2` renders `notes[1]{index,text,created}:` with a row indexed `2` and the position you read is still the one to act on. The other sections carry no index column, so a narrowed one hands back the item without its position.
+
+A request that returns a bare value ignores `--toon`, `--pretty` and `--json`; a request that returns a document honours them. `--quiet` together with a field selection is refused. An unrecognised name and a position outside its section both exit non-zero.
 
 ### `update`
 
