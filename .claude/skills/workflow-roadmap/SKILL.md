@@ -1,7 +1,7 @@
 ---
 name: workflow-roadmap
 user-invocable: false
-allowed-tools: Bash(node .claude/skills/workflow-roadmap/scripts/gateway.cjs), Bash(node .claude/skills/workflow-engine/scripts/engine.cjs), Bash(node .claude/skills/workflow-knowledge/scripts/knowledge.cjs), Bash(git log)
+allowed-tools: Bash(node .claude/skills/workflow-roadmap/scripts/gateway.cjs), Bash(node .claude/skills/workflow-start/scripts/gateway.cjs), Bash(node .claude/skills/workflow-engine/scripts/engine.cjs), Bash(node .claude/skills/workflow-knowledge/scripts/knowledge.cjs), Bash(git log)
 ---
 
 # Product Roadmap
@@ -17,7 +17,7 @@ The roadmap is project-level and outside the pipeline — no work unit, no phase
 Three invocation modes, dispatched at Step 1:
 
 - **genesis** — from discovery's shaping gate: the conversation is live and just read as product-altitude. Persist the shaping so far, continue the conversation at this altitude.
-- **open** — from the `r/roadmap` start-menu row: show the map, then converse, pull, or leave.
+- **open** — from the `r/roadmap` start-menu row: show the map, then converse, pull, or return to the start menu.
 - **pull** — from a recognition offer: the user accepted pulling an existing waiting item, straight to the pull ceremony.
 
 **Stay in your lane**: shape the product and its staging — what exists, what's next, what waits. Capability-grain only: an item is whatever you'd move around a roadmap as one thing. Topic shaping, mechanism, and design decisions belong to the work units the pull creates; a pulled item's substance belongs to its epic. Right of a pull the work unit is authoritative — the map edits waiting items freely and only watches joined ones.
@@ -86,7 +86,7 @@ Read the positional argument:
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
-> This is product-altitude work — laying the whole thing out before anything commits to delivery. The conversation so far is being saved as the first roadmap session; nothing here creates a work unit until you pull a slice.
+> This is about the product as a whole, not one piece of work. The conversation so far is being saved as the first roadmap session; nothing becomes a work unit until you choose an item to start building.
 ```
 
 The shaping conversation before this point was ephemeral — persist it now:
@@ -158,13 +158,9 @@ Set `session_number` from the DATA's `active_session` when one is open (the loop
 
 #### If `action` is `back`
 
-> *Output the next fenced block as markdown (not a code block):*
+Load **[start-menu.md](../workflow-start/references/start-menu.md)** and follow its instructions as written.
 
-```
-> Leaving the roadmap as it is — run /workflow-start whenever you want back in.
-```
-
-**STOP.** Do not proceed — terminal condition.
+→ On return, proceed as the reference directed.
 
 #### If the user asks a question
 
@@ -193,7 +189,7 @@ Load **[roadmap-guidelines.md](references/roadmap-guidelines.md)** and follow it
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
-> The product conversation — ideas, staging, what matters when. Items and horizons crystallise at the harvest, when you pull them; say "lay it out" whenever it feels ready.
+> The product conversation — what the product needs and roughly when. Say "lay it out" when you're ready and I'll propose the items and horizons I heard.
 ```
 
 Load **[session-loop.md](references/session-loop.md)** and follow its instructions as written — the harvest runs inside it, and it returns only once a sort is confirmed.
@@ -225,13 +221,13 @@ On return, load **[conclude.md](references/conclude.md)** and follow its instruc
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
-**`□ Pull Into Delivery`**
+**`□ Start Work From the Roadmap`**
 ```
 
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
-> The commitment point — pick the items going into delivery, and a work unit is born already fenced to them. Everything left keeps waiting, visibly.
+> Pick the items to build now. They become one work unit; everything else stays on the roadmap, waiting.
 ```
 
 Load **[pull.md](references/pull.md)** and follow its instructions as written.

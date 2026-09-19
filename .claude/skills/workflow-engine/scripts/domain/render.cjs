@@ -40,7 +40,6 @@ const {
   roadmapHarvestGate,
   roadmapParksGate,
   roadmapShapeGate,
-  roadmapConcludeGate,
 } = require('./projections/roadmap.cjs');
 const { revisitablePhases, revisitPhasesSection } = require('./projections/workunit.cjs');
 const { experimentRegister, experimentApprovalGate, experimentPick, experimentNextGate, experimentSpawnGate } = require('./projections/experiment.cjs');
@@ -528,7 +527,7 @@ function specReviewGate(cwd, { dotpath, variant }) {
 
 const CONVERGENCE_LOOPS = { fix: 'Fix Loop', analysis: 'Analysis', 'planning-review': 'Plan Review', 'spec-review': 'Spec Review' };
 const CONVERGENCE_TRENDS = {
-  churning: 'Findings resolve but are replaced at the same rate — the edits are likely generating new findings. Consider consolidating duplicated statements rather than running another cycle.',
+  churning: 'Findings resolve but are replaced at the same rate — the edits are generating the next cycle\'s findings. Read what the last cycle added before running another.',
   converging: 'Continuing is likely to resolve remaining items.',
   stable: 'Same issues are cycling. Consider manual intervention on the recurring items.',
   diverging: 'Fixes are introducing new issues. Consider reviewing the approach.',
@@ -616,10 +615,10 @@ function convergenceDiagnostic(cwd, { dotpath, file }) {
 
   const flags = [callout(CONVERGENCE_TRENDS[p.trend])];
   if (p.loop_type === 'spec-review' && p.trend === 'churning' && growth > 0) {
-    flags.push(callout('The cycles are adding words while findings churn — later reviews are reviewing earlier reviews\' writing, a shape the review rules forbid: findings add missing source content or remove wrong content, never rework sound ground. Check the recent additions against the sources before running another cycle.'));
+    flags.push(callout('The cycles are adding words while findings churn — the review is writing rules the record never decided. A finding adds what a source states or removes what is wrong; anything else is a decision nobody made. Check the additions against the sources before running another cycle.'));
   }
   if (hasGrowth && growth > p.review_baseline_words / 4) {
-    flags.push(callout(`Review has added ${growth} words to a ${p.review_baseline_words}-word construction. Growth that traces to source material is the loop working; check that these additions do — additions from nowhere mean the loop is feeding on itself.`));
+    flags.push(callout(`Review has added ${growth} words to a ${p.review_baseline_words}-word construction. Growth is the loop working only where each addition traces to a source; growth from review-authored rules is the review deciding for the user.`));
   }
   parts.push(flags.join('\n'));
 
@@ -2123,7 +2122,7 @@ function offTopicOffer(cwd, { dotpath, file, variant }) {
   const options = [cmdOption('l', 'log', 'Capture it as an idea in the inbox for later')];
   // The roadmap park is discussion's valve — research has no roadmap route.
   if (discussion) {
-    options.push(cmdOption('r', 'roadmap', 'Park it on the product roadmap with a horizon'));
+    options.push(cmdOption('r', 'roadmap', 'Put it on the product roadmap for a later release'));
   }
   if (manifest.work_type === 'feature') {
     options.push(cmdOption('p', 'pivot', 'Convert this work to an epic so it can hold the concern as its own topic'));
@@ -3051,8 +3050,8 @@ function findingAnnounce(cwd, { dotpath, file }) {
 
 // finding-batch — a surfacing lane whose findings need at most a scan from
 // the user: the `apply` batch (corrections determined by decisions already
-// made), the `decide` batch (calls settled by the record or first
-// principles, presented for veto before they land), and the `route` batch
+// made), the `decide` batch (calls the session made, presented for veto
+// before they land), and the `route` batch
 // (concerns owned by a sibling topic). The lane fixes the chrome; the
 // payload carries only judgment content, so the screen is one call and the
 // prose holds no template. A screen holds at most BATCH_MAX items — a
@@ -3074,8 +3073,8 @@ const BATCH_LANES = {
   },
   decide: {
     intro: (n) => (n === 1
-      ? "This one has a single defensible answer, settled by what's already decided or by first principles. I've made the call and named what determined it."
-      : "Each of these has one defensible answer, settled by what's already decided or by first principles. I've made each call and named what determined it."),
+      ? "This one is a call I've made, with what it rests on named beside it."
+      : "Each of these is a call I've made, with what it rests on named beside it."),
     question: (n) => (n === 1 ? 'Document it?' : 'Document them?'),
     confirm: (n, more) => `${n === 1 ? 'Document it' : `Document all ${n}`} and move on${moreTail(more)}`,
     discuss: "Say discuss and a number — I'll raise it after the rest land",
@@ -3100,7 +3099,7 @@ const BATCH_LANES = {
  */
 function findingBatch(cwd, { dotpath, file }) {
   if (!file) throw new Error('render finding-batch: --file <payload.json> is required');
-  resolveAddress(cwd, dotpath, 'finding-batch');
+  const { manifest, phase, topic } = resolveAddress(cwd, dotpath, 'finding-batch');
   const p = readJsonPayload(cwd, file, 'finding-batch');
   const lane = BATCH_LANES[p.lane];
   if (!lane) {
@@ -3121,6 +3120,7 @@ function findingBatch(cwd, { dotpath, file }) {
       if (!isFilled(it[field])) throw new Error(`render finding-batch: item ${i + 1} is missing "${field}"`);
     }
   });
+  const overAuto = laneHoldsAuto(itemOf(manifest, phase, topic) || {}, 'review');
   // Batch rows carry no walk-state — the lane is all-or-nothing, so no
   // glyph column. A route row's destination rides the tag slot.
   const body = worklist({
@@ -3132,7 +3132,7 @@ function findingBatch(cwd, { dotpath, file }) {
     section(
       'MENU: finding batch',
       "emit verbatim as markdown, then STOP for the user's response",
-      menu('', [
+      menu(overAuto ? AUTO_OVERRIDE_LINE : '', [
         cmdOption('y', 'yes', lane.confirm(p.items.length, more)),
         ...(lane.discuss ? [promptOption('Discuss', lane.discuss)] : []),
         promptOption('Ask', lane.ask),
@@ -3150,12 +3150,13 @@ const FINDING_CATEGORIES = ['enhancement', 'new-topic', 'gap', 'duplication', 'c
 const ROUTED_CATEGORIES = ['source-defect', 'unsourced-decision'];
 
 // The move owed — what the user has to do about the finding, which is the
-// only question that determines its shape. `settled`: the record admits one
-// defensible answer, so the finding carries the call and what determined it,
+// only question that determines its shape. `settled`: the record determines
+// the answer, so the finding carries the call and what determined it,
 // and `auto` applies it without a stop. `choice`: real options exist and
 // picking is the user's, so the finding proposes nothing and the stop
 // overrides `auto` — the stays-gated rule is that a choice exists, never a
-// category. `route` belongs to resolve-source-incoherence and refuses by name.
+// category. `route` belongs to resolve-source-incoherence and `decide` to the
+// finding-batch veto screen; both refuse here by name.
 const FINDING_MOVES = ['settled', 'choice'];
 
 /**
@@ -3180,6 +3181,9 @@ function finding(cwd, { dotpath, file, view }) {
   }
   if (p.move === 'route') {
     throw new Error('render finding: a "route" finding goes to resolve-source-incoherence and never renders at the gate');
+  }
+  if (p.move === 'decide') {
+    throw new Error('render finding: a "decide" finding is held for the veto batch and renders through finding-batch, never at the gate');
   }
   if (!FINDING_MOVES.includes(p.move)) {
     throw new Error(`render finding: "move" must be one of ${FINDING_MOVES.join('/')} — the move owed picks the shape, not the category`);
@@ -3699,10 +3703,11 @@ function specificationCancelStatement(manifest, spec) {
 }
 
 /**
- * The epic menu's cancel confirm over one unit — `<wu>.discovery.<topic>`
- * or `<wu>.specification.<spec>`. The statement names exactly what the
- * cancel takes and stays context; the short question takes the glyph. A
- * locked or already-cancelled unit refuses: the menu never offers it.
+ * The cancel confirm over one unit — `<wu>.discovery.<topic>` or
+ * `<wu>.specification.<spec>` — fetched by the epic menu and by a session
+ * cancelling its own topic. The statement names exactly what the cancel
+ * takes and stays context; the short question takes the glyph. A locked or
+ * already-cancelled unit refuses: the menu never offers it.
  * @param {string} cwd
  * @param {{dotpath: string}} args
  * @returns {string}
@@ -3720,7 +3725,7 @@ function cancelGate(cwd, { dotpath }) {
     "emit verbatim as markdown, then STOP for the user's response",
     menu(statement, [
       cmdOption('y', 'yes', 'Confirm cancellation'),
-      cmdOption('n', 'no', 'Return to menu'),
+      cmdOption('n', 'no', 'Keep it'),
     ], { question: 'Cancel it?' }),
   );
 }
@@ -4776,11 +4781,6 @@ function roadmapShapeGateSurface(_cwd, _args) {
   return section('MENU: roadmap shape gate', STOP_FOR_RESPONSE, roadmapShapeGate());
 }
 
-/** @param {string} _cwd @param {object} _args @returns {string} */
-function roadmapConcludeGateSurface(_cwd, _args) {
-  return section('MENU: roadmap conclude gate', STOP_FOR_RESPONSE, roadmapConcludeGate());
-}
-
 // The cross-flow static gates — adopted engine-side as their files were
 // touched (menus are engine-rendered, static sets included). Wording is
 // the gates' own; each is fetched at the exact point it displays.
@@ -5230,7 +5230,6 @@ const SURFACES = {
   'roadmap-harvest-gate': roadmapHarvestGateSurface,
   'roadmap-parks-gate': roadmapParksGateSurface,
   'roadmap-shape-gate': roadmapShapeGateSurface,
-  'roadmap-conclude-gate': roadmapConcludeGateSurface,
   'name-gate': nameGateSurface,
   'shape-gate': shapeGateSurface,
   'synthesis-gate': synthesisGateSurface,

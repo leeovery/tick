@@ -20,6 +20,12 @@ The output arrives in demarcated sections: read `=== DATA` to reason from (the `
 
 #### If `back`
 
+**If `$0` is `pull`:**
+
+→ Load **[start-menu.md](../../workflow-start/references/start-menu.md)**.
+
+**Otherwise:**
+
 → Return to **[the skill](../SKILL.md)** for **Step 3**.
 
 #### Otherwise
@@ -100,7 +106,7 @@ This skill ends. The invoked skill will load into context and provide additional
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
-> Pulled and fenced — entering plan mode to hand the feature to its first phase in a clean context.
+> Feature created from the roadmap — entering plan mode to hand it to its first phase in a clean context.
 ```
 
 Invoke `/workflow-bridge {work_unit} discovery {routing}` via the Skill tool.

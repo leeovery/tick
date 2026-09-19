@@ -1,7 +1,7 @@
 {
   "leeovery/agentic-workflows": {
-    "ref": "v0.7.61",
-    "commit": "86a0bb7248f990b3d5028bfea42f72dd7376a4eb",
+    "ref": "v0.7.65",
+    "commit": "1ef57a560ed195326ef5095239ac10cba46c037f",
     "agents": [
       "claude"
     ],
@@ -502,6 +502,7 @@
       ".claude/skills/workflow-shared/references/altitude.md",
       ".claude/skills/workflow-shared/references/analysis-approval-gate.md",
       ".claude/skills/workflow-shared/references/ask-or-decide.md",
+      ".claude/skills/workflow-shared/references/cancelling-the-topic.md",
       ".claude/skills/workflow-shared/references/casing-conventions.md",
       ".claude/skills/workflow-shared/references/closing-recap.md",
       ".claude/skills/workflow-shared/references/code-session-gate.md",
@@ -597,6 +598,7 @@
       ".claude/skills/workflow-start/references/manage-work-unit.md",
       ".claude/skills/workflow-start/references/route-to-discovery.md",
       ".claude/skills/workflow-start/references/start-from-inbox.md",
+      ".claude/skills/workflow-start/references/start-menu.md",
       ".claude/skills/workflow-start/references/view-completed.md",
       ".claude/skills/workflow-start/references/view-plan.md",
       ".claude/skills/workflow-start/scripts/",
@@ -638,7 +640,7 @@
     ],
     "type": "plugin",
     "cloneUrl": "https://github.com/leeovery/agentic-workflows.git",
-    "installedAt": "2026-09-17T20:22:05.907Z",
+    "installedAt": "2026-09-19T16:16:52.476Z",
     "constraint": "^0.7.54"
   },
   "samber/cc-skills-golang": {

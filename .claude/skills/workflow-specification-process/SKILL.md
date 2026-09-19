@@ -64,6 +64,14 @@ Do not guess at progress or continue from memory. The files on disk and git hist
 
 ---
 
+## Cancelling the Topic
+
+The user calls the topic off — they say to cancel, or the conversation agrees it is not worth pursuing. Load **[cancelling-the-topic.md](../workflow-shared/references/cancelling-the-topic.md)** with work_unit = `{work_unit}`, topic = `{topic}`, phase = `specification`, from any point in the phase.
+
+→ On return, resume the interrupted flow — never fall through to Step 0.
+
+---
+
 ## Step 0: Resume Detection
 
 Refresh the tmux session label — a no-op unless the user opted in and this session runs inside tmux:
@@ -187,7 +195,7 @@ Load **[dependencies.md](references/dependencies.md)** and follow its instructio
 > *Output the next fenced block as markdown (not a code block):*
 
 ```
-> Reviewing the specification. Agents will measure its claims against the codebase and analyse it against source material for gaps and inconsistencies. Settled findings carry their fix; genuine choices stop for your call, and any finding can be talked through — adjusted, challenged, or declined.
+> Reviewing the specification. Agents will measure its claims against the codebase and analyse it against source material for gaps and inconsistencies. Settled findings carry their fix; calls the record leaves open come to you as a batch to veto; genuine choices stop for your call, and any finding can be talked through — adjusted, challenged, or declined.
 ```
 
 Load **[spec-review.md](references/spec-review.md)** and follow its instructions as written.
