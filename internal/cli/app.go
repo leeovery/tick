@@ -186,7 +186,8 @@ func (a *App) handleList(fc FormatConfig, fmtr Formatter, subArgs []string) erro
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	filter, err := parseListFlags(subArgs)
+	flagArgs, literals := fc.SplitLiterals(subArgs)
+	filter, err := parseListFlags(flagArgs, literals)
 	if err != nil {
 		return err
 	}
@@ -217,7 +218,8 @@ func (a *App) handleReady(fc FormatConfig, fmtr Formatter, subArgs []string) err
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	filter, err := parseListFlags(append([]string{"--ready"}, subArgs...))
+	flagArgs, literals := fc.SplitLiterals(subArgs)
+	filter, err := parseListFlags(append([]string{"--ready"}, flagArgs...), literals)
 	if err != nil {
 		return err
 	}
@@ -230,7 +232,8 @@ func (a *App) handleBlocked(fc FormatConfig, fmtr Formatter, subArgs []string) e
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	filter, err := parseListFlags(append([]string{"--blocked"}, subArgs...))
+	flagArgs, literals := fc.SplitLiterals(subArgs)
+	filter, err := parseListFlags(append([]string{"--blocked"}, flagArgs...), literals)
 	if err != nil {
 		return err
 	}
@@ -265,7 +268,8 @@ func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) er
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 
-	rawIDs, force := parseRemoveArgs(subArgs)
+	flagArgs, literals := fc.SplitLiterals(subArgs)
+	rawIDs, force := parseRemoveArgs(flagArgs, literals)
 
 	if len(rawIDs) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick remove <id> [<id>...]")

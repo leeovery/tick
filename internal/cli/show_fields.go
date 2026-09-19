@@ -242,21 +242,22 @@ func unknownFieldError(name string) error {
 
 // parseShowArgs separates the task ID from the field selection in show's
 // arguments. The selection is nil when neither --field nor --fields appeared.
-func parseShowArgs(args []string) (string, *FieldSelection, error) {
+// Flags are recognised in flagArgs only; every literal is a task ID candidate.
+func parseShowArgs(flagArgs, literals []string) (string, *FieldSelection, error) {
 	var id string
 	var selection *FieldSelection
 
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
+	for i := 0; i < len(flagArgs); i++ {
+		arg := flagArgs[i]
 		if arg == "--field" || arg == "--fields" {
-			if i+1 >= len(args) {
+			if i+1 >= len(flagArgs) {
 				return "", nil, fmt.Errorf("--field requires a value")
 			}
 			i++
 			if selection == nil {
 				selection = newFieldSelection()
 			}
-			if err := selection.addValue(args[i]); err != nil {
+			if err := selection.addValue(flagArgs[i]); err != nil {
 				return "", nil, err
 			}
 			continue
@@ -267,6 +268,9 @@ func parseShowArgs(args []string) (string, *FieldSelection, error) {
 		if id == "" {
 			id = arg
 		}
+	}
+	if id == "" && len(literals) > 0 {
+		id = literals[0]
 	}
 
 	return id, selection, nil

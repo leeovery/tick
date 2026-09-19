@@ -359,3 +359,239 @@ func TestFormatConfigSplitLiterals(t *testing.T) {
 		}
 	})
 }
+
+func TestPostMarkerArgumentsAreNeverFlags(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	newTask := func(id, title string) task.Task {
+		return task.Task{
+			ID: id, Title: title, Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+	}
+	existingTask := newTask("tick-aaa111", "Task A")
+
+	t.Run("it treats a post-marker command flag as a title", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+
+		_, stderr, exitCode := runCreate(t, dir, "--", "--priority")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].Title != "--priority" {
+			t.Errorf("title = %q, want %q", tasks[0].Title, "--priority")
+		}
+		if tasks[0].Priority != 2 {
+			t.Errorf("priority = %d, want 2", tasks[0].Priority)
+		}
+	})
+
+	t.Run("it does not let a post-marker value-taking flag swallow the next argument", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+
+		_, stderr, exitCode := runCreate(t, dir, "--", "--description", "foo")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].Title != "--description" {
+			t.Errorf("title = %q, want %q", tasks[0].Title, "--description")
+		}
+		if tasks[0].Description != "" {
+			t.Errorf("description = %q, want empty", tasks[0].Description)
+		}
+	})
+
+	t.Run("it parses flags placed before the marker", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+
+		_, stderr, exitCode := runCreate(t, dir, "--priority", "0", "--type", "bug", "--", "- title")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].Title != "- title" {
+			t.Errorf("title = %q, want %q", tasks[0].Title, "- title")
+		}
+		if tasks[0].Priority != 0 {
+			t.Errorf("priority = %d, want 0", tasks[0].Priority)
+		}
+		if tasks[0].Type != "bug" {
+			t.Errorf("type = %q, want %q", tasks[0].Type, "bug")
+		}
+	})
+
+	t.Run("it ignores a second post-marker positional on create", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+
+		_, stderr, exitCode := runCreate(t, dir, "--", "- first", "second")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		if tasks[0].Title != "- first" {
+			t.Errorf("title = %q, want %q", tasks[0].Title, "- first")
+		}
+	})
+
+	t.Run("it treats a post-marker field flag as text on show", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		want, _, wantCode := runShow(t, dir, existingTask.ID)
+		got, stderr, exitCode := runShow(t, dir, existingTask.ID, "--", "--field", "title")
+		if exitCode != wantCode {
+			t.Fatalf("exit code = %d, want %d; stderr = %q", exitCode, wantCode, stderr)
+		}
+		if got != want {
+			t.Errorf("output = %q, want the full document %q", got, want)
+		}
+	})
+
+	t.Run("it resolves a post-marker task id on show", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		want, _, wantCode := runShow(t, dir, existingTask.ID)
+		got, stderr, exitCode := runShow(t, dir, "--", existingTask.ID)
+		if exitCode != wantCode {
+			t.Fatalf("exit code = %d, want %d; stderr = %q", exitCode, wantCode, stderr)
+		}
+		if got != want {
+			t.Errorf("output = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it treats a post-marker global flag as text on update", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		stdout, stderr, exitCode := runUpdate(t, dir, existingTask.ID, "--title", "x", "--", "--json")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if tasks[0].Title != "x" {
+			t.Errorf("title = %q, want %q", tasks[0].Title, "x")
+		}
+		if json.Valid([]byte(stdout)) {
+			t.Errorf("output rendered as JSON: %q", stdout)
+		}
+	})
+
+	t.Run("it treats a post-marker force flag as an id on remove", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		_, stderr, exitCode := runRemove(t, dir, "--", "--force")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stderr, `task '--force' not found`) {
+			t.Errorf("stderr = %q, want it to report the unresolved ID", stderr)
+		}
+		if len(readPersistedTasks(t, tickDir)) != 1 {
+			t.Errorf("task was removed, want it kept")
+		}
+	})
+
+	t.Run("it ignores a post-marker flag name on list", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		want, _, wantCode := runList(t, dir)
+		got, stderr, exitCode := runList(t, dir, "--", "--status")
+		if exitCode != wantCode {
+			t.Fatalf("exit code = %d, want %d; stderr = %q", exitCode, wantCode, stderr)
+		}
+		if got != want {
+			t.Errorf("output = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it joins note text without the marker", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		_, stderr, exitCode := runNote(t, dir, "add", existingTask.ID, "--", "- a", "b")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks[0].Notes) != 1 {
+			t.Fatalf("expected 1 note, got %d", len(tasks[0].Notes))
+		}
+		if tasks[0].Notes[0].Text != "- a b" {
+			t.Errorf("note text = %q, want %q", tasks[0].Notes[0].Text, "- a b")
+		}
+	})
+
+	t.Run("it passes post-marker arguments to a command that scans no flags", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		_, stderr, exitCode := runTransition(t, dir, "done", "--", existingTask.ID)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if tasks[0].Status != task.StatusDone {
+			t.Errorf("status = %q, want %q", tasks[0].Status, task.StatusDone)
+		}
+	})
+
+	t.Run("it passes post-marker arguments to dep add in order", func(t *testing.T) {
+		blocker := newTask("tick-bbb222", "Task B")
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{existingTask, blocker})
+
+		_, stderr, exitCode := runDep(t, dir, "add", "--", existingTask.ID, blocker.ID)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if !slices.Equal(tasks[0].BlockedBy, []string{blocker.ID}) {
+			t.Errorf("blocked_by = %v, want [%s]", tasks[0].BlockedBy, blocker.ID)
+		}
+	})
+
+	t.Run("it passes post-marker arguments to note remove in order", func(t *testing.T) {
+		noted := existingTask
+		noted.Notes = []task.Note{{Text: "first", Created: now}, {Text: "second", Created: now}}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{noted})
+
+		_, stderr, exitCode := runNote(t, dir, "remove", "--", noted.ID, "1")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks[0].Notes) != 1 || tasks[0].Notes[0].Text != "second" {
+			t.Errorf("notes = %v, want only the second note", tasks[0].Notes)
+		}
+	})
+
+	t.Run("it still reports a missing flag value", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{existingTask})
+
+		_, stderr, exitCode := runShow(t, dir, existingTask.ID, "--field", "--", "title")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stderr, "--field requires a value") {
+			t.Errorf("stderr = %q, want it to report the missing value", stderr)
+		}
+	})
+}

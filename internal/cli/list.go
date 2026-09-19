@@ -31,52 +31,53 @@ type ListFilter struct {
 	HasCount bool
 }
 
-// parseListFlags parses list-specific flags from subArgs.
+// parseListFlags parses list-specific flags from flagArgs.
 // Returns the parsed filter and an error if validation fails.
-func parseListFlags(args []string) (ListFilter, error) {
+// list takes no positional argument, so the post-marker literals are ignored.
+func parseListFlags(flagArgs, _ []string) (ListFilter, error) {
 	var f ListFilter
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
+	for i := 0; i < len(flagArgs); i++ {
+		switch flagArgs[i] {
 		case "--ready":
 			f.Ready = true
 		case "--blocked":
 			f.Blocked = true
 		case "--status":
-			if i+1 >= len(args) {
+			if i+1 >= len(flagArgs) {
 				return f, fmt.Errorf("--status requires a value")
 			}
 			i++
-			f.Status = args[i]
+			f.Status = flagArgs[i]
 		case "--priority":
-			if i+1 >= len(args) {
+			if i+1 >= len(flagArgs) {
 				return f, fmt.Errorf("--priority requires a value")
 			}
 			i++
-			p, err := strconv.Atoi(args[i])
+			p, err := strconv.Atoi(flagArgs[i])
 			if err != nil {
-				return f, fmt.Errorf("invalid priority '%s': must be 0-4", args[i])
+				return f, fmt.Errorf("invalid priority '%s': must be 0-4", flagArgs[i])
 			}
 			f.Priority = p
 			f.HasPriority = true
 		case "--parent":
-			if i+1 >= len(args) {
+			if i+1 >= len(flagArgs) {
 				return f, fmt.Errorf("--parent requires a value")
 			}
 			i++
-			f.Parent = task.NormalizeID(args[i])
+			f.Parent = task.NormalizeID(flagArgs[i])
 		case "--type":
-			if i+1 >= len(args) {
+			if i+1 >= len(flagArgs) {
 				return f, fmt.Errorf("--type requires a value")
 			}
 			i++
-			f.Type = task.NormalizeType(args[i])
+			f.Type = task.NormalizeType(flagArgs[i])
 		case "--tag":
-			if i+1 >= len(args) {
+			if i+1 >= len(flagArgs) {
 				return f, fmt.Errorf("--tag requires a value")
 			}
 			i++
 			var group []string
-			for p := range strings.SplitSeq(args[i], ",") {
+			for p := range strings.SplitSeq(flagArgs[i], ",") {
 				normalized := task.NormalizeTag(p)
 				if normalized == "" {
 					continue
@@ -87,13 +88,13 @@ func parseListFlags(args []string) (ListFilter, error) {
 				f.TagGroups = append(f.TagGroups, group)
 			}
 		case "--count":
-			if i+1 >= len(args) {
+			if i+1 >= len(flagArgs) {
 				return f, fmt.Errorf("--count requires a value")
 			}
 			i++
-			c, err := strconv.Atoi(args[i])
+			c, err := strconv.Atoi(flagArgs[i])
 			if err != nil {
-				return f, fmt.Errorf("invalid count '%s': must be an integer", args[i])
+				return f, fmt.Errorf("invalid count '%s': must be an integer", flagArgs[i])
 			}
 			f.Count = c
 			f.HasCount = true

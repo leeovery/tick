@@ -26,77 +26,85 @@ type createOpts struct {
 	hasRefs     bool
 }
 
+// addPositional records a positional argument: the title, first one winning.
+func (o *createOpts) addPositional(arg string) {
+	if o.title == "" {
+		o.title = arg
+	}
+}
+
 // parseCreateArgs parses the subcommand arguments for `tick create`.
 // It extracts the title (first positional arg) and command-specific flags.
-func parseCreateArgs(args []string) (createOpts, error) {
+// Flags are recognised in flagArgs only; every literal is a positional.
+func parseCreateArgs(flagArgs, literals []string) (createOpts, error) {
 	opts := createOpts{priority: 2}
 
 	i := 0
-	for i < len(args) {
-		arg := args[i]
+	for i < len(flagArgs) {
+		arg := flagArgs[i]
 		switch arg {
 		case "--priority":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--priority requires a value")
 			}
-			p, err := strconv.Atoi(args[i])
+			p, err := strconv.Atoi(flagArgs[i])
 			if err != nil {
-				return opts, fmt.Errorf("--priority must be an integer, got %q", args[i])
+				return opts, fmt.Errorf("--priority must be an integer, got %q", flagArgs[i])
 			}
 			opts.priority = p
 		case "--description":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--description requires a value")
 			}
-			opts.description = args[i]
+			opts.description = flagArgs[i]
 		case "--blocked-by":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--blocked-by requires a value")
 			}
-			opts.blockedBy = parseCommaSeparatedIDs(args[i])
+			opts.blockedBy = parseCommaSeparatedIDs(flagArgs[i])
 		case "--blocks":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--blocks requires a value")
 			}
-			opts.blocks = parseCommaSeparatedIDs(args[i])
+			opts.blocks = parseCommaSeparatedIDs(flagArgs[i])
 		case "--parent":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--parent requires a value")
 			}
-			opts.parent = strings.ToLower(strings.TrimSpace(args[i]))
+			opts.parent = strings.ToLower(strings.TrimSpace(flagArgs[i]))
 		case "--type":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--type requires a value")
 			}
-			opts.taskType = args[i]
+			opts.taskType = flagArgs[i]
 			opts.hasType = true
 		case "--tags":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--tags requires a value")
 			}
-			opts.tags = strings.Split(args[i], ",")
+			opts.tags = strings.Split(flagArgs[i], ",")
 			opts.hasTags = true
 		case "--refs":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--refs requires a value")
 			}
-			opts.refs = strings.Split(args[i], ",")
+			opts.refs = strings.Split(flagArgs[i], ",")
 			opts.hasRefs = true
 		default:
-			// Positional argument: title (first one wins)
-			if opts.title == "" {
-				opts.title = arg
-			}
+			opts.addPositional(arg)
 		}
 		i++
+	}
+	for _, literal := range literals {
+		opts.addPositional(literal)
 	}
 	return opts, nil
 }
@@ -104,7 +112,8 @@ func parseCreateArgs(args []string) (createOpts, error) {
 // RunCreate executes the create command: validates inputs, generates an ID,
 // persists via the storage engine, and outputs the created task via the Formatter.
 func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	opts, err := parseCreateArgs(args)
+	flagArgs, literals := fc.SplitLiterals(args)
+	opts, err := parseCreateArgs(flagArgs, literals)
 	if err != nil {
 		return err
 	}

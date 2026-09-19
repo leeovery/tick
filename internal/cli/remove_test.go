@@ -1714,7 +1714,7 @@ func TestApplyRemoval(t *testing.T) {
 
 func TestParseRemoveArgs(t *testing.T) {
 	t.Run("single ID returns slice of length 1", func(t *testing.T) {
-		ids, force := parseRemoveArgs([]string{"tick-abc123"})
+		ids, force := parseRemoveArgs([]string{"tick-abc123"}, nil)
 		if len(ids) != 1 {
 			t.Fatalf("len(ids) = %d, want 1", len(ids))
 		}
@@ -1727,7 +1727,7 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("multiple IDs returned in order", func(t *testing.T) {
-		ids, _ := parseRemoveArgs([]string{"tick-aaa111", "tick-bbb222", "tick-ccc333"})
+		ids, _ := parseRemoveArgs([]string{"tick-aaa111", "tick-bbb222", "tick-ccc333"}, nil)
 		if len(ids) != 3 {
 			t.Fatalf("len(ids) = %d, want 3", len(ids))
 		}
@@ -1740,7 +1740,7 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("IDs preserved as raw input", func(t *testing.T) {
-		ids, _ := parseRemoveArgs([]string{"TICK-AAA111", "Tick-Bbb222"})
+		ids, _ := parseRemoveArgs([]string{"TICK-AAA111", "Tick-Bbb222"}, nil)
 		if len(ids) != 2 {
 			t.Fatalf("len(ids) = %d, want 2", len(ids))
 		}
@@ -1753,7 +1753,7 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("deduplicates identical IDs", func(t *testing.T) {
-		ids, _ := parseRemoveArgs([]string{"tick-aaa111", "tick-aaa111"})
+		ids, _ := parseRemoveArgs([]string{"tick-aaa111", "tick-aaa111"}, nil)
 		if len(ids) != 1 {
 			t.Fatalf("len(ids) = %d, want 1", len(ids))
 		}
@@ -1763,7 +1763,7 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("deduplicates case-variant IDs", func(t *testing.T) {
-		ids, _ := parseRemoveArgs([]string{"TICK-AAA111", "tick-aaa111"})
+		ids, _ := parseRemoveArgs([]string{"TICK-AAA111", "tick-aaa111"}, nil)
 		if len(ids) != 1 {
 			t.Fatalf("len(ids) = %d, want 1", len(ids))
 		}
@@ -1773,7 +1773,7 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("preserves first-occurrence order after dedup", func(t *testing.T) {
-		ids, _ := parseRemoveArgs([]string{"tick-bbb222", "tick-aaa111", "tick-bbb222", "tick-ccc333"})
+		ids, _ := parseRemoveArgs([]string{"tick-bbb222", "tick-aaa111", "tick-bbb222", "tick-ccc333"}, nil)
 		if len(ids) != 3 {
 			t.Fatalf("len(ids) = %d, want 3", len(ids))
 		}
@@ -1786,7 +1786,7 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("extracts --force from between IDs", func(t *testing.T) {
-		ids, force := parseRemoveArgs([]string{"tick-aaa111", "--force", "tick-bbb222"})
+		ids, force := parseRemoveArgs([]string{"tick-aaa111", "--force", "tick-bbb222"}, nil)
 		if !force {
 			t.Errorf("force = false, want true")
 		}
@@ -1802,7 +1802,7 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("extracts -f shorthand flag", func(t *testing.T) {
-		ids, force := parseRemoveArgs([]string{"tick-aaa111", "-f"})
+		ids, force := parseRemoveArgs([]string{"tick-aaa111", "-f"}, nil)
 		if !force {
 			t.Errorf("force = false, want true")
 		}
@@ -1815,7 +1815,7 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("handles --force before and after all IDs", func(t *testing.T) {
-		ids, force := parseRemoveArgs([]string{"--force", "tick-aaa111", "tick-bbb222"})
+		ids, force := parseRemoveArgs([]string{"--force", "tick-aaa111", "tick-bbb222"}, nil)
 		if !force {
 			t.Errorf("force = false, want true (before)")
 		}
@@ -1823,7 +1823,7 @@ func TestParseRemoveArgs(t *testing.T) {
 			t.Fatalf("len(ids) = %d, want 2", len(ids))
 		}
 
-		ids2, force2 := parseRemoveArgs([]string{"tick-aaa111", "tick-bbb222", "--force"})
+		ids2, force2 := parseRemoveArgs([]string{"tick-aaa111", "tick-bbb222", "--force"}, nil)
 		if !force2 {
 			t.Errorf("force = false, want true (after)")
 		}
@@ -1833,7 +1833,7 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("treats all non-force args as positional IDs", func(t *testing.T) {
-		ids, force := parseRemoveArgs([]string{"tick-aaa111", "tick-bbb222"})
+		ids, force := parseRemoveArgs([]string{"tick-aaa111", "tick-bbb222"}, nil)
 		if force {
 			t.Errorf("force = true, want false")
 		}
@@ -1849,17 +1849,17 @@ func TestParseRemoveArgs(t *testing.T) {
 	})
 
 	t.Run("returns empty slice when only --force or no args provided", func(t *testing.T) {
-		ids, _ := parseRemoveArgs([]string{"--force"})
+		ids, _ := parseRemoveArgs([]string{"--force"}, nil)
 		if len(ids) != 0 {
 			t.Errorf("len(ids) = %d, want 0", len(ids))
 		}
 
-		ids2, _ := parseRemoveArgs([]string{})
+		ids2, _ := parseRemoveArgs([]string{}, nil)
 		if len(ids2) != 0 {
 			t.Errorf("len(ids2) = %d, want 0", len(ids2))
 		}
 
-		ids3, _ := parseRemoveArgs(nil)
+		ids3, _ := parseRemoveArgs(nil, nil)
 		if len(ids3) != 0 {
 			t.Errorf("len(ids3) = %d, want 0", len(ids3))
 		}

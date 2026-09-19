@@ -33,82 +33,90 @@ func (o updateOpts) hasChanges() bool {
 	return o.title != nil || o.description != nil || o.priority != nil || o.parent != nil || len(o.blocks) > 0 || o.clearDescription || o.taskType != nil || o.clearType || o.tags != nil || o.clearTags || o.refs != nil || o.clearRefs
 }
 
+// addPositional records a positional argument: the task ID, first one winning.
+func (o *updateOpts) addPositional(arg string) {
+	if o.id == "" {
+		o.id = strings.ToLower(strings.TrimSpace(arg))
+	}
+}
+
 // parseUpdateArgs parses the subcommand arguments for `tick update`.
 // It extracts the task ID (first positional arg) and command-specific flags.
-func parseUpdateArgs(args []string) (updateOpts, error) {
+// Flags are recognised in flagArgs only; every literal is a positional.
+func parseUpdateArgs(flagArgs, literals []string) (updateOpts, error) {
 	var opts updateOpts
 
 	i := 0
-	for i < len(args) {
-		arg := args[i]
+	for i < len(flagArgs) {
+		arg := flagArgs[i]
 		switch arg {
 		case "--title":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--title requires a value")
 			}
-			opts.title = new(args[i])
+			opts.title = new(flagArgs[i])
 		case "--description":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--description requires a value")
 			}
-			opts.description = new(args[i])
+			opts.description = new(flagArgs[i])
 		case "--priority":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--priority requires a value")
 			}
-			p, err := strconv.Atoi(args[i])
+			p, err := strconv.Atoi(flagArgs[i])
 			if err != nil {
-				return opts, fmt.Errorf("--priority must be an integer, got %q", args[i])
+				return opts, fmt.Errorf("--priority must be an integer, got %q", flagArgs[i])
 			}
 			opts.priority = &p
 		case "--parent":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--parent requires a value")
 			}
-			opts.parent = new(strings.ToLower(strings.TrimSpace(args[i])))
+			opts.parent = new(strings.ToLower(strings.TrimSpace(flagArgs[i])))
 		case "--clear-description":
 			opts.clearDescription = true
 		case "--type":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--type requires a value")
 			}
-			opts.taskType = new(args[i])
+			opts.taskType = new(flagArgs[i])
 		case "--clear-type":
 			opts.clearType = true
 		case "--tags":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--tags requires a value")
 			}
-			opts.tags = new(strings.Split(args[i], ","))
+			opts.tags = new(strings.Split(flagArgs[i], ","))
 		case "--clear-tags":
 			opts.clearTags = true
 		case "--refs":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--refs requires a value")
 			}
-			opts.refs = new(strings.Split(args[i], ","))
+			opts.refs = new(strings.Split(flagArgs[i], ","))
 		case "--clear-refs":
 			opts.clearRefs = true
 		case "--blocks":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return opts, fmt.Errorf("--blocks requires a value")
 			}
-			opts.blocks = parseCommaSeparatedIDs(args[i])
+			opts.blocks = parseCommaSeparatedIDs(flagArgs[i])
 		default:
-			// Positional argument: task ID (first one wins)
-			if opts.id == "" {
-				opts.id = strings.ToLower(strings.TrimSpace(arg))
-			}
+			opts.addPositional(arg)
 		}
 		i++
+	}
+	for _, literal := range literals {
+		opts.addPositional(literal)
 	}
 	return opts, nil
 }
@@ -160,7 +168,8 @@ func autoCompleteParentIfTerminal(tasks []task.Task, origParentID string, sm *ta
 // RunUpdate executes the update command: validates inputs, applies changes via the storage engine,
 // and outputs the updated task details via the Formatter.
 func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	opts, err := parseUpdateArgs(args)
+	flagArgs, literals := fc.SplitLiterals(args)
+	opts, err := parseUpdateArgs(flagArgs, literals)
 	if err != nil {
 		return err
 	}

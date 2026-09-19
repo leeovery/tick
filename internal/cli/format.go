@@ -77,7 +77,7 @@ type FormatConfig struct {
 
 // SplitLiterals splits args into the arguments that may carry flags and the
 // trailing free text that followed the end-of-flags marker.
-func (fc FormatConfig) SplitLiterals(args []string) ([]string, []string) {
+func (fc FormatConfig) SplitLiterals(args []string) (flagArgs, literals []string) {
 	return splitLiteralArgs(args, fc.Literals)
 }
 

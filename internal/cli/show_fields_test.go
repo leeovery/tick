@@ -13,7 +13,7 @@ import (
 // parseSelection parses args and fails the test if parsing returns an error.
 func parseSelection(t *testing.T, args ...string) (string, *FieldSelection) {
 	t.Helper()
-	id, sel, err := parseShowArgs(args)
+	id, sel, err := parseShowArgs(args, nil)
 	if err != nil {
 		t.Fatalf("parseShowArgs(%v) returned error: %v", args, err)
 	}
@@ -117,7 +117,7 @@ func TestParseShowArgs(t *testing.T) {
 
 	t.Run("it recognises every registered name", func(t *testing.T) {
 		for _, name := range slices.Sorted(maps.Keys(showFields)) {
-			_, sel, err := parseShowArgs([]string{"tick-a1b2", "--field", name})
+			_, sel, err := parseShowArgs([]string{"tick-a1b2", "--field", name}, nil)
 			if err != nil {
 				t.Errorf("parseShowArgs for %q returned error: %v", name, err)
 				continue
@@ -187,7 +187,7 @@ func TestParseShowArgs(t *testing.T) {
 			{[]string{"tick-a1b2", "--field", "titel.1"}, "titel.1"},
 		}
 		for _, tc := range cases {
-			_, _, err := parseShowArgs(tc.args)
+			_, _, err := parseShowArgs(tc.args, nil)
 			if err == nil {
 				t.Errorf("parseShowArgs(%v) returned nil error", tc.args)
 				continue
@@ -201,7 +201,7 @@ func TestParseShowArgs(t *testing.T) {
 
 	t.Run("it rejects a flag with no value", func(t *testing.T) {
 		for _, flag := range []string{"--field", "--fields"} {
-			_, _, err := parseShowArgs([]string{"tick-a1b2", flag})
+			_, _, err := parseShowArgs([]string{"tick-a1b2", flag}, nil)
 			if err == nil {
 				t.Fatalf("parseShowArgs with bare %s returned nil error", flag)
 			}

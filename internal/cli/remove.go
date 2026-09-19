@@ -16,23 +16,28 @@ var errAborted = errors.New("aborted")
 
 // parseRemoveArgs extracts raw task ID arguments and --force flag from remove command arguments.
 // Returns raw positional args (preserving first-occurrence order, deduped by lowercase) and whether --force was set.
+// Flags are recognised in flagArgs only; every literal is a task ID.
 // ID resolution happens after the store is opened.
-func parseRemoveArgs(args []string) ([]string, bool) {
-	var ids []string
-	var force bool
+func parseRemoveArgs(flagArgs, literals []string) (ids []string, force bool) {
 	seen := map[string]bool{}
+	addID := func(arg string) {
+		lower := strings.ToLower(arg)
+		if !seen[lower] {
+			seen[lower] = true
+			ids = append(ids, arg)
+		}
+	}
 
-	for _, arg := range args {
+	for _, arg := range flagArgs {
 		switch arg {
 		case "--force", "-f":
 			force = true
 		default:
-			lower := strings.ToLower(arg)
-			if !seen[lower] {
-				seen[lower] = true
-				ids = append(ids, arg)
-			}
+			addID(arg)
 		}
+	}
+	for _, literal := range literals {
+		addID(literal)
 	}
 
 	return ids, force
