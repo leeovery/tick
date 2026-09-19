@@ -233,7 +233,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 4,
-          "current_task": "free-text-round-trip-4-3",
+          "current_task": "free-text-round-trip-4-4",
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -261,7 +261,8 @@
             "free-text-round-trip-3-9",
             "free-text-round-trip-3-10",
             "free-text-round-trip-4-1",
-            "free-text-round-trip-4-2"
+            "free-text-round-trip-4-2",
+            "free-text-round-trip-4-3"
           ],
           "staging": {
             "p1": {
@@ -318,6 +319,28 @@
               "detail": "internal/cli/help.go:308 formats with \"  %-24s%s\\n\"; any label longer than 24 columns loses the gap entirely. The new show entry label is 28 columns (internal/cli/help.go:74). Pre-existing, not introduced here — `tick help create` already prints `--type <bug|feature|task|chore>Task type` from internal/cli/help.go:44. Out of this task scope on both counts: the task fixed Name and Arg verbatim (no in-scope shortening fits 24 columns while keeping both spellings the drift test requires), and the remedy — a two-space minimum gap, or widening the column to the longest label — changes the rendered help of create, list, remove and migrate too.",
               "files": [
                 "internal/cli/help.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-4-3",
+              "source": "reviewer",
+              "summary": "FieldSelection carries two gates with opposite nil behaviour — exported Selected panics on a nil receiver, unexported includes treats nil as everything.",
+              "failure": "A later site reaching for the exported Selected where the selection may be nil (the JSON and pretty formatters of tasks 4-4 and 4-5 need exactly this gate, and TaskDetail.Fields is nil for every mutation command) dereferences nil and crashes `tick show`/`tick create` with a runtime panic instead of printing a document. Noticed as a CLI panic in the field, not at compile time.",
+              "detail": "Selected at internal/cli/show_fields.go:90 indexes s.whole without a nil check; includes at :96 wraps it with `s == nil ||`. After this task Selected has no production caller except through includes (grep -rn \"\\.Selected(\" internal/ → show_fields.go:97 plus four sites in show_fields_test.go). The consolidation — make Selected nil-safe, delete includes, update the eight call sites in toon_formatter.go — reaches task 4-1 method and its tests, and is best done once 4-4/4-5 have landed their own gates.",
+              "files": [
+                "internal/cli/show_fields.go",
+                "internal/cli/toon_formatter.go",
+                "internal/cli/show_fields_test.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-4-3",
+              "source": "reviewer",
+              "summary": "showFieldScalar and showFieldDescription are a distinction nothing reads.",
+              "failure": "A maintainer adding a rule keyed on showFieldScalar (a plausible shape for the position/formatting work in 4-6/4-7) silently excludes description, since it is the sole member of a kind that behaves identically — a wrong `--field description` result with no compile error and no failing test to flag it.",
+              "detail": "Kinds declared at internal/cli/show_fields.go:15-18; only showFieldUnknown (:149) and showFieldList (:155) are ever compared, and bareFieldValue (:56-70) branches on `bare == nil` rather than on kind. The executor confirmed this task filtering did not need the distinction. Either collapse showFieldDescription into showFieldScalar or let 4-6/4-7 give it a job; decide at the phase boundary once those tasks are in.",
+              "files": [
+                "internal/cli/show_fields.go"
               ]
             }
           ]
