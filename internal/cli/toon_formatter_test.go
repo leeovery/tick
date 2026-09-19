@@ -1029,8 +1029,8 @@ func TestToonFormatDepTree(t *testing.T) {
 		}
 	})
 
-	t.Run("it renders summary as single-object section", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+	t.Run("it emits the dep tree summary as top-level named fields", func(t *testing.T) {
+		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
 			Roots: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
@@ -1042,21 +1042,93 @@ func TestToonFormatDepTree(t *testing.T) {
 			ChainCount:   3,
 			LongestChain: 5,
 			BlockedCount: 7,
+		}))
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(3),
+			"longest": float64(5),
+			"blocked": float64(7),
 		})
-		// Result should have two sections separated by blank line
-		sections := strings.Split(result, "\n\n")
-		if len(sections) != 2 {
-			t.Fatalf("expected 2 sections, got %d: %q", len(sections), result)
+		assertToonKeysAbsent(t, doc, "summary")
+	})
+
+	t.Run("it keeps the dep_tree edge section unchanged", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+					Children: []DepTreeNode{
+						{
+							Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
+							Children: []DepTreeNode{
+								{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"}},
+							},
+						},
+					},
+				},
+			},
+			ChainCount:   1,
+			LongestChain: 2,
+			BlockedCount: 2,
+		})
+		lines := strings.Split(result, "\n")
+		wantLines := []string{
+			"dep_tree[2]{from,to}:",
+			"  tick-aaa111,tick-bbb222",
+			"  tick-bbb222,tick-ccc333",
 		}
-		summaryLines := strings.Split(sections[1], "\n")
-		expectedHeader := "summary{chains,longest,blocked}:"
-		if summaryLines[0] != expectedHeader {
-			t.Errorf("summary header = %q, want %q", summaryLines[0], expectedHeader)
+		if !slices.Equal(lines[:len(wantLines)], wantLines) {
+			t.Errorf("edge section = %v, want %v", lines[:len(wantLines)], wantLines)
 		}
-		expectedRow := "  3,5,7"
-		if summaryLines[1] != expectedRow {
-			t.Errorf("summary row = %q, want %q", summaryLines[1], expectedRow)
+		rows := toonRows(t, decodeToonDoc(t, result), "dep_tree")
+		wantRows := []map[string]any{
+			{"from": "tick-aaa111", "to": "tick-bbb222"},
+			{"from": "tick-bbb222", "to": "tick-ccc333"},
 		}
+		if len(rows) != len(wantRows) {
+			t.Fatalf("dep_tree length = %d, want %d", len(rows), len(wantRows))
+		}
+		for i, want := range wantRows {
+			if rows[i]["from"] != want["from"] || rows[i]["to"] != want["to"] {
+				t.Errorf("dep_tree[%d] = %#v, want %#v", i, rows[i], want)
+			}
+		}
+	})
+
+	t.Run("it emits zero-valued summary fields", func(t *testing.T) {
+		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
+			Roots: []DepTreeNode{
+				{
+					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
+					Children: []DepTreeNode{
+						{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
+					},
+				},
+			},
+			ChainCount:   0,
+			LongestChain: 2,
+			BlockedCount: 1,
+		}))
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(0),
+			"longest": float64(2),
+			"blocked": float64(1),
+		})
+	})
+
+	t.Run("it renders the emptied full document for a result with no roots", func(t *testing.T) {
+		result := f.FormatDepTree(DepTreeResult{})
+		if first, _, _ := strings.Cut(result, "\n"); first != "dep_tree[0]{from,to}:" {
+			t.Errorf("header = %q, want %q", first, "dep_tree[0]{from,to}:")
+		}
+		doc := decodeToonDoc(t, result)
+		if rows := toonRows(t, doc, "dep_tree"); len(rows) != 0 {
+			t.Errorf("dep_tree length = %d, want 0", len(rows))
+		}
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(0),
+			"longest": float64(0),
+			"blocked": float64(0),
+		})
 	})
 
 	t.Run("it renders focused view with both directions", func(t *testing.T) {

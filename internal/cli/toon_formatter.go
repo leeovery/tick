@@ -156,15 +156,8 @@ type toonEdgeRow struct {
 	To   string `toon:"to"`
 }
 
-// toonDepTreeSummary is a TOON-serializable row for the dep tree summary section.
-type toonDepTreeSummary struct {
-	Chains  int `toon:"chains"`
-	Longest int `toon:"longest"`
-	Blocked int `toon:"blocked"`
-}
-
 // FormatDepTree renders a dependency tree in TOON edge-list format.
-// Full graph: dep_tree[N]{from,to}: section + summary{chains,longest,blocked}: section.
+// Full graph: dep_tree[N]{from,to}: section + chains, longest and blocked named fields.
 // Focused mode: separate blocked_by[N]{from,to}: and blocks[N]{from,to}: sections,
 // omitting empty directions entirely. When the target has no dependencies, renders
 // the target task info followed by the message.
@@ -187,15 +180,14 @@ func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
 		edges = append(edges, collectDownstreamEdges(root.Task.ID, root.Children)...)
 	}
 
-	var sections []string
-	sections = append(sections, buildEdgeSection("dep_tree", edges))
-
-	summary := toonDepTreeSummary{
-		Chains:  result.ChainCount,
-		Longest: result.LongestChain,
-		Blocked: result.BlockedCount,
+	sections := []string{
+		buildEdgeSection("dep_tree", edges),
+		encodeToonFields(
+			toon.Field{Key: "chains", Value: result.ChainCount},
+			toon.Field{Key: "longest", Value: result.LongestChain},
+			toon.Field{Key: "blocked", Value: result.BlockedCount},
+		),
 	}
-	sections = append(sections, encodeToonSingleObject("summary", summary))
 
 	return strings.Join(sections, "\n\n")
 }
@@ -342,16 +334,4 @@ func encodeToonSection[T any](name string, rows []T) string {
 		return fmt.Sprintf("%s[0]:", name)
 	}
 	return s
-}
-
-// encodeToonSingleObject encodes a single struct as a TOON object scope (no [N] count).
-// It encodes as a 1-element array via toon-go, then strips the "[1]" from the header.
-func encodeToonSingleObject[T any](name string, value T) string {
-	obj := toon.NewObject(toon.Field{Key: name, Value: []T{value}})
-	s, err := toon.MarshalString(obj)
-	if err != nil {
-		return name + ":"
-	}
-	// Replace "name[1]" with "name" to get single-object scope format
-	return strings.Replace(s, name+"[1]", name, 1)
 }
