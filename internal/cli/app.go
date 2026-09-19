@@ -68,14 +68,16 @@ func (a *App) Run(args []string) int {
 
 	// Doctor and migrate bypass format/formatter machinery — always human-readable text.
 	if subcmd == "doctor" {
-		if err := ValidateFlags("doctor", subArgs, commandFlags); err != nil {
+		doctorFlagArgs, _ := splitLiteralArgs(subArgs, flags.literals)
+		if err := ValidateFlags("doctor", doctorFlagArgs, commandFlags); err != nil {
 			fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 			return 1
 		}
 		return a.handleDoctor()
 	}
 	if subcmd == "migrate" {
-		if err := ValidateFlags("migrate", subArgs, commandFlags); err != nil {
+		migrateFlagArgs, _ := splitLiteralArgs(subArgs, flags.literals)
+		if err := ValidateFlags("migrate", migrateFlagArgs, commandFlags); err != nil {
 			fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 			return 1
 		}
@@ -112,7 +114,8 @@ func (a *App) Run(args []string) int {
 
 	// Determine fully-qualified command name and validate flags before dispatch.
 	qualifiedCmd, restArgs := qualifyCommand(subcmd, subArgs)
-	if err := ValidateFlags(qualifiedCmd, restArgs, commandFlags); err != nil {
+	cmdFlagArgs, _ := splitLiteralArgs(restArgs, flags.literals)
+	if err := ValidateFlags(qualifiedCmd, cmdFlagArgs, commandFlags); err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
 	}
@@ -332,6 +335,8 @@ func (a *App) handleHelp(args []string) int {
 	return 0
 }
 
+const endOfFlagsMarker = "--"
+
 // globalFlags holds parsed global CLI flags.
 type globalFlags struct {
 	quiet   bool
@@ -341,23 +346,36 @@ type globalFlags struct {
 	json    bool
 	help    bool
 	version bool
+	// literals counts the trailing arguments that followed the end-of-flags marker.
+	literals int
 }
 
 // parseArgs separates global flags from the subcommand and its arguments.
 // Global flags are extracted from all positions (before and after the subcommand),
 // following the pattern of tools like git where "git commit --verbose" works the
-// same as "git --verbose commit". Returns the parsed global flags, the subcommand
-// name, remaining subcommand-specific args (non-global arguments only), and an
-// error if an unknown flag appears before the subcommand.
+// same as "git --verbose commit". The first bare "--" ends flag parsing: it is
+// dropped from the returned args, no later argument sets a global flag, and each
+// argument appended to the returned args is counted in flags.literals. Command
+// resolution continues past the marker, so a marker before the subcommand still
+// leaves the next argument as the subcommand and does not count it. Returns the parsed global flags, the subcommand name, remaining
+// subcommand-specific args (non-global arguments only), and an error if an
+// unknown flag appears before the subcommand.
 func parseArgs(args []string) (globalFlags, string, []string, error) {
 	var flags globalFlags
 	var subcmd string
 	var rest []string
 
 	foundCmd := false
+	pastMarker := false
 	for _, arg := range args {
-		if applyGlobalFlag(&flags, arg) {
-			continue
+		if !pastMarker {
+			if arg == endOfFlagsMarker {
+				pastMarker = true
+				continue
+			}
+			if applyGlobalFlag(&flags, arg) {
+				continue
+			}
 		}
 		if !foundCmd {
 			if strings.HasPrefix(arg, "-") {
@@ -365,8 +383,11 @@ func parseArgs(args []string) (globalFlags, string, []string, error) {
 			}
 			subcmd = arg
 			foundCmd = true
-		} else {
-			rest = append(rest, arg)
+			continue
+		}
+		rest = append(rest, arg)
+		if pastMarker {
+			flags.literals++
 		}
 	}
 	return flags, subcmd, rest, nil

@@ -159,3 +159,16 @@ func helpCommand(command string) string {
 	}
 	return command
 }
+
+// splitLiteralArgs splits the trailing n arguments off args as literals: text the
+// caller placed after the end-of-flags marker, which must not be inspected as
+// flags. n is clamped to len(args), since leading arguments may have been sliced
+// off args after the count was taken.
+func splitLiteralArgs(args []string, n int) (flagArgs, literals []string) {
+	n = min(n, len(args))
+	if n <= 0 {
+		return args, nil
+	}
+	boundary := len(args) - n
+	return args[:boundary], args[boundary:]
+}
