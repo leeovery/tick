@@ -147,7 +147,8 @@
             "free-text-round-trip-6-3": "tick-6e30b5",
             "free-text-round-trip-6-4": "tick-ae3897",
             "free-text-round-trip-6-5": "tick-2974b8",
-            "free-text-round-trip-6-6": "tick-f9b5f3"
+            "free-text-round-trip-6-6": "tick-f9b5f3",
+            "free-text-round-trip-1-7": "tick-ca8507"
           },
           "storage_paths": [
             ".tick/"
@@ -189,7 +190,7 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
           "analysis_gate_mode": "gated",
-          "consolidation_gate_mode": "gated",
+          "consolidation_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle_total": 0,
           "linters": [
@@ -227,38 +228,6 @@
           ],
           "current_phase": 1,
           "current_task": null,
-          "bank": [
-            {
-              "task": "free-text-round-trip-1-1",
-              "source": "executor",
-              "summary": "encodeToonSingleObject still strips [1] from a header, leaving tick stats toon output non-decodable by the same mechanism this task removed from the detail document.",
-              "failure": "An agent piping tick stats --toon into a standard TOON reader gets invalid unquoted key \"stats{total,open,…}\" on line 1 and reads nothing below it — the exact failure that sent an agent to .tick/tasks.jsonl for show. Noticed the first time a consumer parses stats output rather than eyeballing it.",
-              "detail": "internal/cli/toon_formatter.go:393 — return strings.Replace(s, name+\"[1]\", name, 1) inside encodeToonSingleObject, called from FormatStats at internal/cli/toon_formatter.go:126. With encodeToonFields now in place the summary could be emitted as named fields the same way; the task explicitly scoped this fallback out, and it may already be a later phase task.",
-              "files": [
-                "internal/cli/toon_formatter.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-1-4",
-              "source": "executor",
-              "summary": "README's TOON example block documents the task-detail document in its pre-phase shape and is now wrong in four independent ways.",
-              "failure": "A user or agent reading README.md §Toon builds a parser against task{id,...}:, multi-line tags[2]: lists and notes[1]{text,created}: — none of which the binary emits after phase 1. The parser fails on real tick show --toon output, and the README gives no hint which side is right.",
-              "detail": "README.md:428-450 still shows the wrapped task{...} head replaced by task 1-1 with top-level named fields, the block-form tags[2]:/refs[1]: lists replaced by task 1-2 with inline lists, and now the notes header without the index column. The fix spans the outputs of tasks 1-1 through 1-4, so it belongs to a phase-boundary pass, not to any single task's surface.",
-              "files": [
-                "README.md"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-1-6",
-              "source": "reviewer",
-              "summary": "Pre-existing lint failure on main, untouched by this task.",
-              "failure": "golangci-lint run ./... — the lint command CLAUDE.md documents — exits non-zero on a clean tree, so every contributor and every agent that runs it sees a failure unrelated to their change and learns to ignore lint output. There is no CI lint gate (.github/workflows/ holds only release.yml), so nothing else catches it.",
-              "detail": "scripts/install_test.go:83:16 — strings.SplitN(content, \"\\n\", 2)[0] should be strings.Cut (modernize/stringscut). Introduced by a0bf228a, which adopted the linter; one-line fix.",
-              "files": [
-                "scripts/install_test.go"
-              ]
-            }
-          ],
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -266,6 +235,16 @@
             "free-text-round-trip-1-4",
             "free-text-round-trip-1-5",
             "free-text-round-trip-1-6"
+          ],
+          "staging": {
+            "p1": {
+              "tasks": {
+                "1": "approved"
+              }
+            }
+          },
+          "consolidated_phases": [
+            1
           ]
         }
       }
