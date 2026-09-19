@@ -24,10 +24,9 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--toon",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					// Toon format: the task's own fields open the document
-					if !strings.HasPrefix(stdout, "id: ") {
-						t.Errorf("toon format should open with 'id: ', got %q", stdout)
-					}
+					doc := decodeToonDoc(t, stdout)
+					assertToonFields(t, doc, map[string]any{"title": "Test task"})
+					assertToonKeysPresent(t, doc, "id", "notes")
 				},
 			},
 			{
@@ -301,9 +300,9 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--toon",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					if !strings.HasPrefix(stdout, "id: ") {
-						t.Errorf("toon show should open with 'id: ', got %q", stdout)
-					}
+					doc := decodeToonDoc(t, stdout)
+					assertToonFields(t, doc, map[string]any{"id": "tick-aaa111"})
+					assertToonKeysPresent(t, doc, "notes")
 				},
 			},
 			{
@@ -616,10 +615,9 @@ func TestFormatIntegration(t *testing.T) {
 			if exitCode != 0 {
 				t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderrBuf.String())
 			}
-			// TOON detail output opens with the task's own fields
-			if !strings.HasPrefix(stdoutBuf.String(), "id: ") {
-				t.Errorf("non-TTY should default to toon format, got %q", stdoutBuf.String())
-			}
+			doc := decodeToonDoc(t, stdoutBuf.String())
+			assertToonFields(t, doc, map[string]any{"id": "tick-aaa111"})
+			assertToonKeysPresent(t, doc, "notes")
 		})
 
 		t.Run("TTY defaults to pretty", func(t *testing.T) {
@@ -660,9 +658,9 @@ func TestFormatIntegration(t *testing.T) {
 			if exitCode != 0 {
 				t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderrBuf.String())
 			}
-			if !strings.HasPrefix(stdoutBuf.String(), "id: ") {
-				t.Errorf("--toon should force toon format, got %q", stdoutBuf.String())
-			}
+			doc := decodeToonDoc(t, stdoutBuf.String())
+			assertToonFields(t, doc, map[string]any{"id": "tick-aaa111"})
+			assertToonKeysPresent(t, doc, "notes")
 		})
 
 		t.Run("--pretty overrides piped default", func(t *testing.T) {

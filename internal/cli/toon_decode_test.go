@@ -1,10 +1,14 @@
 package cli
 
 import (
+	"bytes"
 	"slices"
 	"testing"
+	"time"
 
 	toon "github.com/toon-format/toon-go"
+
+	"github.com/leeovery/tick/internal/task"
 )
 
 // decodeToonDoc decodes a TOON document and fails the test if it does not
@@ -25,19 +29,25 @@ func decodeToonDoc(t *testing.T, doc string) map[string]any {
 // decodeToonNotes decodes a task detail document and returns its notes rows.
 func decodeToonNotes(t *testing.T, doc string) []map[string]any {
 	t.Helper()
-	raw, ok := decodeToonDoc(t, doc)["notes"]
+	return toonRows(t, decodeToonDoc(t, doc), "notes")
+}
+
+// toonRows returns the rows of a tabular section of a decoded document.
+func toonRows(t *testing.T, doc map[string]any, key string) []map[string]any {
+	t.Helper()
+	raw, ok := doc[key]
 	if !ok {
-		t.Fatalf("key \"notes\" missing from decoded document:\n%s", doc)
+		t.Fatalf("key %q missing from decoded document", key)
 	}
 	items, ok := raw.([]any)
 	if !ok {
-		t.Fatalf("key \"notes\" = %#v, want a list", raw)
+		t.Fatalf("key %q = %#v, want a list", key, raw)
 	}
 	rows := make([]map[string]any, 0, len(items))
 	for i, item := range items {
 		row, ok := item.(map[string]any)
 		if !ok {
-			t.Fatalf("notes[%d] = %#v, want an object", i, item)
+			t.Fatalf("%s[%d] = %#v, want an object", key, i, item)
 		}
 		rows = append(rows, row)
 	}
@@ -54,6 +64,15 @@ func assertToonFields(t *testing.T, doc map[string]any, want map[string]any) {
 		}
 		if got != wantValue {
 			t.Errorf("key %q = %#v, want %#v", key, got, wantValue)
+		}
+	}
+}
+
+func assertToonKeysPresent(t *testing.T, doc map[string]any, keys ...string) {
+	t.Helper()
+	for _, key := range keys {
+		if _, ok := doc[key]; !ok {
+			t.Errorf("key %q missing from decoded document", key)
 		}
 	}
 }
@@ -88,4 +107,153 @@ func assertToonStringList(t *testing.T, doc map[string]any, key string, want []s
 	if !slices.Equal(got, want) {
 		t.Errorf("key %q = %#v, want %#v", key, got, want)
 	}
+}
+
+// runToonCommand runs a tick command under --toon and returns its stdout.
+func runToonCommand(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	var stdoutBuf, stderrBuf bytes.Buffer
+	app := &App{
+		Stdout: &stdoutBuf,
+		Stderr: &stderrBuf,
+		Getwd:  func() (string, error) { return dir, nil },
+	}
+	full := append([]string{"tick", "--toon"}, args...)
+	if code := app.Run(full); code != 0 {
+		t.Fatalf("%v exit code = %d, want 0; stderr = %q", full, code, stderrBuf.String())
+	}
+	return stdoutBuf.String()
+}
+
+func assertToonNoteRows(t *testing.T, doc map[string]any, want []task.Note) {
+	t.Helper()
+	rows := toonRows(t, doc, "notes")
+	if len(rows) != len(want) {
+		t.Fatalf("notes length = %d, want %d", len(rows), len(want))
+	}
+	for i, row := range rows {
+		assertToonFields(t, row, map[string]any{
+			"index":   float64(i + 1),
+			"text":    want[i].Text,
+			"created": task.FormatTimestamp(want[i].Created),
+		})
+	}
+}
+
+func assertToonRelatedRow(t *testing.T, doc map[string]any, key string, want RelatedTask) {
+	t.Helper()
+	rows := toonRows(t, doc, key)
+	if len(rows) != 1 {
+		t.Fatalf("key %q has %d rows, want 1", key, len(rows))
+	}
+	assertToonFields(t, rows[0], map[string]any{
+		"id":     want.ID,
+		"title":  want.Title,
+		"status": want.Status,
+	})
+}
+
+func assertToonRowsEmpty(t *testing.T, doc map[string]any, keys ...string) {
+	t.Helper()
+	for _, key := range keys {
+		if rows := toonRows(t, doc, key); len(rows) != 0 {
+			t.Errorf("key %q has %d rows, want 0", key, len(rows))
+		}
+	}
+}
+
+func TestToonTaskDetailConformance(t *testing.T) {
+	created := time.Date(2026, 2, 10, 10, 0, 0, 0, time.UTC)
+	updated := time.Date(2026, 2, 11, 8, 30, 0, 0, time.UTC)
+	closed := time.Date(2026, 2, 11, 9, 0, 0, 0, time.UTC)
+
+	notes := []task.Note{
+		{Text: "First note", Created: created},
+		{Text: "Second note: with a colon", Created: created.Add(time.Hour)},
+	}
+	fullTask := task.Task{
+		ID:          "tick-aaa111",
+		Title:       "Full task",
+		Status:      task.StatusDone,
+		Priority:    1,
+		Type:        "bug",
+		Parent:      "tick-ccc333",
+		Tags:        []string{"backend", "ui"},
+		Refs:        []string{"https://x.dev/issues/3"},
+		Description: "Line one\nLine two",
+		Notes:       notes,
+		BlockedBy:   []string{"tick-ddd444"},
+		Created:     created,
+		Updated:     updated,
+		Closed:      &closed,
+	}
+	blocker := task.Task{ID: "tick-ddd444", Title: "Blocking task", Status: task.StatusDone, Priority: 2, Created: created, Updated: created, Closed: &closed}
+	child := task.Task{ID: "tick-eee555", Title: "Child task", Status: task.StatusOpen, Priority: 3, Parent: "tick-aaa111", Created: created, Updated: created}
+	parent := task.Task{ID: "tick-ccc333", Title: "Parent task", Status: task.StatusOpen, Priority: 1, Created: created, Updated: created}
+	bareTask := task.Task{ID: "tick-bbb222", Title: "Bare task", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created}
+
+	seed := []task.Task{parent, blocker, child, fullTask, bareTask}
+
+	t.Run("it decodes a show document carrying every optional field", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, seed)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "show", "tick-aaa111"))
+
+		assertToonFields(t, doc, map[string]any{
+			"id":          "tick-aaa111",
+			"title":       "Full task",
+			"status":      "done",
+			"priority":    float64(1),
+			"type":        "bug",
+			"parent":      "tick-ccc333",
+			"created":     task.FormatTimestamp(created),
+			"updated":     task.FormatTimestamp(updated),
+			"closed":      task.FormatTimestamp(closed),
+			"description": "Line one\nLine two",
+		})
+		assertToonStringList(t, doc, "tags", []string{"backend", "ui"})
+		assertToonStringList(t, doc, "refs", []string{"https://x.dev/issues/3"})
+		assertToonRelatedRow(t, doc, "blocked_by", RelatedTask{ID: "tick-ddd444", Title: "Blocking task", Status: "done"})
+		assertToonRelatedRow(t, doc, "children", RelatedTask{ID: "tick-eee555", Title: "Child task", Status: "open"})
+		assertToonNoteRows(t, doc, notes)
+	})
+
+	t.Run("it decodes a show document carrying no optional fields", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, seed)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "show", "tick-bbb222"))
+
+		assertToonFields(t, doc, map[string]any{
+			"id":       "tick-bbb222",
+			"title":    "Bare task",
+			"status":   "open",
+			"priority": float64(2),
+			"created":  task.FormatTimestamp(created),
+			"updated":  task.FormatTimestamp(created),
+		})
+		assertToonKeysAbsent(t, doc, "type", "parent", "closed", "tags", "refs", "description")
+		assertToonRowsEmpty(t, doc, "blocked_by", "children", "notes")
+	})
+
+	t.Run("it decodes note add output as the task detail document", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, seed)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "note", "add", "tick-aaa111", "Third note"))
+
+		assertToonFields(t, doc, map[string]any{"id": "tick-aaa111"})
+		rows := toonRows(t, doc, "notes")
+		if len(rows) != 3 {
+			t.Fatalf("notes length = %d, want 3", len(rows))
+		}
+		assertToonFields(t, rows[2], map[string]any{"index": float64(3), "text": "Third note"})
+	})
+
+	t.Run("it decodes note remove output as the task detail document", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, seed)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "note", "remove", "tick-aaa111", "1"))
+
+		assertToonFields(t, doc, map[string]any{"id": "tick-aaa111"})
+		assertToonNoteRows(t, doc, notes[1:])
+	})
 }

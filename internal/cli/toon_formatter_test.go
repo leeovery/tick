@@ -221,6 +221,7 @@ func TestToonFormatter(t *testing.T) {
 		if !strings.Contains(result, "children[0]{id,title,status}:") {
 			t.Errorf("missing children[0] section in: %q", result)
 		}
+		assertToonRowsEmpty(t, decodeToonDoc(t, result), "blocked_by", "children")
 	})
 
 	t.Run("it omits the description section when the description is empty", func(t *testing.T) {
@@ -573,9 +574,6 @@ func TestToonFormatter(t *testing.T) {
 		f := &ToonFormatter{}
 		tags := []string{"backend", "ui"}
 		result := f.FormatTaskDetail(detailWith(tags, nil))
-		if !strings.Contains(result, "tags[2]: backend,ui") {
-			t.Errorf("should contain inline tags list, got:\n%s", result)
-		}
 		assertToonStringList(t, decodeToonDoc(t, result), "tags", tags)
 	})
 
@@ -858,8 +856,8 @@ func TestToonFormatter(t *testing.T) {
 
 	t.Run("it omits the head rather than emitting a blank line when the head cannot be encoded", func(t *testing.T) {
 		firstSection := "blocked_by[0]{id,title,status}:"
-		got := joinToonSections([]string{"", firstSection, "notes[0]{text,created}:"})
-		want := firstSection + "\n\nnotes[0]{text,created}:"
+		got := joinToonSections([]string{"", firstSection, "notes[0]{index,text,created}:"})
+		want := firstSection + "\n\nnotes[0]{index,text,created}:"
 		if got != want {
 			t.Errorf("joinToonSections = %q, want %q", got, want)
 		}
