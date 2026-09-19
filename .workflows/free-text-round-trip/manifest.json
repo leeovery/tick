@@ -227,7 +227,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 2,
-          "current_task": "free-text-round-trip-2-4",
+          "current_task": "free-text-round-trip-2-5",
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -238,7 +238,8 @@
             "free-text-round-trip-1-7",
             "free-text-round-trip-2-1",
             "free-text-round-trip-2-2",
-            "free-text-round-trip-2-3"
+            "free-text-round-trip-2-3",
+            "free-text-round-trip-2-4"
           ],
           "staging": {
             "p1": {
@@ -292,6 +293,19 @@
                 "internal/cli/json_formatter.go",
                 "internal/cli/pretty_formatter.go",
                 "internal/cli/helpers.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-2-4",
+              "source": "reviewer",
+              "summary": "StatusChanges carries Rows and Blocks as independent fields where Rows is fully derivable from Blocks, and Task 5 is the task that populates both.",
+              "failure": "Task 5 (or a later edit) builds Rows from a different source than Blocks, or updates one and not the other; toon/JSON then report a changed table that pretty cascade tree contradicts for the same tick create/tick update invocation. Nothing fails to compile and no test compares the two views, so it ships and is noticed only by a user or agent that reads both formats of the same command.",
+              "detail": "mergeStatusChanges(blocks ...CascadeResult) []StatusChange at internal/cli/transition.go:168 already performs exactly this derivation, and the merge is safe outside the Mutate closure (its own doc notes the rows hold only copied values). StatusChanges at internal/cli/format.go:112-115 could hold Blocks alone and expose rows as a method, making the toon/JSON table and pretty tree two views of one value. The change reaches Task 5 construction sites (create.go around the parent-cascade result, update.go around the Rule 6 / Rule 3 results), which is why it is not an issue against this task.",
+              "files": [
+                "internal/cli/format.go",
+                "internal/cli/transition.go",
+                "internal/cli/create.go",
+                "internal/cli/update.go"
               ]
             }
           ]
