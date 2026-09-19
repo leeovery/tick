@@ -30,6 +30,7 @@ status: draft
 | free-text-round-trip-1-4 | Notes carry a 1-based index column | count-zero header carries the index column, multi-line note text stays library-quoted, index matches the 1-based addressing `note remove` takes |
 | free-text-round-trip-1-5 | Detail-document assertions check decoded values | pretty's golden-string assertions must stay in place, JSON full-document golden blobs in create/update/note tests, assertions on sections whose shape did not change |
 | free-text-round-trip-1-6 | README samples match real output | list sample's empty type renders as a quoted empty string, show sample's section order must match the formatter's real order |
+| free-text-round-trip-1-7 | Corrections | README.md:421's explainer sentence names only the tabular form; the samples beneath it stay byte-unchanged, the opening and closing clauses survive, no file other than README.md is modified |
 
 ### Phase 2: Status changes become one `changed` table
 status: draft
