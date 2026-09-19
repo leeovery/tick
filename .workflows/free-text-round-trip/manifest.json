@@ -159,7 +159,9 @@
             "free-text-round-trip-4-10": "tick-46ece2",
             "free-text-round-trip-4-11": "tick-f31314",
             "free-text-round-trip-4-12": "tick-e8d2eb",
-            "free-text-round-trip-4-13": "tick-1267e8"
+            "free-text-round-trip-4-13": "tick-1267e8",
+            "free-text-round-trip-5-7": "tick-3f0af1",
+            "free-text-round-trip-5-8": "tick-91fb2f"
           },
           "storage_paths": [
             ".tick/"
@@ -318,59 +320,26 @@
                 "4": "approved",
                 "5": "approved"
               }
+            },
+            "p5": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved"
+              }
             }
           },
           "consolidated_phases": [
             1,
             2,
             3,
-            4
+            4,
+            5
           ],
           "completed_phases": [
             1,
             2,
             3,
             4
-          ],
-          "bank": [
-            {
-              "task": "free-text-round-trip-5-1",
-              "source": "reviewer",
-              "summary": "A value-taking flag whose value is exactly `--` became unwritable, leaving a new hole in §2.2 byte-identity bar that no command can now close.",
-              "failure": "An agent reads a task whose description is exactly `--` out of `tick show` and writes it back with `tick update <id> --description --`; the marker is consumed by parseArgs and the command fails with `Error: --description requires a value` (verified against the working tree; before this change the same invocation stored the two-dash description). Noticed by the phase own round-trip fixture task (free-text-round-trip-5-5, The Awkward-Task Fixture Round-Trips Byte-Identically) if it covers a dash-only value, otherwise by a user whose text is silently unwritable. Task 5-2 split does not fix it — post-marker arguments become positionals, so the value can never re-attach to --description.",
-              "detail": "Marker recognition at internal/cli/app.go:374-377 consumes a bare `--` wherever it appears, including the slot a value-taking flag value occupies; the parsers that then find no value are parseCreateArgs (internal/cli/create.go:46-51), parseUpdateArgs, parseListFlags and parseShowArgs. The same family already exists pre-existing for values that spell a global flag (`--description --json` fails today because applyGlobalFlag strips the value at any position), which is why a fix belongs at the phase level rather than in either task: supporting the `--flag=value` form for value-taking flags closes both at once. The task body accepts this as its single documented regression.",
-              "files": [
-                "internal/cli/app.go",
-                "internal/cli/create.go",
-                "internal/cli/update.go",
-                "internal/cli/list.go",
-                "internal/cli/show.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-5-2",
-              "source": "reviewer",
-              "summary": "`migrate` is the one command still reading post-marker text as flags; the literal split is per-handler opt-in with nothing enforcing it.",
-              "failure": "`tick migrate --from beads -- --dry-run` performs a dry run — verified, the output carries [dry-run]. The marker is silently ignored, so once the README task publishes \"`--` means everything after it is text\", a caller who follows that rule on migrate gets a no-op import and only notices when the tasks they expected are absent. The same hole reopens for any command added later: forgetting fc.SplitLiterals in a new handler produces no compile error and no test failure.",
-              "detail": "parseMigrateArgs (internal/cli/migrate.go:46-65) scans all of args for --from/--dry-run/--pending-only, and App.Run passes the unsplit subArgs to a.handleMigrate(subArgs) (internal/cli/app.go:82) one line after it has already computed migrateFlagArgs for ValidateFlags (internal/cli/app.go:79) — so the split half exists and is discarded. Two shapes for the consolidation pass: (a) convert parseMigrateArgs like its siblings (two lines; migrate has no positional so literals are simply dropped as list drops them); (b) the structural fix — split once in App.Run and hand both halves to every handler, so a handler cannot forget. (b) reaches every handler signature, which is why it belongs at the phase boundary.",
-              "files": [
-                "internal/cli/migrate.go",
-                "internal/cli/app.go"
-              ]
-            },
-            {
-              "task": "free-text-round-trip-5-6",
-              "source": "reviewer",
-              "summary": "No drift guard ties the global-flag registry to the three places that document it; the README already diverges.",
-              "failure": "A global flag added to globalFlagSet (or a spelling changed) ships undocumented, or documented wrong, in up to three hand-maintained lists with nothing failing. A user reading `tick help` or the README never learns the flag exists, or learns a spelling that does not work. It is already live: globalFlagSet registers -V, `tick help` prints `--version, -V`, and the README Global Flags block lists only --version — no test notices.",
-              "detail": "internal/cli/flags.go:21 (globalFlagSet), internal/cli/help.go:264-273 (printTopLevelHelp block), internal/cli/help.go:281 (printAllHelp line), README.md:623-632 (README block). Task 5-6 new agreement subtest (internal/cli/help_test.go:491) pins top-level → --all for long flags only; nothing checks either against globalFlagSet, and nothing checks the README at all. Per-command flags already have this guard (TestCommandFlagsMatchHelp); global flags do not. Independently found twice — a reviewer on task free-text-round-trip-4-9 reported the same gap before this phase bank existed.",
-              "files": [
-                "internal/cli/flags.go",
-                "internal/cli/help.go",
-                "internal/cli/help_test.go",
-                "README.md"
-              ]
-            }
           ]
         }
       }

@@ -1,0 +1,72 @@
+# Consolidation Tasks: free-text-round-trip (Phase 5)
+
+## Task 1: Every Command Gets Its Arguments Split At The Marker
+placement: phase 5
+severity: behaviour
+
+**Problem**: `tick migrate --from beads -- --dry-run` performs a dry run. `parseMigrateArgs` (`internal/cli/migrate.go:46-65`) scans every argument it is given, and `App.Run` computes the pre-marker split for `ValidateFlags` (`internal/cli/app.go:79`) and then hands the *unsplit* arguments to `handleMigrate` (`app.go:84`). Meanwhile this phase published the opposite rule in three places a caller reads: `tick help` (`help.go:272`), `tick help --all` (`help.go:281`), and the README, which now lists `--` among the flags accepted on every command (`README.md:631`) and states that everything after it is text (`README.md:641`). An agent following the documented rule on a migrate invocation gets a silent no-op import and notices only when the tasks it expected are absent. The hole also reopens for every command added later: the split is per-handler opt-in across two layers — four handler sites (`app.go:189`, `:221`, `:235`, `:271`) and three `Run*` functions (`create.go:115`, `update.go:171`, `show.go:38`), plus three validation-only splits that discard the literals (`app.go:71`, `:79`, `:117`) — so forgetting the call in a new handler produces no compile error and no test failure. The phase's own migrate guard (`end_of_flags_test.go:99-106`) asserts only that no unknown-flag error is printed, which stays true while the marker is ignored.
+
+**Solution**: Split once, above the handlers. `App.Run` computes `flagArgs, literals` immediately after `parseArgs` and hands both halves to every handler and `Run*` function, so a handler cannot forget the step and the validation call sites reuse the same pair. That removes the seven per-site calls and the three validation-only ones, puts the split in one layer instead of two, and makes `migrate` honour the marker as a consequence rather than as a second decision. Pin the behaviour with a guard that asserts the dry run did *not* happen — tasks actually imported — rather than asserting the absence of an error string. Settled rather than raised: the narrower fix the finder offered (give `parseMigrateArgs` the `(flagArgs, literals)` shape and split in `handleMigrate`, two lines) repairs the reported invocation but leaves the trap that produced it, and this phase's failure is as much "a handler can forget" as "migrate forgot"; a change too wide for a single task is what the boundary pass is for, and the central split is a net removal of ten call sites rather than an addition.
+
+**Outcome**: The marker means the same thing on every command including `migrate`, the split exists in one place, and a new handler inherits it rather than opting in.
+
+**Do**:
+- In `App.Run` (`internal/cli/app.go:35-163`), compute `flagArgs, literals := splitLiteralArgs(subArgs, flags.literals)` once immediately after `parseArgs` returns, and delete the three validation-only splits (`app.go:71` doctor, `:79` migrate, `:117` everything else), validating the single `flagArgs` pair instead; pass `flagArgs` to `qualifyCommand` (`app.go:406`) so the sub-subcommand comes off the flag half and the literals ride past untouched.
+- Change every handler and `Run*` function that takes a command argument slice to take `flagArgs, literals []string` — 12 handlers (`app.go:166`, `:175`, `:184`, `:198`, `:207`, `:216`, `:230`, `:265`, `:315`, `dep.go:13`, `note.go:14`, `migrate.go:70`) and 9 `Run*` functions (`create.go:114`, `show.go:37`, `update.go:170`, `transition.go:14`, `dep.go:55`, `dep.go:131`, `dep_tree.go:12`, `note.go:39`, `note.go:92`) — and delete the seven per-site split calls they now receive ready-made (`grep -rn 'fc.SplitLiterals(' internal/ --include='*.go' | grep -v _test` → 7 sites: `app.go:189`, `:221`, `:235`, `:271`, `create.go:115`, `update.go:171`, `show.go:38`).
+- Route the sub-subcommand off `flagArgs[0]` in `handleDep` (`dep.go:23`) and `handleNote` (`note.go:24`), passing `flagArgs[1:]` with the literals unchanged; commands that read every argument as a positional — `RunTransition`, `RunDepAdd`, `RunDepRemove`, `RunDepTree`, `RunNoteAdd`, `RunNoteRemove` — concatenate the two halves in order, which reproduces today's single slice exactly.
+- Give `parseMigrateArgs` (`migrate.go:46`) the `(flagArgs, literals)` shape its siblings have and scan `flagArgs` only, dropping the literals as `parseListFlags` does (`list.go:37`) since migrate carries no positional; replace the guard at `end_of_flags_test.go:99-106` with one that asserts the import happened.
+- Remove `FormatConfig.SplitLiterals` and the `FormatConfig.Literals` field (`format.go:73-82`, `:94`) together with `TestFormatConfigSplitLiterals` (`end_of_flags_test.go:344-361`), so no splitting mechanism remains reachable below the dispatcher; keep `splitLiteralArgs` (`flags.go:181`) and `TestSplitLiteralArgs`, now serving one caller.
+
+**Acceptance Criteria**:
+- [ ] `tick migrate --from beads -- --dry-run` performs a real import: the tasks land in `tasks.jsonl` and the dry-run presenter is not used.
+- [ ] Post-marker `--from`, `--pending-only` and `--dry-run` are text on migrate: `tick migrate -- --from beads` fails with `--from flag is required`, and a post-marker second `--from` does not override the pre-marker one.
+- [ ] `grep -rn 'splitLiteralArgs(' internal/ --include='*.go' | grep -v _test` returns exactly two lines — the definition in `flags.go` and the single call in `App.Run`.
+- [ ] `grep -rn 'SplitLiterals' internal/ --include='*.go'` returns nothing: the method, the `Literals` field and their test are gone, so a handler has no split to forget or repeat.
+- [ ] Every handler and `Run*` that takes command arguments takes both halves; none re-derives the boundary from a count.
+- [ ] Marker behaviour on every other command is unchanged: `TestEndOfFlagsMarker`, `TestPostMarkerArgumentsAreNeverFlags`, `TestParseArgsLiterals` and `TestSplitLiteralArgs` pass as written, and `go test ./...` is green.
+
+**Tests**:
+- `"it imports tasks when the marker precedes --dry-run on migrate"` — `setupBeadsFixture` then `tick migrate --from beads -- --dry-run`, asserting the fixture task is in `readPersistedTasks` (replaces the error-string guard at `end_of_flags_test.go:99-106`)
+- `"it treats a post-marker --from as text on migrate"` — `--from beads -- --from bogus` still imports through the beads provider
+- `"it reports a missing --from when the only --from follows the marker"` — `tick migrate -- --from beads` exits 1 with `--from flag is required`
+- `"it treats a post-marker --pending-only as text on migrate"` — a done-status fixture task is imported rather than filtered out
+- `"it keeps the marker working on a command with a sub-subcommand"` — `tick note add <id> -- - text` stores `- text`, and `tick dep add -- <id> <blocker>` links them in order
+
+## Task 2: A Flag Value Of Exactly Two Dashes Is Writable Again
+placement: phase 5
+severity: behaviour
+
+**Problem**: `tick update <id> --title --` and `tick create --description --` fail with `--title requires a value` / `--description requires a value`. `parseArgs` consumes the first bare `--` wherever it appears, including the slot a value-taking flag's value occupies (`internal/cli/app.go:374-378`); the following argument arrives as a literal, and no value case in any parser can consume a literal (`create.go:39`, `update.go:46`, `show_fields.go:246`, `list.go:37` all read values from `flagArgs` alone). Before this phase both invocations stored the two-dash value — `ValidateFlags` skipped it as the value of a registered `TakesValue` flag, and `parseArgs` passed it through because `applyGlobalFlag` does not claim `--`. This phase's own tests create a task whose title is exactly `--` (`end_of_flags_test.go:159-172`), so the tool now produces a stored value it cannot write back: read `--` out of `tick show`, write it back, and the command refuses. That is §2.2's byte-identity bar failing on a value the tool itself accepts, with no escape spelling — `--title -- --` fails identically, because a post-marker argument is a positional and can never re-attach to the flag. A description of exactly `--` has no positional route at all and is unwritable on both `create` and `update`. The round-trip fixture carries no dash-only value (`round_trip_test.go:14-24`), so nothing in the suite fails.
+
+**Solution**: Support the attached form `--flag=value` for value-taking flags. `applyGlobalFlag` already leaves `--description=--` alone; `ValidateFlags` splits on the first `=` before the registry lookup (`flags.go:127-160`), and each parser's value cases accept the attached spelling alongside the separated one. Extend the round-trip fixture with a dash-only value and a flag-spelling value on both `--title` and `--description`, so the bar is pinned where it broke. Settled rather than raised: §2.2 states the bar, and the corrigendum this pass landed on §10.2 records the attached form as the repair — the marker alone cannot restore the case. The smaller alternative the finder weighed, letting a value-taking flag that runs out of `flagArgs` consume `literals[0]`, is ambiguous exactly where it matters, since a flag in the last pre-marker position makes the first literal equally the command's positional. Note the reach this accepts: the attached form also closes the pre-existing sibling hole where a value spelling a global flag is stripped wherever it appears (`--description --json` fails today), because one parsing change covers both and deliberately closing only one would cost more than closing both.
+
+**Outcome**: A free-text value of exactly two dashes, or one spelling a flag, can be written back through the flag that carries it, and the round-trip fixture holds that guarantee rather than leaving it untested.
+
+**Do**:
+- Add a cut helper beside `splitLiteralArgs` in `internal/cli/flags.go`: for an argument beginning with `-` it returns the name before the first `=`, the value after it, and whether an `=` was present; for anything else it returns the argument whole with `attached` false.
+- Teach `ValidateFlags` (`flags.go:128-164`) the attached spelling: keep the numeric and `globalFlagSet` checks on the whole argument, then look the registry up under the cut name; when the name resolves to a `TakesValue: true` def and the argument carried `=`, accept it and do not skip the following argument. A `TakesValue: false` flag given `=`, and any unregistered name, keep today's whole-argument error text (`unknown flag "--clear-tags=x" for "update"`).
+- Convert the value cases in all five parsers that read values from `flagArgs` — `parseCreateArgs` (`create.go:39-110`), `parseUpdateArgs` (`update.go:46-122`), `parseListFlags` (`list.go:37-102`), `parseShowArgs` (`show_fields.go:246-277`), `parseMigrateArgs` (`migrate.go:46-66`); `grep -rn 'requires a value' internal/cli/*.go | grep -v _test` counts 24 value cases across exactly those five files. Switch on the cut name, take the attached value when the argument carried `=`, otherwise consume the next `flagArgs` entry and return the existing `… requires a value` error when none follows.
+- Keep the non-flag paths byte-exact: the default/positional branch of each parser records the original unsplit argument, so a title or ID containing `=` is stored whole, and an attached value is passed through verbatim — empty included, leaving `--description=` to the same downstream validation that handles `--description ""` today.
+- Extend the round-trip fixture (`round_trip_test.go`) with the two hostile values — exactly `--` and exactly `--json` — on both `--title` and `--description`: write each in, read it back out of `tick show <id> --field`, write the read value back through the attached form, and assert the stored bytes are unchanged.
+
+**Acceptance Criteria**:
+- [ ] `tick update <id> --title=--` and `tick create --description=-- "t"` succeed and store the two-dash value.
+- [ ] `tick update <id> --description=--json` stores `--json` and does not switch the output format; the same value read out of `tick show --field description` and written back stores byte-identically.
+- [ ] A dash-only or flag-spelling title and description survive the full round trip through `show --field` and back, asserted in the fixture rather than only at the parser.
+- [ ] The separated form is unchanged on every flag: values, positionals, and the `… requires a value` error when a value-taking flag is the last flag argument.
+- [ ] A positional carrying `=` is stored whole — `tick create -- "a=b"` stores the title `a=b`, `tick show a=b` resolves nothing rather than half an argument.
+- [ ] `--clear-tags=x` and `--stauts=open` still fail with the existing unknown-flag error naming the whole argument; `--json=x` is still an unknown flag, since global flags stay exact-match in `applyGlobalFlag`.
+- [ ] The attached form works on all five parsers: `tick list --status=open`, `tick show <id> --field=title`, `tick create --priority=0 "t"`, `tick update <id> --tags=a,b`, `tick migrate --from=beads`.
+- [ ] `go test ./...` is green with the existing marker and round-trip suites unmodified apart from the fixture additions.
+
+**Tests**:
+- `"it stores a title of exactly two dashes given in the attached form"` — `tick update <id> --title=--` exits 0 and persists `--`
+- `"it stores a description of exactly two dashes on create"` — `tick create --description=-- -- title` persists the two-dash description
+- `"it stores a value that spells a global flag"` — `--description=--json` persists `--json` and the output is not JSON
+- `"it writes a dash-only title back byte-identically"` — fixture round trip through `show --field title`
+- `"it writes a description spelling a global flag back byte-identically"` — fixture round trip through `show --field description`
+- `"it still reports a missing value for a trailing separated flag"` — `tick update <id> --title` exits 1 with `--title requires a value`
+- `"it keeps a positional containing an equals sign whole"` — `tick create -- "a=b"` stores the title `a=b`
+- `"it rejects an unknown flag given in the attached form"` — `tick list --stauts=open` reports `unknown flag "--stauts=open" for "list"`
+- `"it rejects the attached form on a flag that takes no value"` — `tick update <id> --clear-tags=x` reports the unknown flag
+- `"it accepts the attached form on list, show and migrate"` — `--status=open`, `--field=title` and `--from=beads` each behave as their separated spelling
