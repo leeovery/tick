@@ -226,8 +226,8 @@
             ".claude/skills/golang-dependency-management",
             ".claude/skills/golang-continuous-integration"
           ],
-          "current_phase": 1,
-          "current_task": "free-text-round-trip-2-1",
+          "current_phase": 2,
+          "current_task": "free-text-round-trip-2-2",
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -235,7 +235,8 @@
             "free-text-round-trip-1-4",
             "free-text-round-trip-1-5",
             "free-text-round-trip-1-6",
-            "free-text-round-trip-1-7"
+            "free-text-round-trip-1-7",
+            "free-text-round-trip-2-1"
           ],
           "staging": {
             "p1": {
@@ -249,6 +250,22 @@
           ],
           "completed_phases": [
             1
+          ],
+          "bank": [
+            {
+              "task": "free-text-round-trip-2-1",
+              "source": "reviewer",
+              "summary": "CascadeResult will carry two parallel representations of the same status movements once phase 2 rendering lands — Cascaded (pretty tree) and Changed (toon/JSON table) — with nothing forcing a producer to populate both.",
+              "failure": "A future path that moves a task status populates one representation and not the other. Nothing fails to compile and no test necessarily covers the new path, so toon and JSON report a row that pretty tree omits (or the reverse), and the divergence is noticed only when a user compares two formats of the same command. The risk exists only because §4.1 deliberately keeps pretty on the old tree while §7.2 moves toon and JSON to the table, so the two must be kept in sync by hand.",
+              "detail": "CascadeResult (internal/cli/format.go:152-159) now holds TaskID/TaskTitle/OldStatus/NewStatus/Cascaded for PrettyFormatter.FormatCascadeTransition (internal/cli/pretty_formatter.go:234-275) and Changed for the table. buildCascadeResult (internal/cli/transition.go:64-125) is currently the only thing populating both from one input, which is what keeps them consistent today; the consolidation is to make that the enforced single entry point (or derive pretty tree from Changed plus parent links) once tasks 2-2 through 2-4 have landed. Not actionable inside this task.",
+              "files": [
+                "internal/cli/format.go",
+                "internal/cli/transition.go",
+                "internal/cli/pretty_formatter.go",
+                "internal/cli/toon_formatter.go",
+                "internal/cli/json_formatter.go"
+              ]
+            }
           ]
         }
       }
