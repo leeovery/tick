@@ -33,14 +33,7 @@ func RunDepTree(dir string, fc FormatConfig, fmtr Formatter, args []string, stdo
 
 // runFullDepTree builds and outputs the full dependency graph.
 func runFullDepTree(tasks []task.Task, fmtr Formatter, stdout io.Writer) error {
-	result := BuildFullDepTree(tasks)
-
-	if len(result.Roots) == 0 {
-		fmt.Fprintln(stdout, fmtr.FormatMessage(result.Message))
-		return nil
-	}
-
-	fmt.Fprintln(stdout, fmtr.FormatDepTree(result))
+	fmt.Fprintln(stdout, fmtr.FormatDepTree(BuildFullDepTree(tasks)))
 	return nil
 }
 

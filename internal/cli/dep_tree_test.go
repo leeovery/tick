@@ -147,10 +147,18 @@ func runDepTree(t *testing.T, dir string, args ...string) (stdout string, stderr
 	return stdoutBuf.String(), stderrBuf.String(), code
 }
 
+// unconnectedTasks returns two tasks that carry no dependencies in either direction.
+func unconnectedTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+	}
+}
+
 func TestRunDepTree(t *testing.T) {
 	now := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
 
-	t.Run("it outputs no dependencies found for empty project", func(t *testing.T) {
+	t.Run("it still prints the no-dependencies sentence in pretty for an empty project", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
 
 		stdout, stderr, exitCode := runDepTree(t, dir)
@@ -158,28 +166,86 @@ func TestRunDepTree(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		output := strings.TrimSpace(stdout)
-		if output != "No dependencies found." {
-			t.Errorf("output = %q, want %q", output, "No dependencies found.")
+		if stdout != "No dependencies found.\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "No dependencies found.\n")
 		}
 	})
 
-	t.Run("it outputs no dependencies found for project with no tasks", func(t *testing.T) {
-		tasks := []task.Task{
-			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
-			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
-		}
-		dir, _ := setupTickProjectWithTasks(t, tasks)
+	t.Run("it still prints the no-dependencies sentence in pretty when no task has dependencies", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, unconnectedTasks(now))
 
 		stdout, stderr, exitCode := runDepTree(t, dir)
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		output := strings.TrimSpace(stdout)
-		if output != "No dependencies found." {
-			t.Errorf("output = %q, want %q", output, "No dependencies found.")
+		if stdout != "No dependencies found.\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "No dependencies found.\n")
 		}
+	})
+
+	t.Run("it returns the emptied document for an empty project", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
+
+		assertToonRowsEmpty(t, doc, "dep_tree")
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(0),
+			"longest": float64(0),
+			"blocked": float64(0),
+		})
+	})
+
+	t.Run("it returns the emptied document when no task has dependencies", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, unconnectedTasks(now))
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
+
+		assertToonRowsEmpty(t, doc, "dep_tree")
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(0),
+			"longest": float64(0),
+			"blocked": float64(0),
+		})
+	})
+
+	t.Run("it reports real counts when a cycle leaves no roots", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
+
+		assertToonRowsEmpty(t, doc, "dep_tree")
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(1),
+			"longest": float64(0),
+			"blocked": float64(2),
+		})
+	})
+
+	t.Run("it still renders the populated graph", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+			{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+			{ID: "tick-ccc333", Title: "Task C", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		}
+		dir, _ := setupTickProjectWithTasks(t, tasks)
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
+
+		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
+			{From: "tick-aaa111", To: "tick-bbb222"},
+			{From: "tick-bbb222", To: "tick-ccc333"},
+		})
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(1),
+			"longest": float64(2),
+			"blocked": float64(2),
+		})
 	})
 
 	t.Run("it outputs dep tree for project with dependencies", func(t *testing.T) {

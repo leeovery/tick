@@ -321,7 +321,7 @@ func (f *PrettyFormatter) FormatDepTree(result DepTreeResult) string {
 // formatFullDepTree renders root tasks with their downstream dependency trees and a summary line.
 func (f *PrettyFormatter) formatFullDepTree(result DepTreeResult) string {
 	if len(result.Roots) == 0 {
-		return ""
+		return result.Message
 	}
 
 	var b strings.Builder

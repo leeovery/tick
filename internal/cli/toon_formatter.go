@@ -165,10 +165,6 @@ func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
 		return f.formatFocusedDepTree(result)
 	}
 
-	if result.Message != "" {
-		return result.Message
-	}
-
 	return f.formatFullDepTree(result)
 }
 
