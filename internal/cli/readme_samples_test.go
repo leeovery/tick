@@ -21,10 +21,12 @@ const (
 	readmeShowSampleAnchor      = "id: tick-a1b2"
 	readmeTransitionAnchor      = "changed[1]{id,title,from,to,auto}:"
 	readmeCascadeAnchor         = "changed[2]{id,title,from,to,auto}:"
+	readmeDepTreeAnchor         = "dep_tree[2]{from,to}:"
 	readmeEmptyTypeRow          = `tick-d5c6,Update docs,open,3,""`
 	readmeMissingAnchorFixture  = "tasks[9]{nothing}:"
 	readmeShellPromptLinePrefix = "$ tick"
 	readmeUnchangedMarker       = "(unchanged)"
+	readmeObjectHeaderMarker    = "summary{"
 )
 
 type readmeFence struct {
@@ -172,6 +174,18 @@ func TestREADMEToonSamplesDecode(t *testing.T) {
 	t.Run("it decodes the README cascade sample", func(t *testing.T) {
 		if err := decodeAnchoredBlock(blocks, readmeCascadeAnchor); err != nil {
 			t.Error(err)
+		}
+	})
+
+	t.Run("it decodes the README dep tree sample", func(t *testing.T) {
+		if err := decodeAnchoredBlock(blocks, readmeDepTreeAnchor); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("it has no single-object section header in the README", func(t *testing.T) {
+		if strings.Contains(readmeContent(t), readmeObjectHeaderMarker) {
+			t.Errorf("README contains %q", readmeObjectHeaderMarker)
 		}
 	})
 

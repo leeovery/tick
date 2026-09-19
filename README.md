@@ -304,8 +304,9 @@ dep_tree[2]{from,to}:
   tick-a1b2,tick-c3d4
   tick-c3d4,tick-f3e4
 
-summary{chains,longest,blocked}:
-  1,2,2
+chains: 1
+longest: 2
+blocked: 2
 ```
 
 </td>
