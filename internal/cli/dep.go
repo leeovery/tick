@@ -10,26 +10,26 @@ import (
 )
 
 // handleDep implements the dep subcommand, routing to add/remove sub-subcommands.
-func (a *App) handleDep(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleDep(fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 
-	if len(subArgs) == 0 {
+	if len(flagArgs) == 0 {
 		return fmt.Errorf("sub-command required. Usage: tick dep <add|remove|tree> <task_id> <blocked_by_id>")
 	}
 
-	subCmd := subArgs[0]
-	rest := subArgs[1:]
+	subCmd := flagArgs[0]
+	rest := flagArgs[1:]
 
 	switch subCmd {
 	case "add":
-		return RunDepAdd(dir, fc, fmtr, rest, a.Stdout)
+		return RunDepAdd(dir, fc, fmtr, rest, literals, a.Stdout)
 	case "remove":
-		return RunDepRemove(dir, fc, fmtr, rest, a.Stdout)
+		return RunDepRemove(dir, fc, fmtr, rest, literals, a.Stdout)
 	case "tree":
-		return RunDepTree(dir, fc, fmtr, rest, a.Stdout)
+		return RunDepTree(dir, fc, fmtr, rest, literals, a.Stdout)
 	default:
 		return fmt.Errorf("unknown dep sub-command '%s'. Usage: tick dep <add|remove|tree> <task_id> <blocked_by_id>", subCmd)
 	}
@@ -51,9 +51,11 @@ func parseDepArgs(args []string, subCmd string) (string, string, error) {
 }
 
 // RunDepAdd executes the dep add command: validates inputs, resolves partial IDs,
-// adds the dependency, persists via the storage engine, and outputs confirmation via the Formatter.
-func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	taskID, blockedByID, err := parseDepArgs(args, "add")
+// adds the dependency, persists via the storage engine, and outputs confirmation via
+// the Formatter. Every argument is positional, so the post-marker literals follow the
+// flag half in order.
+func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error {
+	taskID, blockedByID, err := parseDepArgs(slices.Concat(flagArgs, literals), "add")
 	if err != nil {
 		return err
 	}
@@ -126,10 +128,12 @@ func RunDepAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdou
 	return nil
 }
 
-// RunDepRemove executes the dep remove command: resolves partial IDs, finds the task, removes the
-// dependency from blocked_by, persists via the storage engine, and outputs confirmation via the Formatter.
-func RunDepRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	taskID, blockedByID, err := parseDepArgs(args, "remove")
+// RunDepRemove executes the dep remove command: resolves partial IDs, finds the task, removes
+// the dependency from blocked_by, persists via the storage engine, and outputs confirmation via
+// the Formatter. Every argument is positional, so the post-marker literals follow the flag half
+// in order.
+func RunDepRemove(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error {
+	taskID, blockedByID, err := parseDepArgs(slices.Concat(flagArgs, literals), "remove")
 	if err != nil {
 		return err
 	}

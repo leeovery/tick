@@ -167,8 +167,7 @@ func autoCompleteParentIfTerminal(tasks []task.Task, origParentID string, sm *ta
 
 // RunUpdate executes the update command: validates inputs, applies changes via the storage engine,
 // and outputs the updated task details via the Formatter.
-func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	flagArgs, literals := fc.SplitLiterals(args)
+func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error {
 	opts, err := parseUpdateArgs(flagArgs, literals)
 	if err != nil {
 		return err

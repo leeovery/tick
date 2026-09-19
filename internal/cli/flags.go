@@ -175,9 +175,8 @@ func helpCommand(command string) string {
 
 // splitLiteralArgs splits the trailing n arguments off args as literals: text the
 // caller placed after the end-of-flags marker, which must not be inspected as
-// flags. n is clamped to len(args), since leading arguments may have been sliced
-// off args after the count was taken. When literals are split off, flagArgs has
-// its capacity clipped, so appending to it cannot overwrite the first literal.
+// flags. When literals are split off, flagArgs has its capacity clipped, so
+// appending to it cannot overwrite the first literal.
 func splitLiteralArgs(args []string, n int) (flagArgs, literals []string) {
 	n = min(n, len(args))
 	if n <= 0 {

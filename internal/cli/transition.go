@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/leeovery/tick/internal/task"
 )
@@ -10,8 +11,10 @@ import (
 // RunTransition executes a status transition command (start, done, cancel, reopen).
 // It resolves the task ID (supporting partial prefixes), looks up the task, applies the
 // transition and any cascading status changes, persists all changes atomically, and
-// outputs the result via the Formatter.
-func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
+// outputs the result via the Formatter. Every argument is positional, so the
+// post-marker literals follow the flag half in order.
+func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error {
+	args := slices.Concat(flagArgs, literals)
 	if len(args) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick %s <id>", command)
 	}

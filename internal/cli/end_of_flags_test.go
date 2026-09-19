@@ -26,6 +26,12 @@ func runTick(t *testing.T, dir string, args ...string) (stdout string, stderr st
 	return stdoutBuf.String(), stderrBuf.String(), code
 }
 
+// Beads issue fixtures; the "closed" status maps to a done task.
+const (
+	beadsPendingFixture = `{"id":"b-001","title":"Open task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`
+	beadsClosedFixture  = `{"id":"b-002","title":"Done task","status":"closed","priority":1,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z","closed_at":"2026-01-11T10:00:00Z","close_reason":"completed"}`
+)
+
 func TestEndOfFlagsMarker(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	existingTask := task.Task{
@@ -96,12 +102,95 @@ func TestEndOfFlagsMarker(t *testing.T) {
 		}
 	})
 
-	t.Run("it accepts the marker on migrate", func(t *testing.T) {
-		dir, _ := setupTickProject(t)
+	t.Run("it imports tasks when the marker precedes --dry-run on migrate", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		setupBeadsFixture(t, dir, beadsPendingFixture)
 
-		stdout, stderr, _ := runMigrate(t, dir, "--from", "beads", "--", "--bogus")
-		if strings.Contains(stderr, "unknown flag") || strings.Contains(stdout, "unknown flag") {
-			t.Errorf("should not report an unknown flag, stdout = %q stderr = %q", stdout, stderr)
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--", "--dry-run")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if strings.Contains(stdout, "[dry-run]") {
+			t.Errorf("dry-run presenter was used, stdout = %q", stdout)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 imported task, got %d", len(tasks))
+		}
+		if tasks[0].Title != "Open task" {
+			t.Errorf("title = %q, want %q", tasks[0].Title, "Open task")
+		}
+	})
+
+	t.Run("it treats a post-marker --from as text on migrate", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		setupBeadsFixture(t, dir, beadsPendingFixture)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--", "--from", "bogus")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 imported task, got %d", len(tasks))
+		}
+		if tasks[0].Title != "Open task" {
+			t.Errorf("title = %q, want %q", tasks[0].Title, "Open task")
+		}
+	})
+
+	t.Run("it reports a missing --from when the only --from follows the marker", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		setupBeadsFixture(t, dir, beadsPendingFixture)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--", "--from", "beads")
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stderr, "--from flag is required") {
+			t.Errorf("stderr = %q, want it to report the missing --from", stderr)
+		}
+	})
+
+	t.Run("it treats a post-marker --pending-only as text on migrate", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		setupBeadsFixture(t, dir, beadsPendingFixture+"\n"+beadsClosedFixture)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--", "--pending-only")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 imported tasks, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it keeps the marker working on a command with a sub-subcommand", func(t *testing.T) {
+		blocker := task.Task{
+			ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen,
+			Priority: 2, Created: now, Updated: now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{existingTask, blocker})
+
+		_, stderr, exitCode := runNote(t, dir, "add", existingTask.ID, "--", "- text")
+		if exitCode != 0 {
+			t.Fatalf("note add exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		_, stderr, exitCode = runDep(t, dir, "add", "--", existingTask.ID, blocker.ID)
+		if exitCode != 0 {
+			t.Fatalf("dep add exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks[0].Notes) != 1 || tasks[0].Notes[0].Text != "- text" {
+			t.Errorf("notes = %v, want a single %q note", tasks[0].Notes, "- text")
+		}
+		if !slices.Equal(tasks[0].BlockedBy, []string{blocker.ID}) {
+			t.Errorf("blocked_by = %v, want [%s]", tasks[0].BlockedBy, blocker.ID)
 		}
 	})
 
@@ -337,25 +426,6 @@ func TestSplitLiteralArgs(t *testing.T) {
 		}
 		if !slices.Equal(literals, []string{"x"}) {
 			t.Errorf("literals = %v, want [x]", literals)
-		}
-	})
-}
-
-func TestFormatConfigSplitLiterals(t *testing.T) {
-	t.Run("it splits using the literal count carried on the config", func(t *testing.T) {
-		fc, err := NewFormatConfig(globalFlags{literals: 2}, false)
-		if err != nil {
-			t.Fatalf("NewFormatConfig returned unexpected error: %v", err)
-		}
-		if fc.Literals != 2 {
-			t.Fatalf("fc.Literals = %d, want 2", fc.Literals)
-		}
-		flagArgs, literals := fc.SplitLiterals([]string{"a", "b", "c"})
-		if !slices.Equal(flagArgs, []string{"a"}) {
-			t.Errorf("flagArgs = %v, want [a]", flagArgs)
-		}
-		if !slices.Equal(literals, []string{"b", "c"}) {
-			t.Errorf("literals = %v, want [b c]", literals)
 		}
 	})
 }

@@ -38,14 +38,14 @@ scripts/install.sh        → platform-aware installer (Homebrew on macOS, binar
 release                   → release script with AI-generated notes via Claude CLI
 ```
 
-**Data flow:** `App.Run(args)` → parse flags → resolve format → dispatch to `Run<Command>(dir, fc, fmtr, args, stdout)` → `Store.Mutate/Query` → JSONL + SQLite
+**Data flow:** `App.Run(args)` → parse flags → resolve format → dispatch to `Run<Command>(dir, fc, fmtr, flagArgs, literals, stdout)` → `Store.Mutate/Query` → JSONL + SQLite
 
 **Storage model:** `.tick/` directory in project root contains `tasks.jsonl` (source of truth), `cache.db` (SQLite, rebuilt from JSONL via SHA256 hash comparison + schema version check), and `lock` (flock). Schema version stored in metadata table; mismatch triggers delete+rebuild.
 
 ## Key Patterns
 
 - **DI via struct fields:** App injects Stdout, Stderr, Getwd, IsTTY. Store uses functional options (`StoreOption`).
-- **Handler signature:** `Run<Command>(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error`
+- **Handler signature:** `Run<Command>(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error` — `App.Run` splits arguments at the end-of-flags marker once and hands both halves to every handler; fully-positional commands concatenate them in order.
 - **Formatter interface:** `Formatter` with methods FormatTaskList, FormatTaskDetail, FormatCascadeTransition, FormatDepChange, FormatDepTree, FormatStats, FormatMessage, FormatRemoval. Three implementations: ToonFormatter, PrettyFormatter, JSONFormatter.
 - **Format auto-detection:** TTY → pretty, non-TTY → toon. Override with `--toon`, `--pretty`, `--json`.
 - **Error wrapping:** `fmt.Errorf("context: %w", err)` throughout.

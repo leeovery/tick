@@ -40,6 +40,8 @@ func (a *App) Run(args []string) int {
 		return 1
 	}
 
+	flagArgs, literals := splitLiteralArgs(subArgs, flags.literals)
+
 	// --version global flag short-circuits before help and subcommand dispatch,
 	// mirroring the existing version subcommand output byte-for-byte.
 	if flags.version {
@@ -68,20 +70,18 @@ func (a *App) Run(args []string) int {
 
 	// Doctor and migrate bypass format/formatter machinery — always human-readable text.
 	if subcmd == "doctor" {
-		doctorFlagArgs, _ := splitLiteralArgs(subArgs, flags.literals)
-		if err := ValidateFlags("doctor", doctorFlagArgs, commandFlags); err != nil {
+		if err := ValidateFlags("doctor", flagArgs, commandFlags); err != nil {
 			fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 			return 1
 		}
 		return a.handleDoctor()
 	}
 	if subcmd == "migrate" {
-		migrateFlagArgs, _ := splitLiteralArgs(subArgs, flags.literals)
-		if err := ValidateFlags("migrate", migrateFlagArgs, commandFlags); err != nil {
+		if err := ValidateFlags("migrate", flagArgs, commandFlags); err != nil {
 			fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 			return 1
 		}
-		return a.handleMigrate(subArgs)
+		return a.handleMigrate(flagArgs, literals)
 	}
 
 	// Resolve format once in dispatcher.
@@ -113,8 +113,7 @@ func (a *App) Run(args []string) int {
 	}
 
 	// Determine fully-qualified command name and validate flags before dispatch.
-	qualifiedCmd, restArgs := qualifyCommand(subcmd, subArgs)
-	cmdFlagArgs, _ := splitLiteralArgs(restArgs, flags.literals)
+	qualifiedCmd, cmdFlagArgs := qualifyCommand(subcmd, flagArgs)
 	if err := ValidateFlags(qualifiedCmd, cmdFlagArgs, commandFlags); err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
@@ -122,27 +121,27 @@ func (a *App) Run(args []string) int {
 
 	switch subcmd {
 	case "init":
-		err = a.handleInit(fc, fmtr, subArgs)
+		err = a.handleInit(fc, fmtr, flagArgs, literals)
 	case "create":
-		err = a.handleCreate(fc, fmtr, subArgs)
+		err = a.handleCreate(fc, fmtr, flagArgs, literals)
 	case "list":
-		err = a.handleList(fc, fmtr, subArgs)
+		err = a.handleList(fc, fmtr, flagArgs, literals)
 	case "show":
-		err = a.handleShow(fc, fmtr, subArgs)
+		err = a.handleShow(fc, fmtr, flagArgs, literals)
 	case "update":
-		err = a.handleUpdate(fc, fmtr, subArgs)
+		err = a.handleUpdate(fc, fmtr, flagArgs, literals)
 	case "start", "done", "cancel", "reopen":
-		err = a.handleTransition(subcmd, fc, fmtr, subArgs)
+		err = a.handleTransition(subcmd, fc, fmtr, flagArgs, literals)
 	case "ready":
-		err = a.handleReady(fc, fmtr, subArgs)
+		err = a.handleReady(fc, fmtr, flagArgs, literals)
 	case "blocked":
-		err = a.handleBlocked(fc, fmtr, subArgs)
+		err = a.handleBlocked(fc, fmtr, flagArgs, literals)
 	case "dep":
-		err = a.handleDep(fc, fmtr, subArgs)
+		err = a.handleDep(fc, fmtr, flagArgs, literals)
 	case "note":
-		err = a.handleNote(fc, fmtr, subArgs)
+		err = a.handleNote(fc, fmtr, flagArgs, literals)
 	case "remove":
-		err = a.handleRemove(fc, fmtr, subArgs)
+		err = a.handleRemove(fc, fmtr, flagArgs, literals)
 	case "stats":
 		err = a.handleStats(fc, fmtr)
 	case "rebuild":
@@ -163,7 +162,7 @@ func (a *App) Run(args []string) int {
 }
 
 // handleInit implements the init subcommand.
-func (a *App) handleInit(fc FormatConfig, fmtr Formatter, _ []string) error {
+func (a *App) handleInit(fc FormatConfig, fmtr Formatter, _, _ []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
@@ -172,21 +171,20 @@ func (a *App) handleInit(fc FormatConfig, fmtr Formatter, _ []string) error {
 }
 
 // handleCreate implements the create subcommand.
-func (a *App) handleCreate(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleCreate(fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunCreate(dir, fc, fmtr, subArgs, a.Stdout)
+	return RunCreate(dir, fc, fmtr, flagArgs, literals, a.Stdout)
 }
 
 // handleList implements the list subcommand.
-func (a *App) handleList(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleList(fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	flagArgs, literals := fc.SplitLiterals(subArgs)
 	filter, err := parseListFlags(flagArgs, literals)
 	if err != nil {
 		return err
@@ -195,30 +193,29 @@ func (a *App) handleList(fc FormatConfig, fmtr Formatter, subArgs []string) erro
 }
 
 // handleShow implements the show subcommand.
-func (a *App) handleShow(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleShow(fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunShow(dir, fc, fmtr, subArgs, a.Stdout)
+	return RunShow(dir, fc, fmtr, flagArgs, literals, a.Stdout)
 }
 
 // handleUpdate implements the update subcommand.
-func (a *App) handleUpdate(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleUpdate(fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunUpdate(dir, fc, fmtr, subArgs, a.Stdout)
+	return RunUpdate(dir, fc, fmtr, flagArgs, literals, a.Stdout)
 }
 
 // handleReady implements the ready subcommand (alias for list --ready).
-func (a *App) handleReady(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleReady(fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	flagArgs, literals := fc.SplitLiterals(subArgs)
 	filter, err := parseListFlags(append([]string{"--ready"}, flagArgs...), literals)
 	if err != nil {
 		return err
@@ -227,12 +224,11 @@ func (a *App) handleReady(fc FormatConfig, fmtr Formatter, subArgs []string) err
 }
 
 // handleBlocked implements the blocked subcommand (alias for list --blocked).
-func (a *App) handleBlocked(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleBlocked(fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	flagArgs, literals := fc.SplitLiterals(subArgs)
 	filter, err := parseListFlags(append([]string{"--blocked"}, flagArgs...), literals)
 	if err != nil {
 		return err
@@ -262,13 +258,12 @@ func (a *App) handleRebuild(fc FormatConfig, fmtr Formatter) error {
 // It parses args once, resolves partial IDs via store.ResolveID, computes the blast radius
 // for non-force removals using Store.ReadTasks (shared lock, read-only), runs the interactive
 // confirmation prompt using App's Stdin/Stderr, then delegates to RunRemove for the actual mutation.
-func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 
-	flagArgs, literals := fc.SplitLiterals(subArgs)
 	rawIDs, force := parseRemoveArgs(flagArgs, literals)
 
 	if len(rawIDs) == 0 {
@@ -312,12 +307,12 @@ func (a *App) handleRemove(fc FormatConfig, fmtr Formatter, subArgs []string) er
 }
 
 // handleTransition implements the start/done/cancel/reopen subcommands.
-func (a *App) handleTransition(command string, fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleTransition(command string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
-	return RunTransition(dir, command, fc, fmtr, subArgs, a.Stdout)
+	return RunTransition(dir, command, fc, fmtr, flagArgs, literals, a.Stdout)
 }
 
 // handleHelp implements the help command and --help/-h flag.
@@ -398,29 +393,29 @@ func parseArgs(args []string) (globalFlags, string, []string, error) {
 }
 
 // qualifyCommand determines the fully-qualified command name for validation.
-// For two-level commands (dep, note), it peeks at the first positional arg in
-// subArgs to form "dep add", "dep remove", etc. and returns the remaining args
-// after the sub-subcommand. If the sub-subcommand is not a known sub-subcommand,
-// it returns the top-level command and full subArgs (the handler will produce
-// its own error for unknown sub-subcommands).
-func qualifyCommand(subcmd string, subArgs []string) (string, []string) {
+// For two-level commands (dep, note), it peeks at the first argument in flagArgs
+// to form "dep add", "dep remove", etc. and returns the remaining args after the
+// sub-subcommand. If the sub-subcommand is not a known sub-subcommand, it returns
+// the top-level command and full flagArgs (the handler will produce its own error
+// for unknown sub-subcommands).
+func qualifyCommand(subcmd string, flagArgs []string) (string, []string) {
 	if subcmd != "dep" && subcmd != "note" {
-		return subcmd, subArgs
+		return subcmd, flagArgs
 	}
-	if len(subArgs) == 0 {
-		return subcmd, subArgs
+	if len(flagArgs) == 0 {
+		return subcmd, flagArgs
 	}
-	sub := subArgs[0]
+	sub := flagArgs[0]
 	switch sub {
 	case "add", "remove":
-		return subcmd + " " + sub, subArgs[1:]
+		return subcmd + " " + sub, flagArgs[1:]
 	case "tree":
 		if subcmd == "dep" {
-			return subcmd + " " + sub, subArgs[1:]
+			return subcmd + " " + sub, flagArgs[1:]
 		}
-		return subcmd, subArgs
+		return subcmd, flagArgs
 	default:
-		return subcmd, subArgs
+		return subcmd, flagArgs
 	}
 }
 

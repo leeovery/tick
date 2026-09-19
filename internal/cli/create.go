@@ -111,8 +111,7 @@ func parseCreateArgs(flagArgs, literals []string) (createOpts, error) {
 
 // RunCreate executes the create command: validates inputs, generates an ID,
 // persists via the storage engine, and outputs the created task via the Formatter.
-func RunCreate(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	flagArgs, literals := fc.SplitLiterals(args)
+func RunCreate(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error {
 	opts, err := parseCreateArgs(flagArgs, literals)
 	if err != nil {
 		return err

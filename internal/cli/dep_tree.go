@@ -3,13 +3,16 @@ package cli
 import (
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/leeovery/tick/internal/task"
 )
 
 // RunDepTree executes the dep tree command: displays the dependency tree
-// for all tasks (full graph mode) or a specific task (focused mode).
-func RunDepTree(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
+// for all tasks (full graph mode) or a specific task (focused mode). Every
+// argument is positional, so the post-marker literals follow the flag half in order.
+func RunDepTree(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error {
+	args := slices.Concat(flagArgs, literals)
 	if fc.Quiet {
 		return nil
 	}

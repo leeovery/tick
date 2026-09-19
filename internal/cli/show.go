@@ -34,8 +34,7 @@ type showData struct {
 // RunShow executes the show command: queries a single task by ID from SQLite and
 // outputs the bare value of a single selected field, or the detail document —
 // narrowed to the selected fields when one was given — via the Formatter.
-func RunShow(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	flagArgs, literals := fc.SplitLiterals(args)
+func RunShow(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error {
 	rawID, selection, err := parseShowArgs(flagArgs, literals)
 	if err != nil {
 		return err

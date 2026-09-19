@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -11,34 +12,34 @@ import (
 )
 
 // handleNote implements the note subcommand, routing to add and remove sub-subcommands.
-func (a *App) handleNote(fc FormatConfig, fmtr Formatter, subArgs []string) error {
+func (a *App) handleNote(fc FormatConfig, fmtr Formatter, flagArgs, literals []string) error {
 	dir, err := a.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not determine working directory: %w", err)
 	}
 
-	if len(subArgs) == 0 {
+	if len(flagArgs) == 0 {
 		return fmt.Errorf("sub-command required. Usage: tick note <add|remove> <task_id> <text>")
 	}
 
-	subCmd := subArgs[0]
-	rest := subArgs[1:]
+	subCmd := flagArgs[0]
+	rest := flagArgs[1:]
 
 	switch subCmd {
 	case "add":
-		return RunNoteAdd(dir, fc, fmtr, rest, a.Stdout)
+		return RunNoteAdd(dir, fc, fmtr, rest, literals, a.Stdout)
 	case "remove":
-		return RunNoteRemove(dir, fc, fmtr, rest, a.Stdout)
+		return RunNoteRemove(dir, fc, fmtr, rest, literals, a.Stdout)
 	default:
 		return fmt.Errorf("unknown note sub-command '%s'. Usage: tick note <add|remove> <task_id> <text>", subCmd)
 	}
 }
 
 // RunNoteAdd executes the note add command: parses args, validates text,
-// resolves partial ID, appends a Note to the task, and outputs the result.
-func RunNoteAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
-	// Parse positional args: first non-flag is ID, remaining non-flags are joined as text.
-	positional := append([]string{}, args...)
+// resolves partial ID, appends a Note to the task, and outputs the result. Every
+// argument is positional, so the post-marker literals follow the flag half in order.
+func RunNoteAdd(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error {
+	positional := slices.Concat(flagArgs, literals)
 
 	if len(positional) == 0 {
 		return fmt.Errorf("task ID is required. Usage: tick note add <task_id> <text>")
@@ -88,8 +89,10 @@ func RunNoteAdd(dir string, fc FormatConfig, fmtr Formatter, args []string, stdo
 
 // RunNoteRemove executes the note remove command: parses args (task ID and 1-based index),
 // validates the index, resolves partial ID, removes the note at the given position,
-// and outputs the result.
-func RunNoteRemove(dir string, fc FormatConfig, fmtr Formatter, args []string, stdout io.Writer) error {
+// and outputs the result. Every argument is positional, so the post-marker literals
+// follow the flag half in order.
+func RunNoteRemove(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []string, stdout io.Writer) error {
+	args := slices.Concat(flagArgs, literals)
 	if len(args) < 1 {
 		return fmt.Errorf("task ID is required. Usage: tick note remove <task_id> <index>")
 	}

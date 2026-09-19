@@ -70,15 +70,6 @@ type FormatConfig struct {
 	Verbose bool
 	// Logger is the verbose logger. Nil when verbose is disabled.
 	Logger *VerboseLogger
-	// Literals counts the trailing command arguments that followed the
-	// end-of-flags marker and are therefore free text.
-	Literals int
-}
-
-// SplitLiterals splits args into the arguments that may carry flags and the
-// trailing free text that followed the end-of-flags marker.
-func (fc FormatConfig) SplitLiterals(args []string) (flagArgs, literals []string) {
-	return splitLiteralArgs(args, fc.Literals)
 }
 
 // NewFormatConfig builds a FormatConfig from parsed global flags and TTY state.
@@ -88,10 +79,9 @@ func NewFormatConfig(flags globalFlags, isTTY bool) (FormatConfig, error) {
 		return FormatConfig{}, err
 	}
 	return FormatConfig{
-		Format:   f,
-		Quiet:    flags.quiet,
-		Verbose:  flags.verbose,
-		Literals: flags.literals,
+		Format:  f,
+		Quiet:   flags.quiet,
+		Verbose: flags.verbose,
 	}, nil
 }
 

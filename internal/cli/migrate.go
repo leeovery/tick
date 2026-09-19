@@ -43,16 +43,17 @@ type migrateFlags struct {
 }
 
 // parseMigrateArgs extracts flag values from migrate subcommand args.
-func parseMigrateArgs(args []string) (migrateFlags, error) {
+// migrate takes no positional argument, so the post-marker literals are ignored.
+func parseMigrateArgs(flagArgs, _ []string) (migrateFlags, error) {
 	var flags migrateFlags
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
+	for i := 0; i < len(flagArgs); i++ {
+		switch flagArgs[i] {
 		case "--from":
 			i++
-			if i >= len(args) {
+			if i >= len(flagArgs) {
 				return flags, fmt.Errorf("--from requires a value")
 			}
-			flags.from = args[i]
+			flags.from = flagArgs[i]
 		case "--dry-run":
 			flags.dryRun = true
 		case "--pending-only":
@@ -67,8 +68,8 @@ func parseMigrateArgs(args []string) (migrateFlags, error) {
 
 // handleMigrate implements the migrate subcommand. It bypasses the format/formatter
 // machinery and outputs migration progress directly.
-func (a *App) handleMigrate(subArgs []string) int {
-	mf, err := parseMigrateArgs(subArgs)
+func (a *App) handleMigrate(flagArgs, literals []string) int {
+	mf, err := parseMigrateArgs(flagArgs, literals)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "Error: %s\n", err)
 		return 1
