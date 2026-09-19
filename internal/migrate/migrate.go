@@ -53,6 +53,14 @@ func (mt MigratedTask) Validate() error {
 	return nil
 }
 
+// Normalize returns a copy of the task with edge whitespace removed from its
+// free-text fields, leaving every other field untouched.
+func (mt MigratedTask) Normalize() MigratedTask {
+	mt.Title = task.TrimTitle(mt.Title)
+	mt.Description = task.TrimDescription(mt.Description)
+	return mt
+}
+
 // Provider abstracts a source system from which tasks can be imported.
 type Provider interface {
 	// Name returns the provider identifier (e.g., "beads") used in output.

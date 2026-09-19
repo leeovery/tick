@@ -1,7 +1,7 @@
 package migrate
 
 import (
-	"strings"
+	"cmp"
 
 	"github.com/leeovery/tick/internal/task"
 )
@@ -67,22 +67,21 @@ func (e *Engine) Run(provider Provider) ([]Result, error) {
 	}
 
 	results := make([]Result, 0, len(tasks))
-	for _, task := range tasks {
-		if err := task.Validate(); err != nil {
-			title := task.Title
-			if strings.TrimSpace(title) == "" {
-				title = FallbackTitle
-			}
+	for _, mt := range tasks {
+		mt = mt.Normalize()
+
+		if err := mt.Validate(); err != nil {
+			title := cmp.Or(mt.Title, FallbackTitle)
 			results = append(results, Result{Title: title, Success: false, Err: err})
 			continue
 		}
 
-		if _, err := e.creator.CreateTask(task); err != nil {
-			results = append(results, Result{Title: task.Title, Success: false, Err: err})
+		if _, err := e.creator.CreateTask(mt); err != nil {
+			results = append(results, Result{Title: mt.Title, Success: false, Err: err})
 			continue
 		}
 
-		results = append(results, Result{Title: task.Title, Success: true})
+		results = append(results, Result{Title: mt.Title, Success: true})
 	}
 
 	return results, nil

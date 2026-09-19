@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/leeovery/tick/internal/migrate"
 	"github.com/leeovery/tick/internal/migrate/beads"
@@ -653,4 +654,98 @@ func setupBeadsFixture(t *testing.T, dir string, content string) {
 	if err := os.WriteFile(filepath.Join(beadsDir, "issues.jsonl"), []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to write issues.jsonl: %v", err)
 	}
+}
+
+// readJSONLLine returns the raw tasks.jsonl line containing the given task ID.
+func readJSONLLine(t *testing.T, tickDir, id string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(tickDir, "tasks.jsonl"))
+	if err != nil {
+		t.Fatalf("failed to read tasks.jsonl: %v", err)
+	}
+	for line := range strings.SplitSeq(strings.TrimRight(string(data), "\n"), "\n") {
+		if strings.Contains(line, id) {
+			return line
+		}
+	}
+	t.Fatalf("no tasks.jsonl line for %s in:\n%s", id, data)
+	return ""
+}
+
+func TestMigrateFreeTextNormalization(t *testing.T) {
+	t.Run("it stores the trimmed values end to end", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"  Fix parser  ","description":"\nFirst line\n\n    indented line  \n","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 persisted task, got %d", len(tasks))
+		}
+		if tasks[0].Title != "Fix parser" {
+			t.Errorf("persisted Title = %q, want %q", tasks[0].Title, "Fix parser")
+		}
+		wantDesc := "First line\n\n    indented line"
+		if tasks[0].Description != wantDesc {
+			t.Errorf("persisted Description = %q, want %q", tasks[0].Description, wantDesc)
+		}
+	})
+
+	t.Run("it leaves values already in storage untouched", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		seeded := task.Task{
+			ID:          "tick-aaa111",
+			Title:       "  Seeded task  ",
+			Status:      task.StatusOpen,
+			Priority:    2,
+			Description: "\n  seeded description  \n",
+			Created:     now,
+			Updated:     now,
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{seeded})
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Imported","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
+
+		before := readJSONLLine(t, tickDir, seeded.ID)
+
+		_, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if after := readJSONLLine(t, tickDir, seeded.ID); after != before {
+			t.Errorf("seeded record changed:\n before = %q\n  after = %q", before, after)
+		}
+	})
+
+	t.Run("it emits stored bytes unmodified from show", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		seeded := task.Task{
+			ID:          "tick-aaa111",
+			Title:       "Seeded task",
+			Status:      task.StatusOpen,
+			Priority:    2,
+			Description: "\n  seeded description  \n",
+			Created:     now,
+			Updated:     now,
+		}
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{seeded})
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Imported","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
+
+		if _, stderr, exitCode := runMigrate(t, dir, "--from", "beads"); exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		stdout, stderr, exitCode := runShow(t, dir, seeded.ID, "--field", "description")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if stdout != seeded.Description+"\n" {
+			t.Errorf("show --field description = %q, want %q", stdout, seeded.Description+"\n")
+		}
+	})
 }

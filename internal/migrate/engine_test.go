@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/leeovery/tick/internal/task"
 )
@@ -892,6 +893,218 @@ func TestEnginePendingOnly(t *testing.T) {
 		// Only 1 task sent to creator (the valid one)
 		if len(creator.calls) != 1 {
 			t.Fatalf("expected 1 CreateTask call, got %d", len(creator.calls))
+		}
+	})
+}
+
+func TestEngineNormalization(t *testing.T) {
+	t.Run("it trims edge whitespace from an imported title", func(t *testing.T) {
+		provider := &mockProvider{
+			name:  "test",
+			tasks: []MigratedTask{{Title: "  Fix parser  "}},
+		}
+		creator := &mockTaskCreator{ids: []string{"id-1"}}
+		engine := NewEngine(creator, Options{})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(creator.calls) != 1 {
+			t.Fatalf("expected 1 CreateTask call, got %d", len(creator.calls))
+		}
+		if creator.calls[0].Title != "Fix parser" {
+			t.Errorf("created Title = %q, want %q", creator.calls[0].Title, "Fix parser")
+		}
+		if results[0].Title != "Fix parser" {
+			t.Errorf("results[0].Title = %q, want %q", results[0].Title, "Fix parser")
+		}
+	})
+
+	t.Run("it trims edge whitespace from an imported description", func(t *testing.T) {
+		provider := &mockProvider{
+			name:  "test",
+			tasks: []MigratedTask{{Title: "Task", Description: "\nFirst line\nsecond line   "}},
+		}
+		creator := &mockTaskCreator{ids: []string{"id-1"}}
+		engine := NewEngine(creator, Options{})
+
+		if _, err := engine.Run(provider); err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(creator.calls) != 1 {
+			t.Fatalf("expected 1 CreateTask call, got %d", len(creator.calls))
+		}
+		want := "First line\nsecond line"
+		if creator.calls[0].Description != want {
+			t.Errorf("created Description = %q, want %q", creator.calls[0].Description, want)
+		}
+	})
+
+	t.Run("it imports a whitespace-only description as empty", func(t *testing.T) {
+		provider := &mockProvider{
+			name:  "test",
+			tasks: []MigratedTask{{Title: "Task", Description: "  \n\t "}},
+		}
+		creator := &mockTaskCreator{ids: []string{"id-1"}}
+		engine := NewEngine(creator, Options{})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(creator.calls) != 1 {
+			t.Fatalf("expected 1 CreateTask call, got %d", len(creator.calls))
+		}
+		if creator.calls[0].Description != "" {
+			t.Errorf("created Description = %q, want empty", creator.calls[0].Description)
+		}
+		if !results[0].Success {
+			t.Errorf("results[0].Success = false, want true (err: %v)", results[0].Err)
+		}
+	})
+
+	t.Run("it does not fail an import because the description was whitespace-only", func(t *testing.T) {
+		provider := &mockProvider{
+			name:  "test",
+			tasks: []MigratedTask{{Title: "Task", Description: "   "}},
+		}
+		creator := &mockTaskCreator{ids: []string{"id-1"}}
+		engine := NewEngine(creator, Options{})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		imported, failed := 0, 0
+		for _, r := range results {
+			if r.Success {
+				imported++
+			} else {
+				failed++
+			}
+		}
+		if imported != 1 || failed != 0 {
+			t.Errorf("imported = %d, failed = %d; want 1 and 0", imported, failed)
+		}
+	})
+
+	t.Run("it keeps today's error for a whitespace-only title", func(t *testing.T) {
+		provider := &mockProvider{
+			name:  "test",
+			tasks: []MigratedTask{{Title: "   \n  "}},
+		}
+		creator := &mockTaskCreator{}
+		engine := NewEngine(creator, Options{})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 1 {
+			t.Fatalf("expected 1 result, got %d", len(results))
+		}
+		if results[0].Success {
+			t.Error("results[0].Success = true, want false")
+		}
+		if results[0].Err == nil || results[0].Err.Error() != "title is required and cannot be empty" {
+			t.Errorf("results[0].Err = %v, want %q", results[0].Err, "title is required and cannot be empty")
+		}
+		if results[0].Title != FallbackTitle {
+			t.Errorf("results[0].Title = %q, want %q", results[0].Title, FallbackTitle)
+		}
+	})
+
+	t.Run("it preserves interior whitespace and newlines", func(t *testing.T) {
+		desc := "First line\n\n    indented line\n\nlast  line"
+		provider := &mockProvider{
+			name:  "test",
+			tasks: []MigratedTask{{Title: "Task", Description: "\n" + desc + "  \n"}},
+		}
+		creator := &mockTaskCreator{ids: []string{"id-1"}}
+		engine := NewEngine(creator, Options{})
+
+		if _, err := engine.Run(provider); err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if creator.calls[0].Description != desc {
+			t.Errorf("created Description = %q, want %q", creator.calls[0].Description, desc)
+		}
+	})
+
+	t.Run("it reports the trimmed title in a dry run", func(t *testing.T) {
+		provider := &mockProvider{
+			name:  "test",
+			tasks: []MigratedTask{{Title: "\t Ship the thing \n"}},
+		}
+		engine := NewEngine(&DryRunTaskCreator{}, Options{})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 1 {
+			t.Fatalf("expected 1 result, got %d", len(results))
+		}
+		if results[0].Title != "Ship the thing" {
+			t.Errorf("results[0].Title = %q, want %q", results[0].Title, "Ship the thing")
+		}
+	})
+
+	t.Run("it normalises before validation", func(t *testing.T) {
+		provider := &mockProvider{
+			name:  "test",
+			tasks: []MigratedTask{{Title: "   ", Description: "   "}},
+		}
+		creator := &mockTaskCreator{}
+		engine := NewEngine(creator, Options{})
+
+		results, err := engine.Run(provider)
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+		if len(results) != 1 {
+			t.Fatalf("expected 1 result, got %d", len(results))
+		}
+		if results[0].Success {
+			t.Error("results[0].Success = true, want false")
+		}
+		if len(creator.calls) != 0 {
+			t.Errorf("expected 0 CreateTask calls, got %d", len(creator.calls))
+		}
+	})
+}
+
+func TestMigratedTaskNormalize(t *testing.T) {
+	t.Run("it leaves every field but the free text alone", func(t *testing.T) {
+		priority := 3
+		created := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+		mt := MigratedTask{
+			Title:       "  Title  ",
+			Status:      task.StatusInProgress,
+			Priority:    &priority,
+			Description: "  Body  ",
+			Created:     created,
+			Updated:     created,
+			Closed:      created,
+		}
+
+		got := mt.Normalize()
+
+		want := MigratedTask{
+			Title:       "Title",
+			Status:      task.StatusInProgress,
+			Priority:    &priority,
+			Description: "Body",
+			Created:     created,
+			Updated:     created,
+			Closed:      created,
+		}
+		if got != want {
+			t.Errorf("Normalize() = %+v, want %+v", got, want)
+		}
+		if mt.Title != "  Title  " || mt.Description != "  Body  " {
+			t.Errorf("Normalize() mutated the receiver: %+v", mt)
 		}
 	})
 }
