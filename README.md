@@ -397,7 +397,7 @@ $ tick list
 tasks[3]{id,title,status,priority,type}:
   tick-a1b2,Auth middleware,in_progress,1,feature
   tick-f3e4,Write tests,open,2,task
-  tick-d5c6,Update docs,open,3,
+  tick-d5c6,Update docs,open,3,""
 ```
 
 </td>
@@ -427,27 +427,27 @@ tasks[2]{id,title,status,priority,type}:
 ```
 
 ```
-task{id,title,status,priority,type,created,updated}:
-  tick-a1b2,Setup auth,in_progress,1,feature,"2026-01-19T10:00:00Z","2026-01-19T14:30:00Z"
-
-tags[2]:
-  backend
-  auth
-
-refs[1]:
-  https://github.com/org/repo/issues/42
+id: tick-a1b2
+title: Setup auth
+status: in_progress
+priority: 1
+type: feature
+created: "2026-01-19T10:00:00Z"
+updated: "2026-01-19T14:30:00Z"
 
 blocked_by[1]{id,title,status}:
   tick-c3d4,Database migrations,done
 
 children[0]{id,title,status}:
 
-notes[1]{text,created}:
-  Discussed approach with team,"2026-01-19T14:00:00Z"
+tags[2]: auth,backend
 
-description:
-  Full task description here.
-  Can be multiple lines.
+refs[1]: "https://github.com/org/repo/issues/42"
+
+notes[1]{index,text,created}:
+  1,Discussed approach with team,"2026-01-19T14:00:00Z"
+
+description: "Full task description here.\nCan be multiple lines."
 ```
 
 ### Pretty
