@@ -229,7 +229,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 3,
-          "current_task": "free-text-round-trip-3-6",
+          "current_task": null,
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -250,7 +250,8 @@
             "free-text-round-trip-3-2",
             "free-text-round-trip-3-3",
             "free-text-round-trip-3-4",
-            "free-text-round-trip-3-5"
+            "free-text-round-trip-3-5",
+            "free-text-round-trip-3-6"
           ],
           "staging": {
             "p1": {
@@ -282,6 +283,17 @@
               "detail": "internal/cli/dep_tree_test.go:251-272 — subtest \"it outputs dep tree for project with dependencies\"; the false comment is at lines 266-268 (// FormatDepTree is currently a stub returning empty, so output will be empty,). The new subtest \"it still renders the populated graph\" (dep_tree_test.go:230-249) already asserts the same branch by decoded edges and counts. The remedy is deleting the superseded subtest with its comment, or converting it into a byte-exact pretty golden for the populated branch alongside phase 6's assertion sweep — either way it touches a pre-existing test the task did not name.",
               "files": [
                 "internal/cli/dep_tree_test.go"
+              ]
+            },
+            {
+              "task": "free-text-round-trip-3-6",
+              "source": "reviewer",
+              "summary": "No test preserves the README-vs-real-output verification any sample was authored against; the decode tests only prove the blocks parse.",
+              "failure": "A formatter change renames a field or shifts a value (e.g. chains → chain_count, or the summary numbers), every README sample still parses as valid TOON so TestREADMEToonSamplesDecode stays green, and the README goes on teaching a shape the tool no longer emits. Noticed only when a user or agent writes a parser against the documented sample and it fails at runtime — the exact defect §12.1 exists to prevent. Each of the five samples corrected in Phases 1-3 was hand-diffed against captured binary output once, at authoring time, and nothing re-checks it afterwards.",
+              "detail": "internal/cli/readme_samples_test.go:140-149 decodes anchored blocks but never compares them to formatter output. Phase 6 explicitly keeps it decode-only (phase-6-tasks.md:391, :410), so no later task closes this. The consolidation would be one fixture-driven test that renders each documented command through the real formatter and compares to the README block — it spans the Phase 1 (show, list), Phase 2 (transition, cascade) and Phase 3 (dep tree) samples plus whatever Phases 4/5 add, so it cannot be built inside any single task scope. Cost is non-trivial (each sample needs a seeded project matching its narrative), which is why this is a phase-boundary judgement call rather than an omission.",
+              "files": [
+                "internal/cli/readme_samples_test.go",
+                "README.md"
               ]
             }
           ]
