@@ -164,6 +164,20 @@ func conformanceNotedTask() []task.Task {
 	return []task.Task{noted}
 }
 
+const conformanceSelectedID = "tick-x00001"
+
+const conformanceSelectedDescription = "Line one\nLine two"
+
+// conformanceSelectedTask returns an open, parentless task carrying a
+// description and two notes: the seed of every field-selection document, and
+// of the selection that names only fields it does not carry.
+func conformanceSelectedTask() []task.Task {
+	selected := conformanceTask(conformanceSelectedID, "Selected", task.StatusOpen, 2, "task")
+	selected.Description = conformanceSelectedDescription
+	selected.Notes = conformanceNotes
+	return []task.Task{selected}
+}
+
 func conformanceMovingTask() task.Task {
 	return conformanceTask("tick-m00001", "Moving", task.StatusOpen, 2, "task")
 }
@@ -346,6 +360,45 @@ var conformanceDocs = []conformanceDoc{
 		},
 	},
 	{
+		Name:    "show with a multi-field selection",
+		Command: "show",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceSelectedTask())
+			return dir, []string{"show", conformanceSelectedID, "--field", "description,notes"}
+		},
+	},
+	{
+		Name:    "show with a selection narrowed by position",
+		Command: "show",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceSelectedTask())
+			return dir, []string{"show", conformanceSelectedID, "--field", "description,notes.2"}
+		},
+	},
+	{
+		Name:    "show with a single list section selected",
+		Command: "show",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceSelectedTask())
+			return dir, []string{"show", conformanceSelectedID, "--field", "notes"}
+		},
+	},
+	{
+		Name:         "show with a single non-list field selected",
+		Command:      "show",
+		NotADocument: "a selection naming one field with a bare form prints that value's own bytes and a newline rather than a document",
+	},
+	{
+		Name:         "show with a selection naming only absent fields",
+		Command:      "show",
+		NotADocument: "a selection whose every name prints nothing prints no bytes at all, which is nothing rather than an empty document",
+	},
+	{
+		Name:         "show under --quiet with a selection",
+		Command:      "show",
+		NotADocument: "--quiet alongside a selection is refused, so there is neither a document nor a bare value",
+	},
+	{
 		Name:    "start with no cascade",
 		Command: "start",
 		Setup: func(t *testing.T) (string, []string) {
@@ -526,26 +579,39 @@ func runConformanceDoc(t *testing.T, entry conformanceDoc) map[string]any {
 	return doc
 }
 
+// conformanceEntry returns the inventory entry of the given name.
+func conformanceEntry(t *testing.T, name string) conformanceDoc {
+	t.Helper()
+	for _, entry := range conformanceDocs {
+		if entry.Name == name {
+			return entry
+		}
+	}
+	t.Fatalf("no conformance entry named %q", name)
+	return conformanceDoc{}
+}
+
 // decodeConformanceEntry runs the named inventory entry and returns its
 // decoded document.
 func decodeConformanceEntry(t *testing.T, name string) map[string]any {
 	t.Helper()
-	for _, entry := range conformanceDocs {
-		if entry.Name == name {
-			return runConformanceDoc(t, entry)
-		}
+	return runConformanceDoc(t, conformanceEntry(t, name))
+}
+
+// driveConformanceEntry decodes one inventory entry, skipping the entries
+// whose output is not a document.
+func driveConformanceEntry(t *testing.T, entry conformanceDoc) {
+	t.Helper()
+	if entry.NotADocument != "" {
+		t.Skip(entry.NotADocument)
 	}
-	t.Fatalf("no conformance entry named %q", name)
-	return nil
+	runConformanceDoc(t, entry)
 }
 
 func TestToonOutputConformance(t *testing.T) {
 	for _, entry := range conformanceDocs {
 		t.Run(entry.Name, func(t *testing.T) {
-			if entry.NotADocument != "" {
-				t.Skip(entry.NotADocument)
-			}
-			runConformanceDoc(t, entry)
+			driveConformanceEntry(t, entry)
 		})
 	}
 }
@@ -793,6 +859,171 @@ func TestToonDetailConformance(t *testing.T) {
 		assertToonKeysAbsent(t, doc, "type", "parent", "closed", "tags", "refs", "description")
 		assertToonRowsEmpty(t, doc, "blocked_by", "children", "notes")
 	})
+
+	t.Run("it decodes a multi-field selection document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "show with a multi-field selection")
+
+		assertConformanceKeys(t, doc, "description", "notes")
+		assertToonFields(t, doc, map[string]any{"description": conformanceSelectedDescription})
+		assertToonNoteRows(t, doc, conformanceNotes)
+	})
+
+	t.Run("it decodes a position-narrowed selection document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "show with a selection narrowed by position")
+
+		assertConformanceKeys(t, doc, "description", "notes")
+		assertToonFields(t, doc, map[string]any{"description": conformanceSelectedDescription})
+		rows := toonRows(t, doc, "notes")
+		if len(rows) != 1 {
+			t.Fatalf("notes has %d rows, want 1", len(rows))
+		}
+		assertToonFields(t, rows[0], map[string]any{
+			"index":   float64(2),
+			"text":    conformanceNotes[1].Text,
+			"created": task.FormatTimestamp(conformanceNotes[1].Created),
+		})
+	})
+
+	t.Run("it decodes a single list-section selection document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "show with a single list section selected")
+
+		assertConformanceKeys(t, doc, "notes")
+		assertToonNoteRows(t, doc, conformanceNotes)
+	})
+}
+
+// conformanceFormatSpellings are the four ways a format reaches a command: no
+// flag at all, and each of the three explicit ones.
+var conformanceFormatSpellings = [][]string{nil, {"--toon"}, {"--pretty"}, {"--json"}}
+
+// runConformanceShow runs a show command under the given format spelling.
+func runConformanceShow(t *testing.T, dir string, format []string, args ...string) (stdout, stderr string, exitCode int) {
+	t.Helper()
+	return runTick(t, dir, slices.Concat(format, []string{"show"}, args)...)
+}
+
+func TestFieldSelectionExemptions(t *testing.T) {
+	setup := func(t *testing.T) string {
+		t.Helper()
+		dir, _ := setupTickProjectWithTasks(t, conformanceSelectedTask())
+		return dir
+	}
+	bareValue := conformanceSelectedDescription + "\n"
+
+	t.Run("it prints a bare value as its bytes plus one newline", func(t *testing.T) {
+		dir := setup(t)
+
+		stdout, stderr, code := runConformanceShow(t, dir, nil, conformanceSelectedID, "--field", "description")
+
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if stdout != bareValue {
+			t.Errorf("stdout = %q, want %q", stdout, bareValue)
+		}
+	})
+
+	t.Run("it prints the same bare bytes under every format flag", func(t *testing.T) {
+		dir := setup(t)
+
+		for _, format := range conformanceFormatSpellings {
+			stdout, stderr, code := runConformanceShow(t, dir, format, conformanceSelectedID, "--field", "description")
+
+			if code != 0 {
+				t.Fatalf("exit code under %v = %d, want 0; stderr = %q", format, code, stderr)
+			}
+			if stdout != bareValue {
+				t.Errorf("stdout under %v = %q, want %q", format, stdout, bareValue)
+			}
+		}
+	})
+
+	t.Run("it prints zero bytes for a selection that renders nothing", func(t *testing.T) {
+		dir := setup(t)
+
+		stdout, stderr, code := runConformanceShow(t, dir, nil, conformanceSelectedID, "--field", "parent,closed")
+
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want no bytes at all", stdout)
+		}
+	})
+
+	t.Run("it prints zero bytes in every format for a selection that renders nothing", func(t *testing.T) {
+		dir := setup(t)
+
+		for _, format := range conformanceFormatSpellings {
+			stdout, stderr, code := runConformanceShow(t, dir, format, conformanceSelectedID, "--field", "parent,closed")
+
+			if code != 0 {
+				t.Fatalf("exit code under %v = %d, want 0; stderr = %q", format, code, stderr)
+			}
+			if stdout != "" {
+				t.Errorf("stdout under %v = %q, want no bytes at all", format, stdout)
+			}
+		}
+	})
+
+	t.Run("it refuses quiet alongside a selection", func(t *testing.T) {
+		dir := setup(t)
+
+		stdout, _, code := runConformanceShow(t, dir, nil, conformanceSelectedID, "--quiet", "--field", "title")
+
+		if code == 0 {
+			t.Errorf("exit code = 0, want non-zero")
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want no bytes at all", stdout)
+		}
+	})
+
+	t.Run("it declares the bare value exempt in the inventory", func(t *testing.T) {
+		entry := conformanceEntry(t, "show with a single non-list field selected")
+
+		if entry.NotADocument == "" {
+			t.Errorf("entry %q carries no exemption reason", entry.Name)
+		}
+	})
+
+	t.Run("it declares the zero-byte selection exempt in the inventory", func(t *testing.T) {
+		entry := conformanceEntry(t, "show with a selection naming only absent fields")
+
+		if entry.NotADocument == "" {
+			t.Errorf("entry %q carries no exemption reason", entry.Name)
+		}
+	})
+
+	t.Run("it skips exempt entries in the toon driver", func(t *testing.T) {
+		attempted := false
+		entry := conformanceDoc{
+			Name:         "exempt fixture",
+			Command:      "show",
+			NotADocument: "a bare value is not a document",
+			Setup: func(t *testing.T) (string, []string) {
+				attempted = true
+				return "", nil
+			},
+		}
+
+		t.Run(entry.Name, func(t *testing.T) { driveConformanceEntry(t, entry) })
+
+		if attempted {
+			t.Error("the driver ran the setup of an entry carrying an exemption reason")
+		}
+	})
+}
+
+// assertConformanceKeys asserts the decoded document carries exactly the given
+// keys.
+func assertConformanceKeys(t *testing.T, doc map[string]any, want ...string) {
+	t.Helper()
+	got := slices.Sorted(maps.Keys(doc))
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Errorf("decoded keys = %v, want %v", got, want)
+	}
 }
 
 func TestConformanceScopeBoundary(t *testing.T) {
