@@ -201,7 +201,7 @@
         "free-text-round-trip": {
           "status": "in-progress",
           "task_gate_mode": "auto",
-          "fix_gate_mode": "gated",
+          "fix_gate_mode": "auto",
           "analysis_gate_mode": "gated",
           "consolidation_gate_mode": "gated",
           "fix_attempts": 0,
@@ -240,7 +240,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 6,
-          "current_task": "free-text-round-trip-6-6",
+          "current_task": null,
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -292,7 +292,8 @@
             "free-text-round-trip-6-2",
             "free-text-round-trip-6-3",
             "free-text-round-trip-6-4",
-            "free-text-round-trip-6-5"
+            "free-text-round-trip-6-5",
+            "free-text-round-trip-6-6"
           ],
           "staging": {
             "p1": {
