@@ -177,7 +177,13 @@
             "free-text-round-trip-9": "tick-abac80",
             "free-text-round-trip-9-1": "tick-6b8ce7",
             "free-text-round-trip-9-2": "tick-ccc8ee",
-            "free-text-round-trip-9-3": "tick-88e344"
+            "free-text-round-trip-9-3": "tick-88e344",
+            "free-text-round-trip-10": "tick-b1b2c2",
+            "free-text-round-trip-10-1": "tick-e8fce5",
+            "free-text-round-trip-10-2": "tick-9e5458",
+            "free-text-round-trip-10-3": "tick-9502f1",
+            "free-text-round-trip-10-4": "tick-63d1bd",
+            "free-text-round-trip-10-5": "tick-b57be3"
           },
           "storage_paths": [
             ".tick/"
@@ -404,11 +410,11 @@
             },
             "c4": {
               "tasks": {
-                "1": "pending",
-                "2": "pending",
-                "3": "pending",
-                "4": "pending",
-                "5": "pending"
+                "1": "approved",
+                "2": "approved",
+                "3": "approved",
+                "4": "approved",
+                "5": "approved"
               }
             }
           },

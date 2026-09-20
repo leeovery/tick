@@ -10,6 +10,24 @@ sources: duplication
 
 **Outcome**: Adding a list section to the detail document, or respelling one, is a single edit that reaches all three formats, and a collection paired with the wrong field name is a single mistake in one place rather than a silent divergence between formats.
 
+**Do**:
+1. In `internal/cli/format.go`, beside `TaskDetail` (`:96-109`), add an unexported `selectedSections` struct carrying `BlockedBy`, `Children []RelatedTask`, `Tags`, `Refs []string`, `Notes []task.Note` and `NotePositions []int`, and a `func (d TaskDetail) selectedSections() selectedSections` that fills it with one `selectedItems(d.X, d.Fields.Positions(fieldX))` per section — the only place any field-name constant meets its collection. `Positions` is nil-safe (`internal/cli/show_fields.go:174-179`), so a nil `d.Fields` keeps every item and every position through the same call.
+2. Point `ToonFormatter.FormatTaskDetail` (`internal/cli/toon_formatter.go:71-110`) at it: bind `detail.selectedSections()` once and feed `buildRelatedSection("blocked_by", …BlockedBy)`, `buildRelatedSection("children", …Children)`, `encodeToonSection("tags", …Tags)`, `encodeToonSection("refs", …Refs)` and `buildNotesSection(…Notes, …NotePositions)` from it, deleting the five `selectedItems` calls at `:78`, `:83`, `:88`, `:93` and `:98`.
+3. Point `taskDetailJSONObject` (`internal/cli/json_formatter.go:104-144`) at it the same way, deleting the four bindings at `:115-118` and the inline call at `:127`; `toJSONStrings`, `toJSONRelated` and `toJSONNotes` take the narrowed values, `toJSONNotes` taking `NotePositions` as its second argument. Key order and the `fields.includes` gate stay exactly as they are.
+4. Point `prettyDetailHeader` (`internal/cli/pretty_formatter.go:140-178`) and `prettyDetailBlocks` (`:182-215`) at it, each binding `detail.selectedSections()` itself, deleting the calls at `:158`, `:187`, `:192`, `:197` and `:202`. Keep both helpers' single `detail` parameter — the separate `sel` parameter was removed deliberately in an earlier round so the two cannot be passed apart.
+5. Leave every gate reading `detail` unchanged in all three formatters: `sel.includes(...)` and the presence tests (`len(detail.Tags) > 0`, `len(detail.BlockedBy) > 0`, `len(detail.Children) > 0`, `len(detail.Refs) > 0`, `len(detail.Notes) > 0`) keep consulting the unnarrowed collections, so a section the task has nothing for is omitted exactly where it is today. `selectedItems` itself and its one non-formatter caller, `barePositionValue` (`internal/cli/show_fields.go:138-148`), are untouched.
+
+**Acceptance Criteria**:
+- [ ] The three formatters call `selectedItems` nowhere: `grep -rn 'selectedItems(' internal/cli/ | grep -v _test` returns 16 lines today, 15 of them in `toon_formatter.go`, `json_formatter.go` and `pretty_formatter.go`; afterwards those three files return none and every remaining hit is in `format.go` (inside `selectedSections`) or `show_fields.go`.
+- [ ] Each of `fieldBlockedBy`, `fieldChildren`, `fieldTags`, `fieldRefs` and `fieldNotes` is handed to `Positions` in exactly one place in non-test code.
+- [ ] Output is byte-identical against a binary built before the change, in all three formats, filtered and full: `tick show <id>`, `--field notes.2`, `--field title,tags.2`, `--field children.1` and `--field notes.1,notes.3`, each under `--toon`, `--json` and `--pretty`.
+- [ ] A narrowed note still carries its whole-section position in the `index` column under toon and JSON — `--field notes.2` reports index 2, not 1.
+- [ ] The presence gates still read the unnarrowed collections: a document whose task has no tags, refs, children, blockers or notes renders the same empty sections (toon, JSON) and omits the same blocks (pretty) as today.
+- [ ] No test file is changed; the diff is confined to `internal/cli/format.go`, `internal/cli/toon_formatter.go`, `internal/cli/json_formatter.go` and `internal/cli/pretty_formatter.go`.
+- [ ] `go test ./...`, `go vet ./...` and `golangci-lint run ./...` are clean, and `gofmt` has been applied.
+
+**Tests**: A pure refactor — no new test and no change to any test's semantics; the existing suite is the check, and it already covers the narrowing in every format. `TestShowFieldPositions` (`internal/cli/list_show_test.go:1085`) stays green unchanged, in particular `"it keeps the real index on a narrowed note"` (`:1147`), `"it narrows a table to one row"` (`:1159`), `"it narrows to several positions in output order"` (`:1163`), `"it narrows notes in json with the real index"` (`:1222`), `"it narrows notes in pretty"` (`:1246`) and `"it narrows a pretty tags line"` (`:1255`), alongside `TestShowFilteredDocument` (`:883`), `TestTaskDetailWithoutFieldSelection` (`internal/cli/show_fields_test.go:717`) and `TestRegisteredFieldRendering` (`:760`).
+
 ## Task 2: A Refusal Names The Task Carrying The Refused Value, Not The Document's Subject
 severity: medium
 sources: standards
@@ -20,6 +38,30 @@ sources: standards
 
 **Outcome**: Every TOON refusal names a task the agent can act on directly — the offending row for a task list, a related section and a cascade table, the document's subject for a section whose rows carry no ID — so no refusal hands back an ID that does not carry the refused value.
 
+**Do**:
+1. In `internal/cli/toon_formatter.go`, have `buildRelatedSection` (`:299-309`) call `encodeToonSectionIdentified(name, rows, func(r toonRelatedRow) string { return r.ID })` in place of `encodeToonSection` at `:308`, which gives both `blocked_by` and `children` a row identity in every detail document.
+2. Have `buildChangedSection` (`:149-159`) do the same at `:158` with `func(r toonChangedRow) string { return r.ID }`, which covers the `changed` table on both paths that build it — `FormatCascadeTransition` (`:162-165`) and `FormatTaskDetail` (`:101-103`).
+3. Change `refusalForTask` (`:391-398`) to override only an anonymous refusal: when `errors.As` resolves a `*toonEncodeError` whose `taskID` is already set, return the error untouched; the empty-`taskID` case keeps today's rewrite naming the document's subject. Both call sites (`:164` and `toonDoc.join`, `:421`) keep their arguments.
+4. Rewrite the subtest at `internal/cli/toon_refusal_test.go:231-242` to the behaviour §3.1 requires: retitle it to name the cascaded task, and assert stderr carries `"cannot encode section changed"` and the child's ID while leaving the parent unnamed via `assertUnnamed` (`:51`) — replacing the present assertion that the child is absent.
+5. Add two subtests to the same suite for the related sections, reusing `createChildCarryingRefusedTitle` (`:137`) and `createRefusedTitleTask` (`:13`): `tick --toon show <parent>` over a clean-titled parent with a refused-title child names `"section children"` and the child and leaves the parent unnamed; and a clean-titled task blocked (via `dep add`) by a refused-title blocker names `"section blocked_by"` and the blocker under `tick --toon show <blocked>`.
+
+**Acceptance Criteria**:
+- [ ] `tick --toon show <parent>` where a child's title carries `\x1b` exits 1, writes nothing to stdout, and its stderr names the `children` section and the child's ID — the parent's ID appears nowhere in the message.
+- [ ] `tick --toon show <id>` where a blocker's title carries `\x1b` names the `blocked_by` section and the blocker's ID, not the subject's.
+- [ ] `tick --toon done <parent>` where the cascaded child's title carries `\x1b` names the `changed` section and the child's ID, not the parent's. This supersedes step 4 of phase 9's task 1 and the acceptance criterion at `.workflows/free-text-round-trip/implementation/free-text-round-trip/consolidation-tasks-p9.md:26`, which required the opposite.
+- [ ] A refusal with no row identity still names the document's subject, byte-identically to today: a refused note text under `tick --toon show <id>` names `notes` plus the subject, and a refused value on the subject's own `title` or `description` names the field plus the subject.
+- [ ] A task-list refusal is unchanged — `tick --toon list`, `ready` and `blocked` still name `tasks` and the first offending row.
+- [ ] Every command in `refusedDocumentCommands()` (`internal/cli/toon_refusal_test.go:90-113`) still names `env.id`, that task being the one carrying the refused value in each case.
+- [ ] The per-row re-marshal stays on the error path: a document whose sections all encode marshals each section exactly once.
+- [ ] The diff is confined to `internal/cli/toon_formatter.go` and `internal/cli/toon_refusal_test.go`. No README edit — the refusal paragraph at `README.md:494` is Task 5's, and the sentence Task 5 writes states §3.1's rule, which holds whether or not this task has landed. No file under `.workflows/` is edited: §3.1 as amended already requires the diagnostic to name the task carrying the refused value, so nothing in the specification is made wrong by this change and no corrigendum follows from it.
+- [ ] `go test ./...`, `go vet ./...` and `golangci-lint run ./...` are clean, and `gofmt` has been applied.
+
+**Tests**:
+- `"it names the cascaded task carrying the refused value"` (rewritten from `"it names the document's subject when the refused value sits on a cascaded task"`, `internal/cli/toon_refusal_test.go:231`)
+- `"it names the child when a child's title cannot be encoded"`
+- `"it names the blocker when a blocker's title cannot be encoded"`
+- The rest of `TestToonRefusesUnencodableValues` (`internal/cli/toon_refusal_test.go:146`) stays green unchanged and is what pins the untouched branches: `"it fails rather than printing a count-zero notes section when a note's text cannot be encoded"` (`:192`) keeps the subject-naming fallback for a section whose rows carry no ID, `"it fails naming the task and the field when the stored title cannot be encoded"` (`:147`) keeps it for a field on the subject, and `"it fails rather than printing an empty task list when one task's title cannot be encoded"` (`:156`), `"it names the first offending task when two tasks in the list carry refused values"` (`:167`) and `"it writes nothing to stdout when the document is refused"` (`:211`) keep the task-list and per-command behaviour.
+
 ## Task 3: One Enumeration Of The Stored Dependency Edges
 severity: near-miss
 sources: duplication
@@ -28,15 +70,53 @@ sources: duplication
 
 **Solution**: Keep one enumeration: have `collectStoredEdges(tasks)` delegate to the scoped form with a scope that keeps every ID — a nil ID set read as "no scope", or a keep predicate — so record order and one-row-per-`BlockedBy` are stated once and the scope filter is the only thing the focused form adds. Behaviour-preserving: both callers emit the same rows in the same order as today, and the dep-tree suites stay green unchanged. This completes the settled direction of phase 8's task 1 and cycle 2's task 1 — both views derive their rows from the stored relation — rather than touching it; those tasks made the two forms agree, and this makes them agree by construction.
 
+**Outcome**: `tick dep tree` and `tick dep tree <id>` read the stored dependencies through one walk, so the project view and the focused view cannot report different edges for the same store — the scope filter is the only thing that separates them, and a change to record order or to one-row-per-`BlockedBy` reaches both at once.
+
+**Do**:
+1. In `internal/cli/dep_tree_graph.go`, make `collectScopedStoredEdges(tasks, ids)` (`:194-209`) the single enumeration: read a nil `ids` as "no scope" — skip both membership tests outright rather than consulting the map, since a lookup on a nil map returns false and would silently drop every edge — and keep today's behaviour for a non-nil `ids`, keeping only edges whose blocker and blocked task are both members.
+2. Reduce `collectStoredEdges(tasks)` (`:182-192`) to `return collectScopedStoredEdges(tasks, nil)`, keeping its name, signature and its single call site at `:173`, so the walk over `tasks` and over each task's `BlockedBy` exists once and the record-order rule is stated once, on the enumeration rather than on both.
+3. Leave the two focused call sites (`:365`, `:366`) and `neighbourhoodIDs` exactly as they are — they already pass a non-nil scope.
+
+**Acceptance Criteria**:
+- [ ] Only one function in `internal/cli/dep_tree_graph.go` ranges over `tasks` emitting `DepTreeEdge`; `collectStoredEdges` carries no loop of its own.
+- [ ] A nil scope keeps every edge rather than none: over a project where every task carries a blocker, `tick dep tree` still reports one row per stored dependency, with `dep_tree[N]`'s count matching the rows beneath it.
+- [ ] `tick dep tree` and `tick dep tree <id>` produce byte-identical output against a binary built before the change, under `--toon`, `--json` and `--pretty`, over a cycle, a diamond and a graph with a dangling blocker.
+- [ ] Row order is unchanged: tasks in slice order, each task's blockers in stored order, on both views.
+- [ ] No test file is changed; the diff is confined to `internal/cli/dep_tree_graph.go`.
+- [ ] `go test ./...`, `go vet ./...` and `golangci-lint run ./...` are clean, and `gofmt` has been applied.
+
+**Tests**: A pure refactor — no new test and no change to any test's semantics; the existing suite is the check. `TestBuildFullDepTree` (`internal/cli/dep_tree_graph_test.go:23`) and `TestBuildFocusedDepTree` (`:422`) stay green unchanged, as do `TestRunDepTree` (`internal/cli/dep_tree_test.go:310`) — in particular `"it emits one edge per stored dependency where two blockers converge"` (`:412`), `"it emits no repeated edge when a dangling blocker sits above a chain"` (`:429`) and `"it emits both edges of a cycle through the target in each focused section"` (`:520`) — `TestToonFormatDepTree` (`internal/cli/toon_formatter_test.go:908`), `TestToonDepTreeConformance` (`internal/cli/conformance_test.go:1005`) and `TestToonDepTreeFocusedConformance` (`internal/cli/toon_decode_test.go:402`).
+
 ## Task 4: The Field Selection Type Answers A Nil Receiver One Way
 severity: drift
 sources: architecture
 
-**Problem**: `*FieldSelection` documents nil as "the whole document" and three of its five methods honour it — `includes`, `Positions` and `ValidatePositions` all return sensible values on a nil receiver. `Len` and `Only` (`internal/cli/show_fields.go:165-192`) dereference the receiver; verified against the working tree, either panics with `runtime error: invalid memory address or nil pointer dereference`. `detail.Fields` is nil on every document `create`, `update`, `note add`, `note remove` and an unfiltered `show` produce (`internal/cli/format.go:236`), and all three formatters hold that pointer. The one compensating check is `bareFieldValue`'s `if sel == nil` at `internal/cli/show_fields.go:119` — in a caller, not in the type — so correctness rests on caller discipline: the first production code that asks the selection its size, the natural question given `Only` exists, crashes the CLI with a Go stack trace on the commands an agent runs most, instead of printing the task. `Len` has no production caller at all today, so the split has been carried this far untested from the production side.
+**Problem**: `*FieldSelection` documents nil as "the whole document" and three of its five methods honour it — `includes`, `Positions` and `ValidatePositions` all return sensible values on a nil receiver. `Len` and `Only` (`internal/cli/show_fields.go:181-192`) dereference the receiver; verified against the working tree, either panics with `runtime error: invalid memory address or nil pointer dereference`. `detail.Fields` is nil on every document `create`, `update`, `note add`, `note remove` and an unfiltered `show` produce — `showDataToTaskDetail` (`internal/cli/show.go:238`) leaves the field zero, and every one of those commands renders through it (`internal/cli/helpers.go:28`) — and all three formatters hold that pointer. The one compensating check is `bareFieldValue`'s `if sel == nil` at `internal/cli/show_fields.go:119` — in a caller, not in the type — so correctness rests on caller discipline: the first production code that asks the selection its size, the natural question given `Only` exists, crashes the CLI with a Go stack trace on the commands an agent runs most, instead of printing the task. `Len` has no production caller at all today, so the split has been carried this far untested from the production side.
 
 **Solution**: Give `Len` and `Only` the nil handling the other three already have — `Len` returning 0, `Only` returning `("", false)` — and drop the `if sel == nil` guard from `bareFieldValue`, which the type then covers. Behaviour-preserving: `bareFieldValue` returns `("", false)` for a nil selection exactly as it does now, and no other caller changes. Settled rather than staged, on the record: phase 4's task 3 already chose one nil-safe gate for this type when it deleted the exported `Selected` in favour of nil-safe `includes`; extending that convention over the two methods it did not reach is the same move. `Len` is kept rather than deleted — it is exercised by the type's own tests, and deleting it trades the contract fix for a test rewrite that buys nothing. The architecture finding's second half — unexporting the type's methods — is not carried: visibility and naming are below the finding floor.
 
 **Outcome**: The nil-means-whole-document convention is a property of the type rather than of its callers, so a formatter reaching for the selection's size on a document with no selection gets an answer instead of a stack trace.
+
+**Do**:
+1. In `internal/cli/show_fields.go`, guard the receiver before the dereference in `Len` (`:181-184`), returning 0 for a nil selection, and in `Only` (`:186-192`), returning `("", false)`, matching the shape `includes` (`:167-169`) and `Positions` (`:174-179`) already use; state what nil answers in each method's doc in one line, as those two do.
+2. Delete the `if sel == nil { return "", false }` guard at the head of `bareFieldValue` (`:118-121`) — `sel.Only()` now returns `("", false)` for a nil selection, so the function's result is unchanged for every input and the correctness sits in the type.
+3. Keep `Len` and `Only` as they are named and exported; their visibility, and the rest of the type's exported/unexported split, is out of this task's scope.
+4. Add a `TestFieldSelectionNilReceiver` to `internal/cli/show_fields_test.go`, beside the existing nil case in `TestValidatePositions` (`:654`), exercising all five methods on `var sel *FieldSelection`: `Len()` is 0, `Only()` reports not-sole, `includes("title")` is true, `Positions("notes")` is nil and `ValidatePositions(detail)` returns nil.
+
+**Acceptance Criteria**:
+- [ ] `var sel *FieldSelection; sel.Len()` returns 0 and `sel.Only()` returns `("", false)`; neither panics.
+- [ ] All five methods of `*FieldSelection` answer a nil receiver: `includes` true, `Positions` nil, `ValidatePositions` a nil error, `Len` 0, `Only` `("", false)`.
+- [ ] `bareFieldValue` contains no `sel == nil` check and still returns `("", false)` for a nil selection, which the existing `"it is not bare without a selection"` (`internal/cli/show_fields_test.go:538`) pins.
+- [ ] A non-nil selection is unaffected: `Len` still counts distinct requested names and `Only` still reports the sole name, as `TestParseShowArgs` asserts (`internal/cli/show_fields_test.go:75-103`, `:146`).
+- [ ] No shipped output changes: `tick show`, `create`, `update`, `note add` and `note remove` produce byte-identical documents under `--toon`, `--json` and `--pretty`, filtered and unfiltered.
+- [ ] The diff is confined to `internal/cli/show_fields.go` and `internal/cli/show_fields_test.go`; no caller outside those files changes and no method is renamed, unexported or deleted.
+- [ ] `go test ./...`, `go vet ./...` and `golangci-lint run ./...` are clean, and `gofmt` has been applied.
+
+**Tests**:
+- `"it reports zero names for a nil selection"`
+- `"it reports no sole name for a nil selection"`
+- `"it answers the other three methods for a nil selection"` — `includes`, `Positions` and `ValidatePositions` unchanged, pinning all five answers in one place
+- The existing suite stays green unchanged, in particular `TestBareFieldValue`'s `"it is not bare without a selection"` (`internal/cli/show_fields_test.go:538`) and `TestValidatePositions`'s `"it accepts a nil selection"` (`:654`).
 
 ## Task 5: Corrections
 severity: corrections
@@ -45,3 +125,20 @@ sources: standards
 **Problem**: `README.md:494` describes the pre-`Tfree-text-round-trip-9-2` refusal diagnostic: a refused value is reported "naming the field or section it could not encode — and the task, where the document covers one". `tick list`, `tick ready` and `tick blocked` cover many tasks, so that clause tells a reader the ID will not be in the message; the shipped behaviour since that task names it (pinned at `internal/cli/toon_refusal_test.go:163`). A reader who believes the README goes looking for the row by bisection or in `.tick/tasks.jsonl` — the route §3.1's amendment was written to remove — with the answer already sitting in the error they dismissed. §12.1 holds the README to what the tool produces.
 
 **Solution**: One edit, `README.md:494` — replace the restriction clause "— and the task, where the document covers one —" so the sentence states §3.1's rule in full: the diagnostic names the field or section it could not encode and the task carrying the refused value, the offending row where the document is a task list, with the section name alone standing only where no row can be attributed. Keep the sentence that follows ("The value is stored and read back intact either way…"), which is accurate. Wording is the author's; the rule is the spec's, so the paragraph is true of shipped behaviour with or without Task 2, which removes the one remaining branch where the code departs from it.
+
+**Outcome**: The README's TOON section states the refusal rule the tool follows — the field or section, and the task carrying the refused value, the offending row where the document is a task list — so a reader who hits a refusal on `tick list` acts on the ID in the message instead of bisecting the project or opening `.tick/tasks.jsonl`.
+
+**Do**:
+1. In `README.md`, in the paragraph at `:494`, replace the restriction clause `— and the task, where the document covers one —` so the sentence carries §3.1's rule whole: the command fails naming the field or section it could not encode and the task carrying the refused value, the offending row where the document is a task list, with the section name alone standing only where no row can be attributed. Wording is the author's.
+2. Leave the rest of the paragraph byte-identical: the opening sentence on C0 control characters and ANSI escapes, and the closing `The value is stored and read back intact either way: --json returns it, and so does tick show <id> --field <name>.` Both are accurate.
+3. Edit nothing else — no fenced sample, no other README section, no source or test file, and no file under `.workflows/`.
+
+**Acceptance Criteria**:
+- [ ] `grep -n 'where the document covers one' README.md` returns no line.
+- [ ] The paragraph names both halves of the rule — the field or section, and the task carrying the refused value — calls out the task-list row, and bounds the section-name-only case to a row that cannot be attributed.
+- [ ] The paragraph's first and last sentences are unchanged.
+- [ ] The whole diff is `README.md`, one paragraph: `git diff --stat` names no other file.
+- [ ] The sentence is true of the binary as it stands, independent of Task 2: `tick --toon list` over a project where one task's title carries `\x1b` names the `tasks` section and that task's ID, as `internal/cli/toon_refusal_test.go:163` asserts.
+- [ ] `go test ./...` passes with no test file changed.
+
+**Tests**: A documentation correction — no new test and no change to any test's semantics. The README suite checks the fenced samples, not this prose: `TestREADMEToonSamplesDecode` (`internal/cli/readme_samples_test.go:164`), `TestREADMESamplesMatchRenderedOutput` (`:425`) and `TestREADMEPromptedSamplesAreClaimed` (`:514`) all stay green unchanged.
