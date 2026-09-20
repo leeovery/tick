@@ -104,6 +104,7 @@ func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) (string, error) {
 func taskDetailJSONObject(detail TaskDetail) jsonObject {
 	t := detail.Task
 	fields := detail.Fields
+	sections := detail.selectedSections()
 
 	obj := make(jsonObject, 0, 16)
 	add := func(key string, value any) {
@@ -112,19 +113,14 @@ func taskDetailJSONObject(detail TaskDetail) jsonObject {
 		}
 	}
 
-	tags, _ := selectedItems(detail.Tags, fields.Positions(fieldTags))
-	refs, _ := selectedItems(detail.Refs, fields.Positions(fieldRefs))
-	blockedBy, _ := selectedItems(detail.BlockedBy, fields.Positions(fieldBlockedBy))
-	children, _ := selectedItems(detail.Children, fields.Positions(fieldChildren))
-
 	add(fieldID, t.ID)
 	add(fieldTitle, t.Title)
 	add(fieldStatus, string(t.Status))
 	add(fieldPriority, t.Priority)
 	add(fieldType, t.Type)
-	add(fieldTags, toJSONStrings(tags))
-	add(fieldRefs, toJSONStrings(refs))
-	add(fieldNotes, toJSONNotes(selectedItems(detail.Notes, fields.Positions(fieldNotes))))
+	add(fieldTags, toJSONStrings(sections.Tags))
+	add(fieldRefs, toJSONStrings(sections.Refs))
+	add(fieldNotes, toJSONNotes(sections.Notes, sections.NotePositions))
 	add(fieldDescription, t.Description)
 	if t.Parent != "" {
 		add(fieldParent, t.Parent)
@@ -134,8 +130,8 @@ func taskDetailJSONObject(detail TaskDetail) jsonObject {
 	if closed := jsonClosedTimestamp(t); closed != "" {
 		add(fieldClosed, closed)
 	}
-	add(fieldBlockedBy, toJSONRelated(blockedBy))
-	add(fieldChildren, toJSONRelated(children))
+	add(fieldBlockedBy, toJSONRelated(sections.BlockedBy))
+	add(fieldChildren, toJSONRelated(sections.Children))
 	if detail.Changes != nil {
 		add("changed", toJSONStatusChanges(detail.Changes.Rows()))
 	}

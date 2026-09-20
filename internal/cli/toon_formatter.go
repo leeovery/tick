@@ -70,32 +70,29 @@ func (f *ToonFormatter) FormatTaskList(tasks []task.Task) (string, error) {
 // FormatTaskDetail renders a single task in multi-section TOON format, narrowed to detail.Fields when it is set.
 func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) (string, error) {
 	sel := detail.Fields
+	sections := detail.selectedSections()
 	var doc toonDoc
 
 	doc.add(buildTaskSection(detail.Task, sel))
 
 	if sel.includes(fieldBlockedBy) {
-		blockedBy, _ := selectedItems(detail.BlockedBy, sel.Positions(fieldBlockedBy))
-		doc.add(buildRelatedSection("blocked_by", blockedBy))
+		doc.add(buildRelatedSection("blocked_by", sections.BlockedBy))
 	}
 
 	if sel.includes(fieldChildren) {
-		children, _ := selectedItems(detail.Children, sel.Positions(fieldChildren))
-		doc.add(buildRelatedSection("children", children))
+		doc.add(buildRelatedSection("children", sections.Children))
 	}
 
 	if len(detail.Tags) > 0 && sel.includes(fieldTags) {
-		tags, _ := selectedItems(detail.Tags, sel.Positions(fieldTags))
-		doc.add(encodeToonSection("tags", tags))
+		doc.add(encodeToonSection("tags", sections.Tags))
 	}
 
 	if len(detail.Refs) > 0 && sel.includes(fieldRefs) {
-		refs, _ := selectedItems(detail.Refs, sel.Positions(fieldRefs))
-		doc.add(encodeToonSection("refs", refs))
+		doc.add(encodeToonSection("refs", sections.Refs))
 	}
 
 	if sel.includes(fieldNotes) {
-		doc.add(buildNotesSection(selectedItems(detail.Notes, sel.Positions(fieldNotes))))
+		doc.add(buildNotesSection(sections.Notes, sections.NotePositions))
 	}
 
 	if detail.Changes != nil {

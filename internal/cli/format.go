@@ -108,6 +108,37 @@ type TaskDetail struct {
 	Changes *StatusChanges
 }
 
+// selectedSections holds the detail document's list sections narrowed to the
+// positions Fields requests, with NotePositions giving each kept note its
+// whole-section position.
+type selectedSections struct {
+	BlockedBy     []RelatedTask
+	Children      []RelatedTask
+	Tags          []string
+	Refs          []string
+	Notes         []task.Note
+	NotePositions []int
+}
+
+// selectedSections narrows every list section through d.Fields. A nil
+// selection keeps every item and every position.
+func (d TaskDetail) selectedSections() selectedSections {
+	blockedBy, _ := selectedItems(d.BlockedBy, d.Fields.Positions(fieldBlockedBy))
+	children, _ := selectedItems(d.Children, d.Fields.Positions(fieldChildren))
+	tags, _ := selectedItems(d.Tags, d.Fields.Positions(fieldTags))
+	refs, _ := selectedItems(d.Refs, d.Fields.Positions(fieldRefs))
+	notes, notePositions := selectedItems(d.Notes, d.Fields.Positions(fieldNotes))
+
+	return selectedSections{
+		BlockedBy:     blockedBy,
+		Children:      children,
+		Tags:          tags,
+		Refs:          refs,
+		Notes:         notes,
+		NotePositions: notePositions,
+	}
+}
+
 // StatusChanges holds a command's status changes as the per-transition cascade results
 // rendered by pretty; Rows flattens them into the merged table rendered by toon and JSON.
 type StatusChanges struct {

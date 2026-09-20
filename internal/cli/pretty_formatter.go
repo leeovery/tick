@@ -140,6 +140,7 @@ func prettyRelatedEntries(related []RelatedTask) []string {
 func prettyDetailHeader(detail TaskDetail) []string {
 	t := detail.Task
 	sel := detail.Fields
+	sections := detail.selectedSections()
 
 	var lines []string
 	add := func(name, label, value string) {
@@ -155,8 +156,7 @@ func prettyDetailHeader(detail TaskDetail) []string {
 	add(fieldType, "Type", typeOrDash(t.Type))
 
 	if len(detail.Tags) > 0 {
-		tags, _ := selectedItems(detail.Tags, sel.Positions(fieldTags))
-		add(fieldTags, "Tags", strings.Join(tags, ", "))
+		add(fieldTags, "Tags", strings.Join(sections.Tags, ", "))
 	}
 
 	if t.Parent != "" {
@@ -181,27 +181,24 @@ func prettyDetailHeader(detail TaskDetail) []string {
 // A block the task has nothing for is omitted whether or not it was selected.
 func prettyDetailBlocks(detail TaskDetail) []string {
 	sel := detail.Fields
+	sections := detail.selectedSections()
 	var blocks []string
 
 	if len(detail.BlockedBy) > 0 && sel.includes(fieldBlockedBy) {
-		blockedBy, _ := selectedItems(detail.BlockedBy, sel.Positions(fieldBlockedBy))
-		blocks = append(blocks, prettyDetailBlock("Blocked by", prettyRelatedEntries(blockedBy)))
+		blocks = append(blocks, prettyDetailBlock("Blocked by", prettyRelatedEntries(sections.BlockedBy)))
 	}
 
 	if len(detail.Children) > 0 && sel.includes(fieldChildren) {
-		children, _ := selectedItems(detail.Children, sel.Positions(fieldChildren))
-		blocks = append(blocks, prettyDetailBlock("Children", prettyRelatedEntries(children)))
+		blocks = append(blocks, prettyDetailBlock("Children", prettyRelatedEntries(sections.Children)))
 	}
 
 	if len(detail.Refs) > 0 && sel.includes(fieldRefs) {
-		refs, _ := selectedItems(detail.Refs, sel.Positions(fieldRefs))
-		blocks = append(blocks, prettyDetailBlock("Refs", refs))
+		blocks = append(blocks, prettyDetailBlock("Refs", sections.Refs))
 	}
 
 	if len(detail.Notes) > 0 && sel.includes(fieldNotes) {
-		notes, _ := selectedItems(detail.Notes, sel.Positions(fieldNotes))
-		entries := make([]string, len(notes))
-		for i, note := range notes {
+		entries := make([]string, len(sections.Notes))
+		for i, note := range sections.Notes {
 			entries[i] = fmt.Sprintf("%s  %s", note.Created.Format("2006-01-02 15:04"), note.Text)
 		}
 		blocks = append(blocks, prettyDetailBlock("Notes", entries))
