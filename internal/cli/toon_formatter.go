@@ -181,13 +181,8 @@ func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
 }
 
 func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
-	var edges []toonEdgeRow
-	for _, edge := range result.Edges {
-		edges = append(edges, toonEdgeRow(edge))
-	}
-
 	sections := []string{
-		buildEdgeSection("dep_tree", edges),
+		buildEdgeSection("dep_tree", toonEdgeRows(result.Edges)),
 		encodeToonFields(
 			toon.Field{Key: "chains", Value: result.ChainCount},
 			toon.Field{Key: "longest", Value: result.LongestChain},
@@ -207,31 +202,19 @@ func (f *ToonFormatter) formatFocusedDepTree(result DepTreeResult) string {
 			toon.Field{Key: "title", Value: result.Target.Title},
 			toon.Field{Key: "status", Value: result.Target.Status},
 		),
-		buildEdgeSection("blocked_by", collectUpstreamEdges(result.Target.ID, result.BlockedBy)),
-		buildEdgeSection("blocks", collectDownstreamEdges(result.Target.ID, result.Blocks)),
+		buildEdgeSection("blocked_by", toonEdgeRows(result.BlockedByEdges)),
+		buildEdgeSection("blocks", toonEdgeRows(result.BlocksEdges)),
 	}
 
 	return joinToonSections(sections)
 }
 
-// collectDownstreamEdges recursively collects edges from parent to each child node.
-func collectDownstreamEdges(parentID string, nodes []DepTreeNode) []toonEdgeRow {
-	var edges []toonEdgeRow
-	for _, node := range nodes {
-		edges = append(edges, toonEdgeRow{From: parentID, To: node.Task.ID})
-		edges = append(edges, collectDownstreamEdges(node.Task.ID, node.Children)...)
+func toonEdgeRows(edges []DepTreeEdge) []toonEdgeRow {
+	rows := make([]toonEdgeRow, 0, len(edges))
+	for _, edge := range edges {
+		rows = append(rows, toonEdgeRow(edge))
 	}
-	return edges
-}
-
-// collectUpstreamEdges recursively collects edges from each blocker node to the blocked task.
-func collectUpstreamEdges(blockedID string, nodes []DepTreeNode) []toonEdgeRow {
-	var edges []toonEdgeRow
-	for _, node := range nodes {
-		edges = append(edges, toonEdgeRow{From: node.Task.ID, To: blockedID})
-		edges = append(edges, collectUpstreamEdges(node.Task.ID, node.Children)...)
-	}
-	return edges
+	return rows
 }
 
 // buildEdgeSection renders a named toon section of edge rows.

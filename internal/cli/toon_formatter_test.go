@@ -1014,6 +1014,8 @@ func TestToonFormatDepTree(t *testing.T) {
 			Blocks: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"}},
 			},
+			BlockedByEdges: []DepTreeEdge{{From: "tick-aaa111", To: "tick-bbb222"}},
+			BlocksEdges:    []DepTreeEdge{{From: "tick-bbb222", To: "tick-ccc333"}},
 		}))
 
 		assertToonFields(t, doc, map[string]any{"id": "tick-bbb222", "title": "B", "status": "open"})
@@ -1037,6 +1039,7 @@ func TestToonFormatDepTree(t *testing.T) {
 			Blocks: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
 			},
+			BlocksEdges: []DepTreeEdge{{From: "tick-aaa111", To: "tick-bbb222"}},
 		})
 
 		assertCountZeroSection(t, result, "blocked_by[0]{from,to}:")
@@ -1049,6 +1052,7 @@ func TestToonFormatDepTree(t *testing.T) {
 			BlockedBy: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"}},
 			},
+			BlockedByEdges: []DepTreeEdge{{From: "tick-aaa111", To: "tick-bbb222"}},
 		})
 
 		assertCountZeroSection(t, result, "blocks[0]{from,to}:")
@@ -1096,7 +1100,7 @@ func TestToonFormatDepTree(t *testing.T) {
 		})
 	})
 
-	t.Run("it keeps diamond duplication in the blocks direction", func(t *testing.T) {
+	t.Run("it renders the focused sections from the result's edge fields", func(t *testing.T) {
 		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 			Blocks: []DepTreeNode{
@@ -1113,12 +1117,18 @@ func TestToonFormatDepTree(t *testing.T) {
 					},
 				},
 			},
+			BlocksEdges: []DepTreeEdge{
+				{From: "tick-aaa111", To: "tick-bbb222"},
+				{From: "tick-aaa111", To: "tick-ccc333"},
+				{From: "tick-bbb222", To: "tick-ddd444"},
+				{From: "tick-ccc333", To: "tick-ddd444"},
+			},
 		}))
 
 		assertToonEdgeRows(t, doc, "blocks", []toonEdgeRow{
 			{From: "tick-aaa111", To: "tick-bbb222"},
-			{From: "tick-bbb222", To: "tick-ddd444"},
 			{From: "tick-aaa111", To: "tick-ccc333"},
+			{From: "tick-bbb222", To: "tick-ddd444"},
 			{From: "tick-ccc333", To: "tick-ddd444"},
 		})
 	})

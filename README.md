@@ -318,7 +318,7 @@ tick dep tree                          # full graph: all dependency chains
 tick dep tree tick-a1b2                # focused: upstream + downstream from a task
 ```
 
-Full graph covers every task that participates in a dependency, plus a summary line. All three formats cover every participant: the pretty tree draws root tasks (tasks that block others but aren't blocked themselves) with their downstream chains, then seeds a tree from each participant nothing already drawn reaches — a cycle's member, or a task blocked by an ID that no longer exists — with its downstream chain nested beneath it. Focused view walks both directions from the target — what blocks it and what it unblocks. The pretty and JSON trees draw a diamond's shared branch under each of its blockers; the toon edge list carries one row per stored dependency.
+Full graph covers every task that participates in a dependency, plus a summary line. All three formats cover every participant: the pretty tree draws root tasks (tasks that block others but aren't blocked themselves) with their downstream chains, then seeds a tree from each participant nothing already drawn reaches — a cycle's member, or a task blocked by an ID that no longer exists — with its downstream chain nested beneath it. Focused view walks both directions from the target — what blocks it and what it unblocks. The pretty and JSON trees draw a diamond's shared branch under each of its blockers; the toon edge lists carry one row per stored dependency — `dep_tree` over the whole graph, and the focused `blocked_by`/`blocks` sections over the dependencies inside the target's neighbourhood.
 
 <table>
 <tr>

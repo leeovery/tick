@@ -218,7 +218,9 @@ type DepTreeNode struct {
 // DepTreeResult holds all data needed to render a dep tree command output.
 // For full graph mode: Trees holds the drawn trees, Edges holds one entry per stored
 // dependency, and summary stats are populated.
-// For focused mode: BlockedBy and Blocks contain upstream/downstream trees.
+// For focused mode: BlockedBy and Blocks contain upstream/downstream trees, and
+// BlockedByEdges and BlocksEdges hold one entry per stored dependency inside the
+// target's upstream and downstream neighbourhood.
 type DepTreeResult struct {
 	// Full graph mode fields
 	Trees        []DepTreeNode
@@ -229,9 +231,11 @@ type DepTreeResult struct {
 	BlockedCount int
 
 	// Focused mode fields
-	Target    *DepTreeTask
-	BlockedBy []DepTreeNode
-	Blocks    []DepTreeNode
+	Target         *DepTreeTask
+	BlockedBy      []DepTreeNode
+	Blocks         []DepTreeNode
+	BlockedByEdges []DepTreeEdge
+	BlocksEdges    []DepTreeEdge
 
 	// Message is the no-dependencies sentence. Only the pretty formatter renders it;
 	// the machine formats answer an empty graph with the emptied document instead.

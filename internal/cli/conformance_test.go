@@ -1063,8 +1063,8 @@ func TestToonDepTreeConformance(t *testing.T) {
 			"status": "open",
 		})
 		assertToonEdgeRows(t, doc, "blocked_by", []toonEdgeRow{
-			{From: "tick-b22222", To: "tick-c33333"},
 			{From: "tick-a11111", To: "tick-b22222"},
+			{From: "tick-b22222", To: "tick-c33333"},
 		})
 		assertToonRowsEmpty(t, doc, "blocks")
 	})

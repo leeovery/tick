@@ -372,6 +372,21 @@ func TestToonStatusChangeConformance(t *testing.T) {
 	})
 }
 
+// decodeToonEdgeRows decodes an edge section into from/to pairs in document order.
+func decodeToonEdgeRows(t *testing.T, doc map[string]any, key string) []toonEdgeRow {
+	t.Helper()
+	var edges []toonEdgeRow
+	for i, row := range toonRows(t, doc, key) {
+		from, fromOK := row["from"].(string)
+		to, toOK := row["to"].(string)
+		if !fromOK || !toOK {
+			t.Fatalf("%s[%d] = %#v, want string from and to", key, i, row)
+		}
+		edges = append(edges, toonEdgeRow{From: from, To: to})
+	}
+	return edges
+}
+
 // assertToonEdgeRows asserts that an edge section decodes to the given from/to pairs in order.
 func assertToonEdgeRows(t *testing.T, doc map[string]any, key string, want []toonEdgeRow) {
 	t.Helper()

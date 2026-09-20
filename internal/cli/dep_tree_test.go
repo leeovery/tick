@@ -295,6 +295,18 @@ func diamondTasks(now time.Time) []task.Task {
 	}
 }
 
+// diamondTailTasks returns the diamond with a tail: A blocks B and C, both of which block D,
+// and D blocks E.
+func diamondTailTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		{ID: "tick-ccc333", Title: "Task C", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		{ID: "tick-ddd444", Title: "Task D", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222", "tick-ccc333"}, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+		{ID: "tick-eee555", Title: "Task E", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ddd444"}, Created: now.Add(4 * time.Second), Updated: now.Add(4 * time.Second)},
+	}
+}
+
 func TestRunDepTree(t *testing.T) {
 	now := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
 
@@ -466,6 +478,99 @@ func TestRunDepTree(t *testing.T) {
 			{From: "tick-bbb222", To: "tick-ddd444"},
 			{From: "tick-ccc333", To: "tick-ddd444"},
 		})
+	})
+
+	t.Run("it emits one row per stored dependency in the focused blocks section", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, diamondTailTasks(now))
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree", "tick-aaa111"))
+
+		assertToonEdgeRows(t, doc, "blocks", []toonEdgeRow{
+			{From: "tick-aaa111", To: "tick-bbb222"},
+			{From: "tick-aaa111", To: "tick-ccc333"},
+			{From: "tick-bbb222", To: "tick-ddd444"},
+			{From: "tick-ccc333", To: "tick-ddd444"},
+			{From: "tick-ddd444", To: "tick-eee555"},
+		})
+	})
+
+	t.Run("it counts each dependency once whether the graph is asked full or focused", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, diamondTailTasks(now))
+
+		focused := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree", "tick-aaa111"))
+		full := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
+
+		assertToonEdgeRows(t, focused, "blocks", decodeToonEdgeRows(t, full, "dep_tree"))
+	})
+
+	t.Run("it emits the focused blocked_by rows in record order", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, diamondTailTasks(now))
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree", "tick-eee555"))
+
+		assertToonEdgeRows(t, doc, "blocked_by", []toonEdgeRow{
+			{From: "tick-aaa111", To: "tick-bbb222"},
+			{From: "tick-aaa111", To: "tick-ccc333"},
+			{From: "tick-bbb222", To: "tick-ddd444"},
+			{From: "tick-ccc333", To: "tick-ddd444"},
+			{From: "tick-ddd444", To: "tick-eee555"},
+		})
+	})
+
+	t.Run("it emits both edges of a cycle through the target in each focused section", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, cycleTasks(now))
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree", "tick-aaa111"))
+
+		want := []toonEdgeRow{
+			{From: "tick-bbb222", To: "tick-aaa111"},
+			{From: "tick-aaa111", To: "tick-bbb222"},
+		}
+		assertToonEdgeRows(t, doc, "blocked_by", want)
+		assertToonEdgeRows(t, doc, "blocks", want)
+	})
+
+	t.Run("it emits no focused row for a blocker no task record matches", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, danglingAboveChainTasks(now))
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree", "tick-bbb222"))
+
+		assertToonEdgeRows(t, doc, "blocked_by", []toonEdgeRow{
+			{From: "tick-aaa111", To: "tick-bbb222"},
+		})
+	})
+
+	t.Run("it still draws the diamond under each blocker in the focused pretty and JSON trees", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, diamondTasks(now))
+
+		stdout, stderr, exitCode := runDepTree(t, dir, "tick-aaa111")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		wantPretty := "" +
+			"tick-aaa111  Task A (open)\n" +
+			"\n" +
+			"Blocks:\n" +
+			"├── tick-bbb222  Task B (open)\n" +
+			"│   └── tick-ddd444  Task D (open)\n" +
+			"└── tick-ccc333  Task C (open)\n" +
+			"    └── tick-ddd444  Task D (open)\n"
+		if stdout != wantPretty {
+			t.Errorf("stdout = %q, want %q", stdout, wantPretty)
+		}
+
+		blocks, ok := runDepTreeJSON(t, dir, "tick-aaa111")["blocks"].([]any)
+		if !ok || len(blocks) != 2 {
+			t.Fatalf("blocks = %#v, want two nodes", blocks)
+		}
+		for i, wantID := range []string{"tick-bbb222", "tick-ccc333"} {
+			node, ok := blocks[i].(map[string]any)
+			if !ok {
+				t.Fatalf("blocks[%d] = %#v, want an object", i, blocks[i])
+			}
+			assertJSONDepTreeTask(t, node, wantID, "Task "+string(rune('B'+i)), "open")
+			assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, node), "tick-ddd444", "Task D", "open")
+		}
 	})
 
 	t.Run("it publishes every full-graph tree under trees", func(t *testing.T) {

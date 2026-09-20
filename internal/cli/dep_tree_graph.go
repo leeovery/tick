@@ -191,6 +191,23 @@ func collectStoredEdges(tasks []task.Task) []DepTreeEdge {
 	return edges
 }
 
+// collectScopedStoredEdges returns the stored dependencies whose blocker and blocked task are
+// both in ids, tasks in slice order and each task's blockers in stored order.
+func collectScopedStoredEdges(tasks []task.Task, ids map[string]bool) []DepTreeEdge {
+	var edges []DepTreeEdge
+	for _, t := range tasks {
+		if !ids[t.ID] {
+			continue
+		}
+		for _, dep := range t.BlockedBy {
+			if ids[dep] {
+				edges = append(edges, DepTreeEdge{From: dep, To: t.ID})
+			}
+		}
+	}
+	return edges
+}
+
 // collectParticipants returns the IDs of every task that participates in a dependency
 // relationship, in first-seen order, alongside the same IDs as a set. A blocker ID that
 // no task record matches participates like any other.
@@ -343,9 +360,17 @@ func BuildFocusedDepTree(tasks []task.Task, targetID string) (DepTreeResult, err
 	}
 
 	return DepTreeResult{
-		Target:    &targetDTT,
-		BlockedBy: blockedBy,
-		Blocks:    downstream,
-		Message:   message,
+		Target:         &targetDTT,
+		BlockedBy:      blockedBy,
+		Blocks:         downstream,
+		BlockedByEdges: collectScopedStoredEdges(tasks, neighbourhoodIDs(targetID, blockedBy)),
+		BlocksEdges:    collectScopedStoredEdges(tasks, neighbourhoodIDs(targetID, downstream)),
+		Message:        message,
 	}, nil
+}
+
+func neighbourhoodIDs(targetID string, nodes []DepTreeNode) map[string]bool {
+	ids := map[string]bool{targetID: true}
+	collectTreeIDs(nodes, ids)
+	return ids
 }
