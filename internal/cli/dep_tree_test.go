@@ -382,13 +382,13 @@ func TestRunDepTree(t *testing.T) {
 		}
 	})
 
-	t.Run("it carries a bare id for a blocker no task carries in JSON", func(t *testing.T) {
+	t.Run("it marks a blocker no task carries as missing in JSON", func(t *testing.T) {
 		dir, _ := setupTickProjectWithTasks(t, danglingBlockerTasks(now))
 
 		doc := runDepTreeJSON(t, dir)
 
 		tree := jsonDepTreeOnlyTree(t, doc)
-		assertJSONDepTreeTask(t, tree, "tick-ghost1", "", "")
+		assertJSONDepTreeTask(t, tree, "tick-ghost1", "", "missing")
 		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, tree), "tick-aaa111", "Task A", "open")
 	})
 
@@ -411,7 +411,7 @@ func TestRunDepTree(t *testing.T) {
 		}
 	})
 
-	t.Run("it renders a dangling blocker in the terminal", func(t *testing.T) {
+	t.Run("it renders a dangling blocker as missing in the terminal", func(t *testing.T) {
 		dir, _ := setupTickProjectWithTasks(t, danglingBlockerTasks(now))
 
 		stdout, stderr, exitCode := runDepTree(t, dir)
@@ -420,7 +420,7 @@ func TestRunDepTree(t *testing.T) {
 		}
 
 		want := "" +
-			"tick-ghost1   ()\n" +
+			"tick-ghost1   (missing)\n" +
 			"└── tick-aaa111  Task A (open)\n" +
 			"\n" +
 			"1 chain, longest: 1, 1 blocked\n"

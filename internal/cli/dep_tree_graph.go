@@ -215,6 +215,9 @@ func collectTreeIDs(nodes []DepTreeNode, seen map[string]bool) {
 	}
 }
 
+// depTreeMissingStatus is the status carried by a dependency participant no task record matches.
+const depTreeMissingStatus = "missing"
+
 // buildSeededTrees seeds a downstream walk from each participant the walk from the roots
 // left unemitted, so the edges of a cycle or of a dangling blocker still reach the output.
 // Participants that block nothing need no seed: each is reached as the target of a blocker's edge.
@@ -225,7 +228,7 @@ func buildSeededTrees(participants []string, emitted map[string]bool, blocks map
 			continue
 		}
 		node := DepTreeNode{
-			Task:     DepTreeTask{ID: id},
+			Task:     DepTreeTask{ID: id, Status: depTreeMissingStatus},
 			Children: walkDownstream(id, blocks, taskIdx, make(map[string]bool)),
 		}
 		if t, exists := taskIdx[id]; exists {

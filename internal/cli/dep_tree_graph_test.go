@@ -290,6 +290,54 @@ func TestBuildFullDepTree(t *testing.T) {
 			t.Errorf("BlockedCount = %d, want 2", result.BlockedCount)
 		}
 	})
+
+	t.Run("it seeds a participant with no task record with status missing", func(t *testing.T) {
+		now := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
+
+		result := BuildFullDepTree(danglingBlockerTasks(now))
+
+		if len(result.Trees) != 1 {
+			t.Fatalf("Trees has %d entries, want 1", len(result.Trees))
+		}
+		ghost := result.Trees[0]
+		want := DepTreeTask{ID: "tick-ghost1", Title: "", Status: "missing"}
+		if ghost.Task != want {
+			t.Errorf("seeded task = %#v, want %#v", ghost.Task, want)
+		}
+		if len(ghost.Children) != 1 {
+			t.Fatalf("seeded node has %d children, want 1", len(ghost.Children))
+		}
+		wantChild := DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"}
+		if got := ghost.Children[0].Task; got != wantChild {
+			t.Errorf("child task = %#v, want %#v", got, wantChild)
+		}
+	})
+
+	t.Run("it keeps real statuses on a cycle's participants", func(t *testing.T) {
+		now := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
+
+		result := BuildFullDepTree(cycleTasks(now))
+
+		statuses := map[string]string{
+			"tick-aaa111": "open",
+			"tick-bbb222": "open",
+		}
+		var check func(nodes []DepTreeNode)
+		check = func(nodes []DepTreeNode) {
+			for _, n := range nodes {
+				want, known := statuses[n.Task.ID]
+				if !known {
+					t.Errorf("unexpected participant %q", n.Task.ID)
+					continue
+				}
+				if n.Task.Status != want {
+					t.Errorf("status of %s = %q, want %q", n.Task.ID, n.Task.Status, want)
+				}
+				check(n.Children)
+			}
+		}
+		check(result.Trees)
+	})
 }
 
 func TestBuildFocusedDepTree(t *testing.T) {
