@@ -64,7 +64,7 @@ func (f *ToonFormatter) FormatTaskList(tasks []task.Task) (string, error) {
 			Type:     t.Type,
 		}
 	}
-	return encodeToonSection("tasks", rows)
+	return encodeToonSectionIdentified("tasks", rows, func(r toonTaskRow) string { return r.ID })
 }
 
 // FormatTaskDetail renders a single task in multi-section TOON format, narrowed to detail.Fields when it is set.
@@ -340,12 +340,35 @@ func emptyToonSection[T any](name string) string {
 // become a tabular section, scalars an inline list. Quoting is the encoder's.
 // It returns a *toonEncodeError naming the section when the encoder rejects a value.
 func encodeToonSection[T any](name string, rows []T) (string, error) {
+	return encodeToonSectionIdentified(name, rows, nil)
+}
+
+// encodeToonSectionIdentified encodes a section like encodeToonSection, naming
+// the refused row in the refusal when identity resolves a row's task ID.
+func encodeToonSectionIdentified[T any](name string, rows []T, identity func(T) string) (string, error) {
 	obj := toon.NewObject(toon.Field{Key: name, Value: rows})
 	s, err := toon.MarshalString(obj)
 	if err != nil {
-		return "", &toonEncodeError{part: "section " + name, err: err}
+		return "", sectionRefusal(name, rows, identity, err)
 	}
 	return s, nil
+}
+
+// sectionRefusal names the first row the encoder rejects on its own; the
+// library error names none. Without an identity, or with no row refused alone,
+// the section name stands by itself.
+func sectionRefusal[T any](name string, rows []T, identity func(T) string, err error) error {
+	refusal := &toonEncodeError{part: "section " + name, err: err}
+	if identity == nil {
+		return refusal
+	}
+	for _, row := range rows {
+		if _, single := toon.MarshalString(toon.NewObject(toon.Field{Key: name, Value: []T{row}})); single != nil {
+			refusal.taskID = identity(row)
+			break
+		}
+	}
+	return refusal
 }
 
 // toonEncodeError reports a value TOON cannot carry, naming the field or

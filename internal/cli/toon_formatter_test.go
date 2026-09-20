@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -864,6 +865,17 @@ func TestToonFormatter(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "notes") {
 			t.Errorf("error = %q, want it to name the notes section", err)
+		}
+	})
+
+	t.Run("it falls back to the section name when the section refuses but no single row does", func(t *testing.T) {
+		rows := []toonTaskRow{{ID: "tick-aaa111", Title: "an ordinary title"}, {ID: "tick-bbb222", Title: "another ordinary title"}}
+		_, want := encodeToonSection("tasks", []toonTaskRow{{ID: "tick-aaa111", Title: "bell " + refusedChar + " title"}})
+
+		got := sectionRefusal("tasks", rows, func(r toonTaskRow) string { return r.ID }, errors.Unwrap(want))
+
+		if got.Error() != want.Error() {
+			t.Errorf("error = %q, want the section-only message %q", got, want)
 		}
 	})
 

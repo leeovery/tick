@@ -15,9 +15,44 @@ func createRefusedTitleTask(t *testing.T, dir string) string {
 	return createCarryingValue(t, dir, "title", refusedTitle)
 }
 
+// createRefusedTitleTaskAtPriority creates a task whose title carries a refused
+// character at the given priority, which fixes its position in list order.
+func createRefusedTitleTaskAtPriority(t *testing.T, dir, priority string) string {
+	t.Helper()
+	stdout, stderr, exitCode := runToon(t, dir, "create", "--quiet", "--priority", priority, "--", refusedTitle)
+	if exitCode != 0 {
+		t.Fatalf("create exit code = %d, want 0; stderr = %q", exitCode, stderr)
+	}
+	return strings.TrimSuffix(stdout, "\n")
+}
+
+// blockAgainstOrdinaryTask blocks id on a newly created encodable task and
+// asserts the dependency was stored, the document confirming it being refused.
+func blockAgainstOrdinaryTask(t *testing.T, dir, id string) {
+	t.Helper()
+	blocker := createCarryingValue(t, dir, "title", "an ordinary blocker")
+	runToon(t, dir, "dep", "add", id, blocker)
+	stdout, stderr, exitCode := runToon(t, dir, "blocked", "--quiet")
+	if exitCode != 0 {
+		t.Fatalf("blocked --quiet exit code = %d, want 0; stderr = %q", exitCode, stderr)
+	}
+	if got := strings.TrimSuffix(stdout, "\n"); got != id {
+		t.Fatalf("blocked task IDs = %q, want %q", got, id)
+	}
+}
+
 func runToon(t *testing.T, dir string, args ...string) (stdout, stderr string, exitCode int) {
 	t.Helper()
 	return runTick(t, dir, append([]string{"--toon"}, args...)...)
+}
+
+// assertUnnamed asserts that a refusal diagnostic leaves a task it does not
+// concern out of its message.
+func assertUnnamed(t *testing.T, stderr, id string) {
+	t.Helper()
+	if strings.Contains(stderr, id) {
+		t.Errorf("stderr = %q, want it to leave task %q unnamed", stderr, id)
+	}
 }
 
 func assertRefused(t *testing.T, stdout, stderr string, exitCode int, wants ...string) {
@@ -43,8 +78,8 @@ type refusalEnv struct {
 }
 
 // refusedDocumentCommand is a command that prints a TOON document covering the
-// refused task. namedSection is the section its diagnostic names in place of
-// the task ID, for a document covering more than one task.
+// refused task. namedSection is the section its diagnostic names alongside the
+// task ID, for a document covering more than one task.
 type refusedDocumentCommand struct {
 	name         string
 	args         func(env refusalEnv) []string
@@ -120,13 +155,39 @@ func TestToonRefusesUnencodableValues(t *testing.T) {
 
 	t.Run("it fails rather than printing an empty task list when one task's title cannot be encoded", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
-		createCarryingValue(t, dir, "title", "an ordinary title")
-		createRefusedTitleTask(t, dir)
+		encodable := createCarryingValue(t, dir, "title", "an ordinary title")
+		refused := createRefusedTitleTask(t, dir)
 
 		stdout, stderr, exitCode := runToon(t, dir, "list")
 
-		assertRefused(t, stdout, stderr, exitCode, "tasks")
+		assertRefused(t, stdout, stderr, exitCode, "tasks", refused)
+		assertUnnamed(t, stderr, encodable)
 	})
+
+	t.Run("it names the first offending task when two tasks in the list carry refused values", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		first := createRefusedTitleTaskAtPriority(t, dir, "1")
+		second := createRefusedTitleTaskAtPriority(t, dir, "3")
+
+		stdout, stderr, exitCode := runToon(t, dir, "list")
+
+		assertRefused(t, stdout, stderr, exitCode, "tasks", first)
+		assertUnnamed(t, stderr, second)
+	})
+
+	for _, command := range []string{"ready", "blocked"} {
+		t.Run("it names the offending task for "+command+" as well as list", func(t *testing.T) {
+			dir, _ := setupTickProject(t)
+			refused := createRefusedTitleTask(t, dir)
+			if command == "blocked" {
+				blockAgainstOrdinaryTask(t, dir, refused)
+			}
+
+			stdout, stderr, exitCode := runToon(t, dir, command)
+
+			assertRefused(t, stdout, stderr, exitCode, "tasks", refused)
+		})
+	}
 
 	t.Run("it fails rather than printing a count-zero notes section when a note's text cannot be encoded", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
@@ -158,11 +219,11 @@ func TestToonRefusesUnencodableValues(t *testing.T) {
 
 				stdout, stderr, exitCode := runToon(t, env.dir, command.args(env)...)
 
-				named := env.id
+				wants := []string{"cannot encode", env.id}
 				if command.namedSection != "" {
-					named = command.namedSection
+					wants = append(wants, command.namedSection)
 				}
-				assertRefused(t, stdout, stderr, exitCode, "cannot encode", named)
+				assertRefused(t, stdout, stderr, exitCode, wants...)
 			})
 		}
 	})
