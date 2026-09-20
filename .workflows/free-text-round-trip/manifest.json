@@ -183,7 +183,8 @@
             "free-text-round-trip-10-2": "tick-9e5458",
             "free-text-round-trip-10-3": "tick-9502f1",
             "free-text-round-trip-10-4": "tick-63d1bd",
-            "free-text-round-trip-10-5": "tick-b57be3"
+            "free-text-round-trip-10-5": "tick-b57be3",
+            "free-text-round-trip-10-6": "tick-9e1023"
           },
           "storage_paths": [
             ".tick/"
@@ -421,6 +422,11 @@
                 "4": "approved",
                 "5": "approved"
               }
+            },
+            "p10": {
+              "tasks": {
+                "1": "approved"
+              }
             }
           },
           "consolidated_phases": [
@@ -432,7 +438,8 @@
             6,
             7,
             8,
-            9
+            9,
+            10
           ],
           "completed_phases": [
             1,
@@ -444,20 +451,6 @@
             7,
             8,
             9
-          ],
-          "bank": [
-            {
-              "task": "free-text-round-trip-10-1",
-              "source": "reviewer",
-              "summary": "blocked_by positional narrowing is rendered in all three formats but pinned by no test, so the single pairing site can silently lose or mispair it.",
-              "failure": "An agent runs tick show <id> --field blocked_by.2 on a task with several blockers and is handed the whole blocker list, or the wrong blocker, then acts on a blocker ID it never asked for (tick dep remove, or reporting the wrong blocker upstream). Nothing fails: exit 0, the document parses, the count header follows the selection. Noticed only as a dependency edited against the wrong task. Demonstrated: replacing d.Fields.Positions(fieldBlockedBy) with nil in internal/cli/format.go:126 leaves go test ./internal/cli green, while the equivalent mutation on children fails three subtests.",
-              "detail": "TestShowFieldPositions (internal/cli/list_show_test.go:1085) builds a fixture with two children, three notes, two tags and two refs but no blockers, so its narrowing subtests cover every list section except blocked_by. The only blocked_by positional coverage anywhere is error-path: list_show_test.go:1350 and show_fields_test.go:671, both on a one-blocker fixture where blocked_by.1 is indistinguishable from the whole section. Remedy is a fixture with two blockers plus a blocked_by.2 assertion in toon and pretty, mirroring it narrows a table to one row (:1159) and it narrows a pretty children block (:1266).",
-              "files": [
-                "internal/cli/list_show_test.go",
-                "internal/cli/show_fields_test.go",
-                "internal/cli/format.go"
-              ]
-            }
           ]
         }
       }
