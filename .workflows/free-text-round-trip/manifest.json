@@ -172,7 +172,8 @@
             "free-text-round-trip-7-5": "tick-5087a7",
             "free-text-round-trip-8": "tick-a06bd5",
             "free-text-round-trip-8-1": "tick-9e2a3b",
-            "free-text-round-trip-8-2": "tick-a69bd6"
+            "free-text-round-trip-8-2": "tick-a69bd6",
+            "free-text-round-trip-8-3": "tick-b845fe"
           },
           "storage_paths": [
             ".tick/"
@@ -376,6 +377,11 @@
                 "1": "approved",
                 "2": "approved"
               }
+            },
+            "p8": {
+              "tasks": {
+                "1": "approved"
+              }
             }
           },
           "consolidated_phases": [
@@ -385,7 +391,8 @@
             4,
             5,
             6,
-            7
+            7,
+            8
           ],
           "completed_phases": [
             1,
@@ -395,20 +402,6 @@
             5,
             6,
             7
-          ],
-          "bank": [
-            {
-              "task": "free-text-round-trip-8-2",
-              "source": "reviewer",
-              "summary": "The cycle fallback can still seed a participant that a later fallback seed reaches, so the task's rule does not hold on a graph whose cycle has tasks hanging off it.",
-              "failure": "A user or agent running tick dep tree on a project holding a dependency cycle with dependents sees the same subtree drawn twice and a blocked task presented as a top-level entry — the exact defect this task removed for acyclic graphs. Noticed as a repeated chain in the pretty tree and a repeated subtree under trees in JSON; internal/doctor/dependency_cycle.go exists because the project expects this state.",
-              "detail": "internal/cli/dep_tree_graph.go:266-270 seeds the first remaining participant in first-seen order whenever a pass emits nothing. That participant may itself be reached by a later fallback seed. Reproducer found by random-graph search: t0 BlockedBy [t0,t2], t1 BlockedBy [t0,t2,t3,t4], t2 BlockedBy [t3], t3 BlockedBy [t4], t4 BlockedBy [t4] — t2 is emitted as a top-level tree and then again beneath t3's tree. Beyond this task's scope because the task's Do prescribes this fallback verbatim (seed the first of them in first-seen order), and the Outcome sentence it would need to satisfy — a top-level entry is a participant nothing else in the drawn graph reaches — cannot hold under that prescription; changing it is a plan/spec decision, not an executor fix. A candidate refinement is to prefer a remaining participant that reaches one of its own blockers (a genuine cycle member) over the first in order.",
-              "files": [
-                "internal/cli/dep_tree_graph.go",
-                "internal/cli/dep_tree_test.go",
-                "internal/cli/dep_tree_graph_test.go"
-              ]
-            }
           ]
         }
       }
