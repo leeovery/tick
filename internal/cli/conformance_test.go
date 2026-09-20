@@ -748,6 +748,19 @@ func decodeJSONConformanceEntry(t *testing.T, name string) map[string]any {
 	return obj
 }
 
+// declaredCommandProblem reports the disagreement between an entry's declared
+// command and the args its setup returns, empty when the args begin with the
+// command's words.
+func declaredCommandProblem(t *testing.T, entry conformanceDoc) string {
+	t.Helper()
+	_, args := entry.Setup(t)
+	words := strings.Fields(entry.Command)
+	if len(args) >= len(words) && slices.Equal(args[:len(words)], words) {
+		return ""
+	}
+	return fmt.Sprintf("entry %q declares command %q but its setup runs %v", entry.Name, entry.Command, args)
+}
+
 func TestConformanceInventoryWellFormed(t *testing.T) {
 	inventoryProblems := func(t *testing.T, docs []conformanceDoc) []string {
 		t.Helper()
@@ -758,14 +771,20 @@ func TestConformanceInventoryWellFormed(t *testing.T) {
 				problems = append(problems, fmt.Sprintf("duplicate entry name %q", entry.Name))
 			}
 			seen[entry.Name] = true
-			if (entry.NotADocument != "") == (entry.Setup == nil) {
+			if (entry.NotADocument != "") != (entry.Setup == nil) {
+				if entry.Setup == nil {
+					problems = append(problems, fmt.Sprintf("entry %q carries neither a setup nor a reason", entry.Name))
+					continue
+				}
+				problems = append(problems, fmt.Sprintf("entry %q carries both a setup and a reason", entry.Name))
 				continue
 			}
 			if entry.Setup == nil {
-				problems = append(problems, fmt.Sprintf("entry %q carries neither a setup nor a reason", entry.Name))
 				continue
 			}
-			problems = append(problems, fmt.Sprintf("entry %q carries both a setup and a reason", entry.Name))
+			if problem := declaredCommandProblem(t, entry); problem != "" {
+				problems = append(problems, problem)
+			}
 		}
 		return problems
 	}
@@ -777,7 +796,7 @@ func TestConformanceInventoryWellFormed(t *testing.T) {
 	})
 
 	t.Run("it rejects a duplicate document name", func(t *testing.T) {
-		setup := func(t *testing.T) (string, []string) { return "", nil }
+		setup := func(t *testing.T) (string, []string) { return "", []string{"list"} }
 		docs := []conformanceDoc{
 			{Name: "twice", Command: "list", Setup: setup},
 			{Name: "twice", Command: "list", Setup: setup},
@@ -806,6 +825,54 @@ func TestConformanceInventoryWellFormed(t *testing.T) {
 
 		if problems := inventoryProblems(t, docs); len(problems) != 1 {
 			t.Errorf("problems = %v, want one missing-both problem", problems)
+		}
+	})
+
+	t.Run("it rejects an entry whose setup runs a different command", func(t *testing.T) {
+		docs := []conformanceDoc{{
+			Name:    "ready with results",
+			Command: "ready",
+			Setup:   func(t *testing.T) (string, []string) { return "", []string{"list", "--ready"} },
+		}}
+
+		problems := inventoryProblems(t, docs)
+
+		if len(problems) != 1 {
+			t.Fatalf("problems = %v, want one command-mismatch problem", problems)
+		}
+		if !strings.Contains(problems[0], `"ready"`) || !strings.Contains(problems[0], "[list --ready]") {
+			t.Errorf("problem %q names neither the declared command nor the args", problems[0])
+		}
+	})
+
+	t.Run("it rejects an entry whose setup args are shorter than its declared command", func(t *testing.T) {
+		docs := []conformanceDoc{{
+			Name:    "dep tree",
+			Command: "dep tree",
+			Setup:   func(t *testing.T) (string, []string) { return "", []string{"dep"} },
+		}}
+
+		problems := inventoryProblems(t, docs)
+
+		if len(problems) != 1 {
+			t.Fatalf("problems = %v, want one command-mismatch problem", problems)
+		}
+		if !strings.Contains(problems[0], `"dep tree"`) || !strings.Contains(problems[0], "[dep]") {
+			t.Errorf("problem %q names neither the declared command nor the args", problems[0])
+		}
+	})
+
+	t.Run("it accepts an entry whose setup args carry flags after the command", func(t *testing.T) {
+		docs := []conformanceDoc{{
+			Name:    "show with a field selection",
+			Command: "show",
+			Setup: func(t *testing.T) (string, []string) {
+				return "", []string{"show", "tick-a00001", "--field", "notes"}
+			},
+		}}
+
+		if problems := inventoryProblems(t, docs); len(problems) != 0 {
+			t.Errorf("problems = %v, want none", problems)
 		}
 	})
 }
