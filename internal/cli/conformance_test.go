@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +12,7 @@ import (
 	toon "github.com/toon-format/toon-go"
 
 	"github.com/leeovery/tick/internal/task"
+	"github.com/leeovery/tick/internal/testutil"
 )
 
 // conformanceDoc is one document the tool can produce. Command is the
@@ -49,6 +52,74 @@ func conformanceBlockedPair() []task.Task {
 	blocked := conformanceTask("tick-eee555", "Blocked", task.StatusOpen, 2, "task")
 	blocked.BlockedBy = []string{blocker.ID}
 	return []task.Task{blocker, blocked}
+}
+
+func conformanceStatsTasks() []task.Task {
+	blocker := conformanceTask("tick-111aaa", "Blocker", task.StatusOpen, 0, "task")
+	blocked := conformanceTask("tick-222bbb", "Blocked", task.StatusOpen, 1, "bug")
+	blocked.BlockedBy = []string{blocker.ID}
+	done := conformanceTask("tick-333ccc", "Finished", task.StatusDone, 3, "chore")
+	done.Closed = &conformanceTime
+	cancelled := conformanceTask("tick-444ddd", "Dropped", task.StatusCancelled, 4, "task")
+	cancelled.Closed = &conformanceTime
+	return []task.Task{
+		blocker,
+		blocked,
+		conformanceTask("tick-555eee", "Running", task.StatusInProgress, 2, "feature"),
+		done,
+		cancelled,
+	}
+}
+
+// conformanceDepGraph returns a three-task chain beside a task carrying no
+// dependencies, covering every branch of the focused dependency view.
+func conformanceDepGraph() []task.Task {
+	upstream := conformanceTask("tick-a11111", "Upstream", task.StatusOpen, 2, "task")
+	middle := conformanceTask("tick-b22222", "Middle", task.StatusOpen, 2, "task")
+	middle.BlockedBy = []string{upstream.ID}
+	downstream := conformanceTask("tick-c33333", "Downstream", task.StatusOpen, 2, "task")
+	downstream.BlockedBy = []string{middle.ID}
+	lone := conformanceTask("tick-d44444", "Lone", task.StatusOpen, 2, "")
+	return []task.Task{upstream, middle, downstream, lone}
+}
+
+func conformanceUnconnectedTasks() []task.Task {
+	return []task.Task{
+		conformanceTask("tick-e11111", "First", task.StatusOpen, 2, "task"),
+		conformanceTask("tick-f22222", "Second", task.StatusOpen, 2, "task"),
+	}
+}
+
+func conformanceCyclePair() []task.Task {
+	first := conformanceTask("tick-a99999", "First of the cycle", task.StatusOpen, 2, "task")
+	second := conformanceTask("tick-b88888", "Second of the cycle", task.StatusOpen, 2, "task")
+	first.BlockedBy = []string{second.ID}
+	second.BlockedBy = []string{first.ID}
+	return []task.Task{first, second}
+}
+
+var conformanceNotes = []task.Note{
+	{Text: "First note", Created: conformanceTime},
+	{Text: "Second note: with a colon", Created: conformanceTime.Add(time.Hour)},
+}
+
+// conformanceDetailTasks returns the dependency graph extended with a task
+// carrying every optional field and the child it refers to; the graph supplies
+// the parent and blocker it names.
+func conformanceDetailTasks() []task.Task {
+	full := conformanceTask("tick-e55555", "Full task", task.StatusDone, 1, "bug")
+	full.Parent = "tick-a11111"
+	full.Tags = []string{"backend", "ui"}
+	full.Refs = []string{"https://x.dev/issues/3"}
+	full.Description = "Line one\nLine two"
+	full.Notes = conformanceNotes
+	full.BlockedBy = []string{"tick-c33333"}
+	full.Closed = &conformanceTime
+
+	child := conformanceTask("tick-f66666", "Child task", task.StatusOpen, 3, "task")
+	child.Parent = full.ID
+
+	return append(conformanceDepGraph(), full, child)
 }
 
 var conformanceDocs = []conformanceDoc{
@@ -111,6 +182,99 @@ var conformanceDocs = []conformanceDoc{
 		Setup: func(t *testing.T) (string, []string) {
 			dir, _ := setupTickProjectWithTasks(t, conformanceListTasks)
 			return dir, []string{"blocked"}
+		},
+	},
+	{
+		Name:    "stats on a populated project",
+		Command: "stats",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceStatsTasks())
+			return dir, []string{"stats"}
+		},
+	},
+	{
+		Name:    "stats on an empty project",
+		Command: "stats",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProject(t)
+			return dir, []string{"stats"}
+		},
+	},
+	{
+		Name:    "dep tree on a populated graph",
+		Command: "dep tree",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceDepGraph())
+			return dir, []string{"dep", "tree"}
+		},
+	},
+	{
+		Name:    "dep tree with no dependencies",
+		Command: "dep tree",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceUnconnectedTasks())
+			return dir, []string{"dep", "tree"}
+		},
+	},
+	{
+		Name:    "dep tree on a two-task cycle",
+		Command: "dep tree",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceCyclePair())
+			return dir, []string{"dep", "tree"}
+		},
+	},
+	{
+		Name:    "dep tree for a task with both directions",
+		Command: "dep tree",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceDepGraph())
+			return dir, []string{"dep", "tree", "tick-b22222"}
+		},
+	},
+	{
+		Name:    "dep tree for a task with upstream only",
+		Command: "dep tree",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceDepGraph())
+			return dir, []string{"dep", "tree", "tick-c33333"}
+		},
+	},
+	{
+		Name:    "dep tree for a task with downstream only",
+		Command: "dep tree",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceDepGraph())
+			return dir, []string{"dep", "tree", "tick-a11111"}
+		},
+	},
+	{
+		Name:    "dep tree for a task with neither direction",
+		Command: "dep tree",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceDepGraph())
+			return dir, []string{"dep", "tree", "tick-d44444"}
+		},
+	},
+	{
+		Name:         "dep tree under --quiet",
+		Command:      "dep tree",
+		NotADocument: "--quiet prints nothing at all rather than a document",
+	},
+	{
+		Name:    "show on a task carrying every optional field",
+		Command: "show",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceDetailTasks())
+			return dir, []string{"show", "tick-e55555"}
+		},
+	},
+	{
+		Name:    "show on a task carrying no optional field",
+		Command: "show",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceDetailTasks())
+			return dir, []string{"show", "tick-d44444"}
 		},
 	},
 }
@@ -261,6 +425,215 @@ func TestConformanceDecodeFailureReporting(t *testing.T) {
 			t.Errorf("error %q does not carry the document text", err)
 		}
 	})
+}
+
+func TestToonStatsConformance(t *testing.T) {
+	t.Run("it decodes the populated stats document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "stats on a populated project")
+
+		assertToonFields(t, doc, map[string]any{
+			"total":       float64(5),
+			"open":        float64(2),
+			"in_progress": float64(1),
+			"done":        float64(1),
+			"cancelled":   float64(1),
+			"ready":       float64(2),
+			"blocked":     float64(1),
+		})
+		assertConformancePriorityCounts(t, doc, [5]int{1, 1, 1, 1, 1})
+	})
+
+	t.Run("it decodes the stats document for an empty project", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "stats on an empty project")
+
+		assertToonFields(t, doc, map[string]any{
+			"total":       float64(0),
+			"open":        float64(0),
+			"in_progress": float64(0),
+			"done":        float64(0),
+			"cancelled":   float64(0),
+			"ready":       float64(0),
+			"blocked":     float64(0),
+		})
+		assertConformancePriorityCounts(t, doc, [5]int{})
+	})
+}
+
+func TestToonDepTreeConformance(t *testing.T) {
+	t.Run("it decodes the populated full dep tree document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "dep tree on a populated graph")
+
+		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
+			{From: "tick-a11111", To: "tick-b22222"},
+			{From: "tick-b22222", To: "tick-c33333"},
+		})
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(1),
+			"longest": float64(2),
+			"blocked": float64(2),
+		})
+	})
+
+	t.Run("it decodes the emptied full dep tree document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "dep tree with no dependencies")
+
+		assertToonRowsEmpty(t, doc, "dep_tree")
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(0),
+			"longest": float64(0),
+			"blocked": float64(0),
+		})
+	})
+
+	t.Run("it decodes the full dep tree document for a cycle", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "dep tree on a two-task cycle")
+
+		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
+			{From: "tick-a99999", To: "tick-b88888"},
+			{From: "tick-b88888", To: "tick-a99999"},
+		})
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(1),
+			"longest": float64(2),
+			"blocked": float64(2),
+		})
+	})
+
+	t.Run("it decodes the focused document with both directions", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "dep tree for a task with both directions")
+
+		assertToonFields(t, doc, map[string]any{
+			"id":     "tick-b22222",
+			"title":  "Middle",
+			"status": "open",
+		})
+		assertToonEdgeRows(t, doc, "blocked_by", []toonEdgeRow{{From: "tick-a11111", To: "tick-b22222"}})
+		assertToonEdgeRows(t, doc, "blocks", []toonEdgeRow{{From: "tick-b22222", To: "tick-c33333"}})
+	})
+
+	t.Run("it decodes the focused document with upstream only", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "dep tree for a task with upstream only")
+
+		assertToonFields(t, doc, map[string]any{
+			"id":     "tick-c33333",
+			"title":  "Downstream",
+			"status": "open",
+		})
+		assertToonEdgeRows(t, doc, "blocked_by", []toonEdgeRow{
+			{From: "tick-b22222", To: "tick-c33333"},
+			{From: "tick-a11111", To: "tick-b22222"},
+		})
+		assertToonRowsEmpty(t, doc, "blocks")
+	})
+
+	t.Run("it decodes the focused document with downstream only", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "dep tree for a task with downstream only")
+
+		assertToonFields(t, doc, map[string]any{
+			"id":     "tick-a11111",
+			"title":  "Upstream",
+			"status": "open",
+		})
+		assertToonRowsEmpty(t, doc, "blocked_by")
+		assertToonEdgeRows(t, doc, "blocks", []toonEdgeRow{
+			{From: "tick-a11111", To: "tick-b22222"},
+			{From: "tick-b22222", To: "tick-c33333"},
+		})
+	})
+
+	t.Run("it decodes the focused document with neither direction", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "dep tree for a task with neither direction")
+
+		assertToonFields(t, doc, map[string]any{
+			"id":     "tick-d44444",
+			"title":  "Lone",
+			"status": "open",
+		})
+		assertToonRowsEmpty(t, doc, "blocked_by", "blocks")
+	})
+}
+
+func TestToonDetailConformance(t *testing.T) {
+	t.Run("it decodes the full detail document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "show on a task carrying every optional field")
+
+		assertToonFields(t, doc, map[string]any{
+			"id":          "tick-e55555",
+			"title":       "Full task",
+			"status":      "done",
+			"priority":    float64(1),
+			"type":        "bug",
+			"parent":      "tick-a11111",
+			"created":     task.FormatTimestamp(conformanceTime),
+			"updated":     task.FormatTimestamp(conformanceTime),
+			"closed":      task.FormatTimestamp(conformanceTime),
+			"description": "Line one\nLine two",
+		})
+		assertToonStringList(t, doc, "tags", []string{"backend", "ui"})
+		assertToonStringList(t, doc, "refs", []string{"https://x.dev/issues/3"})
+		assertToonRelatedRow(t, doc, "blocked_by", RelatedTask{ID: "tick-c33333", Title: "Downstream", Status: "open"})
+		assertToonRelatedRow(t, doc, "children", RelatedTask{ID: "tick-f66666", Title: "Child task", Status: "open"})
+		assertToonNoteRows(t, doc, conformanceNotes)
+	})
+
+	t.Run("it decodes the bare detail document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "show on a task carrying no optional field")
+
+		assertToonFields(t, doc, map[string]any{
+			"id":       "tick-d44444",
+			"title":    "Lone",
+			"status":   "open",
+			"priority": float64(2),
+			"created":  task.FormatTimestamp(conformanceTime),
+			"updated":  task.FormatTimestamp(conformanceTime),
+		})
+		assertToonKeysAbsent(t, doc, "type", "parent", "closed", "tags", "refs", "description")
+		assertToonRowsEmpty(t, doc, "blocked_by", "children", "notes")
+	})
+}
+
+func TestConformanceScopeBoundary(t *testing.T) {
+	t.Run("it keeps the phase 1 and phase 3 decoded assertions", func(t *testing.T) {
+		root := testutil.FindRepoRoot(t)
+		required := map[string][]string{
+			"toon_decode_test.go": {
+				"func TestToonTaskDetailConformance",
+				"func TestToonDepTreeFocusedConformance",
+			},
+			"toon_formatter_test.go": {
+				"it emits stats counts as top-level named fields",
+				"it emits the dep tree summary as top-level named fields",
+			},
+			"stats_test.go":    {"it decodes stats for a project with no tasks"},
+			"dep_tree_test.go": {"it returns the emptied document when no task has dependencies"},
+		}
+
+		for file, names := range required {
+			source, err := os.ReadFile(filepath.Join(root, "internal", "cli", file))
+			if err != nil {
+				t.Fatalf("reading %s: %v", file, err)
+			}
+			for _, name := range names {
+				if !strings.Contains(string(source), name) {
+					t.Errorf("%s no longer carries %q", file, name)
+				}
+			}
+		}
+	})
+}
+
+func assertConformancePriorityCounts(t *testing.T, doc map[string]any, want [5]int) {
+	t.Helper()
+	rows := toonRows(t, doc, "by_priority")
+	if len(rows) != len(want) {
+		t.Fatalf("by_priority has %d rows, want %d", len(rows), len(want))
+	}
+	for i, row := range rows {
+		assertToonFields(t, row, map[string]any{
+			"priority": float64(i),
+			"count":    float64(want[i]),
+		})
+	}
 }
 
 func assertConformanceTaskRows(t *testing.T, doc map[string]any, want []task.Task) {
