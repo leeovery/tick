@@ -163,7 +163,13 @@
             "free-text-round-trip-5-7": "tick-3f0af1",
             "free-text-round-trip-5-8": "tick-91fb2f",
             "free-text-round-trip-6-7": "tick-8246c5",
-            "free-text-round-trip-6-8": "tick-1f8606"
+            "free-text-round-trip-6-8": "tick-1f8606",
+            "free-text-round-trip-7": "tick-3d71a8",
+            "free-text-round-trip-7-1": "tick-6ef31f",
+            "free-text-round-trip-7-2": "tick-1f59f1",
+            "free-text-round-trip-7-3": "tick-401dc3",
+            "free-text-round-trip-7-4": "tick-02d03b",
+            "free-text-round-trip-7-5": "tick-5087a7"
           },
           "storage_paths": [
             ".tick/"
@@ -204,7 +210,7 @@
           "status": "in-progress",
           "task_gate_mode": "auto",
           "fix_gate_mode": "auto",
-          "analysis_gate_mode": "gated",
+          "analysis_gate_mode": "auto",
           "consolidation_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle_total": 1,
@@ -347,12 +353,12 @@
             },
             "c1": {
               "tasks": {
-                "1": "pending",
-                "2": "pending",
-                "3": "pending",
-                "4": "pending",
-                "5": "pending",
-                "6": "pending"
+                "1": "approved",
+                "2": "approved",
+                "3": "approved",
+                "4": "approved",
+                "5": "approved",
+                "6": "approved"
               }
             }
           },

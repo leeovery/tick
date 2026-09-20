@@ -11,6 +11,27 @@ sources: architecture
 
 **Outcome**: The index an agent reads out of `tick show` is the index `tick note remove` consumes, on every task the tool can hold.
 
+**Do**:
+- In `queryShowData` (`internal/cli/show.go:168-171`), order the notes query by the JSONL position alone: `SELECT text, created FROM task_notes WHERE task_id = ? ORDER BY rowid ASC`. Nothing else in the query changes.
+- Add a subtest to `TestNoteIndex` (`internal/cli/note_test.go:573`) seeding one task through `setupTickProjectWithTasks` whose two stored notes carry descending `Created` stamps — first in the slice with the later stamp — and assert the toon `notes` rows come back in stored order, `index` 1 naming the first note in the file.
+- In the same fixture, run `note remove <id> 1` through `runNote` and assert with `notesTextsOf(readPersistedTasks(t, tickDir), id)` that the note published as index 1 is the one gone, exactly as `"it matches the index note remove accepts"` (`:576`) does for the ascending case.
+- Assert `runShow(t, dir, id, "--toon", "--field", "notes.1")` on that same task narrows to the first stored note, so the `notes.N` selector and `ValidatePositions` address the row the index column names.
+- Leave `"it keeps insertion order for notes sharing a created timestamp"` (`note_test.go:618`) standing unedited — `rowid ASC` alone subsumes the tiebreak it pins.
+
+**Acceptance Criteria**:
+- [ ] The notes query in `queryShowData` orders by `rowid ASC` and carries no `created` term.
+- [ ] On a task whose stored notes carry descending stamps, `tick show <id> --toon` lists them in stored order, `index` 1 naming the first note in `tasks.jsonl`.
+- [ ] On that same task, `tick note remove <id> N` removes the note published at row N, for each N the document carries.
+- [ ] `--field notes.1` on that task returns the first stored note, and a position past the last note still fails as out of range.
+- [ ] Notes sharing one `created` stamp still render in insertion order.
+- [ ] Ordinary ascending-stamp output is unchanged: `go test ./...` green with no existing test edited.
+
+**Tests**:
+- `"it renders notes in stored order when created stamps run backwards"`
+- `"it removes the note the published index names when stamps run backwards"`
+- `"it narrows to the first stored note when stamps run backwards"`
+- `"it keeps insertion order for notes sharing a created timestamp"` (existing, stays green unedited)
+
 ## Task 2: The Two Completed Specifications Carry §12.2's Amendments
 
 severity: high
@@ -31,14 +52,61 @@ sources: standards, architecture
 
 **Outcome**: `tick dep tree --json` returns `{"mode","trees","chains","longest","blocked"}`, and every key in it is true of its contents on a cycle and on a dangling blocker.
 
+**Do**:
+- `internal/cli/format.go:213-240` — replace the published `Roots`/`Unrooted` pair with one field, `Trees []DepTreeNode`, holding every full-graph tree (those grown from roots first, then those seeded from participants no root reaches), delete `fullGraphTrees()`, and rewrite the type's doc comment for the single field.
+- `internal/cli/dep_tree_graph.go:117-183` — keep `roots` and `unrooted` as locals inside `BuildFullDepTree`: the `longest` fold (`:157-160`) and the empty-answer condition (`:169-172`) still read them separately. Return `Trees: slices.Concat(roots, unrooted)`.
+- Point the three read sites at the field — `toon_formatter.go:184`, `pretty_formatter.go:375`, `json_formatter.go:388` — and in `jsonDepTreeFull` (`json_formatter.go:338-345`) rename the member to `Trees` with tag `json:"trees"`, updating the `FormatDepTree` doc comment (`:373-375`) that lists the full-graph keys.
+- Follow the rename through the whole measured set. `grep -rn 'Roots\|Unrooted\|fullGraphTrees' internal/cli` → the production sites above plus 23 `DepTreeResult{Roots: …}` literals (`toon_formatter_test.go` 8, `json_formatter_test.go` 7, `pretty_formatter_test.go` 8) and 29 `result.Roots` references in `dep_tree_graph_test.go`; `grep -rn '"roots"' internal/cli README.md` → `dep_tree_test.go:175` (the `jsonDepTreeRoot` helper) and `:570`, `json_formatter_test.go:1039`/`:1096`/`:1130`/`:1159`/`:1205`/`:1396` (`fullExpected`)/`:1521`, `conformance_test.go:706` (`jsonConformanceListKeys`), `README.md:321`. `"it terminates full graph with circular dependency"` (`dep_tree_graph_test.go:599-612`) asserts `Roots = 0`, which the collapse makes meaningless — re-express it as the cycle's single seeded tree in `Trees`, keeping the termination the subtest exists for.
+- `README.md:321` — drop the clause naming the JSON `roots` array, keeping the sentence's statement that all three formats cover every participant. The fenced dep-tree samples are pretty and toon and do not move.
+
+**Acceptance Criteria**:
+- [ ] `tick dep tree --json` in full-graph mode returns exactly the keys `mode`, `trees`, `chains`, `longest`, `blocked`, and no shipped output carries a key named `roots`.
+- [ ] On a two-task cycle, `trees` carries the cycle's participants; on a task blocked by an ID no record matches, `trees` carries that participant's tree — neither under a key claiming rootness.
+- [ ] On a project where no task has dependencies, `trees` is `[]` rather than `null` and `chains`, `longest`, `blocked` read zero.
+- [ ] `grep -rn 'Unrooted\|fullGraphTrees' internal/cli` returns nothing; `DepTreeResult` publishes one tree field and `BuildFullDepTree` keeps the root-versus-seeded distinction local.
+- [ ] Toon and pretty `dep tree` output is byte-identical to before the change on the rooted, cycle and dangling-blocker projects.
+- [ ] `jsonConformanceListKeys` carries `trees` in place of `roots`, and the JSON conformance driver decodes the full dep-tree document with no null-list problem.
+- [ ] `README.md` names no JSON `roots` array, and `"it reproduces the README dep tree samples"` still passes.
+
+**Tests**:
+- `"it publishes every full-graph tree under trees"`
+- `"it carries a cycle's participants under trees"`
+- `"it emits trees as an empty list when no task has dependencies"`
+- `"it carries a bare id for a blocker no task carries in JSON"` (existing, retargeted at `trees`)
+- `"it terminates full graph with circular dependency"` (existing, re-expressed over the single field)
+
 ## Task 4: A Dependency Participant That Names No Task Says So
 
 severity: medium
 sources: standards
 
-**Problem**: An orphaned dependency — the state `internal/doctor/orphaned_dependency.go` exists to report — now renders as a task with blank fields. `buildUnrootedTrees` seeds `DepTreeTask{ID: id}` and upgrades it from `taskIdx` only when a record exists (`internal/cli/dep_tree_graph.go:228`), so a dangling blocker keeps zero-valued Title and Status; `writeDepTreeTaskLine` then formats `%s%s  %s (%s)` over the blanks (`internal/cli/pretty_formatter.go:422`) and `toJSONDepTreeNodes` copies them through (`internal/cli/json_formatter.go:361`). Verified against a built binary: pretty draws `tick-ghost   ()` and JSON emits `{"id":"tick-ghost","title":"","status":""}`. A human reads the line as a rendering bug; an agent reads the object as a task that exists and has no title, and acts on it — `tick show tick-ghost` then answers "task not found". Before this work the ID could reach neither rendering, so both outputs are new. The toon edge list is unaffected: it carries IDs only. §8's corrigendum requires the full-graph edges of a dangling blocker to reach the output and §4.1's second corrigendum requires pretty to draw the participants no root reaches "through the existing tree rendering with no new visual form"; neither reaches how a participant that is not a task is presented as a node, so the zero value is standing in for a decision nobody took.
+**Problem**: An orphaned dependency — the state `internal/doctor/orphaned_dependency.go` exists to report — now renders as a task with blank fields. `buildUnrootedTrees` seeds `DepTreeTask{ID: id}` and upgrades it from `taskIdx` only when a record exists (`internal/cli/dep_tree_graph.go:228`), so a dangling blocker keeps zero-valued Title and Status; `writeDepTreeTaskLine` then formats `%s%s  %s (%s)` over the blanks (`internal/cli/pretty_formatter.go:422`) and `toJSONDepTreeNodes` copies them through (`internal/cli/json_formatter.go:361`). Verified against a built binary: pretty draws `tick-ghost   ()` and JSON emits `{"id":"tick-ghost","title":"","status":""}`. A human reads the line as a rendering bug; an agent reads the object as a task that exists and has no title, and acts on it — `tick show tick-ghost` then answers "task not found". Before this work the ID could reach neither rendering, so both outputs are new. The toon edge list is unaffected: it carries IDs only. §8's corrigendum requires the full-graph edges of a dangling blocker to reach the output and §4.1's second corrigendum requires pretty to draw the participants no root reaches "through the existing tree rendering with no new visual form"; neither reached how a participant that is not a task is presented as a node, so the zero value stood in for a decision nobody took. §8 has since taken it: the paragraph added on 2026-09-20 fixes status `missing` with an empty title — `tick-ghost   (missing)` in pretty, `{"id":"tick-ghost","title":"","status":"missing"}` in JSON — and the corrigendum of the same date records it. The specification is amended; the code has not followed, and that is the whole of what is left here.
 
 **Solution**: Fill the status slot with what is true instead of leaving it blank: a participant that resolves to no task renders with status `missing` and an empty title, so pretty draws `tick-ghost   (missing)` and JSON returns `{"id":"tick-ghost","title":"","status":"missing"}`. Record the shipped-output shape as a corrigendum entry against §8, since §8's corrigendum is what put this class of graph in the output. Settled rather than staged, on two grounds the record already fixes: dropping non-task participants from the node-shaped renderings — the finder's other branch — would take the blocked real task out of pretty's tree with it, since the ghost is what seeds that walk, which reverses the ad hoc pass's settled direction that the terminal stops denying dependencies that exist; and leaving the blanks makes an agent learn outside the output that an empty `status` means "no such task", which is the rule §1 exists to delete. The marker occupies the existing status slot and introduces no new visual form, so §4.1's bound holds. The four real statuses stay unambiguous — `missing` collides with none of them.
+
+**Outcome**: An agent reading `tick dep tree` can tell a task from an ID that names none, out of the output itself: the participant `tick show` would answer "task not found" for carries status `missing` in both node-shaped renderings.
+
+**Do**:
+- `internal/cli/dep_tree_graph.go:221-239` — seed the node in `buildUnrootedTrees` as `DepTreeTask{ID: id, Status: depTreeMissingStatus}` and keep the upgrade from `taskIdx` when a record exists, so only an ID with no record keeps the marker. Declare `const depTreeMissingStatus = "missing"` in the same file, the one place the marker is spelled.
+- Leave that seed as the only site able to produce a non-task node: `walkDownstream` (`:56-60`) and `walkUpstream` (`:91-95`) already skip IDs absent from `taskIdx`, so no other builder path needs touching.
+- Retarget the two existing dangling-blocker assertions: `"it carries a bare id for a blocker no task carries in JSON"` (`dep_tree_test.go:351-359`) expects `assertJSONDepTreeTask(t, root, "tick-ghost1", "", "")` — take status `"missing"` and rename the subtest to say so; `"it renders a dangling blocker in the terminal"` (`:380-393`) pins `"tick-ghost1   ()\n"` — take `"tick-ghost1   (missing)\n"`, the title still empty so the spacing is unchanged.
+- Add a builder-level subtest in `dep_tree_graph_test.go` over `danglingBlockerTasks(now)` (`dep_tree_test.go:224`): the seeded node carries `Status: "missing"` and an empty `Title`, and the real task beneath it keeps `Task A`/`open`.
+- Add a guard that the marker is confined to participants with no record: on a two-task cycle every rendered node carries its real status, and `"it emits an edge from a blocker no task carries"` (`dep_tree_test.go:318`) stays green unedited, pinning the toon edge list as ID-only.
+
+**Acceptance Criteria**:
+- [ ] `tick dep tree --pretty` in a project whose only blocker ID matches no task draws `tick-ghost1   (missing)` with the blocked task beneath it and an unchanged summary line.
+- [ ] `tick dep tree --json` returns `{"id":"tick-ghost1","title":"","status":"missing"}` for that participant, its child keeping its own title and status.
+- [ ] No participant that resolves to a task record carries the marker — a cycle's members render their real statuses.
+- [ ] The toon edge list is byte-identical: it carries IDs only.
+- [ ] `missing` is spelled once in production code and collides with none of the four task statuses.
+- [ ] `go test ./...` green, with only the two dangling-blocker assertions changed.
+
+**Tests**:
+- `"it marks a blocker no task carries as missing in JSON"` (existing subtest, retargeted)
+- `"it renders a dangling blocker as missing in the terminal"` (existing subtest, retargeted)
+- `"it seeds a participant with no task record with status missing"`
+- `"it keeps real statuses on a cycle's participants"`
+- `"it emits an edge from a blocker no task carries"` (existing, unedited — the toon edge list does not move)
 
 ## Task 5: Each Count-Zero TOON Header Derives Its Columns From The Row Struct
 
@@ -49,6 +117,26 @@ sources: duplication
 
 **Solution**: Add one generic helper to `toon_formatter.go` — `emptyToonSection[T any](name string) string` — that reads `T`'s `toon` struct tags in declaration order by reflection and renders `name[0]{…}:`, and call it at each of the five sites with the same row type the populated branch marshals (`emptyToonSection[toonChangedRow]("changed")`, `emptyToonSection[toonRelatedRow](name)`, and so on). The column list then exists once, in the struct. Leave the literals standing in the test assertions and the README samples: with the production copy derived, those become the independent pin that fails loudly when a column moves — the behaviour the empty branch does not have today. Behaviour-preserving: every rendered header is byte-identical, and the existing tests are the check.
 
+**Outcome**: A toon section declares one schema whether or not it has rows, because both branches read the same struct — a column added, renamed or reordered moves the count-zero header with the populated one, and the literals left in the tests and the README become the pin that fails when it does not.
+
+**Do**:
+- Add `emptyToonSection[T any](name string) string` to `internal/cli/toon_formatter.go`, beside `encodeToonSection` (`:334-343`): take `reflect.TypeFor[T]()`, walk its fields in declaration order, read each field's `toon` tag (the name before any comma), join the names with commas and return `fmt.Sprintf("%s[0]{%s}:", name, cols)`.
+- Replace all five literals with calls passing the row type the populated branch marshals — the complete production set, `grep -n '\[0\]{' internal/cli/toon_formatter.go` → 5 matches, and `grep -rn '\[0\]{' --include='*.go'` shows no other production file holds one: `:53` → `emptyToonSection[toonTaskRow]("tasks")`, `:150` → `emptyToonSection[toonChangedRow]("changed")`, `:241` → `emptyToonSection[toonEdgeRow](name)`, `:308` → `emptyToonSection[toonRelatedRow](name)`, `:320` → `emptyToonSection[toonNoteRow]("notes")`.
+- Leave every literal in the test assertions and the README samples exactly as it stands — the `assertCountZeroSection` callers, the two `tasks[0]{id,title,status,priority,type}:` comparisons (`toon_formatter_test.go:94`, `:106`) and the `dep_tree[0]{from,to}:` comparison (`:1046`). Derived production against literal test is what this task buys.
+- Confirm preservation before committing: `go test ./...` green with no test file edited, then `go vet ./...`, `gofmt -w ./internal ./cmd` and `golangci-lint run ./...` clean.
+
+**Acceptance Criteria**:
+- [ ] `grep -n '\[0\]{' internal/cli/toon_formatter.go` matches only the helper's format string; the five hand-written column lists are gone.
+- [ ] Each of the five call sites passes the same row type its populated branch marshals.
+- [ ] Every count-zero header is byte-identical to before: `tasks[0]{id,title,status,priority,type}:`, `changed[0]{id,title,from,to,auto}:`, `dep_tree[0]{from,to}:`, `blocked_by[0]{from,to}:`, `blocks[0]{from,to}:`, `blocked_by[0]{id,title,status}:`, `children[0]{id,title,status}:`, `notes[0]{index,text,created}:`.
+- [ ] No test file, no README sample and no other production file is edited.
+- [ ] `go test ./...`, `go vet ./...` and `golangci-lint run ./...` all clean.
+
+**Tests**: behaviour-preserving refactor — no test is added, renamed or weakened, and no test semantics change. The existing count-zero assertions are the check and must stay green unedited:
+- `"it formats zero tasks as empty section"` (`toon_formatter_test.go:91`) and `"it formats zero tasks from nil slice as empty section"` (`:103`)
+- the `assertCountZeroSection` callers at `toon_formatter_test.go:162`, `:164`, `:215`, `:216`, `:688`, `:1094`, `:1106`, `:1344`, `list_show_test.go:936`, `:1394`, `detail_changes_test.go:79`, `update_test.go:1423`, `create_test.go:1414`, `format_test.go:415`
+- `"it renders the emptied full document for a result with no roots"` (`toon_formatter_test.go:1044`)
+
 ## Task 6: Corrections
 
 severity: corrections
@@ -57,3 +145,21 @@ sources: architecture
 **Problem**: `TestConformanceScopeBoundary` (`internal/cli/conformance_test.go:1310-1338`) reads four sibling test files and asserts that named function names and subtest strings still appear in their source text. It checks nothing the tool does. It pins test identifiers, the most refactor-prone text in the suite, so a rename fails the suite naming a file the maintainer did not edit; and it is satisfied by a name with no assertions behind it, so emptying one of the named test bodies loses the coverage it exists to protect while the suite stays green. It also encodes a workflow concern — an earlier phase's assertions must not be deleted by a later one — into the shipped suite, where it outlives the phases that motivated it. The guard that matters is already there: the conformance drivers decode every document in the inventory, so a deleted assertion that mattered surfaces as a document nobody checks.
 
 **Solution**: Delete `TestConformanceScopeBoundary` and its single subtest, `internal/cli/conformance_test.go:1310-1338`. The assertions it names stay carried by their own files; nothing else in the suite reads it.
+
+**Outcome**: No test in the suite asserts over the source text of a sibling test file; every guard that remains runs against output the tool produced.
+
+**Do**:
+- Delete `TestConformanceScopeBoundary` and its subtest `"it keeps the phase 1 and phase 3 decoded assertions"`, `internal/cli/conformance_test.go:1310-1338`.
+- Drop the imports that deletion leaves unused from the file's import block (`:3-21`): `os` and `path/filepath` (used only at `:1327`) and `github.com/leeovery/tick/internal/testutil` (used only at `:1312`). `strings` stays — `:715`, `:835`, `:921`, `:938`, `:967`, `:970`, `:1751`, `:1754`.
+- Touch nothing else: the four files the guard read — `toon_decode_test.go`, `toon_formatter_test.go`, `stats_test.go`, `dep_tree_test.go` — keep every assertion they carry.
+- Confirm `go build ./...`, `go vet ./...` and `go test ./...` are green.
+
+**Acceptance Criteria**:
+- [ ] `grep -rn 'TestConformanceScopeBoundary' internal/cli` returns nothing.
+- [ ] `internal/cli` compiles with no unused import and `go vet ./...` is clean.
+- [ ] The four files the guard named are byte-unchanged.
+- [ ] `go test ./...` green, with no other test deleted, renamed or weakened.
+
+**Tests**: the deletion of a guard that tested no product behaviour — nothing is added and no test semantics change. The coverage it claimed keeps running where it lives:
+- `TestToonOutputConformance` (`conformance_test.go:697`) and `TestJSONOutputConformance` (`:1725`) drive every document in the inventory and stay green
+- `TestToonTaskDetailConformance` and `TestToonDepTreeFocusedConformance` (`toon_decode_test.go`), `"it decodes stats for a project with no tasks"` (`stats_test.go`) and `"it returns the emptied document when no task has dependencies"` (`dep_tree_test.go:289`) keep their assertions unedited
