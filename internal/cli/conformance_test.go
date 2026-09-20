@@ -703,7 +703,7 @@ func TestToonOutputConformance(t *testing.T) {
 // jsonConformanceListKeys are the document keys whose value is a list. Each
 // must unmarshal to a non-nil slice, never JSON null.
 var jsonConformanceListKeys = []string{
-	"changed", "roots", "blocked_by", "blocks",
+	"changed", "trees", "blocked_by", "blocks",
 	"tags", "refs", "notes", "children", "by_priority",
 	"removed", "deps_updated",
 }

@@ -747,7 +747,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 
 	t.Run("it renders single linear chain in full graph mode", func(t *testing.T) {
 		result := DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
 					Children: []DepTreeNode{
@@ -770,7 +770,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 
 	t.Run("it renders multiple roots in full graph mode", func(t *testing.T) {
 		result := DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
 					Children: []DepTreeNode{
@@ -804,7 +804,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 		// A blocks B and C; both B and C block D.
 		// D appears under both B and C.
 		result := DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
 					Children: []DepTreeNode{
@@ -841,7 +841,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 
 	t.Run("it renders deep chain with correct indentation", func(t *testing.T) {
 		result := DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
 					Children: []DepTreeNode{
@@ -876,7 +876,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 
 	t.Run("it renders summary line with correct counts", func(t *testing.T) {
 		result := DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 					Children: []DepTreeNode{
@@ -969,7 +969,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 	t.Run("it truncates long titles with ellipsis", func(t *testing.T) {
 		longTitle := "This is a very long title that should be truncated because it exceeds the available width for display in the tree"
 		result := DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
 					Children: []DepTreeNode{
@@ -999,7 +999,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 
 	t.Run("it uses box-drawing characters for tree structure", func(t *testing.T) {
 		result := DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
 					Children: []DepTreeNode{
@@ -1021,7 +1021,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 
 	t.Run("it shows task ID and status in each line", func(t *testing.T) {
 		result := DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "done"},
 					Children: []DepTreeNode{

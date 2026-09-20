@@ -29,8 +29,8 @@ func TestBuildFullDepTree(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		if len(result.Roots) != 0 {
-			t.Errorf("Roots = %d, want 0", len(result.Roots))
+		if len(result.Trees) != 0 {
+			t.Errorf("Trees = %d, want 0", len(result.Trees))
 		}
 		if result.Summary != "0 chains, longest: 0, 0 blocked" {
 			t.Errorf("Summary = %q, want %q", result.Summary, "0 chains, longest: 0, 0 blocked")
@@ -52,8 +52,8 @@ func TestBuildFullDepTree(t *testing.T) {
 	t.Run("it returns empty result when task list is empty", func(t *testing.T) {
 		result := BuildFullDepTree(nil)
 
-		if len(result.Roots) != 0 {
-			t.Errorf("Roots = %d, want 0", len(result.Roots))
+		if len(result.Trees) != 0 {
+			t.Errorf("Trees = %d, want 0", len(result.Trees))
 		}
 		if result.Summary != "0 chains, longest: 0, 0 blocked" {
 			t.Errorf("Summary = %q, want %q", result.Summary, "0 chains, longest: 0, 0 blocked")
@@ -83,10 +83,10 @@ func TestBuildFullDepTree(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		if len(result.Roots) != 1 {
-			t.Fatalf("Roots = %d, want 1", len(result.Roots))
+		if len(result.Trees) != 1 {
+			t.Fatalf("Trees = %d, want 1", len(result.Trees))
 		}
-		root := result.Roots[0]
+		root := result.Trees[0]
 		if root.Task.ID != "tick-aaa111" {
 			t.Errorf("root ID = %q, want %q", root.Task.ID, "tick-aaa111")
 		}
@@ -131,12 +131,12 @@ func TestBuildFullDepTree(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		if len(result.Roots) != 2 {
-			t.Fatalf("Roots = %d, want 2", len(result.Roots))
+		if len(result.Trees) != 2 {
+			t.Fatalf("Trees = %d, want 2", len(result.Trees))
 		}
-		// Roots should be A and C (both block others, neither is blocked)
+		// Both trees are rooted: A and C block others and neither is blocked
 		rootIDs := map[string]bool{}
-		for _, r := range result.Roots {
+		for _, r := range result.Trees {
 			rootIDs[r.Task.ID] = true
 		}
 		if !rootIDs["tick-aaa111"] {
@@ -171,10 +171,10 @@ func TestBuildFullDepTree(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		if len(result.Roots) != 1 {
-			t.Fatalf("Roots = %d, want 1", len(result.Roots))
+		if len(result.Trees) != 1 {
+			t.Fatalf("Trees = %d, want 1", len(result.Trees))
 		}
-		root := result.Roots[0]
+		root := result.Trees[0]
 		if root.Task.ID != "tick-aaa111" {
 			t.Errorf("root ID = %q, want %q", root.Task.ID, "tick-aaa111")
 		}
@@ -203,14 +203,14 @@ func TestBuildFullDepTree(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		if len(result.Roots) != 1 {
-			t.Fatalf("Roots = %d, want 1", len(result.Roots))
+		if len(result.Trees) != 1 {
+			t.Fatalf("Trees = %d, want 1", len(result.Trees))
 		}
-		if result.Roots[0].Task.ID != "tick-aaa111" {
-			t.Errorf("root ID = %q, want %q", result.Roots[0].Task.ID, "tick-aaa111")
+		if result.Trees[0].Task.ID != "tick-aaa111" {
+			t.Errorf("root ID = %q, want %q", result.Trees[0].Task.ID, "tick-aaa111")
 		}
 		// C should not appear anywhere in the tree
-		if containsID(result.Roots, "tick-ccc333") {
+		if containsID(result.Trees, "tick-ccc333") {
 			t.Error("task with no dependencies should be omitted from tree")
 		}
 	})
@@ -225,11 +225,11 @@ func TestBuildFullDepTree(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		if len(result.Roots) != 2 {
-			t.Fatalf("Roots = %d, want 2", len(result.Roots))
+		if len(result.Trees) != 2 {
+			t.Fatalf("Trees = %d, want 2", len(result.Trees))
 		}
 		// C should appear as child of both A and B (duplicated)
-		for _, root := range result.Roots {
+		for _, root := range result.Trees {
 			if len(root.Children) != 1 {
 				t.Errorf("root %s has %d children, want 1", root.Task.ID, len(root.Children))
 				continue
@@ -597,8 +597,7 @@ func TestCycleGuard(t *testing.T) {
 	})
 
 	t.Run("it terminates full graph with circular dependency", func(t *testing.T) {
-		// All tasks in a cycle — every task is blocked, so no root in full mode
-		// But BuildFullDepTree should not hang
+		// Every task in the cycle is blocked, so the cycle is covered by a seeded tree
 		tasks := []task.Task{
 			makeTask("tick-aaa111", "Task A", task.StatusOpen, "tick-bbb222"),
 			makeTask("tick-bbb222", "Task B", task.StatusOpen, "tick-aaa111"),
@@ -606,8 +605,18 @@ func TestCycleGuard(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		if len(result.Roots) != 0 {
-			t.Errorf("Roots = %d, want 0 (all tasks in cycle have BlockedBy)", len(result.Roots))
+		if len(result.Trees) != 1 {
+			t.Fatalf("Trees = %d, want 1", len(result.Trees))
+		}
+		tree := result.Trees[0]
+		if tree.Task.ID != "tick-aaa111" {
+			t.Errorf("tree ID = %q, want %q", tree.Task.ID, "tick-aaa111")
+		}
+		if len(tree.Children) != 1 {
+			t.Fatalf("tree children = %d, want 1", len(tree.Children))
+		}
+		if tree.Children[0].Task.ID != "tick-bbb222" {
+			t.Errorf("child ID = %q, want %q", tree.Children[0].Task.ID, "tick-bbb222")
 		}
 	})
 
@@ -622,10 +631,10 @@ func TestCycleGuard(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		if len(result.Roots) != 1 {
-			t.Fatalf("Roots = %d, want 1", len(result.Roots))
+		if len(result.Trees) != 1 {
+			t.Fatalf("Trees = %d, want 1", len(result.Trees))
 		}
-		root := result.Roots[0]
+		root := result.Trees[0]
 		if len(root.Children) != 2 {
 			t.Fatalf("root children = %d, want 2", len(root.Children))
 		}
@@ -655,10 +664,10 @@ func TestCycleGuard(t *testing.T) {
 
 		result := BuildFullDepTree(tasks)
 
-		if len(result.Roots) != 1 {
-			t.Fatalf("Roots = %d, want 1", len(result.Roots))
+		if len(result.Trees) != 1 {
+			t.Fatalf("Trees = %d, want 1", len(result.Trees))
 		}
-		root := result.Roots[0]
+		root := result.Trees[0]
 		if len(root.Children) != 2 {
 			t.Fatalf("root children = %d, want 2", len(root.Children))
 		}

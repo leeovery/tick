@@ -169,16 +169,16 @@ func runDepTreeJSON(t *testing.T, dir string, args ...string) map[string]any {
 	return parsed
 }
 
-// jsonDepTreeRoot returns the single root node of a full-graph dep tree JSON document.
-func jsonDepTreeRoot(t *testing.T, doc map[string]any) map[string]any {
+// jsonDepTreeOnlyTree returns the single tree of a full-graph dep tree JSON document.
+func jsonDepTreeOnlyTree(t *testing.T, doc map[string]any) map[string]any {
 	t.Helper()
-	roots, ok := doc["roots"].([]any)
-	if !ok || len(roots) != 1 {
-		t.Fatalf("roots = %#v, want one node", doc["roots"])
+	trees, ok := doc["trees"].([]any)
+	if !ok || len(trees) != 1 {
+		t.Fatalf("trees = %#v, want one node", doc["trees"])
 	}
-	node, ok := roots[0].(map[string]any)
+	node, ok := trees[0].(map[string]any)
 	if !ok {
-		t.Fatalf("root = %#v, want an object", roots[0])
+		t.Fatalf("tree = %#v, want an object", trees[0])
 	}
 	return node
 }
@@ -330,14 +330,48 @@ func TestRunDepTree(t *testing.T) {
 		})
 	})
 
-	t.Run("it fills the JSON roots when no participant is a root", func(t *testing.T) {
+	t.Run("it publishes every full-graph tree under trees", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, chainTasks(now))
+
+		doc := runDepTreeJSON(t, dir)
+
+		if _, exists := doc["roots"]; exists {
+			t.Errorf("roots key should be absent, got %#v", doc["roots"])
+		}
+		tree := jsonDepTreeOnlyTree(t, doc)
+		assertJSONDepTreeTask(t, tree, "tick-aaa111", "Task A", "open")
+		child := jsonDepTreeOnlyChild(t, tree)
+		assertJSONDepTreeTask(t, child, "tick-bbb222", "Task B", "open")
+		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, child), "tick-ccc333", "Task C", "open")
+	})
+
+	t.Run("it emits trees as an empty list when no task has dependencies", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, unconnectedTasks(now))
+
+		doc := runDepTreeJSON(t, dir)
+
+		trees, ok := doc["trees"].([]any)
+		if !ok {
+			t.Fatalf("trees should be array (not null), got %T: %v", doc["trees"], doc["trees"])
+		}
+		if len(trees) != 0 {
+			t.Errorf("trees should be empty, got %d items", len(trees))
+		}
+		for key, want := range map[string]float64{"chains": 0, "longest": 0, "blocked": 0} {
+			if got := doc[key]; got != want {
+				t.Errorf("%s = %v, want %v", key, got, want)
+			}
+		}
+	})
+
+	t.Run("it carries a cycle's participants under trees", func(t *testing.T) {
 		dir, _ := setupTickProjectWithTasks(t, cycleTasks(now))
 
 		doc := runDepTreeJSON(t, dir)
 
-		root := jsonDepTreeRoot(t, doc)
-		assertJSONDepTreeTask(t, root, "tick-aaa111", "Task A", "open")
-		child := jsonDepTreeOnlyChild(t, root)
+		tree := jsonDepTreeOnlyTree(t, doc)
+		assertJSONDepTreeTask(t, tree, "tick-aaa111", "Task A", "open")
+		child := jsonDepTreeOnlyChild(t, tree)
 		assertJSONDepTreeTask(t, child, "tick-bbb222", "Task B", "open")
 		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, child), "tick-aaa111", "Task A", "open")
 
@@ -353,9 +387,9 @@ func TestRunDepTree(t *testing.T) {
 
 		doc := runDepTreeJSON(t, dir)
 
-		root := jsonDepTreeRoot(t, doc)
-		assertJSONDepTreeTask(t, root, "tick-ghost1", "", "")
-		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, root), "tick-aaa111", "Task A", "open")
+		tree := jsonDepTreeOnlyTree(t, doc)
+		assertJSONDepTreeTask(t, tree, "tick-ghost1", "", "")
+		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, tree), "tick-aaa111", "Task A", "open")
 	})
 
 	t.Run("it renders a cycle in the terminal", func(t *testing.T) {
@@ -567,12 +601,12 @@ func TestRunDepTree(t *testing.T) {
 			t.Errorf("message key should be absent, got %v", parsed["message"])
 		}
 
-		roots, ok := parsed["roots"].([]any)
+		trees, ok := parsed["trees"].([]any)
 		if !ok {
-			t.Fatalf("roots should be array (not null), got %T: %v", parsed["roots"], parsed["roots"])
+			t.Fatalf("trees should be array (not null), got %T: %v", parsed["trees"], parsed["trees"])
 		}
-		if len(roots) != 0 {
-			t.Errorf("roots should be empty, got %d items", len(roots))
+		if len(trees) != 0 {
+			t.Errorf("trees should be empty, got %d items", len(trees))
 		}
 
 		for _, key := range []string{"chains", "longest", "blocked"} {

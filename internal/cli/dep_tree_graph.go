@@ -141,7 +141,7 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 
 	emitted := make(map[string]bool)
 	collectTreeIDs(roots, emitted)
-	unrooted := buildUnrootedTrees(orderedParticipants, emitted, blocks, taskIdx)
+	unrooted := buildSeededTrees(orderedParticipants, emitted, blocks, taskIdx)
 
 	// Count blocked tasks (tasks with at least one BlockedBy entry)
 	blocked := 0
@@ -154,8 +154,9 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 	// Count connected components (chains) using union-find over participants
 	chains := countChains(tasks, participants)
 
+	trees := slices.Concat(roots, unrooted)
 	longest := 0
-	for _, tree := range slices.Concat(roots, unrooted) {
+	for _, tree := range trees {
 		longest = max(longest, longestPath(tree))
 	}
 
@@ -167,13 +168,12 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 	summary := fmt.Sprintf("%d %s, longest: %d, %d blocked", chains, chainWord, longest, blocked)
 
 	var message string
-	if len(roots) == 0 && len(unrooted) == 0 {
+	if len(trees) == 0 {
 		message = "No dependencies found."
 	}
 
 	return DepTreeResult{
-		Roots:        roots,
-		Unrooted:     unrooted,
+		Trees:        trees,
 		Summary:      summary,
 		ChainCount:   chains,
 		LongestChain: longest,
@@ -215,10 +215,10 @@ func collectTreeIDs(nodes []DepTreeNode, seen map[string]bool) {
 	}
 }
 
-// buildUnrootedTrees seeds a downstream walk from each participant the walk from the roots
+// buildSeededTrees seeds a downstream walk from each participant the walk from the roots
 // left unemitted, so the edges of a cycle or of a dangling blocker still reach the output.
 // Participants that block nothing need no seed: each is reached as the target of a blocker's edge.
-func buildUnrootedTrees(participants []string, emitted map[string]bool, blocks map[string][]string, taskIdx map[string]task.Task) []DepTreeNode {
+func buildSeededTrees(participants []string, emitted map[string]bool, blocks map[string][]string, taskIdx map[string]task.Task) []DepTreeNode {
 	var unrooted []DepTreeNode
 	for _, id := range participants {
 		if emitted[id] || len(blocks[id]) == 0 {

@@ -361,7 +361,6 @@ const depTreeLineWidth = 80
 const depTreeMinTitle = 10
 
 // FormatDepTree renders a dependency tree visualization with box-drawing characters.
-// Supports both full-graph mode (Roots populated) and focused mode (Target populated).
 func (f *PrettyFormatter) FormatDepTree(result DepTreeResult) string {
 	if result.Target != nil {
 		return f.formatFocusedDepTree(result)
@@ -372,13 +371,12 @@ func (f *PrettyFormatter) FormatDepTree(result DepTreeResult) string {
 // formatFullDepTree renders every full-graph tree with its downstream dependencies and a summary line.
 // The no-dependencies message stands in only when the graph holds no participant at all.
 func (f *PrettyFormatter) formatFullDepTree(result DepTreeResult) string {
-	trees := result.fullGraphTrees()
-	if len(trees) == 0 {
+	if len(result.Trees) == 0 {
 		return result.Message
 	}
 
 	var b strings.Builder
-	for i, tree := range trees {
+	for i, tree := range result.Trees {
 		if i > 0 {
 			b.WriteString("\n")
 		}

@@ -338,7 +338,7 @@ type jsonDepTreeNode struct {
 // jsonDepTreeFull represents the full graph mode JSON output.
 type jsonDepTreeFull struct {
 	Mode    string            `json:"mode"`
-	Roots   []jsonDepTreeNode `json:"roots"`
+	Trees   []jsonDepTreeNode `json:"trees"`
 	Chains  int               `json:"chains"`
 	Longest int               `json:"longest"`
 	Blocked int               `json:"blocked"`
@@ -371,7 +371,7 @@ func toJSONDepTreeNodes(nodes []DepTreeNode) []jsonDepTreeNode {
 }
 
 // FormatDepTree renders a dependency tree as structured JSON.
-// Full graph: {mode, roots, chains, longest, blocked}.
+// Full graph: {mode, trees, chains, longest, blocked}.
 // Focused: {mode, target, blocked_by, blocks}.
 func (f *JSONFormatter) FormatDepTree(result DepTreeResult) string {
 	if result.Target != nil {
@@ -385,7 +385,7 @@ func (f *JSONFormatter) FormatDepTree(result DepTreeResult) string {
 func (f *JSONFormatter) formatFullDepTreeJSON(result DepTreeResult) string {
 	return marshalIndentJSON(jsonDepTreeFull{
 		Mode:    "full",
-		Roots:   toJSONDepTreeNodes(result.fullGraphTrees()),
+		Trees:   toJSONDepTreeNodes(result.Trees),
 		Chains:  result.ChainCount,
 		Longest: result.LongestChain,
 		Blocked: result.BlockedCount,

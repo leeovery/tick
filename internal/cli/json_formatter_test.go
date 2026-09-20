@@ -1005,7 +1005,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 
 	t.Run("it renders full graph mode as structured JSON", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
 					Children: []DepTreeNode{
@@ -1036,15 +1036,15 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Errorf("blocked = %v, want 1", parsed["blocked"])
 		}
 
-		roots, ok := parsed["roots"].([]any)
+		trees, ok := parsed["trees"].([]any)
 		if !ok {
-			t.Fatalf("roots should be array, got %T: %v", parsed["roots"], parsed["roots"])
+			t.Fatalf("trees should be array, got %T: %v", parsed["trees"], parsed["trees"])
 		}
-		if len(roots) != 1 {
-			t.Fatalf("roots length = %d, want 1", len(roots))
+		if len(trees) != 1 {
+			t.Fatalf("trees length = %d, want 1", len(trees))
 		}
 
-		root := roots[0].(map[string]any)
+		root := trees[0].(map[string]any)
 		rootTask, ok := root["task"].(map[string]any)
 		if !ok {
 			t.Fatalf("root.task should be object, got %T", root["task"])
@@ -1070,7 +1070,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 
 	t.Run("it renders multi-level chain in full graph", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 					Children: []DepTreeNode{
@@ -1093,8 +1093,8 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		roots := parsed["roots"].([]any)
-		root := roots[0].(map[string]any)
+		trees := parsed["trees"].([]any)
+		root := trees[0].(map[string]any)
 		level1 := root["children"].([]any)
 		if len(level1) != 1 {
 			t.Fatalf("level 1 children = %d, want 1", len(level1))
@@ -1114,9 +1114,9 @@ func TestJSONFormatDepTree(t *testing.T) {
 		}
 	})
 
-	t.Run("it renders roots as [] not null when empty", func(t *testing.T) {
+	t.Run("it renders trees as [] not null when empty", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Roots:        nil,
+			Trees:        nil,
 			ChainCount:   0,
 			LongestChain: 0,
 			BlockedCount: 0,
@@ -1127,18 +1127,18 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		roots, ok := parsed["roots"].([]any)
+		trees, ok := parsed["trees"].([]any)
 		if !ok {
-			t.Fatalf("roots should be array (not null), got %T: %v", parsed["roots"], parsed["roots"])
+			t.Fatalf("trees should be array (not null), got %T: %v", parsed["trees"], parsed["trees"])
 		}
-		if len(roots) != 0 {
-			t.Errorf("roots should be empty, got %d items", len(roots))
+		if len(trees) != 0 {
+			t.Errorf("trees should be empty, got %d items", len(trees))
 		}
 	})
 
 	t.Run("it renders leaf children as [] not null", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
 					Children: []DepTreeNode{
@@ -1156,8 +1156,8 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		roots := parsed["roots"].([]any)
-		root := roots[0].(map[string]any)
+		trees := parsed["trees"].([]any)
+		root := trees[0].(map[string]any)
 		children := root["children"].([]any)
 		leaf := children[0].(map[string]any)
 
@@ -1173,7 +1173,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 	t.Run("it duplicates diamond dependency nodes in tree", func(t *testing.T) {
 		// A -> B, A -> C, B -> D, C -> D (D appears twice)
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 					Children: []DepTreeNode{
@@ -1202,8 +1202,8 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, result)
 		}
 
-		roots := parsed["roots"].([]any)
-		root := roots[0].(map[string]any)
+		trees := parsed["trees"].([]any)
+		root := trees[0].(map[string]any)
 		children := root["children"].([]any)
 		if len(children) != 2 {
 			t.Fatalf("root children = %d, want 2", len(children))
@@ -1375,7 +1375,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 
 		// Check full graph keys too
 		fullResult := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
 					Children: []DepTreeNode{
@@ -1393,7 +1393,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Fatalf("invalid JSON: %v\nresult: %s", err, fullResult)
 		}
 
-		fullExpected := []string{"mode", "roots", "chains", "longest", "blocked"}
+		fullExpected := []string{"mode", "trees", "chains", "longest", "blocked"}
 		for _, key := range fullExpected {
 			if _, exists := fullParsed[key]; !exists {
 				t.Errorf("expected snake_case key %q not found in full graph", key)
@@ -1431,7 +1431,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 
 	t.Run("it produces valid 2-space indented JSON", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
 					Children: []DepTreeNode{
@@ -1518,12 +1518,12 @@ func TestJSONFormatDepTree(t *testing.T) {
 			t.Errorf("message key should be absent, got %v", parsed["message"])
 		}
 
-		roots, ok := parsed["roots"].([]any)
+		trees, ok := parsed["trees"].([]any)
 		if !ok {
-			t.Fatalf("roots should be array (not null), got %T: %v", parsed["roots"], parsed["roots"])
+			t.Fatalf("trees should be array (not null), got %T: %v", parsed["trees"], parsed["trees"])
 		}
-		if len(roots) != 0 {
-			t.Errorf("roots should be empty, got %d items", len(roots))
+		if len(trees) != 0 {
+			t.Errorf("trees should be empty, got %d items", len(trees))
 		}
 
 		for _, key := range []string{"chains", "longest", "blocked"} {

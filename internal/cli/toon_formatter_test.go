@@ -862,7 +862,7 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it renders single chain as edge list in full graph mode", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
 					Children: []DepTreeNode{
@@ -881,7 +881,7 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it renders multi-level chain as edge list", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 					Children: []DepTreeNode{
@@ -906,7 +906,7 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it renders multiple independent chains", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 					Children: []DepTreeNode{
@@ -933,7 +933,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	t.Run("it duplicates edges for diamond dependencies", func(t *testing.T) {
 		// A -> B, A -> C, B -> D, C -> D (D appears twice)
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 					Children: []DepTreeNode{
@@ -966,7 +966,7 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it emits the dep tree summary as top-level named fields", func(t *testing.T) {
 		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 					Children: []DepTreeNode{
@@ -988,7 +988,7 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it keeps the dep_tree edge section unchanged", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 					Children: []DepTreeNode{
@@ -1022,7 +1022,7 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it emits zero-valued summary fields", func(t *testing.T) {
 		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 					Children: []DepTreeNode{
@@ -1041,7 +1041,7 @@ func TestToonFormatDepTree(t *testing.T) {
 		})
 	})
 
-	t.Run("it renders the emptied full document for a result with no roots", func(t *testing.T) {
+	t.Run("it renders the emptied full document for a result with no trees", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{})
 		if first, _, _ := strings.Cut(result, "\n"); first != "dep_tree[0]{from,to}:" {
 			t.Errorf("header = %q, want %q", first, "dep_tree[0]{from,to}:")
@@ -1131,7 +1131,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	t.Run("it renders wide graph with many edges", func(t *testing.T) {
 		// One root blocking 4 tasks
 		result := f.FormatDepTree(DepTreeResult{
-			Roots: []DepTreeNode{
+			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
 					Children: []DepTreeNode{

@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/leeovery/tick/internal/task"
@@ -211,13 +210,13 @@ type DepTreeNode struct {
 }
 
 // DepTreeResult holds all data needed to render a dep tree command output.
-// For full graph mode: Roots contains the trees grown from unblocked tasks, Unrooted the
-// trees seeded from participants no root reaches, and summary stats are populated.
+// For full graph mode: Trees holds every tree covering the graph — those grown from
+// unblocked tasks first, then those seeded from participants no such tree reaches — and
+// summary stats are populated.
 // For focused mode: BlockedBy and Blocks contain upstream/downstream trees.
 type DepTreeResult struct {
 	// Full graph mode fields
-	Roots        []DepTreeNode
-	Unrooted     []DepTreeNode
+	Trees        []DepTreeNode
 	Summary      string
 	ChainCount   int
 	LongestChain int
@@ -231,12 +230,6 @@ type DepTreeResult struct {
 	// Message is the no-dependencies sentence. Only the pretty formatter renders it;
 	// the machine formats answer an empty graph with the emptied document instead.
 	Message string
-}
-
-// fullGraphTrees returns every full-graph tree: those grown from the roots, followed by
-// those seeded from participants no root reaches.
-func (r DepTreeResult) fullGraphTrees() []DepTreeNode {
-	return slices.Concat(r.Roots, r.Unrooted)
 }
 
 // Formatter defines the interface for rendering CLI output in different formats.
