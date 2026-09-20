@@ -491,7 +491,7 @@ notes[1]{index,text,created}:
 description: "Full task description here.\nCan be multiple lines."
 ```
 
-TOON cannot carry a C0 control character other than tab, newline and carriage return — an ANSI escape pasted in from terminal output is the usual way one arrives. A command whose TOON document would carry such a value fails, naming the field or section it could not encode — and the task, where the document covers one — rather than printing a document without it. The value is stored and read back intact either way: `--json` returns it, and so does `tick show <id> --field <name>`.
+TOON cannot carry a C0 control character other than tab, newline and carriage return — an ANSI escape pasted in from terminal output is the usual way one arrives. A command whose TOON document would carry such a value fails, naming the field or section it could not encode and the task carrying the refused value — the offending row, where the document is a task list — rather than printing a document without it; the section name stands alone only where no task can be attributed. The value is stored and read back intact either way: `--json` returns it, and so does `tick show <id> --field <name>`.
 
 ### Pretty
 
