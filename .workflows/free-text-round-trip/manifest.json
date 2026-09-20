@@ -314,7 +314,8 @@
             "free-text-round-trip-7-4",
             "free-text-round-trip-7-5",
             "free-text-round-trip-8-1",
-            "free-text-round-trip-8-2"
+            "free-text-round-trip-8-2",
+            "free-text-round-trip-8-3"
           ],
           "staging": {
             "p1": {
@@ -401,7 +402,8 @@
             4,
             5,
             6,
-            7
+            7,
+            8
           ]
         }
       }
