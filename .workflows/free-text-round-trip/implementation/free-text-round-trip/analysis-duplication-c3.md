@@ -1,0 +1,21 @@
+AGENT: duplication
+FINDINGS: none
+COMMENT_CORRECTIONS:
+- internal/cli/format.go:240 — makes a cardinality claim about which formatter reads the field, which ordinary additive change falsifies far from the comment
+  OLD: 	// Message is the no-dependencies sentence. Only the pretty formatter renders it;
+  OLD: 	// the machine formats answer an empty graph with the emptied document instead.
+  NEW: 	// Message is the no-dependencies sentence.
+- internal/cli/toon_formatter.go:196 — states the focused document's shape a second time, three lines under the FormatDepTree doc that already states it, so an edit to one leaves the other stale
+  OLD: // formatFocusedDepTree renders focused mode as the target's id, title and status
+  OLD: // followed by its blocked_by and blocks sections.
+  NEW:
+- internal/cli/json_formatter.go:384 — restates the function name, and the FormatDepTree doc above already states the full-graph shape
+  OLD: // formatFullDepTreeJSON renders the full graph as nested JSON.
+  NEW:
+- internal/cli/json_formatter.go:395 — restates the function name, and the FormatDepTree doc above already states the focused shape
+  OLD: // formatFocusedDepTreeJSON renders focused mode as JSON.
+  NEW:
+- internal/cli/dep_tree_graph.go:236 — restates the name and the four-line body beside it, carrying nothing the code cannot
+  OLD: // collectTreeIDs adds the ID of every node in the given trees to seen.
+  NEW:
+SUMMARY: No duplication candidate clears the floor this cycle; the change set's repeated shapes are each cross-pinned by a test that fails loudly on drift, and five comments are corrected — one cardinality claim and four restatements, three of which repeat a claim already made a few lines above them. Seven candidate families were examined and dropped. (1) collectStoredEdges (dep_tree_graph.go:163) and collectScopedStoredEdges (:177), both new in phase 8, encode the same rule twice — one row per stored BlockedBy entry, From the blocker, tasks in slice order and each task's blockers in stored order — but dep_tree_test.go:497 ("it counts each dependency once whether the graph is asked full or focused") decodes both documents and asserts the focused blocks rows equal the full dep_tree rows, so a direction or ordering change applied to one copy fails at once; the scoping difference between them (a dangling blocker's edge survives in the full graph and is dropped in the focused view) is itself pinned at dep_tree_test.go:533, so it is a decision rather than a drift. (2) The eleven sites that route post-marker literals into positionals — slices.Concat at transition.go:17, note.go:42 and :95, dep.go:58 and :136, dep_tree.go:15; the addPositional loops at create.go:104, update.go:116 and remove.go:38; the first-literal fallback at show_fields.go:272; and the two parsers that deliberately ignore them at list.go:37 and migrate.go:47 — express one rule eleven ways, but every existing command's routing is pinned per command in end_of_flags_test.go, and the only unguarded case is a command that does not yet exist, which the floor excludes. (3) The three formatters' parallel field projection and the fifteen selectedItems/sel.Positions pairings are guarded by TestRegisteredFieldRendering (show_fields_test.go:760), which drives every name in showFields through all three formatters and fails when one renders nothing. (4) The three help entries restating the same five filter rows (help.go:60, :176, :192) are pre-existing; their flag names are held in agreement by the commandFlags/help drift test, leaving only description text able to drift. (5) The four build*Section shapes and the row-struct conversions in toon_formatter.go/json_formatter.go fall to cycle 2's reasoning — a dropped empty branch fails in the decode and conformance suites, and a new field breaks a conversion at compile time. (6) The "find the parent's title, then build the cascade result" block at create.go:236 and update.go:300 is pre-existing; only its trailing append line changed. (7) The global flag inventory exists in four places, but the two help listings are cross-pinned by help_test.go:490 ("it keeps the two global flag lists in agreement") and the other two — globalFlagSet at flags.go:20 and applyGlobalFlag at app.go:424 — are pre-existing and outside plan scope.
