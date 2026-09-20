@@ -2,8 +2,7 @@ package task
 
 import "slices"
 
-// TransitionResult holds the old and new status after a successful transition,
-// enabling the caller to format output like "tick-a3f2b7: open -> in_progress".
+// TransitionResult holds the old and new status after a successful transition.
 // Auto carries the same flag as the transition's TransitionRecord: false when the
 // caller asked for the change, true when the system produced it.
 type TransitionResult struct {

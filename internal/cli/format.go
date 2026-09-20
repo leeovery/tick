@@ -243,6 +243,9 @@ type DepTreeResult struct {
 }
 
 // Formatter defines the interface for rendering CLI output in different formats.
+// A method returning an error returns one when the format cannot carry a value it
+// was handed; it never substitutes a document that contradicts the data — a dropped
+// section, or a count that disagrees with the rows behind it.
 type Formatter interface {
 	// FormatTaskList renders a list of tasks.
 	FormatTaskList(tasks []task.Task) (string, error)
@@ -257,9 +260,7 @@ type Formatter interface {
 	FormatMessage(msg string) string
 	// FormatRemoval renders the result of a task removal operation.
 	FormatRemoval(result RemovalResult) string
-	// FormatCascadeTransition renders the status changes a command made. It
-	// returns an error when the format cannot carry a value it was handed,
-	// rather than a document that contradicts the data.
+	// FormatCascadeTransition renders the status changes a command made.
 	FormatCascadeTransition(result CascadeResult) (string, error)
 	// FormatDepTree renders a dependency tree visualization.
 	FormatDepTree(result DepTreeResult) (string, error)
