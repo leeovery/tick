@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -155,6 +154,24 @@ func assertToonRelatedRow(t *testing.T, doc map[string]any, key string, want Rel
 	})
 }
 
+// assertCountZeroSection asserts that a rendered document carries the given
+// count-zero section header verbatim and that the same section decodes to an
+// empty list. Decoding collapses a count-zero header's columns, so the column
+// list can only be checked as text.
+func assertCountZeroSection(t *testing.T, rendered, header string) {
+	t.Helper()
+	key, _, ok := strings.Cut(header, "[")
+	if !ok {
+		t.Fatalf("header %q is not a section header", header)
+	}
+	if !strings.Contains(rendered, header) {
+		t.Errorf("document does not carry the count-zero header %q:\n%s", header, rendered)
+	}
+	if rows := toonRows(t, decodeToonDoc(t, rendered), key); len(rows) != 0 {
+		t.Errorf("section %q has %d rows, want 0", key, len(rows))
+	}
+}
+
 func assertToonRowsEmpty(t *testing.T, doc map[string]any, keys ...string) {
 	t.Helper()
 	for _, key := range keys {
@@ -263,14 +280,6 @@ func TestToonTaskDetailConformance(t *testing.T) {
 // changedHeader is the schema line every status command's changed table carries.
 const changedHeader = "{id,title,from,to,auto}:"
 
-func assertChangedHeader(t *testing.T, doc string, count int) {
-	t.Helper()
-	want := fmt.Sprintf("changed[%d]%s", count, changedHeader)
-	if got, _, _ := strings.Cut(doc, "\n"); got != want {
-		t.Errorf("header = %q, want %q", got, want)
-	}
-}
-
 func TestToonStatusChangeConformance(t *testing.T) {
 	now := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 	solo := task.Task{ID: "tick-aaa111", Title: "Solo task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now}
@@ -282,7 +291,6 @@ func TestToonStatusChangeConformance(t *testing.T) {
 
 		doc := runToonCommand(t, dir, "start", "tick-aaa111")
 
-		assertChangedHeader(t, doc, 1)
 		rows := toonRows(t, decodeToonDoc(t, doc), "changed")
 		if len(rows) != 1 {
 			t.Fatalf("changed has %d rows, want 1", len(rows))
@@ -301,7 +309,6 @@ func TestToonStatusChangeConformance(t *testing.T) {
 
 		doc := runToonCommand(t, dir, "done", "tick-ppp111")
 
-		assertChangedHeader(t, doc, 2)
 		rows := toonRows(t, decodeToonDoc(t, doc), "changed")
 		if len(rows) != 2 {
 			t.Fatalf("changed has %d rows, want 2", len(rows))

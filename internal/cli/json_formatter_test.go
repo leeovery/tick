@@ -54,17 +54,8 @@ func TestJSONFormatter(t *testing.T) {
 	t.Run("it formats empty list as [] not null", func(t *testing.T) {
 		f := &JSONFormatter{}
 
-		// Empty slice
-		result := f.FormatTaskList([]task.Task{})
-		if result != "[]" {
-			t.Errorf("empty slice result = %q, want %q", result, "[]")
-		}
-
-		// Nil slice
-		resultNil := f.FormatTaskList(nil)
-		if resultNil != "[]" {
-			t.Errorf("nil slice result = %q, want %q", resultNil, "[]")
-		}
+		assertRenderedJSONIsEmptyArray(t, f.FormatTaskList([]task.Task{}))
+		assertRenderedJSONIsEmptyArray(t, f.FormatTaskList(nil))
 	})
 
 	t.Run("it formats show with all fields", func(t *testing.T) {
@@ -1877,5 +1868,20 @@ func assertJSONEmptyArray(t *testing.T, doc map[string]any, key string) {
 	}
 	if value == nil || len(value) != 0 {
 		t.Errorf("%s = %v, want an empty array", key, value)
+	}
+}
+
+func assertRenderedJSONIsEmptyArray(t *testing.T, rendered string) {
+	t.Helper()
+	var parsed []any
+	if err := json.Unmarshal([]byte(rendered), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v\nrendered: %s", err, rendered)
+	}
+	if parsed == nil {
+		t.Errorf("rendered JSON decoded to null, want an empty array: %s", rendered)
+		return
+	}
+	if len(parsed) != 0 {
+		t.Errorf("rendered JSON decoded to %d items, want 0", len(parsed))
 	}
 }

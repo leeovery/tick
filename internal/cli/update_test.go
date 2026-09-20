@@ -1420,9 +1420,7 @@ func TestUpdateChangedSection(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		if !strings.Contains(stdout, "changed[0]{id,title,from,to,auto}:") {
-			t.Fatalf("document does not carry a count-zero changed header:\n%s", stdout)
-		}
+		assertCountZeroSection(t, stdout, "changed[0]{id,title,from,to,auto}:")
 	})
 
 	t.Run("it prints only the task ID under --quiet", func(t *testing.T) {

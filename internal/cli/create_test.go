@@ -1411,12 +1411,7 @@ func TestCreateChangedSection(t *testing.T) {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
 
-		if !strings.Contains(stdout, "changed[0]{id,title,from,to,auto}:") {
-			t.Fatalf("document does not carry a count-zero changed header:\n%s", stdout)
-		}
-		if rows := toonRows(t, decodeToonDoc(t, stdout), "changed"); len(rows) != 0 {
-			t.Errorf("changed has %d rows, want 0", len(rows))
-		}
+		assertCountZeroSection(t, stdout, "changed[0]{id,title,from,to,auto}:")
 	})
 
 	t.Run("it cascades a reopen to a done grandparent in one table", func(t *testing.T) {

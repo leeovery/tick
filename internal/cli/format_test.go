@@ -412,9 +412,7 @@ func TestCascadeTypes(t *testing.T) {
 				t.Errorf("FormatCascadeTransition on empty result = %q, want empty string", got)
 			}
 		}
-		if got := (&ToonFormatter{}).FormatCascadeTransition(empty); got != "changed[0]{id,title,from,to,auto}:" {
-			t.Errorf("ToonFormatter.FormatCascadeTransition on empty result = %q, want a count-zero changed table", got)
-		}
+		assertCountZeroSection(t, (&ToonFormatter{}).FormatCascadeTransition(empty), "changed[0]{id,title,from,to,auto}:")
 		if got := (&JSONFormatter{}).FormatCascadeTransition(empty); len(changedRows(t, got)) != 0 {
 			t.Errorf("JSONFormatter.FormatCascadeTransition on empty result = %q, want an empty changed list", got)
 		}

@@ -933,9 +933,8 @@ func TestShowFilteredDocument(t *testing.T) {
 	t.Run("it renders a count-zero header for an always-present section", func(t *testing.T) {
 		stdout := show(t, bareProject(t), "tick-a1b2c3", "--toon", "--field", "notes")
 
-		if stdout != "notes[0]{index,text,created}:\n" {
-			t.Errorf("stdout = %q, want %q", stdout, "notes[0]{index,text,created}:\n")
-		}
+		assertCountZeroSection(t, stdout, "notes[0]{index,text,created}:")
+		assertToonKeySet(t, decodeToonDoc(t, stdout), "notes")
 	})
 
 	t.Run("it prints nothing when every selected name is empty", func(t *testing.T) {
@@ -1392,9 +1391,8 @@ func TestShowFieldPositionOutOfRange(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr)
 		}
-		if stdout != "notes[0]{index,text,created}:\n" {
-			t.Errorf("stdout = %q, want the count-zero header", stdout)
-		}
+		assertCountZeroSection(t, stdout, "notes[0]{index,text,created}:")
+		assertToonKeySet(t, decodeToonDoc(t, stdout), "notes")
 	})
 
 	t.Run("it renders an in-range position normally", func(t *testing.T) {

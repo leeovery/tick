@@ -240,9 +240,12 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--toon",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					if !strings.Contains(stdout, "tasks[") {
-						t.Errorf("toon list should contain 'tasks[', got %q", stdout)
+					rows := toonRows(t, decodeToonDoc(t, stdout), "tasks")
+					if len(rows) != 2 {
+						t.Fatalf("tasks has %d rows, want 2", len(rows))
 					}
+					assertToonFields(t, rows[0], map[string]any{"id": "tick-aaa111", "title": "First task"})
+					assertToonFields(t, rows[1], map[string]any{"id": "tick-bbb222", "title": "Second task"})
 				},
 			},
 			{
@@ -555,9 +558,7 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--toon",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					if !strings.Contains(stdout, "tasks[0]") {
-						t.Errorf("toon empty list should contain zero-count, got %q", stdout)
-					}
+					assertToonRowsEmpty(t, decodeToonDoc(t, stdout), "tasks")
 				},
 			},
 			{
@@ -576,10 +577,7 @@ func TestFormatIntegration(t *testing.T) {
 				flag: "--json",
 				checkFunc: func(t *testing.T, stdout string) {
 					t.Helper()
-					trimmed := strings.TrimSpace(stdout)
-					if trimmed != "[]" {
-						t.Errorf("json empty list = %q, want '[]'", trimmed)
-					}
+					assertRenderedJSONIsEmptyArray(t, stdout)
 				},
 			},
 		}

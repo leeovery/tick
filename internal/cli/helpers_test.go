@@ -299,10 +299,16 @@ func TestOutputStatusChanges(t *testing.T) {
 			TaskID: "tick-abc123", TaskTitle: "My Task", OldStatus: "open", NewStatus: "in_progress",
 		})
 
-		expected := "changed[1]{id,title,from,to,auto}:\n  tick-abc123,My Task,open,in_progress,false\n"
-		if buf.String() != expected {
-			t.Errorf("output = %q, want %q", buf.String(), expected)
+		if !strings.HasSuffix(buf.String(), "\n") {
+			t.Errorf("output = %q, want a trailing newline", buf.String())
 		}
+		rows := toonRows(t, decodeToonDoc(t, buf.String()), "changed")
+		if len(rows) != 1 {
+			t.Fatalf("changed has %d rows, want 1", len(rows))
+		}
+		assertToonFields(t, rows[0], map[string]any{
+			"id": "tick-abc123", "title": "My Task", "from": "open", "to": "in_progress", "auto": false,
+		})
 	})
 
 	t.Run("it writes the pretty cascade tree", func(t *testing.T) {

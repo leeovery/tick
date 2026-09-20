@@ -76,12 +76,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 
 		rendered := f.FormatTaskDetail(detailWithChanges(&StatusChanges{}))
 
-		if !strings.Contains(rendered, "changed[0]{id,title,from,to,auto}:") {
-			t.Fatalf("document does not carry a count-zero changed header:\n%s", rendered)
-		}
-		if got := toonRows(t, decodeToonDoc(t, rendered), "changed"); len(got) != 0 {
-			t.Errorf("changed has %d rows, want 0", len(got))
-		}
+		assertCountZeroSection(t, rendered, "changed[0]{id,title,from,to,auto}:")
 	})
 
 	t.Run("it omits the changed section entirely when the detail carries no changes", func(t *testing.T) {
