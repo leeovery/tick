@@ -179,28 +179,22 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 	}
 }
 
-// collectStoredEdges returns one edge per BlockedBy entry, tasks in slice order and each
-// task's blockers in stored order.
 func collectStoredEdges(tasks []task.Task) []DepTreeEdge {
-	var edges []DepTreeEdge
-	for _, t := range tasks {
-		for _, dep := range t.BlockedBy {
-			edges = append(edges, DepTreeEdge{From: dep, To: t.ID})
-		}
-	}
-	return edges
+	return collectScopedStoredEdges(tasks, nil)
 }
 
-// collectScopedStoredEdges returns the stored dependencies whose blocker and blocked task are
-// both in ids, tasks in slice order and each task's blockers in stored order.
+// collectScopedStoredEdges returns one edge per BlockedBy entry, tasks in slice order and each
+// task's blockers in stored order. A nil ids applies no scope and keeps every edge; a non-nil
+// ids keeps only the dependencies whose blocker and blocked task are both members.
 func collectScopedStoredEdges(tasks []task.Task, ids map[string]bool) []DepTreeEdge {
+	inScope := func(id string) bool { return ids == nil || ids[id] }
 	var edges []DepTreeEdge
 	for _, t := range tasks {
-		if !ids[t.ID] {
+		if !inScope(t.ID) {
 			continue
 		}
 		for _, dep := range t.BlockedBy {
-			if ids[dep] {
+			if inScope(dep) {
 				edges = append(edges, DepTreeEdge{From: dep, To: t.ID})
 			}
 		}
