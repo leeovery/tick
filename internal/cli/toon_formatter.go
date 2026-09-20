@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	toon "github.com/toon-format/toon-go"
@@ -50,7 +51,7 @@ type toonPriorityRow struct {
 // FormatTaskList renders a list of tasks in TOON tabular format.
 func (f *ToonFormatter) FormatTaskList(tasks []task.Task) string {
 	if len(tasks) == 0 {
-		return "tasks[0]{id,title,status,priority,type}:"
+		return emptyToonSection[toonTaskRow]("tasks")
 	}
 	rows := make([]toonTaskRow, len(tasks))
 	for i, t := range tasks {
@@ -147,7 +148,7 @@ type toonChangedRow struct {
 // buildChangedSection builds the changed section listing every task whose status moved.
 func buildChangedSection(changes []StatusChange) string {
 	if len(changes) == 0 {
-		return "changed[0]{id,title,from,to,auto}:"
+		return emptyToonSection[toonChangedRow]("changed")
 	}
 	rows := make([]toonChangedRow, len(changes))
 	for i, c := range changes {
@@ -238,7 +239,7 @@ func collectUpstreamEdges(blockedID string, nodes []DepTreeNode) []toonEdgeRow {
 // buildEdgeSection renders a named toon section of edge rows.
 func buildEdgeSection(name string, edges []toonEdgeRow) string {
 	if len(edges) == 0 {
-		return fmt.Sprintf("%s[0]{from,to}:", name)
+		return emptyToonSection[toonEdgeRow](name)
 	}
 	return encodeToonSection(name, edges)
 }
@@ -305,7 +306,7 @@ func joinToonSections(sections []string) string {
 // buildRelatedSection builds a blocked_by or children section.
 func buildRelatedSection(name string, related []RelatedTask) string {
 	if len(related) == 0 {
-		return fmt.Sprintf("%s[0]{id,title,status}:", name)
+		return emptyToonSection[toonRelatedRow](name)
 	}
 	rows := make([]toonRelatedRow, len(related))
 	for i, r := range related {
@@ -318,7 +319,7 @@ func buildRelatedSection(name string, related []RelatedTask) string {
 // row carrying the position the note holds in the whole section.
 func buildNotesSection(notes []task.Note, positions []int) string {
 	if len(notes) == 0 {
-		return "notes[0]{index,text,created}:"
+		return emptyToonSection[toonNoteRow]("notes")
 	}
 	rows := make([]toonNoteRow, len(notes))
 	for i, n := range notes {
@@ -329,6 +330,17 @@ func buildNotesSection(notes []task.Note, positions []int) string {
 		}
 	}
 	return encodeToonSection("notes", rows)
+}
+
+// emptyToonSection renders the header a named TOON section of T rows carries when it
+// holds none, naming T's toon-tagged fields in declaration order as its columns.
+func emptyToonSection[T any](name string) string {
+	rowType := reflect.TypeFor[T]()
+	cols := make([]string, rowType.NumField())
+	for i := range cols {
+		cols[i], _, _ = strings.Cut(rowType.Field(i).Tag.Get("toon"), ",")
+	}
+	return fmt.Sprintf("%s[0]{%s}:", name, strings.Join(cols, ","))
 }
 
 // encodeToonSection encodes a slice as a named TOON section using toon-go: structs
