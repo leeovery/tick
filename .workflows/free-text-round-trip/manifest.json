@@ -242,7 +242,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 6,
-          "current_task": "free-text-round-trip-6-8",
+          "current_task": null,
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -296,7 +296,8 @@
             "free-text-round-trip-6-4",
             "free-text-round-trip-6-5",
             "free-text-round-trip-6-6",
-            "free-text-round-trip-6-7"
+            "free-text-round-trip-6-7",
+            "free-text-round-trip-6-8"
           ],
           "staging": {
             "p1": {
@@ -358,7 +359,8 @@
             2,
             3,
             4,
-            5
+            5,
+            6
           ]
         }
       }
