@@ -143,23 +143,26 @@ Cascaded:
 
 #### Toon Format
 
-Flat lines with `(auto)` and `(unchanged)` markers for machine parsing.
+One `changed` table carrying every task the command moved, plus the unchanged terminal children, as rows of the same shape.
 
 **Downward cascade (cancel):**
 ```
-tick-parent1: in_progress → cancelled
-tick-child1: in_progress → cancelled (auto)
-tick-child2: open → cancelled (auto)
-tick-grand1: open → cancelled (auto)
-tick-grand2: open → cancelled (auto)
-tick-child3: done (unchanged)
+changed[6]{id,title,from,to,auto}:
+  tick-parent1,Auth phase,in_progress,cancelled,false
+  tick-child1,Login,in_progress,cancelled,true
+  tick-child2,Signup,open,cancelled,true
+  tick-grand1,Token refresh,open,cancelled,true
+  tick-grand2,Session store,open,cancelled,true
+  tick-child3,Logout,done,done,true
 ```
+
+An unchanged child is the row whose `from` equals its `to`; the `auto` column distinguishes what the user asked for from what the cascade moved.
 
 Both formats show unchanged terminal children so the user can see what was *not* affected by the cascade.
 
 #### Formatter Interface
 
-A new `FormatCascadeTransition` method is added to the Formatter interface. It receives the primary transition result plus all cascade changes and unchanged terminal children, and renders the full cascade output. The existing `FormatTransition` method remains for non-cascade (single-task) transitions.
+A new `FormatCascadeTransition` method is added to the Formatter interface. It receives the primary transition result plus all cascade changes and unchanged terminal children, and renders the full cascade output. It is the only transition-rendering method on the interface: a single-task transition is the same table with one row.
 
 #### JSON Format
 
@@ -246,3 +249,7 @@ The existing `transition.go` and `dependency.go` logic is migrated into the new 
 ## Working Notes
 
 [In-progress discussion captured here]
+
+## Corrigenda
+
+> **Corrigendum 2026-09-20** (from `free-text-round-trip`): "Flat lines with `(auto)` and `(unchanged)` markers for machine parsing", with the arrow-and-marker lines as the worked example (Toon Format), and "The existing `FormatTransition` method remains for non-cascade (single-task) transitions" (Formatter Interface) — corrected on both points. The arrow lines were never machine-parseable: they are hand-assembled text no TOON reader accepts, and an agent had to learn the arrow, the `(auto)` suffix and the `(unchanged)` suffix from outside the output. `free-text-round-trip` §7.2 replaces them with one `changed` table — `changed[N]{id,title,from,to,auto}:` — carrying every task the command moved. The unchanged terminal children this document requires are still shown, as rows whose `from` equals their `to`, so the requirement stands and only its rendering changes; the pretty rendering above it is untouched. `FormatTransition` was removed from the Formatter interface rather than kept for the single-task case: pretty's zero-cascade branch already produced the identical line, so a single transition is the same table with one row. The JSON shape below, `{"transition":…,"cascaded":…,"unchanged":…}`, is likewise superseded by §7's `changed` list; it is left to supersession rather than corrected here.
