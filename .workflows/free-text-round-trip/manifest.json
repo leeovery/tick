@@ -173,7 +173,9 @@
             "free-text-round-trip-8": "tick-a06bd5",
             "free-text-round-trip-8-1": "tick-9e2a3b",
             "free-text-round-trip-8-2": "tick-a69bd6",
-            "free-text-round-trip-8-3": "tick-b845fe"
+            "free-text-round-trip-8-3": "tick-b845fe",
+            "free-text-round-trip-9": "tick-abac80",
+            "free-text-round-trip-9-1": "tick-6b8ce7"
           },
           "storage_paths": [
             ".tick/"
@@ -386,7 +388,7 @@
             },
             "c3": {
               "tasks": {
-                "1": "pending"
+                "1": "approved"
               }
             }
           },
