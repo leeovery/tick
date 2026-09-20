@@ -3,8 +3,10 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -120,6 +122,72 @@ func conformanceDetailTasks() []task.Task {
 	child.Parent = full.ID
 
 	return append(conformanceDepGraph(), full, child)
+}
+
+// conformanceStatusTask builds a task, stamping the closed time a terminal
+// status carries.
+func conformanceStatusTask(id, title string, status task.Status) task.Task {
+	tk := conformanceTask(id, title, status, 2, "task")
+	if status == task.StatusDone || status == task.StatusCancelled {
+		tk.Closed = &conformanceTime
+	}
+	return tk
+}
+
+// conformanceLoneTask returns a childless task, the branch where a status
+// command moves nothing but its target.
+func conformanceLoneTask(status task.Status) []task.Task {
+	return []task.Task{conformanceStatusTask("tick-a00001", "Lone", status)}
+}
+
+// conformanceStatusFamily returns a parent and its only child, the branch
+// where a status command cascades along the hierarchy.
+func conformanceStatusFamily(parentStatus, childStatus task.Status) []task.Task {
+	parent := conformanceStatusTask("tick-p00001", "Parent", parentStatus)
+	child := conformanceStatusTask("tick-c00001", "Child", childStatus)
+	child.Parent = parent.ID
+	return []task.Task{parent, child}
+}
+
+// conformanceDoneLineage returns a done task under a done parent, so creating
+// a child under it reopens both.
+func conformanceDoneLineage() []task.Task {
+	grandparent := conformanceStatusTask("tick-g00001", "Grandparent", task.StatusDone)
+	parent := conformanceStatusTask("tick-p00001", "Parent", task.StatusDone)
+	parent.Parent = grandparent.ID
+	return []task.Task{grandparent, parent}
+}
+
+func conformanceNotedTask() []task.Task {
+	noted := conformanceTask("tick-t00001", "Noted", task.StatusOpen, 2, "task")
+	noted.Notes = conformanceNotes
+	return []task.Task{noted}
+}
+
+func conformanceMovingTask() task.Task {
+	return conformanceTask("tick-m00001", "Moving", task.StatusOpen, 2, "task")
+}
+
+// conformanceCompletingParent returns a parent under parentID whose only
+// other child is finished, so moving its open child away completes it.
+func conformanceCompletingParent(parentID string) []task.Task {
+	parent := conformanceTask("tick-o00001", "Old parent", task.StatusOpen, 2, "task")
+	parent.Parent = parentID
+	moving := conformanceMovingTask()
+	moving.Parent = parent.ID
+	sibling := conformanceStatusTask("tick-s00001", "Sibling", task.StatusDone)
+	sibling.Parent = parent.ID
+	return []task.Task{parent, moving, sibling}
+}
+
+// conformanceSharedAncestor returns a done root above both a parent that
+// completes when its open child leaves and a done parent that reopens when
+// that child arrives.
+func conformanceSharedAncestor() []task.Task {
+	root := conformanceStatusTask("tick-r00001", "Root", task.StatusDone)
+	newParent := conformanceStatusTask("tick-n00001", "New parent", task.StatusDone)
+	newParent.Parent = root.ID
+	return append([]task.Task{root, newParent}, conformanceCompletingParent(root.ID)...)
 }
 
 var conformanceDocs = []conformanceDoc{
@@ -275,6 +343,141 @@ var conformanceDocs = []conformanceDoc{
 		Setup: func(t *testing.T) (string, []string) {
 			dir, _ := setupTickProjectWithTasks(t, conformanceDetailTasks())
 			return dir, []string{"show", "tick-d44444"}
+		},
+	},
+	{
+		Name:    "start with no cascade",
+		Command: "start",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceLoneTask(task.StatusOpen))
+			return dir, []string{"start", "tick-a00001"}
+		},
+	},
+	{
+		Name:    "done with no cascade",
+		Command: "done",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceLoneTask(task.StatusInProgress))
+			return dir, []string{"done", "tick-a00001"}
+		},
+	},
+	{
+		Name:    "cancel with no cascade",
+		Command: "cancel",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceLoneTask(task.StatusOpen))
+			return dir, []string{"cancel", "tick-a00001"}
+		},
+	},
+	{
+		Name:    "reopen with no cascade",
+		Command: "reopen",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceLoneTask(task.StatusDone))
+			return dir, []string{"reopen", "tick-a00001"}
+		},
+	},
+	{
+		Name:    "start cascading to an open parent",
+		Command: "start",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceStatusFamily(task.StatusOpen, task.StatusOpen))
+			return dir, []string{"start", "tick-c00001"}
+		},
+	},
+	{
+		Name:    "done cascading to an open child",
+		Command: "done",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceStatusFamily(task.StatusOpen, task.StatusOpen))
+			return dir, []string{"done", "tick-p00001"}
+		},
+	},
+	{
+		Name:    "cancel cascading to an open child",
+		Command: "cancel",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceStatusFamily(task.StatusOpen, task.StatusOpen))
+			return dir, []string{"cancel", "tick-p00001"}
+		},
+	},
+	{
+		Name:    "reopen cascading to a done parent",
+		Command: "reopen",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceStatusFamily(task.StatusDone, task.StatusDone))
+			return dir, []string{"reopen", "tick-c00001"}
+		},
+	},
+	{
+		Name:    "create with no parent",
+		Command: "create",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProject(t)
+			return dir, []string{"create", "A new task"}
+		},
+	},
+	{
+		Name:    "create under a done parent",
+		Command: "create",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceDoneLineage())
+			return dir, []string{"create", "A new child", "--parent", "tick-p00001"}
+		},
+	},
+	{
+		Name:         "create under --quiet",
+		Command:      "create",
+		NotADocument: "--quiet prints the bare ID of the created task rather than a document",
+	},
+	{
+		Name:    "note add on a task carrying a note",
+		Command: "note add",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceNotedTask())
+			return dir, []string{"note", "add", "tick-t00001", "Third note"}
+		},
+	},
+	{
+		Name:    "note remove on a task carrying a note",
+		Command: "note remove",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceNotedTask())
+			return dir, []string{"note", "remove", "tick-t00001", "1"}
+		},
+	},
+	{
+		Name:    "update with no status movement",
+		Command: "update",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, []task.Task{conformanceMovingTask()})
+			return dir, []string{"update", "tick-m00001", "--title", "Renamed"}
+		},
+	},
+	{
+		Name:    "update moving a task under a done parent",
+		Command: "update",
+		Setup: func(t *testing.T) (string, []string) {
+			tasks := []task.Task{conformanceMovingTask(), conformanceStatusTask("tick-n00001", "New parent", task.StatusDone)}
+			dir, _ := setupTickProjectWithTasks(t, tasks)
+			return dir, []string{"update", "tick-m00001", "--parent", "tick-n00001"}
+		},
+	},
+	{
+		Name:    "update moving a task away from a completed parent",
+		Command: "update",
+		Setup: func(t *testing.T) (string, []string) {
+			tasks := append(conformanceCompletingParent(""), conformanceTask("tick-k00001", "Other parent", task.StatusOpen, 2, "task"))
+			dir, _ := setupTickProjectWithTasks(t, tasks)
+			return dir, []string{"update", "tick-m00001", "--parent", "tick-k00001"}
+		},
+	},
+	{
+		Name:    "update where reopen and completion meet on a shared ancestor",
+		Command: "update",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceSharedAncestor())
+			return dir, []string{"update", "tick-m00001", "--parent", "tick-n00001"}
 		},
 	},
 }
@@ -705,5 +908,279 @@ func TestToonTaskListConformance(t *testing.T) {
 		doc := decodeConformanceEntry(t, "blocked with no results")
 
 		assertConformanceTaskRows(t, doc, nil)
+	})
+}
+
+// conformanceChange is one row of a decoded changed section.
+type conformanceChange struct {
+	From string
+	To   string
+	Auto bool
+}
+
+// conformanceChanges decodes the changed section, keyed by task id, failing
+// when a task appears in more than one row.
+func conformanceChanges(t *testing.T, doc map[string]any) map[string]conformanceChange {
+	t.Helper()
+	rows := toonRows(t, doc, "changed")
+	changes := make(map[string]conformanceChange, len(rows))
+	for _, row := range rows {
+		id, ok := row["id"].(string)
+		if !ok {
+			t.Fatalf("changed row %#v carries no id", row)
+		}
+		if _, seen := changes[id]; seen {
+			t.Errorf("changed carries task %q more than once", id)
+		}
+		auto, ok := row["auto"].(bool)
+		if !ok {
+			t.Fatalf("changed row %q has auto = %#v, want a bool", id, row["auto"])
+		}
+		changes[id] = conformanceChange{From: fmt.Sprint(row["from"]), To: fmt.Sprint(row["to"]), Auto: auto}
+	}
+	return changes
+}
+
+func assertConformanceChanges(t *testing.T, doc map[string]any, want map[string]conformanceChange) {
+	t.Helper()
+	got := conformanceChanges(t, doc)
+	if len(got) != len(want) {
+		t.Fatalf("changed has %d rows, want %d: %#v", len(got), len(want), got)
+	}
+	for id, wantChange := range want {
+		gotChange, ok := got[id]
+		if !ok {
+			t.Errorf("changed carries no row for %q: %#v", id, got)
+			continue
+		}
+		if gotChange != wantChange {
+			t.Errorf("changed row %q = %#v, want %#v", id, gotChange, wantChange)
+		}
+	}
+}
+
+func TestToonStatusCommandConformance(t *testing.T) {
+	t.Run("it decodes a start document with no cascade", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "start with no cascade")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-a00001": {From: "open", To: "in_progress", Auto: false},
+		})
+	})
+
+	t.Run("it decodes a done document with no cascade", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "done with no cascade")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-a00001": {From: "in_progress", To: "done", Auto: false},
+		})
+	})
+
+	t.Run("it decodes a cancel document with no cascade", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "cancel with no cascade")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-a00001": {From: "open", To: "cancelled", Auto: false},
+		})
+	})
+
+	t.Run("it decodes a reopen document with no cascade", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "reopen with no cascade")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-a00001": {From: "done", To: "open", Auto: false},
+		})
+	})
+
+	t.Run("it decodes a cascading start document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "start cascading to an open parent")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-c00001": {From: "open", To: "in_progress", Auto: false},
+			"tick-p00001": {From: "open", To: "in_progress", Auto: true},
+		})
+	})
+
+	t.Run("it decodes a cascading done document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "done cascading to an open child")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-p00001": {From: "open", To: "done", Auto: false},
+			"tick-c00001": {From: "open", To: "done", Auto: true},
+		})
+	})
+
+	t.Run("it decodes a cascading cancel document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "cancel cascading to an open child")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-p00001": {From: "open", To: "cancelled", Auto: false},
+			"tick-c00001": {From: "open", To: "cancelled", Auto: true},
+		})
+	})
+
+	t.Run("it decodes a cascading reopen document", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "reopen cascading to a done parent")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-c00001": {From: "done", To: "open", Auto: false},
+			"tick-p00001": {From: "done", To: "open", Auto: true},
+		})
+	})
+}
+
+func TestToonMutationConformance(t *testing.T) {
+	t.Run("it decodes a create document with no parent", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "create with no parent")
+
+		assertToonKeysPresent(t, doc, "changed")
+		assertToonRowsEmpty(t, doc, "changed")
+	})
+
+	t.Run("it decodes a create document under a done parent", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "create under a done parent")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-p00001": {From: "done", To: "open", Auto: true},
+			"tick-g00001": {From: "done", To: "open", Auto: true},
+		})
+	})
+
+	t.Run("it decodes an update document with no status movement", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "update with no status movement")
+
+		assertToonRowsEmpty(t, doc, "changed")
+	})
+
+	t.Run("it decodes an update document for rule 6 alone", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "update moving a task under a done parent")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-n00001": {From: "done", To: "open", Auto: true},
+		})
+	})
+
+	t.Run("it decodes an update document for rule 3 alone", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "update moving a task away from a completed parent")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-o00001": {From: "open", To: "done", Auto: true},
+		})
+	})
+
+	t.Run("it decodes an update document where both rules meet on a shared ancestor", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "update where reopen and completion meet on a shared ancestor")
+
+		assertConformanceChanges(t, doc, map[string]conformanceChange{
+			"tick-n00001": {From: "done", To: "open", Auto: true},
+			"tick-o00001": {From: "open", To: "done", Auto: true},
+			"tick-r00001": {From: "done", To: "open", Auto: true},
+		})
+	})
+
+	t.Run("it decodes a note add document with no changed section", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "note add on a task carrying a note")
+
+		if rows := toonRows(t, doc, "notes"); len(rows) != len(conformanceNotes)+1 {
+			t.Errorf("notes has %d rows, want %d", len(rows), len(conformanceNotes)+1)
+		}
+		assertToonKeysAbsent(t, doc, "changed")
+	})
+
+	t.Run("it decodes a note remove document with no changed section", func(t *testing.T) {
+		doc := decodeConformanceEntry(t, "note remove on a task carrying a note")
+
+		if rows := toonRows(t, doc, "notes"); len(rows) != len(conformanceNotes)-1 {
+			t.Errorf("notes has %d rows, want %d", len(rows), len(conformanceNotes)-1)
+		}
+		assertToonKeysAbsent(t, doc, "changed")
+	})
+}
+
+// conformanceProseCommands are the commands whose output is a confirmation
+// message rather than a document.
+var conformanceProseCommands = []string{"dep add", "dep remove", "remove", "init", "rebuild"}
+
+// conformanceOutOfScopeCommands are the commands that bypass the formatter and
+// print straight to the terminal.
+var conformanceOutOfScopeCommands = []string{"doctor", "migrate"}
+
+// conformanceMustParseCommands returns the commands the inventory covers, in
+// the order the inventory first names them.
+func conformanceMustParseCommands() []string {
+	var commands []string
+	seen := make(map[string]bool, len(conformanceDocs))
+	for _, entry := range conformanceDocs {
+		if seen[entry.Command] {
+			continue
+		}
+		seen[entry.Command] = true
+		commands = append(commands, entry.Command)
+	}
+	return commands
+}
+
+// conformanceCoverageProblems reports every registered command the three sets
+// fail to claim exactly once, and every declared name no command registers.
+func conformanceCoverageProblems(registered CommandFlags, mustParse, prose, outOfScope []string) []string {
+	var problems []string
+	declared := make(map[string]int, len(registered))
+	for _, set := range [][]string{mustParse, prose, outOfScope} {
+		for _, name := range set {
+			declared[name]++
+			if _, ok := registered[name]; !ok {
+				problems = append(problems, fmt.Sprintf("declared command %q is not registered in commandFlags", name))
+			}
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(registered)) {
+		switch count := declared[name]; count {
+		case 1:
+		case 0:
+			problems = append(problems, fmt.Sprintf("command %q is declared in none of the must-parse, prose and out-of-scope sets", name))
+		default:
+			problems = append(problems, fmt.Sprintf("command %q is declared in %d sets, want exactly one", name, count))
+		}
+	}
+	return problems
+}
+
+func TestConformanceInventoryCoversEveryCommand(t *testing.T) {
+	t.Run("it covers every registered command", func(t *testing.T) {
+		problems := conformanceCoverageProblems(commandFlags, conformanceMustParseCommands(), conformanceProseCommands, conformanceOutOfScopeCommands)
+
+		for _, problem := range problems {
+			t.Error(problem)
+		}
+	})
+
+	t.Run("it fails when a command is declared nowhere", func(t *testing.T) {
+		registered := CommandFlags{"list": {}, "ghost": {}}
+
+		problems := conformanceCoverageProblems(registered, []string{"list"}, nil, nil)
+
+		if len(problems) != 1 {
+			t.Errorf("problems = %v, want one undeclared-command problem", problems)
+		}
+	})
+
+	t.Run("it fails when a command is declared twice", func(t *testing.T) {
+		registered := CommandFlags{"list": {}}
+
+		problems := conformanceCoverageProblems(registered, []string{"list"}, []string{"list"}, nil)
+
+		if len(problems) != 1 {
+			t.Errorf("problems = %v, want one twice-declared problem", problems)
+		}
+	})
+
+	t.Run("it fails when a declared command is not registered", func(t *testing.T) {
+		registered := CommandFlags{"list": {}}
+
+		problems := conformanceCoverageProblems(registered, []string{"list"}, []string{"phantom"}, nil)
+
+		if len(problems) != 1 {
+			t.Errorf("problems = %v, want one unregistered-declaration problem", problems)
+		}
 	})
 }
