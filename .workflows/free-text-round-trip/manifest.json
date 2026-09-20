@@ -175,7 +175,9 @@
             "free-text-round-trip-8-2": "tick-a69bd6",
             "free-text-round-trip-8-3": "tick-b845fe",
             "free-text-round-trip-9": "tick-abac80",
-            "free-text-round-trip-9-1": "tick-6b8ce7"
+            "free-text-round-trip-9-1": "tick-6b8ce7",
+            "free-text-round-trip-9-2": "tick-ccc8ee",
+            "free-text-round-trip-9-3": "tick-88e344"
           },
           "storage_paths": [
             ".tick/"
@@ -391,6 +393,12 @@
               "tasks": {
                 "1": "approved"
               }
+            },
+            "p9": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved"
+              }
             }
           },
           "consolidated_phases": [
@@ -401,7 +409,8 @@
             5,
             6,
             7,
-            8
+            8,
+            9
           ],
           "completed_phases": [
             1,
@@ -412,19 +421,6 @@
             6,
             7,
             8
-          ],
-          "bank": [
-            {
-              "task": "free-text-round-trip-9-1",
-              "source": "executor",
-              "summary": "baseFormatter's FormatCascadeTransition/FormatDepTree stubs are dead and now return (\"\", nil) — the exact successful-empty-document shape this task deleted everywhere else.",
-              "failure": "Both embedders (ToonFormatter, PrettyFormatter) override them, so the stubs run nowhere today; a formatter added later that embeds baseFormatter and forgets one override inherits a stub that reports success with an empty document, and printDocument prints a bare newline at exit 0. The agent reading that output sees a command that succeeded and changed nothing. base_formatter_test.go:40,54 assert the empty string is the right answer, so the guard passes while checking nothing.",
-              "detail": "internal/cli/format.go:279-282 (the two stubs), asserted at internal/cli/base_formatter_test.go:40 and :54. Remedy is deleting both stubs and their tests, which requires confirming across all formatters that no embedder relies on inheriting them — a change to a shared type and a test file outside this task's surface.",
-              "files": [
-                "internal/cli/format.go",
-                "internal/cli/base_formatter_test.go"
-              ]
-            }
           ]
         }
       }
