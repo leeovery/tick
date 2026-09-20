@@ -39,69 +39,67 @@ func (o *createOpts) addPositional(arg string) {
 func parseCreateArgs(flagArgs, literals []string) (createOpts, error) {
 	opts := createOpts{priority: 2}
 
-	i := 0
-	for i < len(flagArgs) {
-		arg := flagArgs[i]
-		switch arg {
+	s := newFlagScanner(flagArgs)
+	for s.next() {
+		switch s.name {
 		case "--priority":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--priority requires a value")
 			}
-			p, err := strconv.Atoi(flagArgs[i])
+			p, err := strconv.Atoi(v)
 			if err != nil {
-				return opts, fmt.Errorf("--priority must be an integer, got %q", flagArgs[i])
+				return opts, fmt.Errorf("--priority must be an integer, got %q", v)
 			}
 			opts.priority = p
 		case "--description":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--description requires a value")
 			}
-			opts.description = flagArgs[i]
+			opts.description = v
 		case "--blocked-by":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--blocked-by requires a value")
 			}
-			opts.blockedBy = parseCommaSeparatedIDs(flagArgs[i])
+			opts.blockedBy = parseCommaSeparatedIDs(v)
 		case "--blocks":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--blocks requires a value")
 			}
-			opts.blocks = parseCommaSeparatedIDs(flagArgs[i])
+			opts.blocks = parseCommaSeparatedIDs(v)
 		case "--parent":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--parent requires a value")
 			}
-			opts.parent = strings.ToLower(strings.TrimSpace(flagArgs[i]))
+			opts.parent = strings.ToLower(strings.TrimSpace(v))
 		case "--type":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--type requires a value")
 			}
-			opts.taskType = flagArgs[i]
+			opts.taskType = v
 			opts.hasType = true
 		case "--tags":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--tags requires a value")
 			}
-			opts.tags = strings.Split(flagArgs[i], ",")
+			opts.tags = strings.Split(v, ",")
 			opts.hasTags = true
 		case "--refs":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--refs requires a value")
 			}
-			opts.refs = strings.Split(flagArgs[i], ",")
+			opts.refs = strings.Split(v, ",")
 			opts.hasRefs = true
 		default:
-			opts.addPositional(arg)
+			opts.addPositional(s.whole)
 		}
-		i++
 	}
 	for _, literal := range literals {
 		opts.addPositional(literal)

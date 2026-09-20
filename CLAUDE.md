@@ -58,6 +58,7 @@ release                   → release script with AI-generated notes via Claude 
 - **Tag filtering:** AND (comma-separated in one `--tag`) / OR (multiple `--tag` flags) composition via SQL subqueries.
 - **Cache schema versioning:** `schemaVersion` constant in `cache.go` (currently v2); `ensureFresh()` checks version before freshness hash — mismatch triggers delete+recreate+rebuild.
 - **Flag validation:** `ValidateFlags()` in `flags.go` rejects unknown flags before store access. Central `commandFlags` registry maps each command to its valid flags. `ready`/`blocked` flag sets derived from `list` via `copyFlagsExcept()` to prevent drift. Drift-detection test ensures `commandFlags` stays in sync with the help registry.
+- **Flag value spellings:** a value-taking flag accepts `--flag value` and `--flag=value`. `cutFlagValue()` in `flags.go` cuts a flag-shaped argument at its first `=`; `flagScanner` walks a parser's flag arguments and resolves the value from either spelling. Each parser that holds value cases switches on the cut name and records the whole argument for positionals, so text carrying `=` or spelling a flag survives intact. Global flags stay exact-match in `applyGlobalFlag`.
 - **Tests:** stdlib `testing` only (no testify), `t.Run()` subtests, `t.TempDir()` for isolation, `t.Helper()` on helpers.
 
 ## Task Management (Dogfooding)

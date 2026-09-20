@@ -36,48 +36,49 @@ type ListFilter struct {
 // list takes no positional argument, so the post-marker literals are ignored.
 func parseListFlags(flagArgs, _ []string) (ListFilter, error) {
 	var f ListFilter
-	for i := 0; i < len(flagArgs); i++ {
-		switch flagArgs[i] {
+	s := newFlagScanner(flagArgs)
+	for s.next() {
+		switch s.name {
 		case "--ready":
 			f.Ready = true
 		case "--blocked":
 			f.Blocked = true
 		case "--status":
-			if i+1 >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return f, fmt.Errorf("--status requires a value")
 			}
-			i++
-			f.Status = flagArgs[i]
+			f.Status = v
 		case "--priority":
-			if i+1 >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return f, fmt.Errorf("--priority requires a value")
 			}
-			i++
-			p, err := strconv.Atoi(flagArgs[i])
+			p, err := strconv.Atoi(v)
 			if err != nil {
-				return f, fmt.Errorf("invalid priority '%s': must be 0-4", flagArgs[i])
+				return f, fmt.Errorf("invalid priority '%s': must be 0-4", v)
 			}
 			f.Priority = p
 			f.HasPriority = true
 		case "--parent":
-			if i+1 >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return f, fmt.Errorf("--parent requires a value")
 			}
-			i++
-			f.Parent = task.NormalizeID(flagArgs[i])
+			f.Parent = task.NormalizeID(v)
 		case "--type":
-			if i+1 >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return f, fmt.Errorf("--type requires a value")
 			}
-			i++
-			f.Type = task.NormalizeType(flagArgs[i])
+			f.Type = task.NormalizeType(v)
 		case "--tag":
-			if i+1 >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return f, fmt.Errorf("--tag requires a value")
 			}
-			i++
 			var group []string
-			for p := range strings.SplitSeq(flagArgs[i], ",") {
+			for p := range strings.SplitSeq(v, ",") {
 				normalized := task.NormalizeTag(p)
 				if normalized == "" {
 					continue
@@ -88,13 +89,13 @@ func parseListFlags(flagArgs, _ []string) (ListFilter, error) {
 				f.TagGroups = append(f.TagGroups, group)
 			}
 		case "--count":
-			if i+1 >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return f, fmt.Errorf("--count requires a value")
 			}
-			i++
-			c, err := strconv.Atoi(flagArgs[i])
+			c, err := strconv.Atoi(v)
 			if err != nil {
-				return f, fmt.Errorf("invalid count '%s': must be an integer", flagArgs[i])
+				return f, fmt.Errorf("invalid count '%s': must be an integer", v)
 			}
 			f.Count = c
 			f.HasCount = true

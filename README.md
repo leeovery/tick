@@ -638,7 +638,7 @@ $ tick list --stauts open
 unknown flag "--stauts" for "list". Run 'tick help list' for usage.
 ```
 
-Flags come before `--`; everything after it is text, including an argument that spells a global flag exactly, so `tick note add tick-a1b2 -- --json` stores the literal note `--json`. On `note add` the marker is recommended rather than required — dash-leading note text that does not spell a global flag is read as text without it. `create` checks its title against its own flags, so a dash-leading title needs the marker.
+Flags come before `--`; everything after it is text, including an argument that spells a global flag exactly, so `tick note add tick-a1b2 -- --json` stores the literal note `--json`. On `note add` the marker is recommended rather than required — dash-leading note text that does not spell a global flag is read as text without it. `create` checks its title against its own flags, so a dash-leading title needs the marker. A flag that takes a value also accepts it attached as `--flag=value`, which is how a value that is exactly `--`, or one that spells a global flag, is written: `tick update tick-a1b2 --title=-- --description=--json`.
 
 ## License
 

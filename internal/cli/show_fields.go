@@ -247,26 +247,26 @@ func parseShowArgs(flagArgs, literals []string) (string, *FieldSelection, error)
 	var id string
 	var selection *FieldSelection
 
-	for i := 0; i < len(flagArgs); i++ {
-		arg := flagArgs[i]
-		if arg == "--field" || arg == "--fields" {
-			if i+1 >= len(flagArgs) {
+	s := newFlagScanner(flagArgs)
+	for s.next() {
+		if s.name == "--field" || s.name == "--fields" {
+			v, ok := s.value()
+			if !ok {
 				return "", nil, fmt.Errorf("--field requires a value")
 			}
-			i++
 			if selection == nil {
 				selection = newFieldSelection()
 			}
-			if err := selection.addValue(flagArgs[i]); err != nil {
+			if err := selection.addValue(v); err != nil {
 				return "", nil, err
 			}
 			continue
 		}
-		if strings.HasPrefix(arg, "-") {
+		if strings.HasPrefix(s.whole, "-") {
 			continue
 		}
 		if id == "" {
-			id = arg
+			id = s.whole
 		}
 	}
 	if id == "" && len(literals) > 0 {

@@ -46,14 +46,15 @@ type migrateFlags struct {
 // migrate takes no positional argument, so the post-marker literals are ignored.
 func parseMigrateArgs(flagArgs, _ []string) (migrateFlags, error) {
 	var flags migrateFlags
-	for i := 0; i < len(flagArgs); i++ {
-		switch flagArgs[i] {
+	s := newFlagScanner(flagArgs)
+	for s.next() {
+		switch s.name {
 		case "--from":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return flags, fmt.Errorf("--from requires a value")
 			}
-			flags.from = flagArgs[i]
+			flags.from = v
 		case "--dry-run":
 			flags.dryRun = true
 		case "--pending-only":

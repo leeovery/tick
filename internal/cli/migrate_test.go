@@ -361,17 +361,21 @@ func TestMigrateFromFlagSyntax(t *testing.T) {
 		}
 	})
 
-	t.Run("it rejects --from=value (equals-sign) on migrate", func(t *testing.T) {
-		dir, _ := setupTickProject(t)
+	t.Run("it accepts --from=value (equals-sign) on migrate", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
 		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Test task","status":"pending","priority":2,"created_at":"2026-01-10T09:00:00Z","updated_at":"2026-01-10T09:00:00Z"}`)
 
 		_, stderr, exitCode := runMigrate(t, dir, "--from=beads")
 
-		if exitCode != 1 {
-			t.Errorf("exit code = %d, want 1", exitCode)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
-		if !strings.Contains(stderr, "--from") {
-			t.Errorf("stderr should mention --from flag, got %q", stderr)
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 imported task, got %d", len(tasks))
+		}
+		if tasks[0].Title != "Test task" {
+			t.Errorf("title = %q, want %q", tasks[0].Title, "Test task")
 		}
 	})
 }

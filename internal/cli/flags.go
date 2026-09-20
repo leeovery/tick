@@ -119,7 +119,9 @@ func copyFlagsExcept(source map[string]FlagDef, exclude ...string) map[string]Fl
 }
 
 // ValidateFlags checks that all flag-like arguments in args are valid for the given command.
-// Global flags are always accepted. Unknown flags produce an error with the format:
+// A value-taking flag may carry its value attached as "--flag=value" or separated as the
+// following argument. Global flags are always accepted, exact-match only. Unknown flags
+// produce an error naming the whole argument, with the format:
 //
 //	unknown flag "{flag}" for "{command}". Run 'tick help {helpCmd}' for usage.
 //
@@ -149,13 +151,13 @@ func ValidateFlags(command string, args []string, flags CommandFlags) error {
 			continue
 		}
 
-		def, ok := cmdFlags[arg]
-		if !ok {
+		name, _, attached := cutFlagValue(arg)
+		def, ok := cmdFlags[name]
+		if !ok || (attached && !def.TakesValue) {
 			return fmt.Errorf("unknown flag %q for %q. Run 'tick help %s' for usage.", arg, command, helpCommand(command))
 		}
 
-		// Skip the next argument if this flag takes a value.
-		if def.TakesValue {
+		if def.TakesValue && !attached {
 			i++
 		}
 	}
@@ -184,4 +186,59 @@ func splitLiteralArgs(args []string, n int) (flagArgs, literals []string) {
 	}
 	boundary := len(args) - n
 	return args[:boundary:boundary], args[boundary:]
+}
+
+// cutFlagValue cuts a flag-shaped argument at its first "=", returning the name
+// before it, the value after it, and whether an "=" was present. An argument not
+// beginning with "-" is returned whole, with attached false.
+func cutFlagValue(arg string) (name, value string, attached bool) {
+	if !strings.HasPrefix(arg, "-") {
+		return arg, "", false
+	}
+	name, value, attached = strings.Cut(arg, "=")
+	return name, value, attached
+}
+
+// flagScanner walks a command's flag arguments, exposing each one whole and cut
+// into an attached flag name and value, and resolving a flag's value from either
+// spelling. Callers switch on name, read whole for a positional, and call value
+// for a flag that takes one.
+type flagScanner struct {
+	args []string
+	i    int
+	// whole is the current argument exactly as given.
+	whole string
+	// name is whole up to its first "=", for a flag-shaped argument.
+	name          string
+	attachedValue string
+	attached      bool
+}
+
+func newFlagScanner(args []string) *flagScanner {
+	return &flagScanner{args: args, i: -1}
+}
+
+// next advances to the following argument, reporting whether one was available.
+func (s *flagScanner) next() bool {
+	s.i++
+	if s.i >= len(s.args) {
+		return false
+	}
+	s.whole = s.args[s.i]
+	s.name, s.attachedValue, s.attached = cutFlagValue(s.whole)
+	return true
+}
+
+// value returns the current flag's value: the attached one when the argument
+// carried "=", otherwise the following argument, which it consumes. ok is false
+// when a separated value is called for and no argument follows.
+func (s *flagScanner) value() (v string, ok bool) {
+	if s.attached {
+		return s.attachedValue, true
+	}
+	if s.i+1 >= len(s.args) {
+		return "", false
+	}
+	s.i++
+	return s.args[s.i], true
 }

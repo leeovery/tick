@@ -46,74 +46,72 @@ func (o *updateOpts) addPositional(arg string) {
 func parseUpdateArgs(flagArgs, literals []string) (updateOpts, error) {
 	var opts updateOpts
 
-	i := 0
-	for i < len(flagArgs) {
-		arg := flagArgs[i]
-		switch arg {
+	s := newFlagScanner(flagArgs)
+	for s.next() {
+		switch s.name {
 		case "--title":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--title requires a value")
 			}
-			opts.title = new(flagArgs[i])
+			opts.title = &v
 		case "--description":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--description requires a value")
 			}
-			opts.description = new(flagArgs[i])
+			opts.description = &v
 		case "--priority":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--priority requires a value")
 			}
-			p, err := strconv.Atoi(flagArgs[i])
+			p, err := strconv.Atoi(v)
 			if err != nil {
-				return opts, fmt.Errorf("--priority must be an integer, got %q", flagArgs[i])
+				return opts, fmt.Errorf("--priority must be an integer, got %q", v)
 			}
 			opts.priority = &p
 		case "--parent":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--parent requires a value")
 			}
-			opts.parent = new(strings.ToLower(strings.TrimSpace(flagArgs[i])))
+			opts.parent = new(strings.ToLower(strings.TrimSpace(v)))
 		case "--clear-description":
 			opts.clearDescription = true
 		case "--type":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--type requires a value")
 			}
-			opts.taskType = new(flagArgs[i])
+			opts.taskType = &v
 		case "--clear-type":
 			opts.clearType = true
 		case "--tags":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--tags requires a value")
 			}
-			opts.tags = new(strings.Split(flagArgs[i], ","))
+			opts.tags = new(strings.Split(v, ","))
 		case "--clear-tags":
 			opts.clearTags = true
 		case "--refs":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--refs requires a value")
 			}
-			opts.refs = new(strings.Split(flagArgs[i], ","))
+			opts.refs = new(strings.Split(v, ","))
 		case "--clear-refs":
 			opts.clearRefs = true
 		case "--blocks":
-			i++
-			if i >= len(flagArgs) {
+			v, ok := s.value()
+			if !ok {
 				return opts, fmt.Errorf("--blocks requires a value")
 			}
-			opts.blocks = parseCommaSeparatedIDs(flagArgs[i])
+			opts.blocks = parseCommaSeparatedIDs(v)
 		default:
-			opts.addPositional(arg)
+			opts.addPositional(s.whole)
 		}
-		i++
 	}
 	for _, literal := range literals {
 		opts.addPositional(literal)

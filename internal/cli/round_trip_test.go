@@ -270,15 +270,101 @@ func TestAwkwardFixtureRoundTrip(t *testing.T) {
 	})
 }
 
+func TestHostileValueRoundTrip(t *testing.T) {
+	cases := []struct {
+		name   string
+		field  string
+		value  string
+		stored func(task.Task) string
+	}{
+		{
+			name:   "it writes a dash-only title back byte-identically",
+			field:  "title",
+			value:  "--",
+			stored: func(tk task.Task) string { return tk.Title },
+		},
+		{
+			name:   "it writes a title spelling a global flag back byte-identically",
+			field:  "title",
+			value:  "--json",
+			stored: func(tk task.Task) string { return tk.Title },
+		},
+		{
+			name:   "it writes a dash-only description back byte-identically",
+			field:  "description",
+			value:  "--",
+			stored: func(tk task.Task) string { return tk.Description },
+		},
+		{
+			name:   "it writes a description spelling a global flag back byte-identically",
+			field:  "description",
+			value:  "--json",
+			stored: func(tk task.Task) string { return tk.Description },
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir, tickDir := setupTickProject(t)
+
+			id := createCarryingValue(t, dir, tc.field, tc.value)
+			if got := tc.stored(storedFixture(t, tickDir)); got != tc.value {
+				t.Fatalf("stored %s = %q, want %q", tc.field, got, tc.value)
+			}
+
+			read := bareField(t, dir, id, tc.field)
+			if read != tc.value {
+				t.Fatalf("%s read back = %q, want %q", tc.field, read, tc.value)
+			}
+
+			_, stderr, exitCode := runTick(t, dir, "update", id, "--"+tc.field+"="+read)
+			if exitCode != 0 {
+				t.Fatalf("update exit code = %d, want 0; stderr = %q", exitCode, stderr)
+			}
+			if got := tc.stored(storedFixture(t, tickDir)); got != tc.value {
+				t.Errorf("stored %s after write-back = %q, want %q", tc.field, got, tc.value)
+			}
+		})
+	}
+}
+
+// createCarryingValue creates a task whose named field holds value and returns
+// its ID. A title is given after the end-of-flags marker; any other field is
+// given in the attached form, which is the only spelling that survives a value
+// of exactly the marker.
+func createCarryingValue(t *testing.T, dir, field, value string) string {
+	t.Helper()
+	args := []string{"create", "--quiet", "--", value}
+	if field != "title" {
+		args = []string{"create", "--quiet", "--" + field + "=" + value, "--", "carrier title"}
+	}
+	stdout, stderr, exitCode := runTick(t, dir, args...)
+	if exitCode != 0 {
+		t.Fatalf("create exit code = %d, want 0; stderr = %q", exitCode, stderr)
+	}
+	return strings.TrimSuffix(stdout, "\n")
+}
+
 // assertBareField asserts that `tick show <id> --field <field>` prints want
 // followed by exactly one newline.
 func assertBareField(t *testing.T, dir, id, field, want string) {
+	t.Helper()
+	if got := bareField(t, dir, id, field); got != want {
+		t.Errorf("show --field %s = %q, want %q", field, got, want)
+	}
+}
+
+// bareField returns what `tick show <id> --field <field>` prints, with its
+// single trailing newline removed.
+func bareField(t *testing.T, dir, id, field string) string {
 	t.Helper()
 	stdout, stderr, exitCode := runTick(t, dir, "show", id, "--field", field)
 	if exitCode != 0 {
 		t.Fatalf("show --field %s exit code = %d, want 0; stderr = %q", field, exitCode, stderr)
 	}
-	if stdout != want+"\n" {
-		t.Errorf("show --field %s stdout = %q, want %q", field, stdout, want+"\n")
+	value, ok := strings.CutSuffix(stdout, "\n")
+	if !ok {
+		t.Fatalf("show --field %s stdout = %q, want a trailing newline", field, stdout)
 	}
+	return value
 }
