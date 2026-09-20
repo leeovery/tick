@@ -690,9 +690,7 @@ blocked_by[2]{id,title,status}:
 
 children[0]{id,title,status}:
 
-description:
-  Full task description here.
-  Can be multiple lines.
+description: "Full task description here.\nCan be multiple lines."
 ```
 
 **Example - `tick stats` output:**
@@ -711,7 +709,7 @@ by_priority[5]{priority,count}:
 **Principles:**
 1. Each section has its own schema header - self-documenting
 2. Related entities include context (title, status), not just IDs
-3. Long text fields get their own unstructured sections
+3. Long text fields are a single TOON-quoted value on the section they belong to
 4. Empty arrays shown with zero count: `blocked_by[0]{id,title,status}:`
 5. Sections omitted only if the field doesn't exist (vs empty)
 
@@ -808,3 +806,7 @@ None. This is the foundational data layer that other specifications depend on.
 - All other dependencies are Go stdlib (`crypto/rand`, `os`, `encoding/json`, `crypto/sha256`)
 - This specification can be implemented independently before CLI or workflow features
 - Optional libraries will be assessed at implementation for reliability, maintenance, and community support
+
+## Corrigenda
+
+> **Corrigendum 2026-09-20** (from `free-text-round-trip`): "Long text fields get their own unstructured sections" (TOON output principle 3), and the worked `tick show` example that printed the description as an indented raw block — corrected: a long text field is a single TOON-quoted value on the section it belongs to, so the example now reads `description: "Full task description here.\nCan be multiple lines."`. The unstructured section is the form that made tick's toon output unparseable: it is hand-assembled rather than produced by the encoder, and it obliges a reader to know an indentation-stripping rule the document never states. The quoted value is what the library emits from a Go string, and it is the rule note text already obeyed, so all free text in the output now decodes the same way. The `task{…}` and `stats{…}` scope headers in the same passage are left standing: they are superseded by `free-text-round-trip` §5 rather than corrected here.
