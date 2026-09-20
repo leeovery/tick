@@ -220,10 +220,30 @@ func cycleTasks(now time.Time) []task.Task {
 	}
 }
 
+// twoCycleTasks returns two independent two-task cycles, so no participant is a root and no
+// participant of either cycle reaches the other.
+func twoCycleTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now, Updated: now},
+		{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		{ID: "tick-ccc333", Title: "Task C", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ddd444"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		{ID: "tick-ddd444", Title: "Task D", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ccc333"}, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+	}
+}
+
 // danglingBlockerTasks returns a single task blocked by an ID no task record matches.
 func danglingBlockerTasks(now time.Time) []task.Task {
 	return []task.Task{
 		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ghost1"}, Created: now, Updated: now},
+	}
+}
+
+// danglingChainTasks returns a two-task chain whose topmost blocker no task record matches,
+// so every task record is blocked and the chain hangs beneath the unmatched ID.
+func danglingChainTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now, Updated: now},
+		{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ghost1"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
 	}
 }
 
@@ -361,6 +381,22 @@ func TestRunDepTree(t *testing.T) {
 		})
 	})
 
+	t.Run("it emits two edges for a two-edge dangling chain", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, danglingChainTasks(now))
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
+
+		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
+			{From: "tick-bbb222", To: "tick-aaa111"},
+			{From: "tick-ghost1", To: "tick-bbb222"},
+		})
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(1),
+			"longest": float64(2),
+			"blocked": float64(2),
+		})
+	})
+
 	t.Run("it emits one edge per stored dependency where two blockers converge", func(t *testing.T) {
 		dir, _ := setupTickProjectWithTasks(t, convergentTasks(now))
 
@@ -494,6 +530,24 @@ func TestRunDepTree(t *testing.T) {
 		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, tree), "tick-aaa111", "Task A", "open")
 	})
 
+	t.Run("it nests a two-level dangling chain under the ghost in JSON", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, danglingChainTasks(now))
+
+		doc := runDepTreeJSON(t, dir)
+
+		tree := jsonDepTreeOnlyTree(t, doc)
+		assertJSONDepTreeTask(t, tree, "tick-ghost1", "", "missing")
+		middle := jsonDepTreeOnlyChild(t, tree)
+		assertJSONDepTreeTask(t, middle, "tick-bbb222", "Task B", "open")
+		assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, middle), "tick-aaa111", "Task A", "open")
+
+		for key, want := range map[string]float64{"chains": 1, "longest": 2, "blocked": 2} {
+			if got := doc[key]; got != want {
+				t.Errorf("%s = %v, want %v", key, got, want)
+			}
+		}
+	})
+
 	t.Run("it renders a cycle in the terminal", func(t *testing.T) {
 		dir, _ := setupTickProjectWithTasks(t, cycleTasks(now))
 
@@ -526,6 +580,25 @@ func TestRunDepTree(t *testing.T) {
 			"└── tick-aaa111  Task A (open)\n" +
 			"\n" +
 			"1 chain, longest: 1, 1 blocked\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it renders a two-level dangling chain once in the terminal", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, danglingChainTasks(now))
+
+		stdout, stderr, exitCode := runDepTree(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		want := "" +
+			"tick-ghost1   (missing)\n" +
+			"└── tick-bbb222  Task B (open)\n" +
+			"    └── tick-aaa111  Task A (open)\n" +
+			"\n" +
+			"1 chain, longest: 2, 2 blocked\n"
 		if stdout != want {
 			t.Errorf("stdout = %q, want %q", stdout, want)
 		}

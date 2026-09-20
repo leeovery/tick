@@ -313,6 +313,85 @@ func TestBuildFullDepTree(t *testing.T) {
 		}
 	})
 
+	t.Run("it seeds the dangling blocker rather than the chain beneath it", func(t *testing.T) {
+		now := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
+
+		result := BuildFullDepTree(danglingChainTasks(now))
+
+		if len(result.Trees) != 1 {
+			t.Fatalf("Trees has %d entries, want 1", len(result.Trees))
+		}
+		ghost := result.Trees[0]
+		wantGhost := DepTreeTask{ID: "tick-ghost1", Title: "", Status: "missing"}
+		if ghost.Task != wantGhost {
+			t.Errorf("seeded task = %#v, want %#v", ghost.Task, wantGhost)
+		}
+		if len(ghost.Children) != 1 {
+			t.Fatalf("seeded node has %d children, want 1", len(ghost.Children))
+		}
+		middle := ghost.Children[0]
+		wantMiddle := DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "open"}
+		if middle.Task != wantMiddle {
+			t.Errorf("middle task = %#v, want %#v", middle.Task, wantMiddle)
+		}
+		if len(middle.Children) != 1 {
+			t.Fatalf("middle node has %d children, want 1", len(middle.Children))
+		}
+		wantLeaf := DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"}
+		if got := middle.Children[0].Task; got != wantLeaf {
+			t.Errorf("leaf task = %#v, want %#v", got, wantLeaf)
+		}
+		if result.Summary != "1 chain, longest: 2, 2 blocked" {
+			t.Errorf("Summary = %q, want %q", result.Summary, "1 chain, longest: 2, 2 blocked")
+		}
+	})
+
+	t.Run("it still covers a cycle where every participant is blocked", func(t *testing.T) {
+		now := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
+
+		result := BuildFullDepTree(cycleTasks(now))
+
+		if len(result.Trees) != 1 {
+			t.Fatalf("Trees has %d entries, want 1", len(result.Trees))
+		}
+		tree := result.Trees[0]
+		if tree.Task.ID != "tick-aaa111" {
+			t.Errorf("seeded task ID = %q, want %q", tree.Task.ID, "tick-aaa111")
+		}
+		if len(tree.Children) != 1 || tree.Children[0].Task.ID != "tick-bbb222" {
+			t.Fatalf("children = %#v, want one node for tick-bbb222", tree.Children)
+		}
+		back := tree.Children[0].Children
+		if len(back) != 1 || back[0].Task.ID != "tick-aaa111" {
+			t.Fatalf("grandchildren = %#v, want one node for tick-aaa111", back)
+		}
+		if result.ChainCount != 1 || result.LongestChain != 2 || result.BlockedCount != 2 {
+			t.Errorf("counts = (%d, %d, %d), want (1, 2, 2)", result.ChainCount, result.LongestChain, result.BlockedCount)
+		}
+	})
+
+	t.Run("it seeds a second cycle the first cycle's seed does not reach", func(t *testing.T) {
+		now := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
+
+		result := BuildFullDepTree(twoCycleTasks(now))
+
+		if len(result.Trees) != 2 {
+			t.Fatalf("Trees has %d entries, want 2", len(result.Trees))
+		}
+		for i, pair := range [][2]string{{"tick-aaa111", "tick-bbb222"}, {"tick-ccc333", "tick-ddd444"}} {
+			tree := result.Trees[i]
+			if tree.Task.ID != pair[0] {
+				t.Errorf("Trees[%d] ID = %q, want %q", i, tree.Task.ID, pair[0])
+			}
+			if len(tree.Children) != 1 || tree.Children[0].Task.ID != pair[1] {
+				t.Errorf("Trees[%d] children = %#v, want one node for %q", i, tree.Children, pair[1])
+			}
+		}
+		if result.ChainCount != 2 || result.LongestChain != 2 || result.BlockedCount != 4 {
+			t.Errorf("counts = (%d, %d, %d), want (2, 2, 4)", result.ChainCount, result.LongestChain, result.BlockedCount)
+		}
+	})
+
 	t.Run("it keeps real statuses on a cycle's participants", func(t *testing.T) {
 		now := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
 

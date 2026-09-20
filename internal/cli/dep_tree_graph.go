@@ -233,12 +233,12 @@ const depTreeMissingStatus = "missing"
 // buildSeededTrees seeds a downstream walk from each participant the walk from the roots
 // left unemitted, so the edges of a cycle or of a dangling blocker still reach the output.
 // Participants that block nothing need no seed: each is reached as the target of a blocker's edge.
+// A participant whose blockers are not yet emitted is held back until they are; when every remaining
+// participant is blocked by another that is also unemitted, the first in order is seeded so its
+// edges still reach the output.
 func buildSeededTrees(participants []string, emitted map[string]bool, blocks map[string][]string, taskIdx map[string]task.Task) []DepTreeNode {
 	var unrooted []DepTreeNode
-	for _, id := range participants {
-		if emitted[id] || len(blocks[id]) == 0 {
-			continue
-		}
+	seed := func(id string) {
 		node := DepTreeNode{
 			Task:     DepTreeTask{ID: id, Status: depTreeMissingStatus},
 			Children: walkDownstream(id, blocks, taskIdx, make(map[string]bool)),
@@ -250,7 +250,31 @@ func buildSeededTrees(participants []string, emitted map[string]bool, blocks map
 		emitted[id] = true
 		collectTreeIDs(node.Children, emitted)
 	}
-	return unrooted
+	needsSeed := func(id string) bool { return !emitted[id] && len(blocks[id]) > 0 }
+	for {
+		seeded := false
+		for _, id := range participants {
+			if !needsSeed(id) || blockedByUnemitted(id, emitted, taskIdx) {
+				continue
+			}
+			seed(id)
+			seeded = true
+		}
+		if seeded {
+			continue
+		}
+		remaining := slices.IndexFunc(participants, needsSeed)
+		if remaining < 0 {
+			return unrooted
+		}
+		seed(participants[remaining])
+	}
+}
+
+// blockedByUnemitted reports whether any blocker of the given participant has yet to be emitted.
+// A participant no task record matches carries no blockers.
+func blockedByUnemitted(id string, emitted map[string]bool, taskIdx map[string]task.Task) bool {
+	return slices.ContainsFunc(taskIdx[id].BlockedBy, func(dep string) bool { return !emitted[dep] })
 }
 
 // countChains counts connected components among tasks that participate in dependencies.
