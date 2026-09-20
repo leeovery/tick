@@ -277,12 +277,6 @@ func (b *baseFormatter) FormatDepChange(action string, taskID string, depID stri
 	return fmt.Sprintf("Dependency added: %s blocked by %s", taskID, depID)
 }
 
-// FormatCascadeTransition returns an empty string (stub for text-based formatters).
-func (b *baseFormatter) FormatCascadeTransition(_ CascadeResult) (string, error) { return "", nil }
-
-// FormatDepTree returns an empty string (stub for text-based formatters).
-func (b *baseFormatter) FormatDepTree(_ DepTreeResult) (string, error) { return "", nil }
-
 // FormatRemoval renders the result of a task removal as plain text.
 // One line per removed task as 'Removed {id} "{title}"', plus an optional
 // dependency update line if DepsUpdated is non-empty.
