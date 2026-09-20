@@ -2,7 +2,10 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"os"
 	"path/filepath"
@@ -535,9 +538,9 @@ var conformanceDocs = []conformanceDoc{
 	},
 }
 
-// runTickConformance runs a tick command under --toon. IsTTY is true so the
-// format the driver passes is what resolves the format.
-func runTickConformance(t *testing.T, dir string, args ...string) (stdout, stderr string, exitCode int) {
+// runTickConformance runs a tick command under the given format flag. IsTTY is
+// true so the format the driver passes is what resolves the format.
+func runTickConformance(t *testing.T, dir, format string, args ...string) (stdout, stderr string, exitCode int) {
 	t.Helper()
 	var stdoutBuf, stderrBuf bytes.Buffer
 	app := &App{
@@ -546,8 +549,20 @@ func runTickConformance(t *testing.T, dir string, args ...string) (stdout, stder
 		Getwd:  func() (string, error) { return dir, nil },
 		IsTTY:  true,
 	}
-	code := app.Run(append([]string{"tick", "--toon"}, args...))
+	code := app.Run(append([]string{"tick", format}, args...))
 	return stdoutBuf.String(), stderrBuf.String(), code
+}
+
+// runConformanceCommand runs one inventory entry under a format flag and
+// returns what it printed to stdout.
+func runConformanceCommand(t *testing.T, entry conformanceDoc, format string) string {
+	t.Helper()
+	dir, args := entry.Setup(t)
+	stdout, stderr, exitCode := runTickConformance(t, dir, format, args...)
+	if exitCode != 0 {
+		t.Fatalf("%s: exit code = %d, want 0; stderr = %q", entry.Name, exitCode, stderr)
+	}
+	return stdout
 }
 
 // decodeConformanceDoc decodes a document from the inventory, naming the entry
@@ -567,11 +582,7 @@ func decodeConformanceDoc(name, doc string) (map[string]any, error) {
 // runConformanceDoc runs one inventory entry and returns its decoded document.
 func runConformanceDoc(t *testing.T, entry conformanceDoc) map[string]any {
 	t.Helper()
-	dir, args := entry.Setup(t)
-	stdout, stderr, exitCode := runTickConformance(t, dir, args...)
-	if exitCode != 0 {
-		t.Fatalf("%s: exit code = %d, want 0; stderr = %q", entry.Name, exitCode, stderr)
-	}
+	stdout := runConformanceCommand(t, entry, "--toon")
 	doc, err := decodeConformanceDoc(entry.Name, stdout)
 	if err != nil {
 		t.Fatal(err)
@@ -598,22 +609,154 @@ func decodeConformanceEntry(t *testing.T, name string) map[string]any {
 	return runConformanceDoc(t, conformanceEntry(t, name))
 }
 
-// driveConformanceEntry decodes one inventory entry, skipping the entries
-// whose output is not a document.
-func driveConformanceEntry(t *testing.T, entry conformanceDoc) {
+// driveConformanceEntry hands one inventory entry to drive, skipping the
+// entries whose output is not a document.
+func driveConformanceEntry(t *testing.T, entry conformanceDoc, drive func(*testing.T, conformanceDoc)) {
 	t.Helper()
 	if entry.NotADocument != "" {
 		t.Skip(entry.NotADocument)
 	}
-	runConformanceDoc(t, entry)
+	drive(t, entry)
+}
+
+func driveConformanceInventory(t *testing.T, drive func(*testing.T, conformanceDoc)) {
+	t.Helper()
+	for _, entry := range conformanceDocs {
+		t.Run(entry.Name, func(t *testing.T) {
+			driveConformanceEntry(t, entry, drive)
+		})
+	}
 }
 
 func TestToonOutputConformance(t *testing.T) {
-	for _, entry := range conformanceDocs {
-		t.Run(entry.Name, func(t *testing.T) {
-			driveConformanceEntry(t, entry)
-		})
+	driveConformanceInventory(t, func(t *testing.T, entry conformanceDoc) {
+		runConformanceDoc(t, entry)
+	})
+}
+
+// jsonConformanceListKeys are the document keys whose value is a list. Each
+// must unmarshal to a non-nil slice, never JSON null.
+var jsonConformanceListKeys = []string{
+	"changed", "roots", "blocked_by", "blocks",
+	"tags", "refs", "notes", "children", "by_priority",
+}
+
+// decodeSingleJSONValue decodes a stream carrying exactly one JSON value,
+// naming the entry and quoting the stream when it will not parse or when a
+// second value follows the first.
+func decodeSingleJSONValue(name, stream string) (any, error) {
+	decoder := json.NewDecoder(strings.NewReader(stream))
+	var value any
+	if err := decoder.Decode(&value); err != nil {
+		return nil, fmt.Errorf("%s: decode failed: %w\nstream:\n%s", name, err, stream)
 	}
+	var second any
+	switch err := decoder.Decode(&second); {
+	case errors.Is(err, io.EOF):
+		return value, nil
+	case err != nil:
+		return nil, fmt.Errorf("%s: trailing bytes after the document: %w\nstream:\n%s", name, err, stream)
+	default:
+		return nil, fmt.Errorf("%s: a second value follows the document: %#v\nstream:\n%s", name, second, stream)
+	}
+}
+
+// jsonTopLevelIsArray states whether a command's JSON document is a top-level
+// array. The task-list commands are, because FormatTaskList marshals an array;
+// every other document marshals an object.
+func jsonTopLevelIsArray(command string) bool {
+	return command == "list" || command == "ready" || command == "blocked"
+}
+
+// jsonShapeProblem reports the top-level shape the decoded value should have
+// carried, empty when it carries it.
+func jsonShapeProblem(name, command string, value any) string {
+	if jsonTopLevelIsArray(command) {
+		if _, ok := value.([]any); !ok {
+			return fmt.Sprintf("%s: decoded value is %T, want []any", name, value)
+		}
+		return ""
+	}
+	if _, ok := value.(map[string]any); !ok {
+		return fmt.Sprintf("%s: decoded value is %T, want map[string]any", name, value)
+	}
+	return ""
+}
+
+// jsonInvariantProblems reports every invariant the decoded value breaks,
+// anywhere in it: a list key carrying null, a non-boolean auto, a non-numeric
+// index.
+func jsonInvariantProblems(name string, value any) []string {
+	var problems []string
+	switch typed := value.(type) {
+	case map[string]any:
+		for _, key := range slices.Sorted(maps.Keys(typed)) {
+			if problem := jsonMemberProblem(name, key, typed[key]); problem != "" {
+				problems = append(problems, problem)
+			}
+			problems = append(problems, jsonInvariantProblems(name, typed[key])...)
+		}
+	case []any:
+		for _, item := range typed {
+			problems = append(problems, jsonInvariantProblems(name, item)...)
+		}
+	}
+	return problems
+}
+
+// jsonMemberProblem reports the invariant one key of a decoded object breaks,
+// empty when it breaks none.
+func jsonMemberProblem(name, key string, value any) string {
+	switch {
+	case slices.Contains(jsonConformanceListKeys, key):
+		if _, ok := value.([]any); !ok {
+			return fmt.Sprintf("%s: %q = %#v, want a list", name, key, value)
+		}
+	case key == "auto":
+		if _, ok := value.(bool); !ok {
+			return fmt.Sprintf("%s: %q = %#v, want a bool", name, key, value)
+		}
+	case key == "index":
+		if _, ok := value.(float64); !ok {
+			return fmt.Sprintf("%s: %q = %#v, want a number", name, key, value)
+		}
+	}
+	return ""
+}
+
+func assertJSONInvariants(t *testing.T, name string, value any) {
+	t.Helper()
+	for _, problem := range jsonInvariantProblems(name, value) {
+		t.Error(problem)
+	}
+}
+
+// runJSONConformanceDoc runs one inventory entry under --json and returns the
+// single value its stream carries.
+func runJSONConformanceDoc(t *testing.T, entry conformanceDoc) any {
+	t.Helper()
+	stdout := runConformanceCommand(t, entry, "--json")
+	value, err := decodeSingleJSONValue(entry.Name, stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if problem := jsonShapeProblem(entry.Name, entry.Command, value); problem != "" {
+		t.Errorf("%s\nstream:\n%s", problem, stdout)
+	}
+	assertJSONInvariants(t, entry.Name, value)
+	return value
+}
+
+// decodeJSONConformanceEntry runs the named inventory entry under --json and
+// returns its decoded object.
+func decodeJSONConformanceEntry(t *testing.T, name string) map[string]any {
+	t.Helper()
+	value := runJSONConformanceDoc(t, conformanceEntry(t, name))
+	obj, ok := value.(map[string]any)
+	if !ok {
+		t.Fatalf("%s: decoded value is %T, want map[string]any", name, value)
+	}
+	return obj
 }
 
 func TestConformanceInventoryWellFormed(t *testing.T) {
@@ -1007,7 +1150,11 @@ func TestFieldSelectionExemptions(t *testing.T) {
 			},
 		}
 
-		t.Run(entry.Name, func(t *testing.T) { driveConformanceEntry(t, entry) })
+		t.Run(entry.Name, func(t *testing.T) {
+			driveConformanceEntry(t, entry, func(t *testing.T, entry conformanceDoc) {
+				runConformanceDoc(t, entry)
+			})
+		})
 
 		if attempted {
 			t.Error("the driver ran the setup of an entry carrying an exemption reason")
@@ -1413,5 +1560,181 @@ func TestConformanceInventoryCoversEveryCommand(t *testing.T) {
 		if len(problems) != 1 {
 			t.Errorf("problems = %v, want one unregistered-declaration problem", problems)
 		}
+	})
+}
+
+func TestJSONOutputConformance(t *testing.T) {
+	driveConformanceInventory(t, func(t *testing.T, entry conformanceDoc) {
+		runJSONConformanceDoc(t, entry)
+	})
+}
+
+func TestJSONConformanceChecks(t *testing.T) {
+	t.Run("it parses a lone document as one JSON value", func(t *testing.T) {
+		value, err := decodeSingleJSONValue("lone", "{\n  \"id\": \"tick-a00001\"\n}\n")
+
+		if err != nil {
+			t.Fatalf("decode failed: %v", err)
+		}
+		if _, ok := value.(map[string]any); !ok {
+			t.Errorf("decoded value is %T, want map[string]any", value)
+		}
+	})
+
+	t.Run("it fails when a document is followed by a second value", func(t *testing.T) {
+		stream := "{\"id\": \"tick-a00001\"}\n{\"id\": \"tick-b00002\"}\n"
+
+		_, err := decodeSingleJSONValue("two documents", stream)
+
+		if err == nil {
+			t.Fatal("decode of a two-document stream succeeded, want an error")
+		}
+		if !strings.Contains(err.Error(), "two documents") {
+			t.Errorf("error %q does not name the entry", err)
+		}
+		if !strings.Contains(err.Error(), stream) {
+			t.Errorf("error %q does not carry the stream text", err)
+		}
+	})
+
+	t.Run("it expects task list documents to be arrays", func(t *testing.T) {
+		for _, command := range []string{"list", "ready", "blocked"} {
+			if !jsonTopLevelIsArray(command) {
+				t.Errorf("jsonTopLevelIsArray(%q) = false, want true", command)
+			}
+			if problem := jsonShapeProblem("fixture", command, []any{}); problem != "" {
+				t.Errorf("an array document for %q reported %q", command, problem)
+			}
+			if jsonShapeProblem("fixture", command, map[string]any{}) == "" {
+				t.Errorf("an object document for %q reported no problem", command)
+			}
+		}
+	})
+
+	t.Run("it expects every other document to be an object", func(t *testing.T) {
+		for _, command := range []string{"show", "stats", "dep tree", "create", "update", "note add"} {
+			if jsonTopLevelIsArray(command) {
+				t.Errorf("jsonTopLevelIsArray(%q) = true, want false", command)
+			}
+			if problem := jsonShapeProblem("fixture", command, map[string]any{}); problem != "" {
+				t.Errorf("an object document for %q reported %q", command, problem)
+			}
+			if jsonShapeProblem("fixture", command, []any{}) == "" {
+				t.Errorf("an array document for %q reported no problem", command)
+			}
+		}
+	})
+
+	t.Run("it accepts a document meeting every invariant", func(t *testing.T) {
+		doc := map[string]any{
+			"changed":  []any{map[string]any{"id": "tick-a00001", "auto": true}},
+			"tags":     []any{},
+			"children": []any{map[string]any{"children": []any{}}},
+			"notes":    []any{map[string]any{"index": float64(1)}},
+		}
+
+		if problems := jsonInvariantProblems("fixture", doc); len(problems) != 0 {
+			t.Errorf("problems = %v, want none", problems)
+		}
+	})
+
+	t.Run("it rejects a null list value", func(t *testing.T) {
+		for _, key := range jsonConformanceListKeys {
+			doc := map[string]any{key: nil}
+
+			if problems := jsonInvariantProblems("fixture", doc); len(problems) != 1 {
+				t.Errorf("problems for a null %q = %v, want one list problem", key, problems)
+			}
+		}
+	})
+
+	t.Run("it requires auto to be a boolean", func(t *testing.T) {
+		doc := map[string]any{"changed": []any{map[string]any{"auto": "true"}}}
+
+		if problems := jsonInvariantProblems("fixture", doc); len(problems) != 1 {
+			t.Errorf("problems = %v, want one auto problem", problems)
+		}
+	})
+
+	t.Run("it requires index to be a number", func(t *testing.T) {
+		doc := map[string]any{"notes": []any{map[string]any{"index": "1"}}}
+
+		if problems := jsonInvariantProblems("fixture", doc); len(problems) != 1 {
+			t.Errorf("problems = %v, want one index problem", problems)
+		}
+	})
+
+	t.Run("it drives both formats from one inventory", func(t *testing.T) {
+		var driven []string
+		driveConformanceInventory(t, func(_ *testing.T, entry conformanceDoc) {
+			driven = append(driven, entry.Name)
+		})
+
+		var want []string
+		for _, entry := range conformanceDocs {
+			if entry.NotADocument == "" {
+				want = append(want, entry.Name)
+			}
+		}
+		if !slices.Equal(driven, want) {
+			t.Errorf("driven entries = %v, want %v", driven, want)
+		}
+	})
+}
+
+func TestJSONTaskListConformance(t *testing.T) {
+	t.Run("it parses task list documents as arrays", func(t *testing.T) {
+		names := []string{
+			"list on a populated project",
+			"ready with results",
+			"blocked with results",
+		}
+
+		for _, name := range names {
+			value := runJSONConformanceDoc(t, conformanceEntry(t, name))
+
+			items, ok := value.([]any)
+			if !ok {
+				t.Errorf("%s: decoded value is %T, want []any", name, value)
+				continue
+			}
+			if len(items) == 0 {
+				t.Errorf("%s: decoded array is empty", name)
+			}
+		}
+	})
+}
+
+func TestJSONDetailConformance(t *testing.T) {
+	t.Run("it carries json's always-present detail keys", func(t *testing.T) {
+		doc := decodeJSONConformanceEntry(t, "show on a task carrying no optional field")
+
+		assertToonKeysPresent(t, doc, "type", "tags", "refs", "description")
+		assertToonFields(t, doc, map[string]any{
+			"id":          "tick-d44444",
+			"type":        "",
+			"description": "",
+		})
+	})
+
+	t.Run("it omits parent and closed from a bare task's json detail", func(t *testing.T) {
+		doc := decodeJSONConformanceEntry(t, "show on a task carrying no optional field")
+
+		assertToonKeysAbsent(t, doc, "parent", "closed")
+	})
+
+	t.Run("it carries exactly the selected keys in a filtered json document", func(t *testing.T) {
+		doc := decodeJSONConformanceEntry(t, "show with a multi-field selection")
+
+		assertConformanceKeys(t, doc, "description", "notes")
+	})
+}
+
+func TestJSONStatsConformance(t *testing.T) {
+	t.Run("it keeps the nested stats shape in json", func(t *testing.T) {
+		doc := decodeJSONConformanceEntry(t, "stats on a populated project")
+
+		assertConformanceKeys(t, doc, "total", "by_status", "workflow", "by_priority")
+		assertToonFields(t, doc, map[string]any{"total": float64(5)})
 	})
 }
