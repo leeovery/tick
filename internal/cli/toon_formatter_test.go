@@ -862,13 +862,8 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it renders single chain as edge list in full graph mode", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Trees: []DepTreeNode{
-				{
-					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
-					Children: []DepTreeNode{
-						{Task: DepTreeTask{ID: "tick-bbb222", Title: "Child", Status: "open"}},
-					},
-				},
+			Edges: []DepTreeEdge{
+				{From: "tick-aaa111", To: "tick-bbb222"},
 			},
 			ChainCount:   1,
 			LongestChain: 1,
@@ -881,18 +876,9 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it renders multi-level chain as edge list", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Trees: []DepTreeNode{
-				{
-					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
-					Children: []DepTreeNode{
-						{
-							Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
-							Children: []DepTreeNode{
-								{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"}},
-							},
-						},
-					},
-				},
+			Edges: []DepTreeEdge{
+				{From: "tick-aaa111", To: "tick-bbb222"},
+				{From: "tick-bbb222", To: "tick-ccc333"},
 			},
 			ChainCount:   1,
 			LongestChain: 2,
@@ -906,19 +892,9 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it renders multiple independent chains", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Trees: []DepTreeNode{
-				{
-					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
-					Children: []DepTreeNode{
-						{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
-					},
-				},
-				{
-					Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"},
-					Children: []DepTreeNode{
-						{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
-					},
-				},
+			Edges: []DepTreeEdge{
+				{From: "tick-aaa111", To: "tick-bbb222"},
+				{From: "tick-ccc333", To: "tick-ddd444"},
 			},
 			ChainCount:   2,
 			LongestChain: 1,
@@ -930,27 +906,13 @@ func TestToonFormatDepTree(t *testing.T) {
 		})
 	})
 
-	t.Run("it duplicates edges for diamond dependencies", func(t *testing.T) {
-		// A -> B, A -> C, B -> D, C -> D (D appears twice)
+	t.Run("it emits one edge per dependency of a diamond", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Trees: []DepTreeNode{
-				{
-					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
-					Children: []DepTreeNode{
-						{
-							Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
-							Children: []DepTreeNode{
-								{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
-							},
-						},
-						{
-							Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"},
-							Children: []DepTreeNode{
-								{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
-							},
-						},
-					},
-				},
+			Edges: []DepTreeEdge{
+				{From: "tick-aaa111", To: "tick-bbb222"},
+				{From: "tick-aaa111", To: "tick-ccc333"},
+				{From: "tick-bbb222", To: "tick-ddd444"},
+				{From: "tick-ccc333", To: "tick-ddd444"},
 			},
 			ChainCount:   1,
 			LongestChain: 2,
@@ -958,21 +920,16 @@ func TestToonFormatDepTree(t *testing.T) {
 		})
 		assertToonEdgeRows(t, decodeToonDoc(t, result), "dep_tree", []toonEdgeRow{
 			{From: "tick-aaa111", To: "tick-bbb222"},
-			{From: "tick-bbb222", To: "tick-ddd444"},
 			{From: "tick-aaa111", To: "tick-ccc333"},
+			{From: "tick-bbb222", To: "tick-ddd444"},
 			{From: "tick-ccc333", To: "tick-ddd444"},
 		})
 	})
 
 	t.Run("it emits the dep tree summary as top-level named fields", func(t *testing.T) {
 		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
-			Trees: []DepTreeNode{
-				{
-					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
-					Children: []DepTreeNode{
-						{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
-					},
-				},
+			Edges: []DepTreeEdge{
+				{From: "tick-aaa111", To: "tick-bbb222"},
 			},
 			ChainCount:   3,
 			LongestChain: 5,
@@ -988,18 +945,9 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it keeps the dep_tree edge section unchanged", func(t *testing.T) {
 		result := f.FormatDepTree(DepTreeResult{
-			Trees: []DepTreeNode{
-				{
-					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
-					Children: []DepTreeNode{
-						{
-							Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
-							Children: []DepTreeNode{
-								{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"}},
-							},
-						},
-					},
-				},
+			Edges: []DepTreeEdge{
+				{From: "tick-aaa111", To: "tick-bbb222"},
+				{From: "tick-bbb222", To: "tick-ccc333"},
 			},
 			ChainCount:   1,
 			LongestChain: 2,
@@ -1129,18 +1077,12 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders wide graph with many edges", func(t *testing.T) {
-		// One root blocking 4 tasks
 		result := f.FormatDepTree(DepTreeResult{
-			Trees: []DepTreeNode{
-				{
-					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
-					Children: []DepTreeNode{
-						{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
-						{Task: DepTreeTask{ID: "tick-ccc333", Title: "C", Status: "open"}},
-						{Task: DepTreeTask{ID: "tick-ddd444", Title: "D", Status: "open"}},
-						{Task: DepTreeTask{ID: "tick-eee555", Title: "E", Status: "open"}},
-					},
-				},
+			Edges: []DepTreeEdge{
+				{From: "tick-aaa111", To: "tick-bbb222"},
+				{From: "tick-aaa111", To: "tick-ccc333"},
+				{From: "tick-aaa111", To: "tick-ddd444"},
+				{From: "tick-aaa111", To: "tick-eee555"},
 			},
 			ChainCount:   1,
 			LongestChain: 1,

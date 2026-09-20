@@ -244,6 +244,37 @@ func unconnectedTasks(now time.Time) []task.Task {
 	}
 }
 
+// convergentTasks returns two unblocked blockers converging on a task that blocks a further task.
+func convergentTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Alpha", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		{ID: "tick-aaa222", Title: "Alpha2", Status: task.StatusOpen, Priority: 2, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		{ID: "tick-bbb222", Title: "Beta", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111", "tick-aaa222"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		{ID: "tick-ccc333", Title: "Gamma", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+	}
+}
+
+// danglingAboveChainTasks returns an A -> B -> C -> D chain whose second task also carries
+// a blocker no task record matches, so the blocker's walk overlaps the chain below it.
+func danglingAboveChainTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111", "tick-ghost1"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		{ID: "tick-ccc333", Title: "Task C", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		{ID: "tick-ddd444", Title: "Task D", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-ccc333"}, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+	}
+}
+
+// diamondTasks returns a four-task diamond: A blocks B and C, both of which block D.
+func diamondTasks(now time.Time) []task.Task {
+	return []task.Task{
+		{ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		{ID: "tick-bbb222", Title: "Task B", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(time.Second), Updated: now.Add(time.Second)},
+		{ID: "tick-ccc333", Title: "Task C", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-aaa111"}, Created: now.Add(2 * time.Second), Updated: now.Add(2 * time.Second)},
+		{ID: "tick-ddd444", Title: "Task D", Status: task.StatusOpen, Priority: 2, BlockedBy: []string{"tick-bbb222", "tick-ccc333"}, Created: now.Add(3 * time.Second), Updated: now.Add(3 * time.Second)},
+	}
+}
+
 func TestRunDepTree(t *testing.T) {
 	now := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
 
@@ -305,8 +336,8 @@ func TestRunDepTree(t *testing.T) {
 		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
 
 		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
-			{From: "tick-aaa111", To: "tick-bbb222"},
 			{From: "tick-bbb222", To: "tick-aaa111"},
+			{From: "tick-aaa111", To: "tick-bbb222"},
 		})
 		assertToonFields(t, doc, map[string]any{
 			"chains":  float64(1),
@@ -327,6 +358,77 @@ func TestRunDepTree(t *testing.T) {
 			"chains":  float64(1),
 			"longest": float64(1),
 			"blocked": float64(1),
+		})
+	})
+
+	t.Run("it emits one edge per stored dependency where two blockers converge", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, convergentTasks(now))
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
+
+		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
+			{From: "tick-aaa111", To: "tick-bbb222"},
+			{From: "tick-aaa222", To: "tick-bbb222"},
+			{From: "tick-bbb222", To: "tick-ccc333"},
+		})
+		assertToonFields(t, doc, map[string]any{
+			"chains":  float64(1),
+			"longest": float64(2),
+			"blocked": float64(2),
+		})
+	})
+
+	t.Run("it emits no repeated edge when a dangling blocker sits above a chain", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, danglingAboveChainTasks(now))
+
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree"))
+
+		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
+			{From: "tick-aaa111", To: "tick-bbb222"},
+			{From: "tick-ghost1", To: "tick-bbb222"},
+			{From: "tick-bbb222", To: "tick-ccc333"},
+			{From: "tick-ccc333", To: "tick-ddd444"},
+		})
+	})
+
+	t.Run("it still duplicates the diamond in the pretty and JSON trees", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, diamondTasks(now))
+
+		stdout, stderr, exitCode := runDepTree(t, dir)
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		wantPretty := "" +
+			"tick-aaa111  Task A (open)\n" +
+			"├── tick-bbb222  Task B (open)\n" +
+			"│   └── tick-ddd444  Task D (open)\n" +
+			"└── tick-ccc333  Task C (open)\n" +
+			"    └── tick-ddd444  Task D (open)\n" +
+			"\n" +
+			"1 chain, longest: 2, 3 blocked\n"
+		if stdout != wantPretty {
+			t.Errorf("stdout = %q, want %q", stdout, wantPretty)
+		}
+
+		tree := jsonDepTreeOnlyTree(t, runDepTreeJSON(t, dir))
+		children, ok := tree["children"].([]any)
+		if !ok || len(children) != 2 {
+			t.Fatalf("children = %#v, want two nodes", tree["children"])
+		}
+		for i, wantID := range []string{"tick-bbb222", "tick-ccc333"} {
+			node, ok := children[i].(map[string]any)
+			if !ok {
+				t.Fatalf("children[%d] = %#v, want an object", i, children[i])
+			}
+			assertJSONDepTreeTask(t, node, wantID, "Task "+string(rune('B'+i)), "open")
+			assertJSONDepTreeTask(t, jsonDepTreeOnlyChild(t, node), "tick-ddd444", "Task D", "open")
+		}
+
+		assertToonEdgeRows(t, decodeToonDoc(t, runToonCommand(t, dir, "dep", "tree")), "dep_tree", []toonEdgeRow{
+			{From: "tick-aaa111", To: "tick-bbb222"},
+			{From: "tick-aaa111", To: "tick-ccc333"},
+			{From: "tick-bbb222", To: "tick-ddd444"},
+			{From: "tick-ccc333", To: "tick-ddd444"},
 		})
 	})
 

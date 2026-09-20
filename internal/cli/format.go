@@ -203,6 +203,12 @@ type DepTreeTask struct {
 	Status string
 }
 
+// DepTreeEdge is one stored dependency: the blocker From blocks the task To.
+type DepTreeEdge struct {
+	From string
+	To   string
+}
+
 // DepTreeNode represents a node in the dependency tree with its children.
 type DepTreeNode struct {
 	Task     DepTreeTask
@@ -211,12 +217,13 @@ type DepTreeNode struct {
 
 // DepTreeResult holds all data needed to render a dep tree command output.
 // For full graph mode: Trees holds every tree covering the graph — those grown from
-// unblocked tasks first, then those seeded from participants no such tree reaches — and
-// summary stats are populated.
+// unblocked tasks first, then those seeded from participants no such tree reaches — Edges
+// holds one entry per stored dependency, and summary stats are populated.
 // For focused mode: BlockedBy and Blocks contain upstream/downstream trees.
 type DepTreeResult struct {
 	// Full graph mode fields
 	Trees        []DepTreeNode
+	Edges        []DepTreeEdge
 	Summary      string
 	ChainCount   int
 	LongestChain int

@@ -182,8 +182,8 @@ func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
 
 func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
 	var edges []toonEdgeRow
-	for _, tree := range result.Trees {
-		edges = append(edges, collectDownstreamEdges(tree.Task.ID, tree.Children)...)
+	for _, edge := range result.Edges {
+		edges = append(edges, toonEdgeRow(edge))
 	}
 
 	sections := []string{
@@ -215,7 +215,6 @@ func (f *ToonFormatter) formatFocusedDepTree(result DepTreeResult) string {
 }
 
 // collectDownstreamEdges recursively collects edges from parent to each child node.
-// Used for full graph mode and the "blocks" direction of focused mode.
 func collectDownstreamEdges(parentID string, nodes []DepTreeNode) []toonEdgeRow {
 	var edges []toonEdgeRow
 	for _, node := range nodes {

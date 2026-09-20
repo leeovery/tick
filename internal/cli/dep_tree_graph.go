@@ -173,12 +173,25 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 
 	return DepTreeResult{
 		Trees:        trees,
+		Edges:        collectStoredEdges(tasks),
 		Summary:      summary,
 		ChainCount:   chains,
 		LongestChain: longest,
 		BlockedCount: blocked,
 		Message:      message,
 	}
+}
+
+// collectStoredEdges returns one edge per BlockedBy entry, tasks in slice order and each
+// task's blockers in stored order.
+func collectStoredEdges(tasks []task.Task) []DepTreeEdge {
+	var edges []DepTreeEdge
+	for _, t := range tasks {
+		for _, dep := range t.BlockedBy {
+			edges = append(edges, DepTreeEdge{From: dep, To: t.ID})
+		}
+	}
+	return edges
 }
 
 // collectParticipants returns the IDs of every task that participates in a dependency

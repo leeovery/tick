@@ -1032,8 +1032,8 @@ func TestToonDepTreeConformance(t *testing.T) {
 		doc := decodeConformanceEntry(t, "dep tree on a two-task cycle")
 
 		assertToonEdgeRows(t, doc, "dep_tree", []toonEdgeRow{
-			{From: "tick-a99999", To: "tick-b88888"},
 			{From: "tick-b88888", To: "tick-a99999"},
+			{From: "tick-a99999", To: "tick-b88888"},
 		})
 		assertToonFields(t, doc, map[string]any{
 			"chains":  float64(1),
