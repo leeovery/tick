@@ -57,9 +57,9 @@ var _ Formatter = (*PrettyFormatter)(nil)
 // FormatTaskList renders a list of tasks as an aligned-column table with header.
 // Empty input returns "No tasks found." with no headers.
 // Long titles are truncated to maxListTitleLen characters with "..." appended.
-func (f *PrettyFormatter) FormatTaskList(tasks []task.Task) string {
+func (f *PrettyFormatter) FormatTaskList(tasks []task.Task) (string, error) {
 	if len(tasks) == 0 {
-		return "No tasks found."
+		return "No tasks found.", nil
 	}
 
 	// Compute dynamic column widths based on data.
@@ -110,7 +110,7 @@ func (f *PrettyFormatter) FormatTaskList(tasks []task.Task) string {
 		)
 	}
 
-	return b.String()
+	return b.String(), nil
 }
 
 // prettyDetailLine renders one header line of the detail document, padding the
@@ -217,7 +217,7 @@ func prettyDetailBlocks(detail TaskDetail) []string {
 // FormatTaskDetail renders a single task in key-value format, narrowed to
 // detail.Fields when it is set. A section the task has nothing for is omitted,
 // and the whole document is empty when the selection keeps nothing.
-func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
+func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) (string, error) {
 	var groups []string
 	if header := prettyDetailHeader(detail); len(header) > 0 {
 		groups = append(groups, strings.Join(header, "\n"))
@@ -225,7 +225,7 @@ func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
 	groups = append(groups, prettyDetailBlocks(detail)...)
 
 	if len(groups) == 0 {
-		return ""
+		return "", nil
 	}
 
 	var b strings.Builder
@@ -233,18 +233,18 @@ func (f *PrettyFormatter) FormatTaskDetail(detail TaskDetail) string {
 
 	if detail.Changes != nil {
 		for _, block := range detail.Changes.Blocks {
-			fmt.Fprintf(&b, "\n%s", f.FormatCascadeTransition(block))
+			fmt.Fprintf(&b, "\n%s", f.cascadeTransition(block))
 		}
 	}
 
-	return b.String()
+	return b.String(), nil
 }
 
 // FormatStats renders task statistics in grouped sections with right-aligned numbers.
 // Numbers right-align to a consistent column within each group.
 // Top-level lines align to column 15; indented lines align to column 17
 // (accounting for the 2-space indent).
-func (f *PrettyFormatter) FormatStats(stats Stats) string {
+func (f *PrettyFormatter) FormatStats(stats Stats) (string, error) {
 	var b strings.Builder
 
 	// Total line: "Total: " (7 chars) + %8d = 15 total width.
@@ -270,7 +270,7 @@ func (f *PrettyFormatter) FormatStats(stats Stats) string {
 	fmt.Fprintf(&b, "\n  P3 (low):      %2d", stats.ByPriority[3])
 	fmt.Fprintf(&b, "\n  P4 (backlog):  %2d", stats.ByPriority[4])
 
-	return b.String()
+	return b.String(), nil
 }
 
 // FormatMessage renders a general-purpose message as plain text.
@@ -286,9 +286,14 @@ type cascadeNode struct {
 }
 
 // FormatCascadeTransition renders a cascade transition with box-drawing tree characters.
-// Entries are organized into a tree using ParentID. Entries whose ParentID equals the
-// primary task ID are top-level; entries whose ParentID matches another entry are nested.
-func (f *PrettyFormatter) FormatCascadeTransition(result CascadeResult) string {
+func (f *PrettyFormatter) FormatCascadeTransition(result CascadeResult) (string, error) {
+	return f.cascadeTransition(result), nil
+}
+
+// cascadeTransition organises the entries into a tree using ParentID. Entries whose
+// ParentID equals the primary task ID are top-level; entries whose ParentID matches
+// another entry are nested.
+func (f *PrettyFormatter) cascadeTransition(result CascadeResult) string {
 	if result.TaskID == "" {
 		return ""
 	}
@@ -361,11 +366,11 @@ const depTreeLineWidth = 80
 const depTreeMinTitle = 10
 
 // FormatDepTree renders a dependency tree visualization with box-drawing characters.
-func (f *PrettyFormatter) FormatDepTree(result DepTreeResult) string {
+func (f *PrettyFormatter) FormatDepTree(result DepTreeResult) (string, error) {
 	if result.Target != nil {
-		return f.formatFocusedDepTree(result)
+		return f.formatFocusedDepTree(result), nil
 	}
-	return f.formatFullDepTree(result)
+	return f.formatFullDepTree(result), nil
 }
 
 // formatFullDepTree renders every full-graph tree with its downstream dependencies and a summary line.

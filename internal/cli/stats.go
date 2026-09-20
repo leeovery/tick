@@ -90,6 +90,6 @@ func RunStats(dir string, fc FormatConfig, fmtr Formatter, stdout io.Writer) err
 		return err
 	}
 
-	fmt.Fprintln(stdout, fmtr.FormatStats(stats))
-	return nil
+	document, err := fmtr.FormatStats(stats)
+	return printDocument(stdout, document, err)
 }

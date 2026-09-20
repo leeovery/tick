@@ -52,7 +52,7 @@ func detailWithNotes(notes []task.Note) TaskDetail {
 func assertDescriptionRoundTrip(t *testing.T, description string) {
 	t.Helper()
 	f := &ToonFormatter{}
-	doc := decodeToonDoc(t, f.FormatTaskDetail(detailWithDescription(description)))
+	doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detailWithDescription(description))))
 	got, ok := doc["description"].(string)
 	if !ok {
 		t.Fatalf("description = %#v, want a string", doc["description"])
@@ -74,7 +74,7 @@ func TestToonFormatter(t *testing.T) {
 			{ID: "tick-c3d4", Title: "Login endpoint", Status: task.StatusOpen, Priority: 1, Type: "feature", Created: now, Updated: now},
 		}
 
-		doc := decodeToonDoc(t, f.FormatTaskList(tasks))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskList(tasks)))
 
 		rows := toonRows(t, doc, "tasks")
 		if len(rows) != len(tasks) {
@@ -90,7 +90,7 @@ func TestToonFormatter(t *testing.T) {
 
 	t.Run("it formats zero tasks as empty section", func(t *testing.T) {
 		f := &ToonFormatter{}
-		result := f.FormatTaskList([]task.Task{})
+		result := formatted(t).of(f.FormatTaskList([]task.Task{}))
 		expected := "tasks[0]{id,title,status,priority,type}:"
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
@@ -102,7 +102,7 @@ func TestToonFormatter(t *testing.T) {
 
 	t.Run("it formats zero tasks from nil slice as empty section", func(t *testing.T) {
 		f := &ToonFormatter{}
-		result := f.FormatTaskList(nil)
+		result := formatted(t).of(f.FormatTaskList(nil))
 		expected := "tasks[0]{id,title,status,priority,type}:"
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
@@ -134,7 +134,7 @@ func TestToonFormatter(t *testing.T) {
 			Children:    []RelatedTask{},
 			ParentTitle: "Auth System",
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		sections := strings.Split(result, "\n\n")
 		if len(sections) != 5 {
 			t.Fatalf("expected 5 sections, got %d: %q", len(sections), result)
@@ -183,7 +183,7 @@ func TestToonFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		doc := decodeToonDoc(t, result)
 		assertToonFields(t, doc, map[string]any{
 			"id":       "tick-a1b2",
@@ -211,7 +211,7 @@ func TestToonFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		assertCountZeroSection(t, result, "blocked_by[0]{id,title,status}:")
 		assertCountZeroSection(t, result, "children[0]{id,title,status}:")
 	})
@@ -231,7 +231,7 @@ func TestToonFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		assertToonKeysAbsent(t, decodeToonDoc(t, result), "description")
 		// Should have exactly 4 sections (task, blocked_by, children, notes)
 		sections := strings.Split(result, "\n\n")
@@ -243,7 +243,7 @@ func TestToonFormatter(t *testing.T) {
 	t.Run("it emits the description as one quoted value", func(t *testing.T) {
 		f := &ToonFormatter{}
 		description := "Line one.\nLine two.\nLine three."
-		result := f.FormatTaskDetail(detailWithDescription(description))
+		result := formatted(t).of(f.FormatTaskDetail(detailWithDescription(description)))
 		sections := strings.Split(result, "\n\n")
 		descSection := sections[len(sections)-1]
 		if strings.Contains(descSection, "\n") {
@@ -267,7 +267,7 @@ func TestToonFormatter(t *testing.T) {
 	t.Run("it round-trips a header-shaped line", func(t *testing.T) {
 		description := "Fix it.\nSteps:\nrun the thing."
 		assertDescriptionRoundTrip(t, description)
-		doc := decodeToonDoc(t, (&ToonFormatter{}).FormatTaskDetail(detailWithDescription(description)))
+		doc := decodeToonDoc(t, formatted(t).of((&ToonFormatter{}).FormatTaskDetail(detailWithDescription(description))))
 		assertToonKeysAbsent(t, doc, "Steps")
 	})
 
@@ -306,7 +306,7 @@ func TestToonFormatter(t *testing.T) {
 			Refs:      []string{"gh-123"},
 			Notes:     []task.Note{{Text: "Started investigating", Created: now}},
 		}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detail))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detail)))
 		for _, key := range []string{"id", "title", "status", "priority", "created", "updated", "blocked_by", "children", "tags", "refs", "notes"} {
 			if _, ok := doc[key]; !ok {
 				t.Errorf("key %q missing from decoded document", key)
@@ -321,7 +321,7 @@ func TestToonFormatter(t *testing.T) {
 		tasks := []task.Task{
 			{ID: "tick-a1b2", Title: "Setup, Deploy", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
 		}
-		rows := toonRows(t, decodeToonDoc(t, f.FormatTaskList(tasks)), "tasks")
+		rows := toonRows(t, decodeToonDoc(t, formatted(t).of(f.FormatTaskList(tasks))), "tasks")
 
 		if len(rows) != 1 {
 			t.Fatalf("tasks has %d rows, want 1", len(rows))
@@ -343,7 +343,7 @@ func TestToonFormatter(t *testing.T) {
 			Blocked:    4,
 			ByPriority: [5]int{2, 8, 25, 7, 5},
 		}
-		doc := decodeToonDoc(t, f.FormatStats(stats))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatStats(stats)))
 		assertToonFields(t, doc, map[string]any{
 			"total":       float64(47),
 			"open":        float64(12),
@@ -358,7 +358,7 @@ func TestToonFormatter(t *testing.T) {
 
 	t.Run("it emits the counts in their established order", func(t *testing.T) {
 		f := &ToonFormatter{}
-		result := f.FormatStats(Stats{Total: 47, Open: 12, Done: 28, Ready: 8, Blocked: 4})
+		result := formatted(t).of(f.FormatStats(Stats{Total: 47, Open: 12, Done: 28, Ready: 8, Blocked: 4}))
 		want := []string{"total", "open", "in_progress", "done", "cancelled", "ready", "blocked"}
 		lines := strings.Split(strings.Split(result, "\n\n")[0], "\n")
 		if len(lines) != len(want) {
@@ -373,13 +373,13 @@ func TestToonFormatter(t *testing.T) {
 
 	t.Run("it emits a zero count rather than omitting it", func(t *testing.T) {
 		f := &ToonFormatter{}
-		doc := decodeToonDoc(t, f.FormatStats(Stats{Total: 1, Open: 1, InProgress: 0}))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatStats(Stats{Total: 1, Open: 1, InProgress: 0})))
 		assertToonFields(t, doc, map[string]any{"in_progress": float64(0)})
 	})
 
 	t.Run("it decodes counts as numbers", func(t *testing.T) {
 		f := &ToonFormatter{}
-		doc := decodeToonDoc(t, f.FormatStats(Stats{Total: 47}))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatStats(Stats{Total: 47})))
 		if _, ok := doc["total"].(float64); !ok {
 			t.Errorf("total = %#v, want a float64", doc["total"])
 		}
@@ -388,7 +388,7 @@ func TestToonFormatter(t *testing.T) {
 	t.Run("it keeps the by_priority table unchanged", func(t *testing.T) {
 		f := &ToonFormatter{}
 		stats := Stats{Total: 47, ByPriority: [5]int{2, 8, 25, 7, 5}}
-		rows := toonRows(t, decodeToonDoc(t, f.FormatStats(stats)), "by_priority")
+		rows := toonRows(t, decodeToonDoc(t, formatted(t).of(f.FormatStats(stats))), "by_priority")
 		if len(rows) != 5 {
 			t.Fatalf("by_priority has %d rows, want 5", len(rows))
 		}
@@ -409,7 +409,7 @@ func TestToonFormatter(t *testing.T) {
 			Open:       10,
 			ByPriority: [5]int{0, 5, 3, 0, 2},
 		}
-		rows := toonRows(t, decodeToonDoc(t, f.FormatStats(stats)), "by_priority")
+		rows := toonRows(t, decodeToonDoc(t, formatted(t).of(f.FormatStats(stats))), "by_priority")
 
 		if len(rows) != len(stats.ByPriority) {
 			t.Fatalf("by_priority has %d rows, want %d", len(rows), len(stats.ByPriority))
@@ -462,7 +462,7 @@ func TestToonFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		doc := decodeToonDoc(t, result)
 		assertToonFields(t, doc, map[string]any{
 			"id":       "tick-a1b2",
@@ -495,7 +495,7 @@ func TestToonFormatter(t *testing.T) {
 			{ID: "tick-a1b2", Title: "Fix login bug", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
 			{ID: "tick-c3d4", Title: "Add search", Status: task.StatusDone, Priority: 2, Type: "feature", Created: now, Updated: now},
 		}
-		rows := toonRows(t, decodeToonDoc(t, f.FormatTaskList(tasks)), "tasks")
+		rows := toonRows(t, decodeToonDoc(t, formatted(t).of(f.FormatTaskList(tasks))), "tasks")
 
 		if len(rows) != len(tasks) {
 			t.Fatalf("tasks has %d rows, want %d", len(rows), len(tasks))
@@ -520,7 +520,7 @@ func TestToonFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		doc := decodeToonDoc(t, result)
 		assertToonFields(t, doc, map[string]any{
 			"id":       "tick-a1b2",
@@ -548,7 +548,7 @@ func TestToonFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		doc := decodeToonDoc(t, result)
 		assertToonKeysAbsent(t, doc, "type")
 	})
@@ -574,35 +574,35 @@ func TestToonFormatter(t *testing.T) {
 	t.Run("it emits tags as an inline list that decodes to the stored tags", func(t *testing.T) {
 		f := &ToonFormatter{}
 		tags := []string{"backend", "ui"}
-		result := f.FormatTaskDetail(detailWith(tags, nil))
+		result := formatted(t).of(f.FormatTaskDetail(detailWith(tags, nil)))
 		assertToonStringList(t, decodeToonDoc(t, result), "tags", tags)
 	})
 
 	t.Run("it keeps a ref containing a comma as one element", func(t *testing.T) {
 		f := &ToonFormatter{}
 		refs := []string{"https://x.dev/a?b=1,2"}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(nil, refs)))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detailWith(nil, refs))))
 		assertToonStringList(t, doc, "refs", refs)
 	})
 
 	t.Run("it keeps a tag containing a space as one element", func(t *testing.T) {
 		f := &ToonFormatter{}
 		tags := []string{"has space", "plain"}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(tags, nil)))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detailWith(tags, nil))))
 		assertToonStringList(t, doc, "tags", tags)
 	})
 
 	t.Run("it quotes a ref containing a URL colon", func(t *testing.T) {
 		f := &ToonFormatter{}
 		refs := []string{"https://x.dev/issues/3", "JIRA-456"}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(nil, refs)))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detailWith(nil, refs))))
 		assertToonStringList(t, doc, "refs", refs)
 	})
 
 	t.Run("it emits a single-item refs list", func(t *testing.T) {
 		f := &ToonFormatter{}
 		refs := []string{"gh-123"}
-		result := f.FormatTaskDetail(detailWith(nil, refs))
+		result := formatted(t).of(f.FormatTaskDetail(detailWith(nil, refs)))
 		if !strings.Contains(result, "refs[1]: gh-123") {
 			t.Errorf("should contain single-item inline refs list, got:\n%s", result)
 		}
@@ -611,13 +611,13 @@ func TestToonFormatter(t *testing.T) {
 
 	t.Run("it omits the tags section when the task has no tags", func(t *testing.T) {
 		f := &ToonFormatter{}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(nil, []string{"gh-123"})))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detailWith(nil, []string{"gh-123"}))))
 		assertToonKeysAbsent(t, doc, "tags")
 	})
 
 	t.Run("it omits the refs section when the task has no refs", func(t *testing.T) {
 		f := &ToonFormatter{}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith([]string{"backend"}, nil)))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detailWith([]string{"backend"}, nil))))
 		assertToonKeysAbsent(t, doc, "refs")
 	})
 
@@ -625,7 +625,7 @@ func TestToonFormatter(t *testing.T) {
 		f := &ToonFormatter{}
 		tags := []string{"has space", "backend"}
 		refs := []string{"https://x.dev/a?b=1,2", "PR #3"}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWith(tags, refs)))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detailWith(tags, refs))))
 		assertToonStringList(t, doc, "tags", tags)
 		assertToonStringList(t, doc, "refs", refs)
 	})
@@ -650,7 +650,7 @@ func TestToonFormatter(t *testing.T) {
 			Children:    []RelatedTask{},
 			ParentTitle: "Parent task",
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		doc := decodeToonDoc(t, result)
 		assertToonFields(t, doc, map[string]any{
 			"type":   "feature",
@@ -661,10 +661,10 @@ func TestToonFormatter(t *testing.T) {
 
 	t.Run("it numbers notes from 1 in the toon notes table", func(t *testing.T) {
 		f := &ToonFormatter{}
-		result := f.FormatTaskDetail(detailWithNotes([]task.Note{
+		result := formatted(t).of(f.FormatTaskDetail(detailWithNotes([]task.Note{
 			{Text: "Started investigating", Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
 			{Text: "Root cause found", Created: time.Date(2026, 2, 27, 14, 30, 0, 0, time.UTC)},
-		}))
+		})))
 		notes := decodeToonNotes(t, result)
 		if len(notes) != 2 {
 			t.Fatalf("notes length = %d, want 2", len(notes))
@@ -684,16 +684,16 @@ func TestToonFormatter(t *testing.T) {
 
 	t.Run("it carries the index column on the empty notes section", func(t *testing.T) {
 		f := &ToonFormatter{}
-		result := f.FormatTaskDetail(detailWithNotes(nil))
+		result := formatted(t).of(f.FormatTaskDetail(detailWithNotes(nil)))
 		assertCountZeroSection(t, result, "notes[0]{index,text,created}:")
 	})
 
 	t.Run("it keeps multi-line note text quoted", func(t *testing.T) {
 		f := &ToonFormatter{}
 		text := "multi\nline\nnote"
-		result := f.FormatTaskDetail(detailWithNotes([]task.Note{
+		result := formatted(t).of(f.FormatTaskDetail(detailWithNotes([]task.Note{
 			{Text: text, Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
-		}))
+		})))
 		notes := decodeToonNotes(t, result)
 		if len(notes) != 1 {
 			t.Fatalf("notes length = %d, want 1", len(notes))
@@ -709,9 +709,9 @@ func TestToonFormatter(t *testing.T) {
 	t.Run("it keeps a note beginning with a dash intact", func(t *testing.T) {
 		f := &ToonFormatter{}
 		text := "- read the header, then retry"
-		result := f.FormatTaskDetail(detailWithNotes([]task.Note{
+		result := formatted(t).of(f.FormatTaskDetail(detailWithNotes([]task.Note{
 			{Text: text, Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
-		}))
+		})))
 		notes := decodeToonNotes(t, result)
 		if len(notes) != 1 {
 			t.Fatalf("notes length = %d, want 1", len(notes))
@@ -739,7 +739,7 @@ func TestToonFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		doc := decodeToonDoc(t, result)
 		assertToonFields(t, doc, map[string]any{
 			"id":       "tick-a1b2",
@@ -779,7 +779,7 @@ func TestToonFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detail))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detail)))
 		if doc["title"] != title {
 			t.Errorf("title = %#v, want %#v", doc["title"], title)
 		}
@@ -801,7 +801,7 @@ func TestToonFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detail))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detail)))
 		for key, want := range map[string]string{
 			"created": task.FormatTimestamp(created),
 			"updated": task.FormatTimestamp(updated),
@@ -833,7 +833,7 @@ func TestToonFormatter(t *testing.T) {
 			Children:  []RelatedTask{{ID: "tick-g7h8", Title: "Config setup", Status: "open"}},
 			Notes:     []task.Note{{Text: "Started investigating", Created: now}},
 		}
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detail))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detail)))
 		for _, key := range []string{"id", "blocked_by", "children", "notes"} {
 			if _, ok := doc[key]; !ok {
 				t.Errorf("key %q missing from decoded document", key)
@@ -841,18 +841,54 @@ func TestToonFormatter(t *testing.T) {
 		}
 	})
 
-	t.Run("it returns an empty string when the encoder rejects a field value", func(t *testing.T) {
-		if got := encodeToonFields(toon.Field{Key: "x", Value: make(chan int)}); got != "" {
+	t.Run("it returns the encoder's error from encodeToonFields", func(t *testing.T) {
+		got, err := encodeToonFields(toon.Field{Key: "description", Value: "bell " + refusedChar + " here"})
+		if err == nil {
+			t.Fatalf("encodeToonFields error = nil, want the encoder's refusal")
+		}
+		if got != "" {
 			t.Errorf("encodeToonFields = %q, want empty string", got)
+		}
+		if !strings.Contains(err.Error(), "description") {
+			t.Errorf("error = %q, want it to name the description field", err)
 		}
 	})
 
-	t.Run("it omits the head rather than emitting a blank line when the head cannot be encoded", func(t *testing.T) {
-		firstSection := "blocked_by[0]{id,title,status}:"
-		got := joinToonSections([]string{"", firstSection, "notes[0]{index,text,created}:"})
-		want := firstSection + "\n\nnotes[0]{index,text,created}:"
-		if got != want {
-			t.Errorf("joinToonSections = %q, want %q", got, want)
+	t.Run("it returns the encoder's error from encodeToonSection", func(t *testing.T) {
+		got, err := encodeToonSection("notes", []toonNoteRow{{Index: 1, Text: "bell " + refusedChar + " here"}})
+		if err == nil {
+			t.Fatalf("encodeToonSection error = nil, want the encoder's refusal")
+		}
+		if got != "" {
+			t.Errorf("encodeToonSection = %q, want empty string", got)
+		}
+		if !strings.Contains(err.Error(), "notes") {
+			t.Errorf("error = %q, want it to name the notes section", err)
+		}
+	})
+
+	t.Run("it keeps the emptied section header when the section holds no rows", func(t *testing.T) {
+		got, err := buildNotesSection(nil, nil)
+		if err != nil {
+			t.Fatalf("buildNotesSection error = %v, want nil", err)
+		}
+		if want := "notes[0]{index,text,created}:"; got != want {
+			t.Errorf("buildNotesSection = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("it omits the head rather than emitting a blank line when no top-level field is selected", func(t *testing.T) {
+		head, err := buildTaskSection(task.Task{ID: "tick-a1b2", Title: "Anything"}, fieldSelection(t, "notes"))
+		if err != nil {
+			t.Fatalf("buildTaskSection error = %v, want nil", err)
+		}
+		if head != "" {
+			t.Fatalf("buildTaskSection = %q, want empty string", head)
+		}
+
+		notes := "notes[0]{index,text,created}:"
+		if got := joinToonSections([]string{head, notes}); got != notes {
+			t.Errorf("joinToonSections = %q, want %q", got, notes)
 		}
 	})
 }
@@ -861,21 +897,21 @@ func TestToonFormatDepTree(t *testing.T) {
 	f := &ToonFormatter{}
 
 	t.Run("it renders single chain as edge list in full graph mode", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Edges: []DepTreeEdge{
 				{From: "tick-aaa111", To: "tick-bbb222"},
 			},
 			ChainCount:   1,
 			LongestChain: 1,
 			BlockedCount: 1,
-		})
+		}))
 		assertToonEdgeRows(t, decodeToonDoc(t, result), "dep_tree", []toonEdgeRow{
 			{From: "tick-aaa111", To: "tick-bbb222"},
 		})
 	})
 
 	t.Run("it renders multi-level chain as edge list", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Edges: []DepTreeEdge{
 				{From: "tick-aaa111", To: "tick-bbb222"},
 				{From: "tick-bbb222", To: "tick-ccc333"},
@@ -883,7 +919,7 @@ func TestToonFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 2,
 			BlockedCount: 2,
-		})
+		}))
 		assertToonEdgeRows(t, decodeToonDoc(t, result), "dep_tree", []toonEdgeRow{
 			{From: "tick-aaa111", To: "tick-bbb222"},
 			{From: "tick-bbb222", To: "tick-ccc333"},
@@ -891,7 +927,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders multiple independent chains", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Edges: []DepTreeEdge{
 				{From: "tick-aaa111", To: "tick-bbb222"},
 				{From: "tick-ccc333", To: "tick-ddd444"},
@@ -899,7 +935,7 @@ func TestToonFormatDepTree(t *testing.T) {
 			ChainCount:   2,
 			LongestChain: 1,
 			BlockedCount: 2,
-		})
+		}))
 		assertToonEdgeRows(t, decodeToonDoc(t, result), "dep_tree", []toonEdgeRow{
 			{From: "tick-aaa111", To: "tick-bbb222"},
 			{From: "tick-ccc333", To: "tick-ddd444"},
@@ -907,7 +943,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it emits one edge per dependency of a diamond", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Edges: []DepTreeEdge{
 				{From: "tick-aaa111", To: "tick-bbb222"},
 				{From: "tick-aaa111", To: "tick-ccc333"},
@@ -917,7 +953,7 @@ func TestToonFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 2,
 			BlockedCount: 3,
-		})
+		}))
 		assertToonEdgeRows(t, decodeToonDoc(t, result), "dep_tree", []toonEdgeRow{
 			{From: "tick-aaa111", To: "tick-bbb222"},
 			{From: "tick-aaa111", To: "tick-ccc333"},
@@ -927,14 +963,14 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it emits the dep tree summary as top-level named fields", func(t *testing.T) {
-		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Edges: []DepTreeEdge{
 				{From: "tick-aaa111", To: "tick-bbb222"},
 			},
 			ChainCount:   3,
 			LongestChain: 5,
 			BlockedCount: 7,
-		}))
+		})))
 		assertToonFields(t, doc, map[string]any{
 			"chains":  float64(3),
 			"longest": float64(5),
@@ -944,7 +980,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it keeps the dep_tree edge section unchanged", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Edges: []DepTreeEdge{
 				{From: "tick-aaa111", To: "tick-bbb222"},
 				{From: "tick-bbb222", To: "tick-ccc333"},
@@ -952,7 +988,7 @@ func TestToonFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 2,
 			BlockedCount: 2,
-		})
+		}))
 		rows := toonRows(t, decodeToonDoc(t, result), "dep_tree")
 		wantRows := []map[string]any{
 			{"from": "tick-aaa111", "to": "tick-bbb222"},
@@ -969,7 +1005,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it emits zero-valued summary fields", func(t *testing.T) {
-		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
@@ -981,7 +1017,7 @@ func TestToonFormatDepTree(t *testing.T) {
 			ChainCount:   0,
 			LongestChain: 2,
 			BlockedCount: 1,
-		}))
+		})))
 		assertToonFields(t, doc, map[string]any{
 			"chains":  float64(0),
 			"longest": float64(2),
@@ -990,7 +1026,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders the emptied full document for a result with no trees", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{})
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{}))
 		if first, _, _ := strings.Cut(result, "\n"); first != "dep_tree[0]{from,to}:" {
 			t.Errorf("header = %q, want %q", first, "dep_tree[0]{from,to}:")
 		}
@@ -1006,7 +1042,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it names the target as top-level fields on the populated branch", func(t *testing.T) {
-		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
 			BlockedBy: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"}},
@@ -1016,7 +1052,7 @@ func TestToonFormatDepTree(t *testing.T) {
 			},
 			BlockedByEdges: []DepTreeEdge{{From: "tick-aaa111", To: "tick-bbb222"}},
 			BlocksEdges:    []DepTreeEdge{{From: "tick-bbb222", To: "tick-ccc333"}},
-		}))
+		})))
 
 		assertToonFields(t, doc, map[string]any{"id": "tick-bbb222", "title": "B", "status": "open"})
 		assertToonEdgeRows(t, doc, "blocked_by", []toonEdgeRow{{From: "tick-aaa111", To: "tick-bbb222"}})
@@ -1024,36 +1060,36 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it names the target as top-level fields on the no-dependencies branch", func(t *testing.T) {
-		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
 			Message: "No dependencies.",
-		}))
+		})))
 
 		assertToonFields(t, doc, map[string]any{"id": "tick-aaa111", "title": "Task A", "status": "open"})
 		assertToonRowsEmpty(t, doc, "blocked_by", "blocks")
 	})
 
 	t.Run("it carries a count-zero blocked_by when only downstream exists", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 			Blocks: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"}},
 			},
 			BlocksEdges: []DepTreeEdge{{From: "tick-aaa111", To: "tick-bbb222"}},
-		})
+		}))
 
 		assertCountZeroSection(t, result, "blocked_by[0]{from,to}:")
 		assertToonEdgeRows(t, decodeToonDoc(t, result), "blocks", []toonEdgeRow{{From: "tick-aaa111", To: "tick-bbb222"}})
 	})
 
 	t.Run("it carries a count-zero blocks when only upstream exists", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-bbb222", Title: "B", Status: "open"},
 			BlockedBy: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"}},
 			},
 			BlockedByEdges: []DepTreeEdge{{From: "tick-aaa111", To: "tick-bbb222"}},
-		})
+		}))
 
 		assertCountZeroSection(t, result, "blocks[0]{from,to}:")
 		assertToonEdgeRows(t, decodeToonDoc(t, result), "blocked_by", []toonEdgeRow{{From: "tick-aaa111", To: "tick-bbb222"}})
@@ -1061,18 +1097,18 @@ func TestToonFormatDepTree(t *testing.T) {
 
 	t.Run("it quotes a target title containing a comma", func(t *testing.T) {
 		title := "Parse, the header"
-		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-aaa111", Title: title, Status: "open"},
-		}))
+		})))
 
 		assertToonFields(t, doc, map[string]any{"title": title})
 	})
 
 	t.Run("it emits no prose on the no-dependencies branch", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
 			Message: "No dependencies.",
-		})
+		}))
 
 		if strings.Contains(result, "No dependencies.") {
 			t.Errorf("output should carry no prose, got:\n%s", result)
@@ -1081,7 +1117,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders wide graph with many edges", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Edges: []DepTreeEdge{
 				{From: "tick-aaa111", To: "tick-bbb222"},
 				{From: "tick-aaa111", To: "tick-ccc333"},
@@ -1091,7 +1127,7 @@ func TestToonFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 1,
 			BlockedCount: 4,
-		})
+		}))
 		assertToonEdgeRows(t, decodeToonDoc(t, result), "dep_tree", []toonEdgeRow{
 			{From: "tick-aaa111", To: "tick-bbb222"},
 			{From: "tick-aaa111", To: "tick-ccc333"},
@@ -1101,7 +1137,7 @@ func TestToonFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders the focused sections from the result's edge fields", func(t *testing.T) {
-		doc := decodeToonDoc(t, f.FormatDepTree(DepTreeResult{
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
 			Blocks: []DepTreeNode{
 				{
@@ -1123,7 +1159,7 @@ func TestToonFormatDepTree(t *testing.T) {
 				{From: "tick-bbb222", To: "tick-ddd444"},
 				{From: "tick-ccc333", To: "tick-ddd444"},
 			},
-		}))
+		})))
 
 		assertToonEdgeRows(t, doc, "blocks", []toonEdgeRow{
 			{From: "tick-aaa111", To: "tick-bbb222"},
@@ -1200,7 +1236,7 @@ func TestToonFilteredTaskDetail(t *testing.T) {
 	filtered := func(t *testing.T, detail TaskDetail, value string) string {
 		t.Helper()
 		detail.Fields = fieldSelection(t, value)
-		return f.FormatTaskDetail(detail)
+		return formatted(t).of(f.FormatTaskDetail(detail))
 	}
 
 	t.Run("it renders only the selected scalars", func(t *testing.T) {
@@ -1304,7 +1340,7 @@ func TestToonFilteredTaskDetail(t *testing.T) {
 			OldStatus: "open", NewStatus: "in_progress",
 		}}}
 
-		rows := toonRows(t, decodeToonDoc(t, f.FormatTaskDetail(detail)), "changed")
+		rows := toonRows(t, decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detail))), "changed")
 
 		if len(rows) != 1 {
 			t.Fatalf("changed has %d rows, want 1", len(rows))
@@ -1318,7 +1354,7 @@ func TestToonFilteredTaskDetail(t *testing.T) {
 	t.Run("it leaves unfiltered output unchanged", func(t *testing.T) {
 		detail := richDetail()
 
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detail))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detail)))
 
 		assertToonKeySet(t, doc, "id", "title", "status", "priority", "type", "parent",
 			"created", "updated", "closed", "blocked_by", "children", "tags", "refs", "notes", "description")

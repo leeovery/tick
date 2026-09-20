@@ -19,7 +19,7 @@ func TestPrettyFormatter(t *testing.T) {
 			{ID: "tick-a1b2", Title: "Setup Sanctum", Status: task.StatusDone, Priority: 1, Created: now, Updated: now},
 			{ID: "tick-c3d4", Title: "Login endpoint", Status: task.StatusInProgress, Priority: 1, Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 		expected := "" +
 			"ID          STATUS       PRI  TYPE  TITLE\n" +
 			"tick-a1b2   done         1    -     Setup Sanctum\n" +
@@ -36,7 +36,7 @@ func TestPrettyFormatter(t *testing.T) {
 			{ID: "tick-a1b2c3", Title: "A short task", Status: task.StatusOpen, Priority: 0, Created: now, Updated: now},
 			{ID: "tick-d4", Title: "Another task here", Status: task.StatusInProgress, Priority: 3, Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 		lines := strings.Split(result, "\n")
 		if len(lines) != 3 {
 			t.Fatalf("expected 3 lines, got %d:\n%s", len(lines), result)
@@ -64,7 +64,7 @@ func TestPrettyFormatter(t *testing.T) {
 
 	t.Run("it shows No tasks found for empty list", func(t *testing.T) {
 		f := &PrettyFormatter{}
-		result := f.FormatTaskList([]task.Task{})
+		result := formatted(t).of(f.FormatTaskList([]task.Task{}))
 		expected := "No tasks found."
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
@@ -73,7 +73,7 @@ func TestPrettyFormatter(t *testing.T) {
 
 	t.Run("it shows No tasks found for nil list", func(t *testing.T) {
 		f := &PrettyFormatter{}
-		result := f.FormatTaskList(nil)
+		result := formatted(t).of(f.FormatTaskList(nil))
 		expected := "No tasks found."
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
@@ -103,7 +103,7 @@ func TestPrettyFormatter(t *testing.T) {
 			},
 			ParentTitle: "Auth System",
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		expected := "" +
 			"ID:       tick-c3d4\n" +
 			"Title:    Login endpoint\n" +
@@ -142,7 +142,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		expected := "" +
 			"ID:       tick-a1b2\n" +
 			"Title:    Simple task\n" +
@@ -183,7 +183,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if !strings.Contains(result, "Closed:   2026-01-19T16:00:00Z") {
 			t.Errorf("should contain Closed timestamp, got:\n%s", result)
 		}
@@ -201,7 +201,7 @@ func TestPrettyFormatter(t *testing.T) {
 			Blocked:    4,
 			ByPriority: [5]int{2, 8, 25, 7, 5},
 		}
-		result := f.FormatStats(stats)
+		result := formatted(t).of(f.FormatStats(stats))
 		expected := "" +
 			"Total:       47\n" +
 			"\n" +
@@ -238,7 +238,7 @@ func TestPrettyFormatter(t *testing.T) {
 			Blocked:    0,
 			ByPriority: [5]int{0, 0, 0, 0, 0},
 		}
-		result := f.FormatStats(stats)
+		result := formatted(t).of(f.FormatStats(stats))
 		expected := "" +
 			"Total:        0\n" +
 			"\n" +
@@ -270,7 +270,7 @@ func TestPrettyFormatter(t *testing.T) {
 			Open:       15,
 			ByPriority: [5]int{1, 2, 3, 4, 5},
 		}
-		result := f.FormatStats(stats)
+		result := formatted(t).of(f.FormatStats(stats))
 		requiredLabels := []string{
 			"P0 (critical):",
 			"P1 (high):",
@@ -292,7 +292,7 @@ func TestPrettyFormatter(t *testing.T) {
 		tasks := []task.Task{
 			{ID: "tick-a1b2", Title: longTitle, Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 		lines := strings.Split(result, "\n")
 		if len(lines) != 2 {
 			t.Fatalf("expected 2 lines, got %d:\n%s", len(lines), result)
@@ -326,7 +326,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if !strings.Contains(result, longTitle) {
 			t.Errorf("show should contain full title %q, got:\n%s", longTitle, result)
 		}
@@ -334,7 +334,7 @@ func TestPrettyFormatter(t *testing.T) {
 
 	t.Run("it formats transition as plain text", func(t *testing.T) {
 		f := &PrettyFormatter{}
-		result := f.FormatCascadeTransition(CascadeResult{TaskID: "tick-a3f2b7", OldStatus: "open", NewStatus: "in_progress"})
+		result := formatted(t).of(f.FormatCascadeTransition(CascadeResult{TaskID: "tick-a3f2b7", OldStatus: "open", NewStatus: "in_progress"}))
 		expected := "tick-a3f2b7: open \u2192 in_progress"
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
@@ -375,7 +375,7 @@ func TestPrettyFormatter(t *testing.T) {
 			{ID: "tick-a1b2", Title: "Fix login bug", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
 			{ID: "tick-c3d4", Title: "Add search", Status: task.StatusInProgress, Priority: 2, Type: "feature", Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 		lines := strings.Split(result, "\n")
 		if len(lines) != 3 {
 			t.Fatalf("expected 3 lines, got %d:\n%s", len(lines), result)
@@ -409,7 +409,7 @@ func TestPrettyFormatter(t *testing.T) {
 		tasks := []task.Task{
 			{ID: "tick-a1b2", Title: "No type task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 		lines := strings.Split(result, "\n")
 		if len(lines) != 2 {
 			t.Fatalf("expected 2 lines, got %d:\n%s", len(lines), result)
@@ -447,7 +447,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if !strings.Contains(result, "Type:     bug") {
 			t.Errorf("show output should contain 'Type:     bug', got:\n%s", result)
 		}
@@ -474,7 +474,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if !strings.Contains(result, "Type:     -") {
 			t.Errorf("show output should contain 'Type:     -' for unset type, got:\n%s", result)
 		}
@@ -496,7 +496,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if !strings.Contains(result, "Tags:     backend, ui, urgent") {
 			t.Errorf("should contain 'Tags:     backend, ui, urgent', got:\n%s", result)
 		}
@@ -523,7 +523,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if strings.Contains(result, "Tags:") {
 			t.Errorf("should not contain Tags section when empty, got:\n%s", result)
 		}
@@ -554,7 +554,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if !strings.Contains(result, "Refs:") {
 			t.Errorf("should contain 'Refs:' section, got:\n%s", result)
 		}
@@ -592,7 +592,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		for _, ref := range refs {
 			if !strings.Contains(result, "  "+ref) {
 				t.Errorf("should contain indented ref %q, got:\n%s", ref, result)
@@ -607,7 +607,7 @@ func TestPrettyFormatter(t *testing.T) {
 			{ID: "tick-a1b2", Title: "Task with refs", Status: task.StatusOpen, Priority: 2,
 				Refs: []string{"gh-123", "JIRA-456"}, Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 		if strings.Contains(result, "gh-123") {
 			t.Errorf("list output should not contain refs, got:\n%s", result)
 		}
@@ -634,7 +634,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if strings.Contains(result, "Refs:") {
 			t.Errorf("should not contain Refs section when empty, got:\n%s", result)
 		}
@@ -658,7 +658,7 @@ func TestPrettyFormatter(t *testing.T) {
 				{Text: "Started investigating the auth flow", Created: time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)},
 			},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if !strings.Contains(result, "Notes:") {
 			t.Errorf("should contain 'Notes:' section, got:\n%s", result)
 		}
@@ -682,7 +682,7 @@ func TestPrettyFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if strings.Contains(result, "Notes:") {
 			t.Errorf("should not contain Notes section when empty, got:\n%s", result)
 		}
@@ -707,7 +707,7 @@ func TestPrettyFormatter(t *testing.T) {
 				{Text: "Root cause found -- token refresh race condition", Created: time.Date(2026, 2, 27, 14, 30, 0, 0, time.UTC)},
 			},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		expected := "\n\nNotes:\n" +
 			"  2026-02-27 10:00  Started investigating the auth flow\n" +
 			"  2026-02-27 14:30  Root cause found -- token refresh race condition"
@@ -735,7 +735,7 @@ func TestPrettyFormatter(t *testing.T) {
 				{Text: longText, Created: now},
 			},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 		if !strings.Contains(result, longText) {
 			t.Errorf("should contain full long note text without truncation, got:\n%s", result)
 		}
@@ -757,7 +757,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			},
 			Summary: "1 chain, longest: 1, 1 blocked",
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		expected := "" +
 			"tick-aaa111  Task A (open)\n" +
 			"└── tick-bbb222  Task B (in_progress)\n" +
@@ -786,7 +786,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			},
 			Summary: "2 chains, longest: 1, 2 blocked",
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		expected := "" +
 			"tick-aaa111  Task A (open)\n" +
 			"└── tick-bbb222  Task B (open)\n" +
@@ -825,7 +825,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			},
 			Summary: "1 chain, longest: 2, 3 blocked",
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		expected := "" +
 			"tick-aaa111  Task A (open)\n" +
 			"├── tick-bbb222  Task B (open)\n" +
@@ -861,7 +861,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			},
 			Summary: "1 chain, longest: 3, 3 blocked",
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		expected := "" +
 			"tick-aaa111  Task A (open)\n" +
 			"└── tick-bbb222  Task B (open)\n" +
@@ -886,7 +886,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			},
 			Summary: "3 chains, longest: 5, 7 blocked",
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		if !strings.HasSuffix(got, "3 chains, longest: 5, 7 blocked") {
 			t.Errorf("should end with summary line, got:\n%s", got)
 		}
@@ -902,7 +902,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 				{Task: DepTreeTask{ID: "tick-ccc333", Title: "Task C", Status: "open"}},
 			},
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		expected := "" +
 			"tick-bbb222  Task B (in_progress)\n" +
 			"\n" +
@@ -923,7 +923,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 				{Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "in_progress"}},
 			},
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		expected := "" +
 			"tick-ccc333  Task C (open)\n" +
 			"\n" +
@@ -941,7 +941,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 				{Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "in_progress"}},
 			},
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		expected := "" +
 			"tick-aaa111  Task A (open)\n" +
 			"\n" +
@@ -960,7 +960,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 				{Task: DepTreeTask{ID: "tick-bbb222", Title: "Task B", Status: "open"}},
 			},
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		if strings.Contains(got, "Blocked by:") {
 			t.Errorf("should not contain 'Blocked by:' when there are no blockers, got:\n%s", got)
 		}
@@ -986,7 +986,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			},
 			Summary: "1 chain, longest: 2, 2 blocked",
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		// The long title at depth 1 should be truncated with "..."
 		if !strings.Contains(got, "...") {
 			t.Errorf("should contain truncated title with '...', got:\n%s", got)
@@ -1010,7 +1010,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			},
 			Summary: "1 chain, longest: 1, 2 blocked",
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		if !strings.Contains(got, "├── ") {
 			t.Errorf("should contain middle connector (├──), got:\n%s", got)
 		}
@@ -1031,7 +1031,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			},
 			Summary: "1 chain, longest: 1, 1 blocked",
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		lines := strings.Split(got, "\n")
 		// First line: root
 		if !strings.Contains(lines[0], "tick-aaa111") {
@@ -1056,7 +1056,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 				{Task: DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"}},
 			},
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 		lines := strings.Split(got, "\n")
 		expectedFirst := "tick-bbb222  Task B (in_progress)"
 		if lines[0] != expectedFirst {
@@ -1069,7 +1069,7 @@ func TestPrettyFormatDepTree(t *testing.T) {
 			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
 			Message: "No dependencies.",
 		}
-		got := f.FormatDepTree(result)
+		got := formatted(t).of(f.FormatDepTree(result))
 
 		// Must contain task info line
 		if !strings.Contains(got, "tick-aaa111") {
@@ -1102,7 +1102,7 @@ func TestPrettyFilteredTaskDetail(t *testing.T) {
 	filtered := func(t *testing.T, detail TaskDetail, value string) string {
 		t.Helper()
 		detail.Fields = fieldSelection(t, value)
-		return f.FormatTaskDetail(detail)
+		return formatted(t).of(f.FormatTaskDetail(detail))
 	}
 
 	plainDetail := func() TaskDetail {
@@ -1207,7 +1207,7 @@ func TestPrettyFilteredTaskDetail(t *testing.T) {
 	})
 
 	t.Run("it leaves unfiltered pretty detail unchanged", func(t *testing.T) {
-		got := f.FormatTaskDetail(richDetail())
+		got := formatted(t).of(f.FormatTaskDetail(richDetail()))
 
 		want := "ID:       tick-a1b2\n" +
 			"Title:    Add retry to the sync worker\n" +
@@ -1244,7 +1244,7 @@ func TestPrettyFilteredTaskDetail(t *testing.T) {
 			{TaskID: "tick-a1b2", TaskTitle: "Add retry to the sync worker", OldStatus: "open", NewStatus: "in_progress"},
 		}}
 
-		got := f.FormatTaskDetail(detail)
+		got := formatted(t).of(f.FormatTaskDetail(detail))
 
 		want := "ID:       tick-a1b2\n" +
 			"Title:    Add retry to the sync worker\n" +

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"io"
 	"slices"
 
@@ -36,8 +35,8 @@ func RunDepTree(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals 
 
 // runFullDepTree builds and outputs the full dependency graph.
 func runFullDepTree(tasks []task.Task, fmtr Formatter, stdout io.Writer) error {
-	fmt.Fprintln(stdout, fmtr.FormatDepTree(BuildFullDepTree(tasks)))
-	return nil
+	document, err := fmtr.FormatDepTree(BuildFullDepTree(tasks))
+	return printDocument(stdout, document, err)
 }
 
 // runFocusedDepTree builds and outputs the focused dependency view for a single task.
@@ -54,6 +53,6 @@ func runFocusedDepTree(store interface{ ResolveID(string) (string, error) }, tas
 		return err
 	}
 
-	fmt.Fprintln(stdout, fmtr.FormatDepTree(result))
-	return nil
+	document, err := fmtr.FormatDepTree(result)
+	return printDocument(stdout, document, err)
 }

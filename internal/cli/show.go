@@ -81,7 +81,11 @@ func RunShow(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals []s
 	}
 
 	detail.Fields = selection
-	if document := fmtr.FormatTaskDetail(detail); document != "" {
+	document, err := fmtr.FormatTaskDetail(detail)
+	if err != nil {
+		return err
+	}
+	if document != "" {
 		fmt.Fprintln(stdout, document)
 	}
 	return nil

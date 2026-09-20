@@ -225,8 +225,8 @@ func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, std
 		return nil
 	}
 
-	fmt.Fprintln(stdout, fmtr.FormatTaskList(tasks))
-	return nil
+	document, err := fmtr.FormatTaskList(tasks)
+	return printDocument(stdout, document, err)
 }
 
 // queryDescendantIDs executes a recursive CTE to collect all descendant task IDs

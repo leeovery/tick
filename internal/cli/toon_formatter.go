@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -49,9 +50,9 @@ type toonPriorityRow struct {
 }
 
 // FormatTaskList renders a list of tasks in TOON tabular format.
-func (f *ToonFormatter) FormatTaskList(tasks []task.Task) string {
+func (f *ToonFormatter) FormatTaskList(tasks []task.Task) (string, error) {
 	if len(tasks) == 0 {
-		return emptyToonSection[toonTaskRow]("tasks")
+		return emptyToonSection[toonTaskRow]("tasks"), nil
 	}
 	rows := make([]toonTaskRow, len(tasks))
 	for i, t := range tasks {
@@ -67,52 +68,52 @@ func (f *ToonFormatter) FormatTaskList(tasks []task.Task) string {
 }
 
 // FormatTaskDetail renders a single task in multi-section TOON format, narrowed to detail.Fields when it is set.
-func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) string {
+func (f *ToonFormatter) FormatTaskDetail(detail TaskDetail) (string, error) {
 	sel := detail.Fields
-	var sections []string
+	var doc toonDoc
 
-	sections = append(sections, buildTaskSection(detail.Task, sel))
+	doc.add(buildTaskSection(detail.Task, sel))
 
 	if sel.includes(fieldBlockedBy) {
 		blockedBy, _ := selectedItems(detail.BlockedBy, sel.Positions(fieldBlockedBy))
-		sections = append(sections, buildRelatedSection("blocked_by", blockedBy))
+		doc.add(buildRelatedSection("blocked_by", blockedBy))
 	}
 
 	if sel.includes(fieldChildren) {
 		children, _ := selectedItems(detail.Children, sel.Positions(fieldChildren))
-		sections = append(sections, buildRelatedSection("children", children))
+		doc.add(buildRelatedSection("children", children))
 	}
 
 	if len(detail.Tags) > 0 && sel.includes(fieldTags) {
 		tags, _ := selectedItems(detail.Tags, sel.Positions(fieldTags))
-		sections = append(sections, encodeToonSection("tags", tags))
+		doc.add(encodeToonSection("tags", tags))
 	}
 
 	if len(detail.Refs) > 0 && sel.includes(fieldRefs) {
 		refs, _ := selectedItems(detail.Refs, sel.Positions(fieldRefs))
-		sections = append(sections, encodeToonSection("refs", refs))
+		doc.add(encodeToonSection("refs", refs))
 	}
 
 	if sel.includes(fieldNotes) {
-		sections = append(sections, buildNotesSection(selectedItems(detail.Notes, sel.Positions(fieldNotes))))
+		doc.add(buildNotesSection(selectedItems(detail.Notes, sel.Positions(fieldNotes))))
 	}
 
 	if detail.Changes != nil {
-		sections = append(sections, buildChangedSection(detail.Changes.Rows()))
+		doc.add(buildChangedSection(detail.Changes.Rows()))
 	}
 
 	if detail.Task.Description != "" && sel.includes(fieldDescription) {
-		sections = append(sections, encodeToonFields(toon.Field{Key: "description", Value: detail.Task.Description}))
+		doc.add(encodeToonFields(toon.Field{Key: fieldDescription, Value: detail.Task.Description}))
 	}
 
-	return joinToonSections(sections)
+	return doc.join(detail.Task.ID)
 }
 
 // FormatStats renders task statistics in multi-section TOON format.
-func (f *ToonFormatter) FormatStats(stats Stats) string {
-	var sections []string
+func (f *ToonFormatter) FormatStats(stats Stats) (string, error) {
+	var doc toonDoc
 
-	sections = append(sections, encodeToonFields(
+	doc.add(encodeToonFields(
 		toon.Field{Key: "total", Value: stats.Total},
 		toon.Field{Key: "open", Value: stats.Open},
 		toon.Field{Key: "in_progress", Value: stats.InProgress},
@@ -126,9 +127,9 @@ func (f *ToonFormatter) FormatStats(stats Stats) string {
 	for i := range 5 {
 		rows[i] = toonPriorityRow{Priority: i, Count: stats.ByPriority[i]}
 	}
-	sections = append(sections, encodeToonSection("by_priority", rows))
+	doc.add(encodeToonSection("by_priority", rows))
 
-	return joinToonSections(sections)
+	return doc.join("")
 }
 
 // FormatMessage renders a general-purpose message as plain text.
@@ -146,9 +147,9 @@ type toonChangedRow struct {
 }
 
 // buildChangedSection builds the changed section listing every task whose status moved.
-func buildChangedSection(changes []StatusChange) string {
+func buildChangedSection(changes []StatusChange) (string, error) {
 	if len(changes) == 0 {
-		return emptyToonSection[toonChangedRow]("changed")
+		return emptyToonSection[toonChangedRow]("changed"), nil
 	}
 	rows := make([]toonChangedRow, len(changes))
 	for i, c := range changes {
@@ -158,8 +159,9 @@ func buildChangedSection(changes []StatusChange) string {
 }
 
 // FormatCascadeTransition renders every status change the command made as one changed table.
-func (f *ToonFormatter) FormatCascadeTransition(result CascadeResult) string {
-	return buildChangedSection(result.Changed())
+func (f *ToonFormatter) FormatCascadeTransition(result CascadeResult) (string, error) {
+	changed, err := buildChangedSection(result.Changed())
+	return changed, refusalForTask(err, result.TaskID)
 }
 
 // toonEdgeRow is a TOON-serializable row for dep tree edge list output.
@@ -172,7 +174,7 @@ type toonEdgeRow struct {
 // Full graph: dep_tree[N]{from,to}: section + chains, longest and blocked named fields.
 // Focused mode: the target's id, title and status as named fields, followed by
 // blocked_by[N]{from,to}: and blocks[N]{from,to}: sections, both always present.
-func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
+func (f *ToonFormatter) FormatDepTree(result DepTreeResult) (string, error) {
 	if result.Target != nil {
 		return f.formatFocusedDepTree(result)
 	}
@@ -180,31 +182,31 @@ func (f *ToonFormatter) FormatDepTree(result DepTreeResult) string {
 	return f.formatFullDepTree(result)
 }
 
-func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
-	sections := []string{
-		buildEdgeSection("dep_tree", toonEdgeRows(result.Edges)),
-		encodeToonFields(
-			toon.Field{Key: "chains", Value: result.ChainCount},
-			toon.Field{Key: "longest", Value: result.LongestChain},
-			toon.Field{Key: "blocked", Value: result.BlockedCount},
-		),
-	}
+func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) (string, error) {
+	var doc toonDoc
 
-	return joinToonSections(sections)
+	doc.add(buildEdgeSection("dep_tree", toonEdgeRows(result.Edges)))
+	doc.add(encodeToonFields(
+		toon.Field{Key: "chains", Value: result.ChainCount},
+		toon.Field{Key: "longest", Value: result.LongestChain},
+		toon.Field{Key: "blocked", Value: result.BlockedCount},
+	))
+
+	return doc.join("")
 }
 
-func (f *ToonFormatter) formatFocusedDepTree(result DepTreeResult) string {
-	sections := []string{
-		encodeToonFields(
-			toon.Field{Key: "id", Value: result.Target.ID},
-			toon.Field{Key: "title", Value: result.Target.Title},
-			toon.Field{Key: "status", Value: result.Target.Status},
-		),
-		buildEdgeSection("blocked_by", toonEdgeRows(result.BlockedByEdges)),
-		buildEdgeSection("blocks", toonEdgeRows(result.BlocksEdges)),
-	}
+func (f *ToonFormatter) formatFocusedDepTree(result DepTreeResult) (string, error) {
+	var doc toonDoc
 
-	return joinToonSections(sections)
+	doc.add(encodeToonFields(
+		toon.Field{Key: fieldID, Value: result.Target.ID},
+		toon.Field{Key: fieldTitle, Value: result.Target.Title},
+		toon.Field{Key: fieldStatus, Value: result.Target.Status},
+	))
+	doc.add(buildEdgeSection("blocked_by", toonEdgeRows(result.BlockedByEdges)))
+	doc.add(buildEdgeSection("blocks", toonEdgeRows(result.BlocksEdges)))
+
+	return doc.join(result.Target.ID)
 }
 
 func toonEdgeRows(edges []DepTreeEdge) []toonEdgeRow {
@@ -216,9 +218,9 @@ func toonEdgeRows(edges []DepTreeEdge) []toonEdgeRow {
 }
 
 // buildEdgeSection renders a named toon section of edge rows.
-func buildEdgeSection(name string, edges []toonEdgeRow) string {
+func buildEdgeSection(name string, edges []toonEdgeRow) (string, error) {
 	if len(edges) == 0 {
-		return emptyToonSection[toonEdgeRow](name)
+		return emptyToonSection[toonEdgeRow](name), nil
 	}
 	return encodeToonSection(name, edges)
 }
@@ -226,7 +228,7 @@ func buildEdgeSection(name string, edges []toonEdgeRow) string {
 // buildTaskSection builds the task's own selected fields as top-level named
 // fields, omitting type, parent and closed when the task does not carry them
 // and returning "" when no field survives.
-func buildTaskSection(t task.Task, sel *FieldSelection) string {
+func buildTaskSection(t task.Task, sel *FieldSelection) (string, error) {
 	var fields []toon.Field
 	add := func(key string, value any) {
 		if sel.includes(key) {
@@ -255,20 +257,32 @@ func buildTaskSection(t task.Task, sel *FieldSelection) string {
 	}
 
 	if len(fields) == 0 {
-		return ""
+		return "", nil
 	}
 
 	return encodeToonFields(fields...)
 }
 
 // encodeToonFields encodes ordered fields as top-level TOON named fields,
-// returning "" when the encoder rejects a value.
-func encodeToonFields(fields ...toon.Field) string {
+// returning a *toonEncodeError naming the refused field when the encoder
+// rejects a value.
+func encodeToonFields(fields ...toon.Field) (string, error) {
 	s, err := toon.MarshalString(toon.NewObject(fields...))
 	if err != nil {
-		return ""
+		return "", fieldRefusal(fields, err)
 	}
-	return s
+	return s, nil
+}
+
+// fieldRefusal names the first field the encoder rejects on its own; the
+// library error names none.
+func fieldRefusal(fields []toon.Field, err error) error {
+	for _, f := range fields {
+		if _, single := toon.MarshalString(toon.NewObject(f)); single != nil {
+			return &toonEncodeError{part: "field " + f.Key, err: err}
+		}
+	}
+	return &toonEncodeError{part: "the named fields", err: err}
 }
 
 // joinToonSections joins non-empty sections with a blank line between them.
@@ -283,9 +297,9 @@ func joinToonSections(sections []string) string {
 }
 
 // buildRelatedSection builds a blocked_by or children section.
-func buildRelatedSection(name string, related []RelatedTask) string {
+func buildRelatedSection(name string, related []RelatedTask) (string, error) {
 	if len(related) == 0 {
-		return emptyToonSection[toonRelatedRow](name)
+		return emptyToonSection[toonRelatedRow](name), nil
 	}
 	rows := make([]toonRelatedRow, len(related))
 	for i, r := range related {
@@ -296,9 +310,9 @@ func buildRelatedSection(name string, related []RelatedTask) string {
 
 // buildNotesSection builds the notes section as a TOON tabular section, each
 // row carrying the position the note holds in the whole section.
-func buildNotesSection(notes []task.Note, positions []int) string {
+func buildNotesSection(notes []task.Note, positions []int) (string, error) {
 	if len(notes) == 0 {
-		return emptyToonSection[toonNoteRow]("notes")
+		return emptyToonSection[toonNoteRow]("notes"), nil
 	}
 	rows := make([]toonNoteRow, len(notes))
 	for i, n := range notes {
@@ -324,11 +338,64 @@ func emptyToonSection[T any](name string) string {
 
 // encodeToonSection encodes a slice as a named TOON section using toon-go: structs
 // become a tabular section, scalars an inline list. Quoting is the encoder's.
-func encodeToonSection[T any](name string, rows []T) string {
+// It returns a *toonEncodeError naming the section when the encoder rejects a value.
+func encodeToonSection[T any](name string, rows []T) (string, error) {
 	obj := toon.NewObject(toon.Field{Key: name, Value: rows})
 	s, err := toon.MarshalString(obj)
 	if err != nil {
-		return fmt.Sprintf("%s[0]:", name)
+		return "", &toonEncodeError{part: "section " + name, err: err}
 	}
-	return s
+	return s, nil
+}
+
+// toonEncodeError reports a value TOON cannot carry, naming the field or
+// section that holds it and the task the document covers when it covers one.
+type toonEncodeError struct {
+	part   string
+	taskID string
+	err    error
+}
+
+func (e *toonEncodeError) Error() string {
+	if e.taskID == "" {
+		return fmt.Sprintf("cannot encode %s as TOON: %v", e.part, e.err)
+	}
+	return fmt.Sprintf("cannot encode %s of task %s as TOON: %v", e.part, e.taskID, e.err)
+}
+
+func (e *toonEncodeError) Unwrap() error { return e.err }
+
+// refusalForTask returns err naming taskID when err is a TOON refusal.
+func refusalForTask(err error, taskID string) error {
+	var refusal *toonEncodeError
+	if taskID == "" || !errors.As(err, &refusal) {
+		return err
+	}
+	return &toonEncodeError{part: refusal.part, taskID: taskID, err: refusal.err}
+}
+
+// toonDoc collects a document's sections, keeping the first refusal instead.
+type toonDoc struct {
+	sections []string
+	err      error
+}
+
+func (d *toonDoc) add(section string, err error) {
+	if d.err != nil {
+		return
+	}
+	if err != nil {
+		d.err = err
+		return
+	}
+	d.sections = append(d.sections, section)
+}
+
+// join renders the collected sections, or the refusal naming taskID for a
+// document covering a single task.
+func (d *toonDoc) join(taskID string) (string, error) {
+	if d.err != nil {
+		return "", refusalForTask(d.err, taskID)
+	}
+	return joinToonSections(d.sections), nil
 }

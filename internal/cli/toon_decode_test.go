@@ -348,7 +348,7 @@ func TestToonStatusChangeConformance(t *testing.T) {
 	})
 
 	t.Run("it renders an empty changed set as a count-zero header", func(t *testing.T) {
-		section := buildChangedSection(nil)
+		section := formatted(t).of(buildChangedSection(nil))
 
 		if section != "changed[0]"+changedHeader {
 			t.Fatalf("section = %q, want %q", section, "changed[0]"+changedHeader)

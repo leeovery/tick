@@ -51,11 +51,11 @@ func RunTransition(dir string, command string, fc FormatConfig, fmtr Formatter, 
 		return err
 	}
 
-	if !fc.Quiet {
-		outputStatusChanges(stdout, fmtr, *cascadeResult)
+	if fc.Quiet {
+		return nil
 	}
 
-	return nil
+	return outputStatusChanges(stdout, fmtr, *cascadeResult)
 }
 
 // buildCascadeResult constructs a CascadeResult from the primary transition, cascade

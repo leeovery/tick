@@ -747,7 +747,7 @@ func TestTaskDetailWithoutFieldSelection(t *testing.T) {
 			if detail.Fields != nil {
 				t.Fatal("detail.Fields should be nil")
 			}
-			got := formatter.FormatTaskDetail(detail)
+			got := formatted(t).of(formatter.FormatTaskDetail(detail))
 			for _, substring := range want {
 				if !strings.Contains(got, substring) {
 					t.Errorf("output is missing %q:\n%s", substring, got)
@@ -772,7 +772,7 @@ func TestRegisteredFieldRendering(t *testing.T) {
 			for _, f := range formatters {
 				detail := richDetail()
 				detail.Fields = fieldSelection(t, name)
-				if f.fmtr.FormatTaskDetail(detail) == "" {
+				if formatted(t).of(f.fmtr.FormatTaskDetail(detail)) == "" {
 					t.Errorf("%s renders nothing for field %q", f.format, name)
 				}
 			}

@@ -21,7 +21,7 @@ func TestJSONFormatter(t *testing.T) {
 			{ID: "tick-a1b2", Title: "Setup Sanctum", Status: task.StatusDone, Priority: 1, Created: now, Updated: now},
 			{ID: "tick-c3d4", Title: "Login endpoint", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 
 		var parsed []map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -54,8 +54,8 @@ func TestJSONFormatter(t *testing.T) {
 	t.Run("it formats empty list as [] not null", func(t *testing.T) {
 		f := &JSONFormatter{}
 
-		assertRenderedJSONIsEmptyArray(t, f.FormatTaskList([]task.Task{}))
-		assertRenderedJSONIsEmptyArray(t, f.FormatTaskList(nil))
+		assertRenderedJSONIsEmptyArray(t, formatted(t).of(f.FormatTaskList([]task.Task{})))
+		assertRenderedJSONIsEmptyArray(t, formatted(t).of(f.FormatTaskList(nil)))
 	})
 
 	t.Run("it formats show with all fields", func(t *testing.T) {
@@ -83,7 +83,7 @@ func TestJSONFormatter(t *testing.T) {
 			},
 			ParentTitle: "Auth System",
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -162,7 +162,7 @@ func TestJSONFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -194,7 +194,7 @@ func TestJSONFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -234,7 +234,7 @@ func TestJSONFormatter(t *testing.T) {
 			},
 			// BlockedBy and Children are nil (not initialized)
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -275,7 +275,7 @@ func TestJSONFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -319,7 +319,7 @@ func TestJSONFormatter(t *testing.T) {
 				{ID: "tick-g7h8", Title: "Child", Status: "open"},
 			},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -355,7 +355,7 @@ func TestJSONFormatter(t *testing.T) {
 			Blocked:    4,
 			ByPriority: [5]int{2, 8, 25, 7, 5},
 		}
-		result := f.FormatStats(stats)
+		result := formatted(t).of(f.FormatStats(stats))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -423,7 +423,7 @@ func TestJSONFormatter(t *testing.T) {
 			Total:      0,
 			ByPriority: [5]int{0, 0, 0, 0, 0},
 		}
-		result := f.FormatStats(stats)
+		result := formatted(t).of(f.FormatStats(stats))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -497,11 +497,11 @@ func TestJSONFormatter(t *testing.T) {
 			name   string
 			output string
 		}{
-			{"list", f.FormatTaskList([]task.Task{
+			{"list", formatted(t).of(f.FormatTaskList([]task.Task{
 				{ID: "tick-a1b2", Title: "Task one", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
-			})},
-			{"empty list", f.FormatTaskList(nil)},
-			{"detail", f.FormatTaskDetail(TaskDetail{
+			}))},
+			{"empty list", formatted(t).of(f.FormatTaskList(nil))},
+			{"detail", formatted(t).of(f.FormatTaskDetail(TaskDetail{
 				Task: task.Task{
 					ID: "tick-a1b2", Title: "Full task", Status: task.StatusDone,
 					Priority: 1, Description: "desc", Parent: "tick-e5f6",
@@ -509,14 +509,14 @@ func TestJSONFormatter(t *testing.T) {
 				},
 				BlockedBy: []RelatedTask{{ID: "tick-c3d4", Title: "B", Status: "open"}},
 				Children:  []RelatedTask{{ID: "tick-g7h8", Title: "C", Status: "done"}},
-			})},
+			}))},
 			{"dep add", f.FormatDepChange("added", "tick-c3d4", "tick-a1b2")},
 			{"dep remove", f.FormatDepChange("removed", "tick-c3d4", "tick-a1b2")},
 			{"message", f.FormatMessage("Hello world")},
-			{"stats", f.FormatStats(Stats{
+			{"stats", formatted(t).of(f.FormatStats(Stats{
 				Total: 10, Open: 5, InProgress: 2, Done: 2, Cancelled: 1,
 				Ready: 3, Blocked: 2, ByPriority: [5]int{1, 2, 3, 2, 2},
-			})},
+			}))},
 		}
 
 		for _, tc := range outputs {
@@ -686,7 +686,7 @@ func TestJSONFormatter(t *testing.T) {
 			{ID: "tick-a1b2", Title: "Fix login bug", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
 			{ID: "tick-c3d4", Title: "Add search", Status: task.StatusDone, Priority: 2, Type: "feature", Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 
 		var parsed []map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -719,7 +719,7 @@ func TestJSONFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -756,7 +756,7 @@ func TestJSONFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -788,7 +788,7 @@ func TestJSONFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -805,7 +805,7 @@ func TestJSONFormatter(t *testing.T) {
 		tasks := []task.Task{
 			{ID: "tick-a1b2", Title: "No type task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 
 		var parsed []map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -833,7 +833,7 @@ func TestJSONFormatter(t *testing.T) {
 		tasks := []task.Task{
 			{ID: "tick-a1b2", Title: "Test", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
+		result := formatted(t).of(f.FormatTaskList(tasks))
 
 		// Should contain 2-space indented lines (not tabs, not 4 spaces)
 		expected := "  \"id\": \"tick-a1b2\""
@@ -858,7 +858,7 @@ func TestJSONFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -895,7 +895,7 @@ func TestJSONFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -930,7 +930,7 @@ func TestJSONFormatter(t *testing.T) {
 				{Text: "Root cause found", Created: time.Date(2026, 2, 27, 14, 30, 0, 0, time.UTC)},
 			},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -983,7 +983,7 @@ func TestJSONFormatter(t *testing.T) {
 			BlockedBy: []RelatedTask{},
 			Children:  []RelatedTask{},
 		}
-		result := f.FormatTaskDetail(detail)
+		result := formatted(t).of(f.FormatTaskDetail(detail))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1004,7 +1004,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 	f := &JSONFormatter{}
 
 	t.Run("it renders full graph mode as structured JSON", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
@@ -1016,7 +1016,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 1,
 			BlockedCount: 1,
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1069,7 +1069,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders multi-level chain in full graph", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
@@ -1086,7 +1086,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 2,
 			BlockedCount: 2,
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1115,12 +1115,12 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders trees as [] not null when empty", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Trees:        nil,
 			ChainCount:   0,
 			LongestChain: 0,
 			BlockedCount: 0,
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1137,7 +1137,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders leaf children as [] not null", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
@@ -1149,7 +1149,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 1,
 			BlockedCount: 1,
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1172,7 +1172,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 
 	t.Run("it duplicates diamond dependency nodes in tree", func(t *testing.T) {
 		// A -> B, A -> C, B -> D, C -> D (D appears twice)
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "A", Status: "open"},
@@ -1195,7 +1195,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 2,
 			BlockedCount: 3,
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1235,7 +1235,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders focused mode with both directions", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-bbb222", Title: "Target", Status: "in_progress"},
 			BlockedBy: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-aaa111", Title: "Blocker", Status: "open"}},
@@ -1243,7 +1243,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			Blocks: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-ccc333", Title: "Blocked", Status: "open"}},
 			},
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1280,13 +1280,13 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it emits an empty blocked_by when only downstream exists", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target:    &DepTreeTask{ID: "tick-aaa111", Title: "Root blocker", Status: "open"},
 			BlockedBy: nil,
 			Blocks: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-bbb222", Title: "Blocked", Status: "open"}},
 			},
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1311,13 +1311,13 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it emits an empty blocks when only upstream exists", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-bbb222", Title: "Leaf", Status: "open"},
 			BlockedBy: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-aaa111", Title: "Blocker", Status: "done"}},
 			},
 			Blocks: nil,
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1342,7 +1342,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it uses snake_case for all keys", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-bbb222", Title: "Target", Status: "open"},
 			BlockedBy: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-aaa111", Title: "Blocker", Status: "open"}},
@@ -1350,7 +1350,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			Blocks: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-ccc333", Title: "Blocked", Status: "open"}},
 			},
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1374,7 +1374,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 		}
 
 		// Check full graph keys too
-		fullResult := f.FormatDepTree(DepTreeResult{
+		fullResult := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
@@ -1386,7 +1386,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 1,
 			BlockedCount: 1,
-		})
+		}))
 
 		var fullParsed map[string]any
 		if err := json.Unmarshal([]byte(fullResult), &fullParsed); err != nil {
@@ -1402,12 +1402,12 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it renders target task with id, title, status", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target: &DepTreeTask{ID: "tick-abc123", Title: "My target task", Status: "in_progress"},
 			Blocks: []DepTreeNode{
 				{Task: DepTreeTask{ID: "tick-def456", Title: "Downstream", Status: "open"}},
 			},
-		})
+		}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1430,7 +1430,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it produces valid 2-space indented JSON", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Trees: []DepTreeNode{
 				{
 					Task: DepTreeTask{ID: "tick-aaa111", Title: "Root", Status: "open"},
@@ -1442,7 +1442,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 			ChainCount:   1,
 			LongestChain: 1,
 			BlockedCount: 1,
-		})
+		}))
 
 		// Must be valid JSON
 		if !json.Valid([]byte(result)) {
@@ -1507,7 +1507,7 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it emits the emptied full document instead of a message", func(t *testing.T) {
-		result := f.FormatDepTree(DepTreeResult{Message: "No dependencies found."})
+		result := formatted(t).of(f.FormatDepTree(DepTreeResult{Message: "No dependencies found."}))
 
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1534,11 +1534,11 @@ func TestJSONFormatDepTree(t *testing.T) {
 	})
 
 	t.Run("it keeps mode on both documents", func(t *testing.T) {
-		full := f.FormatDepTree(DepTreeResult{Message: "No dependencies found."})
-		focused := f.FormatDepTree(DepTreeResult{
+		full := formatted(t).of(f.FormatDepTree(DepTreeResult{Message: "No dependencies found."}))
+		focused := formatted(t).of(f.FormatDepTree(DepTreeResult{
 			Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
 			Message: "No dependencies.",
-		})
+		}))
 
 		for _, tc := range []struct{ output, want string }{
 			{full, "full"},
@@ -1571,10 +1571,10 @@ func TestJSONFormatDepTree(t *testing.T) {
 func parseFocusedNoDepsJSON(t *testing.T, f *JSONFormatter) map[string]any {
 	t.Helper()
 
-	result := f.FormatDepTree(DepTreeResult{
+	result := formatted(t).of(f.FormatDepTree(DepTreeResult{
 		Target:  &DepTreeTask{ID: "tick-aaa111", Title: "Task A", Status: "open"},
 		Message: "No dependencies.",
-	})
+	}))
 
 	var parsed map[string]any
 	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
@@ -1589,7 +1589,7 @@ func TestJSONFilteredTaskDetail(t *testing.T) {
 	filtered := func(t *testing.T, detail TaskDetail, value string) string {
 		t.Helper()
 		detail.Fields = fieldSelection(t, value)
-		return f.FormatTaskDetail(detail)
+		return formatted(t).of(f.FormatTaskDetail(detail))
 	}
 
 	parse := func(t *testing.T, document string) map[string]any {
@@ -1745,11 +1745,11 @@ func TestJSONFilteredTaskDetail(t *testing.T) {
 		detail.Changes = &StatusChanges{}
 		detail.Fields = fieldSelection(t, "title")
 
-		assertJSONKeySet(t, parse(t, f.FormatTaskDetail(detail)), "title")
+		assertJSONKeySet(t, parse(t, formatted(t).of(f.FormatTaskDetail(detail))), "title")
 	})
 
 	t.Run("it leaves unfiltered output unchanged", func(t *testing.T) {
-		doc := parse(t, f.FormatTaskDetail(richDetail()))
+		doc := parse(t, formatted(t).of(f.FormatTaskDetail(richDetail())))
 
 		assertJSONKeySet(t, doc, "id", "title", "status", "priority", "type", "tags", "refs",
 			"notes", "description", "parent", "created", "updated", "closed", "blocked_by", "children")
@@ -1772,7 +1772,7 @@ func TestJSONFilteredTaskDetail(t *testing.T) {
 	})
 
 	t.Run("it orders a filtered document as the full document restricted to the selection", func(t *testing.T) {
-		full := jsonKeyOrder(t, f.FormatTaskDetail(richDetail()))
+		full := jsonKeyOrder(t, formatted(t).of(f.FormatTaskDetail(richDetail())))
 
 		for _, selection := range []string{
 			"closed,created,id",
@@ -1793,14 +1793,14 @@ func TestJSONFilteredTaskDetail(t *testing.T) {
 	t.Run("it renders a full document's keys in the declared order", func(t *testing.T) {
 		want := []string{"id", "title", "status", "priority", "type", "tags", "refs", "notes",
 			"description", "parent", "created", "updated", "closed", "blocked_by", "children"}
-		if got := jsonKeyOrder(t, f.FormatTaskDetail(richDetail())); !slices.Equal(got, want) {
+		if got := jsonKeyOrder(t, formatted(t).of(f.FormatTaskDetail(richDetail()))); !slices.Equal(got, want) {
 			t.Errorf("key order = %v, want %v", got, want)
 		}
 
 		detail := richDetail()
 		detail.Changes = &StatusChanges{}
 		withChanged := append(slices.Clone(want), "changed")
-		if got := jsonKeyOrder(t, f.FormatTaskDetail(detail)); !slices.Equal(got, withChanged) {
+		if got := jsonKeyOrder(t, formatted(t).of(f.FormatTaskDetail(detail))); !slices.Equal(got, withChanged) {
 			t.Errorf("key order with changes = %v, want %v", got, withChanged)
 		}
 	})

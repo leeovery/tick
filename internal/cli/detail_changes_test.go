@@ -57,7 +57,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 	t.Run("it carries a changed section when the detail carries changes", func(t *testing.T) {
 		f := &ToonFormatter{}
 
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWithChanges(changes)))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detailWithChanges(changes))))
 
 		got := toonRows(t, doc, "changed")
 		if len(got) != 2 {
@@ -74,7 +74,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 	t.Run("it carries a count-zero changed section when the change set is empty", func(t *testing.T) {
 		f := &ToonFormatter{}
 
-		rendered := f.FormatTaskDetail(detailWithChanges(&StatusChanges{}))
+		rendered := formatted(t).of(f.FormatTaskDetail(detailWithChanges(&StatusChanges{})))
 
 		assertCountZeroSection(t, rendered, "changed[0]{id,title,from,to,auto}:")
 	})
@@ -82,7 +82,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 	t.Run("it omits the changed section entirely when the detail carries no changes", func(t *testing.T) {
 		f := &ToonFormatter{}
 
-		doc := decodeToonDoc(t, f.FormatTaskDetail(detailWithChanges(nil)))
+		doc := decodeToonDoc(t, formatted(t).of(f.FormatTaskDetail(detailWithChanges(nil))))
 
 		assertToonKeysAbsent(t, doc, "changed")
 	})
@@ -90,7 +90,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 	t.Run("it places the changed section after notes and before description", func(t *testing.T) {
 		f := &ToonFormatter{}
 
-		keys := toonSectionKeys(t, f.FormatTaskDetail(detailWithChanges(changes)))
+		keys := toonSectionKeys(t, formatted(t).of(f.FormatTaskDetail(detailWithChanges(changes))))
 
 		want := []string{"id", "blocked_by", "children", "notes", "changed", "description"}
 		if !slices.Equal(keys, want) {
@@ -102,7 +102,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 		f := &JSONFormatter{}
 
 		var parsed map[string]any
-		if err := json.Unmarshal([]byte(f.FormatTaskDetail(detailWithChanges(&StatusChanges{}))), &parsed); err != nil {
+		if err := json.Unmarshal([]byte(formatted(t).of(f.FormatTaskDetail(detailWithChanges(&StatusChanges{})))), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v", err)
 		}
 
@@ -123,7 +123,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 		f := &JSONFormatter{}
 
 		var parsed map[string]any
-		if err := json.Unmarshal([]byte(f.FormatTaskDetail(detailWithChanges(changes))), &parsed); err != nil {
+		if err := json.Unmarshal([]byte(formatted(t).of(f.FormatTaskDetail(detailWithChanges(changes)))), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v", err)
 		}
 
@@ -154,7 +154,7 @@ func TestTaskDetailChangedSection(t *testing.T) {
 		f := &JSONFormatter{}
 
 		var parsed map[string]any
-		if err := json.Unmarshal([]byte(f.FormatTaskDetail(detailWithChanges(nil))), &parsed); err != nil {
+		if err := json.Unmarshal([]byte(formatted(t).of(f.FormatTaskDetail(detailWithChanges(nil)))), &parsed); err != nil {
 			t.Fatalf("invalid JSON: %v", err)
 		}
 
@@ -170,22 +170,22 @@ func TestTaskDetailChangedSectionPretty(t *testing.T) {
 	blockTwo := CascadeResult{TaskID: "tick-bbb222", TaskTitle: "Other task", OldStatus: "open", NewStatus: "done"}
 
 	t.Run("it appends one block in pretty exactly as the handler printed it", func(t *testing.T) {
-		body := f.FormatTaskDetail(detailWithChanges(nil))
+		body := formatted(t).of(f.FormatTaskDetail(detailWithChanges(nil)))
 
-		got := f.FormatTaskDetail(detailWithChanges(&StatusChanges{Blocks: []CascadeResult{blockOne}}))
+		got := formatted(t).of(f.FormatTaskDetail(detailWithChanges(&StatusChanges{Blocks: []CascadeResult{blockOne}})))
 
-		want := body + "\n" + f.FormatCascadeTransition(blockOne)
+		want := body + "\n" + formatted(t).of(f.FormatCascadeTransition(blockOne))
 		if got != want {
 			t.Errorf("result = %q, want %q", got, want)
 		}
 	})
 
 	t.Run("it appends two blocks in pretty in order", func(t *testing.T) {
-		body := f.FormatTaskDetail(detailWithChanges(nil))
+		body := formatted(t).of(f.FormatTaskDetail(detailWithChanges(nil)))
 
-		got := f.FormatTaskDetail(detailWithChanges(&StatusChanges{Blocks: []CascadeResult{blockOne, blockTwo}}))
+		got := formatted(t).of(f.FormatTaskDetail(detailWithChanges(&StatusChanges{Blocks: []CascadeResult{blockOne, blockTwo}})))
 
-		want := body + "\n" + f.FormatCascadeTransition(blockOne) + "\n" + f.FormatCascadeTransition(blockTwo)
+		want := body + "\n" + formatted(t).of(f.FormatCascadeTransition(blockOne)) + "\n" + formatted(t).of(f.FormatCascadeTransition(blockTwo))
 		if got != want {
 			t.Errorf("result = %q, want %q", got, want)
 		}

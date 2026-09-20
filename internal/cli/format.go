@@ -245,22 +245,24 @@ type DepTreeResult struct {
 // Formatter defines the interface for rendering CLI output in different formats.
 type Formatter interface {
 	// FormatTaskList renders a list of tasks.
-	FormatTaskList(tasks []task.Task) string
+	FormatTaskList(tasks []task.Task) (string, error)
 	// FormatTaskDetail renders a single task with its related context, narrowed
 	// to detail.Fields when the caller set a selection.
-	FormatTaskDetail(detail TaskDetail) string
+	FormatTaskDetail(detail TaskDetail) (string, error)
 	// FormatDepChange renders a dependency add/remove confirmation.
 	FormatDepChange(action string, taskID string, depID string) string
 	// FormatStats renders task statistics.
-	FormatStats(stats Stats) string
+	FormatStats(stats Stats) (string, error)
 	// FormatMessage renders a general-purpose message.
 	FormatMessage(msg string) string
 	// FormatRemoval renders the result of a task removal operation.
 	FormatRemoval(result RemovalResult) string
-	// FormatCascadeTransition renders the status changes a command made.
-	FormatCascadeTransition(result CascadeResult) string
+	// FormatCascadeTransition renders the status changes a command made. It
+	// returns an error when the format cannot carry a value it was handed,
+	// rather than a document that contradicts the data.
+	FormatCascadeTransition(result CascadeResult) (string, error)
 	// FormatDepTree renders a dependency tree visualization.
-	FormatDepTree(result DepTreeResult) string
+	FormatDepTree(result DepTreeResult) (string, error)
 }
 
 // baseFormatter provides shared implementations of FormatDepChange and FormatRemoval
@@ -276,10 +278,10 @@ func (b *baseFormatter) FormatDepChange(action string, taskID string, depID stri
 }
 
 // FormatCascadeTransition returns an empty string (stub for text-based formatters).
-func (b *baseFormatter) FormatCascadeTransition(_ CascadeResult) string { return "" }
+func (b *baseFormatter) FormatCascadeTransition(_ CascadeResult) (string, error) { return "", nil }
 
 // FormatDepTree returns an empty string (stub for text-based formatters).
-func (b *baseFormatter) FormatDepTree(_ DepTreeResult) string { return "" }
+func (b *baseFormatter) FormatDepTree(_ DepTreeResult) (string, error) { return "", nil }
 
 // FormatRemoval renders the result of a task removal as plain text.
 // One line per removed task as 'Removed {id} "{title}"', plus an optional
@@ -303,16 +305,16 @@ type StubFormatter struct{}
 var _ Formatter = (*StubFormatter)(nil)
 
 // FormatTaskList returns an empty string (stub).
-func (s *StubFormatter) FormatTaskList(_ []task.Task) string { return "" }
+func (s *StubFormatter) FormatTaskList(_ []task.Task) (string, error) { return "", nil }
 
 // FormatTaskDetail returns an empty string (stub).
-func (s *StubFormatter) FormatTaskDetail(_ TaskDetail) string { return "" }
+func (s *StubFormatter) FormatTaskDetail(_ TaskDetail) (string, error) { return "", nil }
 
 // FormatDepChange returns an empty string (stub).
 func (s *StubFormatter) FormatDepChange(_, _, _ string) string { return "" }
 
 // FormatStats returns an empty string (stub).
-func (s *StubFormatter) FormatStats(_ Stats) string { return "" }
+func (s *StubFormatter) FormatStats(_ Stats) (string, error) { return "", nil }
 
 // FormatMessage returns an empty string (stub).
 func (s *StubFormatter) FormatMessage(_ string) string { return "" }
@@ -321,10 +323,10 @@ func (s *StubFormatter) FormatMessage(_ string) string { return "" }
 func (s *StubFormatter) FormatRemoval(_ RemovalResult) string { return "" }
 
 // FormatCascadeTransition returns an empty string (stub).
-func (s *StubFormatter) FormatCascadeTransition(_ CascadeResult) string { return "" }
+func (s *StubFormatter) FormatCascadeTransition(_ CascadeResult) (string, error) { return "", nil }
 
 // FormatDepTree returns an empty string (stub).
-func (s *StubFormatter) FormatDepTree(_ DepTreeResult) string { return "" }
+func (s *StubFormatter) FormatDepTree(_ DepTreeResult) (string, error) { return "", nil }
 
 // NewFormatter creates a Formatter for the given Format.
 func NewFormatter(f Format) Formatter {

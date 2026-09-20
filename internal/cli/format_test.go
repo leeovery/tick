@@ -187,7 +187,7 @@ func TestFormatterInterface(t *testing.T) {
 		var f Formatter = &StubFormatter{}
 
 		// FormatTaskList
-		result := f.FormatTaskList(nil)
+		result := formatted(t).of(f.FormatTaskList(nil))
 		if result != "" {
 			t.Errorf("FormatTaskList = %q, want empty string", result)
 		}
@@ -199,7 +199,7 @@ func TestFormatterInterface(t *testing.T) {
 			Children:    []RelatedTask{{ID: "tick-def456", Title: "child", Status: "done"}},
 			ParentTitle: "parent task",
 		}
-		result = f.FormatTaskDetail(detail)
+		result = formatted(t).of(f.FormatTaskDetail(detail))
 		if result != "" {
 			t.Errorf("FormatTaskDetail = %q, want empty string", result)
 		}
@@ -221,7 +221,7 @@ func TestFormatterInterface(t *testing.T) {
 			Blocked:    4,
 			ByPriority: [5]int{2, 8, 25, 7, 5},
 		}
-		result = f.FormatStats(stats)
+		result = formatted(t).of(f.FormatStats(stats))
 		if result != "" {
 			t.Errorf("FormatStats = %q, want empty string", result)
 		}
@@ -380,13 +380,13 @@ func TestCascadeTypes(t *testing.T) {
 			},
 		}
 		for _, f := range formatters {
-			_ = f.FormatCascadeTransition(result)
+			_ = formatted(t).of(f.FormatCascadeTransition(result))
 		}
 	})
 
 	t.Run("it returns empty string from stub implementation", func(t *testing.T) {
 		f := &StubFormatter{}
-		result := f.FormatCascadeTransition(CascadeResult{
+		result := formatted(t).of(f.FormatCascadeTransition(CascadeResult{
 			TaskID:    "tick-abc123",
 			TaskTitle: "Test",
 			OldStatus: "open",
@@ -394,7 +394,7 @@ func TestCascadeTypes(t *testing.T) {
 			Cascaded: []CascadeEntry{
 				{ID: "tick-def456", Title: "Child", OldStatus: "open", NewStatus: "done"},
 			},
-		})
+		}))
 		if result != "" {
 			t.Errorf("FormatCascadeTransition = %q, want empty string", result)
 		}
@@ -407,13 +407,13 @@ func TestCascadeTypes(t *testing.T) {
 		}
 		empty := CascadeResult{}
 		for _, f := range formatters {
-			got := f.FormatCascadeTransition(empty)
+			got := formatted(t).of(f.FormatCascadeTransition(empty))
 			if got != "" {
 				t.Errorf("FormatCascadeTransition on empty result = %q, want empty string", got)
 			}
 		}
-		assertCountZeroSection(t, (&ToonFormatter{}).FormatCascadeTransition(empty), "changed[0]{id,title,from,to,auto}:")
-		if got := (&JSONFormatter{}).FormatCascadeTransition(empty); len(changedRows(t, got)) != 0 {
+		assertCountZeroSection(t, formatted(t).of((&ToonFormatter{}).FormatCascadeTransition(empty)), "changed[0]{id,title,from,to,auto}:")
+		if got := formatted(t).of((&JSONFormatter{}).FormatCascadeTransition(empty)); len(changedRows(t, got)) != 0 {
 			t.Errorf("JSONFormatter.FormatCascadeTransition on empty result = %q, want an empty changed list", got)
 		}
 	})
@@ -487,4 +487,20 @@ func (b *byteBuffer) Write(p []byte) (int, error) {
 
 func (b *byteBuffer) String() string {
 	return string(b.data)
+}
+
+type documentCheck struct{ t *testing.T }
+
+// formatted reads a formatter's document and error together, failing the test
+// when the format refused a value it was handed.
+func formatted(t *testing.T) documentCheck {
+	return documentCheck{t: t}
+}
+
+func (c documentCheck) of(document string, err error) string {
+	c.t.Helper()
+	if err != nil {
+		c.t.Fatalf("formatting failed: %v", err)
+	}
+	return document
 }

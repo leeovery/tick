@@ -25,7 +25,7 @@ type jsonTaskListItem struct {
 
 // FormatTaskList renders a list of tasks as a JSON array.
 // Empty input produces "[]", never "null".
-func (f *JSONFormatter) FormatTaskList(tasks []task.Task) string {
+func (f *JSONFormatter) FormatTaskList(tasks []task.Task) (string, error) {
 	items := make([]jsonTaskListItem, 0, len(tasks))
 	for _, t := range tasks {
 		items = append(items, jsonTaskListItem{
@@ -36,7 +36,7 @@ func (f *JSONFormatter) FormatTaskList(tasks []task.Task) string {
 			Type:     t.Type,
 		})
 	}
-	return marshalIndentJSON(items)
+	return marshalIndentJSON(items), nil
 }
 
 // jsonRelatedTask represents a related task (blocker or child) in JSON output.
@@ -90,12 +90,12 @@ func (o jsonObject) MarshalJSON() ([]byte, error) {
 // detail.Fields when it is set, and "" when a selection leaves no key. Of the
 // keys it carries: parent/closed are omitted when absent, the list sections are
 // arrays, and description is an empty string when not set.
-func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) string {
+func (f *JSONFormatter) FormatTaskDetail(detail TaskDetail) (string, error) {
 	obj := taskDetailJSONObject(detail)
 	if len(obj) == 0 {
-		return ""
+		return "", nil
 	}
-	return marshalIndentJSON(obj)
+	return marshalIndentJSON(obj), nil
 }
 
 // taskDetailJSONObject lays out the detail document's keys in the order it
@@ -229,7 +229,7 @@ type jsonStats struct {
 // FormatStats renders task statistics as a nested JSON object with
 // total, by_status, workflow, and by_priority sections.
 // by_priority always contains 5 entries (P0-P4), even when counts are zero.
-func (f *JSONFormatter) FormatStats(stats Stats) string {
+func (f *JSONFormatter) FormatStats(stats Stats) (string, error) {
 	priorities := make([]jsonPriorityEntry, 5)
 	for i := range 5 {
 		priorities[i] = jsonPriorityEntry{
@@ -253,7 +253,7 @@ func (f *JSONFormatter) FormatStats(stats Stats) string {
 		ByPriority: priorities,
 	}
 
-	return marshalIndentJSON(obj)
+	return marshalIndentJSON(obj), nil
 }
 
 // jsonMessage represents a general-purpose message in JSON output.
@@ -318,8 +318,8 @@ type jsonChangedList struct {
 }
 
 // FormatCascadeTransition renders every status change the command made as one changed list.
-func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) string {
-	return marshalIndentJSON(jsonChangedList{Changed: toJSONStatusChanges(result.Changed())})
+func (f *JSONFormatter) FormatCascadeTransition(result CascadeResult) (string, error) {
+	return marshalIndentJSON(jsonChangedList{Changed: toJSONStatusChanges(result.Changed())}), nil
 }
 
 // jsonDepTreeTask represents a task in dep tree JSON output.
@@ -373,12 +373,12 @@ func toJSONDepTreeNodes(nodes []DepTreeNode) []jsonDepTreeNode {
 // FormatDepTree renders a dependency tree as structured JSON.
 // Full graph: {mode, trees, chains, longest, blocked}.
 // Focused: {mode, target, blocked_by, blocks}.
-func (f *JSONFormatter) FormatDepTree(result DepTreeResult) string {
+func (f *JSONFormatter) FormatDepTree(result DepTreeResult) (string, error) {
 	if result.Target != nil {
-		return f.formatFocusedDepTreeJSON(result)
+		return f.formatFocusedDepTreeJSON(result), nil
 	}
 
-	return f.formatFullDepTreeJSON(result)
+	return f.formatFullDepTreeJSON(result), nil
 }
 
 func (f *JSONFormatter) formatFullDepTreeJSON(result DepTreeResult) string {

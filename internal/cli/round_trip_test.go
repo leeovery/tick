@@ -23,6 +23,15 @@ var (
 	fixtureRefs = []string{"https://example.com/issues/42"}
 )
 
+// TOON cannot encode a C0 control character other than tab, newline and
+// carriage return.
+const (
+	refusedChar        = "\x1b"
+	refusedTitle       = "bell " + refusedChar + " title"
+	refusedDescription = "bell " + refusedChar + " description"
+	refusedNoteText    = "bell " + refusedChar + " note"
+)
+
 // setupFixtureTask creates the awkward fixture task and its note, returning the
 // project directory, the .tick directory and the new task's ID.
 func setupFixtureTask(t *testing.T) (dir string, tickDir string, id string) {
@@ -367,4 +376,81 @@ func bareField(t *testing.T, dir, id, field string) string {
 		t.Fatalf("show --field %s stdout = %q, want a trailing newline", field, stdout)
 	}
 	return value
+}
+
+// refusedCarrier is one free-text field carrying a value TOON cannot encode.
+type refusedCarrier struct {
+	name   string
+	field  string
+	value  string
+	create func(t *testing.T, dir string) string
+	stored func(task.Task) string
+}
+
+func refusedCarriers() []refusedCarrier {
+	return []refusedCarrier{
+		{
+			name:   "title",
+			field:  "title",
+			value:  refusedTitle,
+			create: func(t *testing.T, dir string) string { return createCarryingValue(t, dir, "title", refusedTitle) },
+			stored: func(tk task.Task) string { return tk.Title },
+		},
+		{
+			name:  "description",
+			field: "description",
+			value: refusedDescription,
+			create: func(t *testing.T, dir string) string {
+				return createCarryingValue(t, dir, "description", refusedDescription)
+			},
+			stored: func(tk task.Task) string { return tk.Description },
+		},
+		{
+			name:   "note text",
+			field:  "notes.1",
+			value:  refusedNoteText,
+			create: createTaskWithRefusedNote,
+			stored: func(tk task.Task) string { return tk.Notes[0].Text },
+		},
+	}
+}
+
+// createTaskWithRefusedNote creates a task and adds the refused note to it. The
+// note is stored though the document confirming it is refused.
+func createTaskWithRefusedNote(t *testing.T, dir string) string {
+	t.Helper()
+	id := createCarryingValue(t, dir, "title", "carrier title")
+	if _, _, exitCode := runToon(t, dir, "note", "add", id, "--", refusedNoteText); exitCode != 1 {
+		t.Fatalf("note add exit code = %d, want 1", exitCode)
+	}
+	return id
+}
+
+func TestRefusedCharacterRoundTrip(t *testing.T) {
+	for _, carrier := range refusedCarriers() {
+		t.Run("it stores the refused "+carrier.name+" byte-identically", func(t *testing.T) {
+			dir, tickDir := setupTickProject(t)
+			carrier.create(t, dir)
+
+			if got := carrier.stored(storedFixture(t, tickDir)); got != carrier.value {
+				t.Errorf("stored %s = %q, want %q", carrier.name, got, carrier.value)
+			}
+		})
+
+		t.Run("it returns the refused "+carrier.name+" byte-identically from --field", func(t *testing.T) {
+			dir, _ := setupTickProject(t)
+			id := carrier.create(t, dir)
+
+			assertBareField(t, dir, id, carrier.field, carrier.value)
+		})
+
+		t.Run("it refuses the document carrying the refused "+carrier.name, func(t *testing.T) {
+			dir, _ := setupTickProject(t)
+			id := carrier.create(t, dir)
+
+			stdout, stderr, exitCode := runToon(t, dir, "show", id)
+
+			assertRefused(t, stdout, stderr, exitCode, id)
+		})
+	}
 }

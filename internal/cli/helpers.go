@@ -27,7 +27,17 @@ func outputMutationResult(store *storage.Store, id string, fc FormatConfig, fmtr
 
 	detail := showDataToTaskDetail(data)
 	detail.Changes = changes
-	fmt.Fprintln(stdout, fmtr.FormatTaskDetail(detail))
+	document, err := fmtr.FormatTaskDetail(detail)
+	return printDocument(stdout, document, err)
+}
+
+// printDocument writes a rendered document to stdout, or returns the error that
+// refused it and leaves stdout untouched.
+func printDocument(stdout io.Writer, document string, err error) error {
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(stdout, document)
 	return nil
 }
 
@@ -96,8 +106,9 @@ func validateRefsFlag(refs []string, emptyErr string) ([]string, error) {
 	return deduped, nil
 }
 
-func outputStatusChanges(stdout io.Writer, fmtr Formatter, cr CascadeResult) {
-	fmt.Fprintln(stdout, fmtr.FormatCascadeTransition(cr))
+func outputStatusChanges(stdout io.Writer, fmtr Formatter, cr CascadeResult) error {
+	document, err := fmtr.FormatCascadeTransition(cr)
+	return printDocument(stdout, document, err)
 }
 
 // validateAndReopenParent finds the parent task in tasks by parentID, validates that
