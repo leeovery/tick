@@ -225,7 +225,6 @@ func collectDownstreamEdges(parentID string, nodes []DepTreeNode) []toonEdgeRow 
 }
 
 // collectUpstreamEdges recursively collects edges from each blocker node to the blocked task.
-// Used for the "blocked_by" direction of focused mode.
 func collectUpstreamEdges(blockedID string, nodes []DepTreeNode) []toonEdgeRow {
 	var edges []toonEdgeRow
 	for _, node := range nodes {

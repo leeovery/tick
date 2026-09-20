@@ -216,9 +216,8 @@ type DepTreeNode struct {
 }
 
 // DepTreeResult holds all data needed to render a dep tree command output.
-// For full graph mode: Trees holds every tree covering the graph — those grown from
-// unblocked tasks first, then those seeded from participants no such tree reaches — Edges
-// holds one entry per stored dependency, and summary stats are populated.
+// For full graph mode: Trees holds the drawn trees, Edges holds one entry per stored
+// dependency, and summary stats are populated.
 // For focused mode: BlockedBy and Blocks contain upstream/downstream trees.
 type DepTreeResult struct {
 	// Full graph mode fields

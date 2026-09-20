@@ -129,7 +129,6 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 		if len(t.BlockedBy) > 0 {
 			continue
 		}
-		// This task participates and is not blocked — it's a root
 		if _, blocksOthers := blocks[t.ID]; blocksOthers {
 			node := DepTreeNode{
 				Task:     toDepTreeTask(t),
@@ -143,7 +142,6 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 	collectTreeIDs(roots, emitted)
 	unrooted := buildSeededTrees(orderedParticipants, emitted, blocks, taskIdx)
 
-	// Count blocked tasks (tasks with at least one BlockedBy entry)
 	blocked := 0
 	for _, t := range tasks {
 		if len(t.BlockedBy) > 0 {
@@ -159,7 +157,6 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 		longest = max(longest, longestPath(tree))
 	}
 
-	// Build summary
 	chainWord := "chains"
 	if chains == 1 {
 		chainWord = "chain"
@@ -231,11 +228,11 @@ func collectTreeIDs(nodes []DepTreeNode, seen map[string]bool) {
 const depTreeMissingStatus = "missing"
 
 // buildSeededTrees seeds a downstream walk from each participant the walk from the roots
-// left unemitted, so the edges of a cycle or of a dangling blocker still reach the output.
-// Participants that block nothing need no seed: each is reached as the target of a blocker's edge.
+// left unemitted, so a cycle's members and a dangling blocker are still drawn.
+// Participants that block nothing need no seed: each is drawn as a child of one of its blockers.
 // A participant whose blockers are not yet emitted is held back until they are; when every remaining
-// participant is blocked by another that is also unemitted, the first in order is seeded so its
-// edges still reach the output.
+// participant is blocked by another that is also unemitted, the first in order is seeded so it is
+// drawn at all.
 func buildSeededTrees(participants []string, emitted map[string]bool, blocks map[string][]string, taskIdx map[string]task.Task) []DepTreeNode {
 	var unrooted []DepTreeNode
 	seed := func(id string) {
