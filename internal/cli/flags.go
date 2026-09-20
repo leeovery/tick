@@ -8,7 +8,6 @@ import (
 
 // FlagDef describes a command flag's behavior.
 type FlagDef struct {
-	// TakesValue indicates whether the flag consumes the next argument as its value.
 	TakesValue bool
 }
 

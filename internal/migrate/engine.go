@@ -51,7 +51,8 @@ func NewEngine(creator TaskCreator, opts Options) *Engine {
 	return &Engine{creator: creator, opts: opts}
 }
 
-// Run fetches tasks from the provider, validates each one, inserts valid tasks
+// Run fetches tasks from the provider, trims edge whitespace off each one's free
+// text, validates each one, inserts valid tasks
 // via the TaskCreator, and returns a Result per task. Both validation and
 // insertion failures are recorded as failed Results; processing continues for
 // all remaining tasks. The returned error is non-nil only when provider.Tasks()

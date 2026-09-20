@@ -25,7 +25,7 @@ const (
 	maxPriority = 4
 )
 
-// MigratedTask represents a normalized task ready for insertion into tick.
+// MigratedTask represents a task ready for insertion into tick.
 // Title is the only required field; all others use defaults when absent.
 type MigratedTask struct {
 	Title       string
@@ -65,7 +65,7 @@ func (mt MigratedTask) Normalize() MigratedTask {
 type Provider interface {
 	// Name returns the provider identifier (e.g., "beads") used in output.
 	Name() string
-	// Tasks returns all normalized tasks from the source, or an error if the source cannot be read.
+	// Tasks returns every task from the source, or an error if the source cannot be read.
 	Tasks() ([]MigratedTask, error)
 }
 

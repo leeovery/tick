@@ -255,7 +255,6 @@ type Formatter interface {
 
 // baseFormatter provides shared implementations of FormatDepChange and FormatRemoval
 // for text-based formatters (Toon and Pretty).
-// Embedded by ToonFormatter and PrettyFormatter.
 type baseFormatter struct{}
 
 // FormatDepChange renders a dependency add/remove confirmation as plain text.
