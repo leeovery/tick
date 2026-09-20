@@ -66,30 +66,26 @@ func TestToonFormatter(t *testing.T) {
 	// Compile-time interface verification.
 	var _ Formatter = (*ToonFormatter)(nil)
 
-	t.Run("it formats list with correct header count and schema", func(t *testing.T) {
+	t.Run("it formats list as a decodable table of the given tasks", func(t *testing.T) {
 		f := &ToonFormatter{}
 		now := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		tasks := []task.Task{
 			{ID: "tick-a1b2", Title: "Setup Sanctum", Status: task.StatusDone, Priority: 1, Created: now, Updated: now},
-			{ID: "tick-c3d4", Title: "Login endpoint", Status: task.StatusOpen, Priority: 1, Created: now, Updated: now},
+			{ID: "tick-c3d4", Title: "Login endpoint", Status: task.StatusOpen, Priority: 1, Type: "feature", Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
-		lines := strings.Split(result, "\n")
-		if len(lines) != 3 {
-			t.Fatalf("expected 3 lines, got %d: %q", len(lines), result)
+
+		doc := decodeToonDoc(t, f.FormatTaskList(tasks))
+
+		rows := toonRows(t, doc, "tasks")
+		if len(rows) != len(tasks) {
+			t.Fatalf("tasks has %d rows, want %d", len(rows), len(tasks))
 		}
-		expectedHeader := "tasks[2]{id,title,status,priority,type}:"
-		if lines[0] != expectedHeader {
-			t.Errorf("header = %q, want %q", lines[0], expectedHeader)
-		}
-		expectedRow1 := `  tick-a1b2,Setup Sanctum,done,1,""`
-		if lines[1] != expectedRow1 {
-			t.Errorf("row 1 = %q, want %q", lines[1], expectedRow1)
-		}
-		expectedRow2 := `  tick-c3d4,Login endpoint,open,1,""`
-		if lines[2] != expectedRow2 {
-			t.Errorf("row 2 = %q, want %q", lines[2], expectedRow2)
-		}
+		assertToonFields(t, rows[0], map[string]any{
+			"id": "tick-a1b2", "title": "Setup Sanctum", "status": "done", "priority": float64(1), "type": "",
+		})
+		assertToonFields(t, rows[1], map[string]any{
+			"id": "tick-c3d4", "title": "Login endpoint", "status": "open", "priority": float64(1), "type": "feature",
+		})
 	})
 
 	t.Run("it formats zero tasks as empty section", func(t *testing.T) {
@@ -99,6 +95,9 @@ func TestToonFormatter(t *testing.T) {
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
 		}
+		if rows := toonRows(t, decodeToonDoc(t, result), "tasks"); len(rows) != 0 {
+			t.Errorf("tasks has %d rows, want 0", len(rows))
+		}
 	})
 
 	t.Run("it formats zero tasks from nil slice as empty section", func(t *testing.T) {
@@ -107,6 +106,9 @@ func TestToonFormatter(t *testing.T) {
 		expected := "tasks[0]{id,title,status,priority,type}:"
 		if result != expected {
 			t.Errorf("result = %q, want %q", result, expected)
+		}
+		if rows := toonRows(t, decodeToonDoc(t, result), "tasks"); len(rows) != 0 {
+			t.Errorf("tasks has %d rows, want 0", len(rows))
 		}
 	})
 
@@ -515,25 +517,13 @@ func TestToonFormatter(t *testing.T) {
 			{ID: "tick-a1b2", Title: "Fix login bug", Status: task.StatusOpen, Priority: 1, Type: "bug", Created: now, Updated: now},
 			{ID: "tick-c3d4", Title: "Add search", Status: task.StatusDone, Priority: 2, Type: "feature", Created: now, Updated: now},
 		}
-		result := f.FormatTaskList(tasks)
-		lines := strings.Split(result, "\n")
-		if len(lines) != 3 {
-			t.Fatalf("expected 3 lines, got %d: %q", len(lines), result)
+		rows := toonRows(t, decodeToonDoc(t, f.FormatTaskList(tasks)), "tasks")
+
+		if len(rows) != len(tasks) {
+			t.Fatalf("tasks has %d rows, want %d", len(rows), len(tasks))
 		}
-		// Header should include type in schema
-		expectedHeader := "tasks[2]{id,title,status,priority,type}:"
-		if lines[0] != expectedHeader {
-			t.Errorf("header = %q, want %q", lines[0], expectedHeader)
-		}
-		// Rows should include type value
-		expectedRow1 := "  tick-a1b2,Fix login bug,open,1,bug"
-		if lines[1] != expectedRow1 {
-			t.Errorf("row 1 = %q, want %q", lines[1], expectedRow1)
-		}
-		expectedRow2 := "  tick-c3d4,Add search,done,2,feature"
-		if lines[2] != expectedRow2 {
-			t.Errorf("row 2 = %q, want %q", lines[2], expectedRow2)
-		}
+		assertToonFields(t, rows[0], map[string]any{"id": "tick-a1b2", "type": "bug"})
+		assertToonFields(t, rows[1], map[string]any{"id": "tick-c3d4", "type": "feature"})
 	})
 
 	t.Run("it includes type in toon show when set", func(t *testing.T) {
