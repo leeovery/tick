@@ -166,7 +166,7 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 
 		// Query notes.
 		noteRows, err := db.Query(
-			`SELECT text, created FROM task_notes WHERE task_id = ? ORDER BY created ASC, rowid ASC`,
+			`SELECT text, created FROM task_notes WHERE task_id = ? ORDER BY rowid ASC`,
 			id,
 		)
 		if err != nil {

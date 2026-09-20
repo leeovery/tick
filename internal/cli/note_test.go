@@ -615,6 +615,62 @@ func TestNoteIndex(t *testing.T) {
 		}
 	})
 
+	t.Run("it renders notes in stored order when created stamps run backwards", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{descendingStampTask(now)})
+
+		stdout, _, code := runShow(t, dir, "tick-aaa111", "--toon")
+		if code != 0 {
+			t.Fatalf("show exit code = %d, want 0", code)
+		}
+		notes := decodeToonNotes(t, stdout)
+		if len(notes) != 2 {
+			t.Fatalf("notes length = %d, want 2", len(notes))
+		}
+		wantRows := []struct {
+			index float64
+			text  string
+		}{{1, "FIRST in file, later stamp"}, {2, "SECOND in file, earlier stamp"}}
+		for i, want := range wantRows {
+			if notes[i]["index"] != want.index || notes[i]["text"] != want.text {
+				t.Errorf("notes[%d] = %#v, want index %v text %q", i, notes[i], want.index, want.text)
+			}
+		}
+	})
+
+	t.Run("it removes the note the published index names when stamps run backwards", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{descendingStampTask(now)})
+
+		if _, _, code := runNote(t, dir, "remove", "tick-aaa111", "1"); code != 0 {
+			t.Fatalf("note remove exit code = %d, want 0", code)
+		}
+
+		remaining := notesTextsOf(t, readPersistedTasks(t, tickDir), "tick-aaa111")
+		want := []string{"SECOND in file, earlier stamp"}
+		if !slices.Equal(remaining, want) {
+			t.Errorf("remaining notes = %#v, want %#v", remaining, want)
+		}
+	})
+
+	t.Run("it narrows to the first stored note when stamps run backwards", func(t *testing.T) {
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{descendingStampTask(now)})
+
+		stdout, _, code := runShow(t, dir, "tick-aaa111", "--toon", "--field", "notes.1")
+		if code != 0 {
+			t.Fatalf("show exit code = %d, want 0", code)
+		}
+		if stdout != "FIRST in file, later stamp\n" {
+			t.Errorf("stdout = %q, want %q", stdout, "FIRST in file, later stamp\n")
+		}
+
+		_, stderr, code := runShow(t, dir, "tick-aaa111", "--toon", "--field", "notes.3")
+		if code == 0 {
+			t.Fatal("show --field notes.3 exit code = 0, want non-zero")
+		}
+		if !strings.Contains(stderr, "notes.3 out of range") {
+			t.Errorf("stderr = %q, want it to report notes.3 out of range", stderr)
+		}
+	})
+
 	t.Run("it keeps insertion order for notes sharing a created timestamp", func(t *testing.T) {
 		taskA := task.Task{
 			ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
@@ -644,6 +700,19 @@ func TestNoteIndex(t *testing.T) {
 			}
 		}
 	})
+}
+
+// descendingStampTask returns a task whose stored notes carry stamps running
+// backwards against their stored order.
+func descendingStampTask(now time.Time) task.Task {
+	return task.Task{
+		ID: "tick-aaa111", Title: "Task A", Status: task.StatusOpen,
+		Priority: 2, Created: now, Updated: now,
+		Notes: []task.Note{
+			{Text: "FIRST in file, later stamp", Created: now},
+			{Text: "SECOND in file, earlier stamp", Created: now.Add(-time.Hour)},
+		},
+	}
 }
 
 // notesTextsOf returns the note texts of the named task, in stored order.
