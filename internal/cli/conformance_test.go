@@ -76,8 +76,6 @@ func conformanceStatsTasks() []task.Task {
 	}
 }
 
-// conformanceDepGraph returns a three-task chain beside a task carrying no
-// dependencies, covering every branch of the focused dependency view.
 func conformanceDepGraph() []task.Task {
 	upstream := conformanceTask("tick-a11111", "Upstream", task.StatusOpen, 2, "task")
 	middle := conformanceTask("tick-b22222", "Middle", task.StatusOpen, 2, "task")
@@ -127,8 +125,6 @@ func conformanceDetailTasks() []task.Task {
 	return append(conformanceDepGraph(), full, child)
 }
 
-// conformanceStatusTask builds a task, stamping the closed time a terminal
-// status carries.
 func conformanceStatusTask(id, title string, status task.Status) task.Task {
 	tk := conformanceTask(id, title, status, 2, "task")
 	if status == task.StatusDone || status == task.StatusCancelled {
@@ -137,14 +133,10 @@ func conformanceStatusTask(id, title string, status task.Status) task.Task {
 	return tk
 }
 
-// conformanceLoneTask returns a childless task, the branch where a status
-// command moves nothing but its target.
 func conformanceLoneTask(status task.Status) []task.Task {
 	return []task.Task{conformanceStatusTask("tick-a00001", "Lone", status)}
 }
 
-// conformanceStatusFamily returns a parent and its only child, the branch
-// where a status command cascades along the hierarchy.
 func conformanceStatusFamily(parentStatus, childStatus task.Status) []task.Task {
 	parent := conformanceStatusTask("tick-p00001", "Parent", parentStatus)
 	child := conformanceStatusTask("tick-c00001", "Child", childStatus)
@@ -171,9 +163,6 @@ const conformanceSelectedID = "tick-x00001"
 
 const conformanceSelectedDescription = "Line one\nLine two"
 
-// conformanceSelectedTask returns an open, parentless task carrying a
-// description and two notes: the seed of every field-selection document, and
-// of the selection that names only fields it does not carry.
 func conformanceSelectedTask() []task.Task {
 	selected := conformanceTask(conformanceSelectedID, "Selected", task.StatusOpen, 2, "task")
 	selected.Description = conformanceSelectedDescription
