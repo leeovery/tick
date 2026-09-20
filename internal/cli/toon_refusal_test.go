@@ -228,17 +228,38 @@ func TestToonRefusesUnencodableValues(t *testing.T) {
 		}
 	})
 
-	t.Run("it names the document's subject when the refused value sits on a cascaded task", func(t *testing.T) {
+	t.Run("it names the cascaded task carrying the refused value", func(t *testing.T) {
 		dir, _ := setupTickProject(t)
 		parent := createCarryingValue(t, dir, "title", "an ordinary parent")
 		child := createChildCarryingRefusedTitle(t, dir, parent)
 
 		stdout, stderr, exitCode := runToon(t, dir, "done", parent)
 
-		assertRefused(t, stdout, stderr, exitCode, "cannot encode section changed", parent)
-		if strings.Contains(stderr, child) {
-			t.Errorf("stderr = %q, want it to name the document's subject %q rather than the cascaded task", stderr, parent)
-		}
+		assertRefused(t, stdout, stderr, exitCode, "cannot encode section changed", child)
+		assertUnnamed(t, stderr, parent)
+	})
+
+	t.Run("it names the child when a child's title cannot be encoded", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		parent := createCarryingValue(t, dir, "title", "an ordinary parent")
+		child := createChildCarryingRefusedTitle(t, dir, parent)
+
+		stdout, stderr, exitCode := runToon(t, dir, "show", parent)
+
+		assertRefused(t, stdout, stderr, exitCode, "section children", child)
+		assertUnnamed(t, stderr, parent)
+	})
+
+	t.Run("it names the blocker when a blocker's title cannot be encoded", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		blocked := createCarryingValue(t, dir, "title", "an ordinary blocked task")
+		blocker := createRefusedTitleTask(t, dir)
+		runToon(t, dir, "dep", "add", blocked, blocker)
+
+		stdout, stderr, exitCode := runToon(t, dir, "show", blocked)
+
+		assertRefused(t, stdout, stderr, exitCode, "section blocked_by", blocker)
+		assertUnnamed(t, stderr, blocked)
 	})
 
 	t.Run("it fails on create while storing the task whose title cannot be encoded", func(t *testing.T) {

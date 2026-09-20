@@ -152,7 +152,7 @@ func buildChangedSection(changes []StatusChange) (string, error) {
 	for i, c := range changes {
 		rows[i] = toonChangedRow(c)
 	}
-	return encodeToonSection("changed", rows)
+	return encodeToonSectionIdentified("changed", rows, func(r toonChangedRow) string { return r.ID })
 }
 
 // FormatCascadeTransition renders every status change the command made as one changed table.
@@ -302,7 +302,7 @@ func buildRelatedSection(name string, related []RelatedTask) (string, error) {
 	for i, r := range related {
 		rows[i] = toonRelatedRow(r)
 	}
-	return encodeToonSection(name, rows)
+	return encodeToonSectionIdentified(name, rows, func(r toonRelatedRow) string { return r.ID })
 }
 
 // buildNotesSection builds the notes section as a TOON tabular section, each
@@ -369,7 +369,7 @@ func sectionRefusal[T any](name string, rows []T, identity func(T) string, err e
 }
 
 // toonEncodeError reports a value TOON cannot carry, naming the field or
-// section that holds it and the task the document covers when it covers one.
+// section that holds it and the task carrying it when one is identified.
 type toonEncodeError struct {
 	part   string
 	taskID string
@@ -385,10 +385,11 @@ func (e *toonEncodeError) Error() string {
 
 func (e *toonEncodeError) Unwrap() error { return e.err }
 
-// refusalForTask returns err naming taskID when err is a TOON refusal.
+// refusalForTask returns err naming taskID when err is a TOON refusal that
+// names no task of its own; one that does keeps it.
 func refusalForTask(err error, taskID string) error {
 	var refusal *toonEncodeError
-	if taskID == "" || !errors.As(err, &refusal) {
+	if taskID == "" || !errors.As(err, &refusal) || refusal.taskID != "" {
 		return err
 	}
 	return &toonEncodeError{part: refusal.part, taskID: taskID, err: refusal.err}
