@@ -116,9 +116,6 @@ func bareClosed(d TaskDetail) string {
 // resolving to a single value, with ok false for every other selection. A field
 // the task does not carry yields the empty string with ok true.
 func bareFieldValue(detail TaskDetail, sel *FieldSelection) (string, bool) {
-	if sel == nil {
-		return "", false
-	}
 	name, ok := sel.Only()
 	if !ok {
 		return "", false
@@ -178,14 +175,19 @@ func (s *FieldSelection) Positions(name string) []int {
 	return s.positions[name]
 }
 
-// Len returns the number of distinct names requested.
+// Len returns the number of distinct names requested. A nil selection is the
+// whole document and requests no name.
 func (s *FieldSelection) Len() int {
+	if s == nil {
+		return 0
+	}
 	return len(s.names)
 }
 
 // Only returns the sole requested name, and false when several were requested.
+// A nil selection is the whole document and has no sole name.
 func (s *FieldSelection) Only() (string, bool) {
-	if len(s.names) != 1 {
+	if s == nil || len(s.names) != 1 {
 		return "", false
 	}
 	return s.names[0], true

@@ -714,6 +714,45 @@ func TestValidatePositions(t *testing.T) {
 	})
 }
 
+func TestFieldSelectionNilReceiver(t *testing.T) {
+	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	detail := TaskDetail{
+		Task:      task.Task{ID: "tick-a1b2c3", Title: "Add login"},
+		Tags:      []string{"api", "ui"},
+		Refs:      []string{"https://example.com"},
+		Notes:     []task.Note{{Text: "looked at it", Created: created}},
+		Children:  []RelatedTask{{ID: "tick-c1c1c1", Title: "Child one", Status: "open"}},
+		BlockedBy: []RelatedTask{{ID: "tick-b1b1b1", Title: "Blocker", Status: "open"}},
+	}
+
+	var sel *FieldSelection
+
+	t.Run("it reports zero names for a nil selection", func(t *testing.T) {
+		if got := sel.Len(); got != 0 {
+			t.Errorf("Len() = %d, want 0", got)
+		}
+	})
+
+	t.Run("it reports no sole name for a nil selection", func(t *testing.T) {
+		name, ok := sel.Only()
+		if name != "" || ok {
+			t.Errorf("Only() = %q, %t; want \"\", false", name, ok)
+		}
+	})
+
+	t.Run("it answers the other three methods for a nil selection", func(t *testing.T) {
+		if !sel.includes("title") {
+			t.Error("includes(title) = false, want true")
+		}
+		if got := sel.Positions("notes"); got != nil {
+			t.Errorf("Positions(notes) = %#v, want nil", got)
+		}
+		if err := sel.ValidatePositions(detail); err != nil {
+			t.Errorf("ValidatePositions = %v, want nil", err)
+		}
+	})
+}
+
 func TestTaskDetailWithoutFieldSelection(t *testing.T) {
 	created := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
 	detail := TaskDetail{
