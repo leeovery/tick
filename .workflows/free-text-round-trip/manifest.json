@@ -201,9 +201,9 @@
         "free-text-round-trip": {
           "status": "in-progress",
           "task_gate_mode": "auto",
-          "fix_gate_mode": "auto",
+          "fix_gate_mode": "gated",
           "analysis_gate_mode": "gated",
-          "consolidation_gate_mode": "auto",
+          "consolidation_gate_mode": "gated",
           "fix_attempts": 0,
           "analysis_cycle_total": 0,
           "linters": [
@@ -239,8 +239,8 @@
             ".claude/skills/golang-dependency-management",
             ".claude/skills/golang-continuous-integration"
           ],
-          "current_phase": 5,
-          "current_task": "free-text-round-trip-6-1",
+          "current_phase": 6,
+          "current_task": "free-text-round-trip-6-2",
           "completed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -287,7 +287,8 @@
             "free-text-round-trip-5-5",
             "free-text-round-trip-5-6",
             "free-text-round-trip-5-7",
-            "free-text-round-trip-5-8"
+            "free-text-round-trip-5-8",
+            "free-text-round-trip-6-1"
           ],
           "staging": {
             "p1": {
@@ -343,6 +344,18 @@
             3,
             4,
             5
+          ],
+          "bank": [
+            {
+              "task": "free-text-round-trip-6-1",
+              "source": "reviewer",
+              "summary": "Nothing ties a conformanceDoc.Command to the arguments its Setup actually runs, so task 6-3's coverage guard can certify a command the suite never exercises.",
+              "failure": "6-3 matches Command against commandFlags keys to prove every structured command is covered. An entry whose Command says ready while its Setup runs list --ready, or a copy-pasted entry that keeps Command: list on a blocked setup, makes the guard green for a command no entry runs. Nobody notices until a malformed document ships in that command with the conformance suite passing.",
+              "detail": "conformanceDoc.Command at internal/cli/conformance_test.go:22 is written independently of the args returned by Setup (internal/cli/conformance_test.go:56-118), and TestConformanceInventoryWellFormed (internal/cli/conformance_test.go:188-248) checks names and the Setup/NotADocument exclusivity but never the two against each other. The cheap fix belongs with 6-3: assert that each entry's returned args begin with its Command's words.",
+              "files": [
+                "internal/cli/conformance_test.go"
+              ]
+            }
           ]
         }
       }
