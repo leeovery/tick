@@ -381,7 +381,6 @@ func (f *JSONFormatter) FormatDepTree(result DepTreeResult) string {
 	return f.formatFullDepTreeJSON(result)
 }
 
-// formatFullDepTreeJSON renders the full graph as nested JSON.
 func (f *JSONFormatter) formatFullDepTreeJSON(result DepTreeResult) string {
 	return marshalIndentJSON(jsonDepTreeFull{
 		Mode:    "full",
@@ -392,7 +391,6 @@ func (f *JSONFormatter) formatFullDepTreeJSON(result DepTreeResult) string {
 	})
 }
 
-// formatFocusedDepTreeJSON renders focused mode as JSON.
 func (f *JSONFormatter) formatFocusedDepTreeJSON(result DepTreeResult) string {
 	return marshalIndentJSON(jsonDepTreeFocused{
 		Mode: "focused",

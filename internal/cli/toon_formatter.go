@@ -193,8 +193,6 @@ func (f *ToonFormatter) formatFullDepTree(result DepTreeResult) string {
 	return joinToonSections(sections)
 }
 
-// formatFocusedDepTree renders focused mode as the target's id, title and status
-// followed by its blocked_by and blocks sections.
 func (f *ToonFormatter) formatFocusedDepTree(result DepTreeResult) string {
 	sections := []string{
 		encodeToonFields(

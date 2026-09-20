@@ -233,7 +233,6 @@ func collectParticipants(tasks []task.Task) ([]string, map[string]bool) {
 	return ordered, seen
 }
 
-// collectTreeIDs adds the ID of every node in the given trees to seen.
 func collectTreeIDs(nodes []DepTreeNode, seen map[string]bool) {
 	for _, n := range nodes {
 		seen[n.Task.ID] = true

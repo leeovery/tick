@@ -237,8 +237,8 @@ type DepTreeResult struct {
 	BlockedByEdges []DepTreeEdge
 	BlocksEdges    []DepTreeEdge
 
-	// Message is the no-dependencies sentence. Only the pretty formatter renders it;
-	// the machine formats answer an empty graph with the emptied document instead.
+	// Message is the no-dependencies sentence; the machine formats answer an empty
+	// graph with the emptied document instead.
 	Message string
 }
 
