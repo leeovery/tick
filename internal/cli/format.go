@@ -228,7 +228,8 @@ type DepTreeResult struct {
 	BlockedBy []DepTreeNode
 	Blocks    []DepTreeNode
 
-	// Message for edge cases (e.g., "No dependencies found.")
+	// Message is the no-dependencies sentence. Only the pretty formatter renders it;
+	// the machine formats answer an empty graph with the emptied document instead.
 	Message string
 }
 
