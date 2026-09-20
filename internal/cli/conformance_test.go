@@ -24,13 +24,22 @@ import (
 // fully-qualified command name as commandFlags spells it, carrying no
 // arguments and no flags. Setup seeds a project and returns its directory
 // plus the arguments following "tick". NotADocument states why an entry's
-// output is not a document; an entry carrying one carries no Setup.
+// output is not a document under any driver; an entry carrying one carries no
+// Setup. ToonNotADocument states why the toon driver skips an entry the json
+// driver runs.
 type conformanceDoc struct {
-	Name         string
-	Command      string
-	Setup        func(t *testing.T) (dir string, args []string)
-	NotADocument string
+	Name             string
+	Command          string
+	Setup            func(t *testing.T) (dir string, args []string)
+	NotADocument     string
+	ToonNotADocument string
 }
+
+// The drivers that run the inventory, one per machine format.
+const (
+	conformanceToonDriver = "toon"
+	conformanceJSONDriver = "json"
+)
 
 var conformanceTime = time.Date(2026, 5, 4, 9, 0, 0, 0, time.UTC)
 
@@ -525,6 +534,50 @@ var conformanceDocs = []conformanceDoc{
 			return dir, []string{"update", "tick-m00001", "--parent", "tick-n00001"}
 		},
 	},
+	{
+		Name:             "dep add joining two unconnected tasks",
+		Command:          "dep add",
+		ToonNotADocument: "toon confirms the dependency change in a line of prose rather than a document",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceUnconnectedTasks())
+			return dir, []string{"dep", "add", "tick-f22222", "tick-e11111"}
+		},
+	},
+	{
+		Name:             "dep remove releasing a blocked task",
+		Command:          "dep remove",
+		ToonNotADocument: "toon confirms the dependency change in a line of prose rather than a document",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceBlockedPair())
+			return dir, []string{"dep", "remove", "tick-eee555", "tick-ddd444"}
+		},
+	},
+	{
+		Name:             "remove on a task nothing depends on",
+		Command:          "remove",
+		ToonNotADocument: "toon confirms what was removed in a line of prose rather than a document",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceListTasks)
+			return dir, []string{"remove", "tick-bbb222", "--force"}
+		},
+	},
+	{
+		Name:             "init in an uninitialised directory",
+		Command:          "init",
+		ToonNotADocument: "toon confirms the initialisation in a line of prose rather than a document",
+		Setup: func(t *testing.T) (string, []string) {
+			return t.TempDir(), []string{"init"}
+		},
+	},
+	{
+		Name:             "rebuild on a populated project",
+		Command:          "rebuild",
+		ToonNotADocument: "toon confirms the rebuild in a line of prose rather than a document",
+		Setup: func(t *testing.T) (string, []string) {
+			dir, _ := setupTickProjectWithTasks(t, conformanceListTasks)
+			return dir, []string{"rebuild"}
+		},
+	},
 }
 
 // runTickConformance runs a tick command under the given format flag. IsTTY is
@@ -598,27 +651,51 @@ func decodeConformanceEntry(t *testing.T, name string) map[string]any {
 	return runConformanceDoc(t, conformanceEntry(t, name))
 }
 
-// driveConformanceEntry hands one inventory entry to drive, skipping the
-// entries whose output is not a document.
-func driveConformanceEntry(t *testing.T, entry conformanceDoc, drive func(*testing.T, conformanceDoc)) {
-	t.Helper()
+// conformanceSkipReason reports why the named driver skips an entry, empty
+// when it runs it. NotADocument holds for every driver, ToonNotADocument for
+// the toon driver alone.
+func conformanceSkipReason(driver string, entry conformanceDoc) string {
 	if entry.NotADocument != "" {
-		t.Skip(entry.NotADocument)
+		return entry.NotADocument
+	}
+	if driver == conformanceToonDriver {
+		return entry.ToonNotADocument
+	}
+	return ""
+}
+
+// driveConformanceEntry hands one inventory entry to drive, skipping the
+// entries the named driver does not run.
+func driveConformanceEntry(t *testing.T, driver string, entry conformanceDoc, drive func(*testing.T, conformanceDoc)) {
+	t.Helper()
+	if reason := conformanceSkipReason(driver, entry); reason != "" {
+		t.Skip(reason)
 	}
 	drive(t, entry)
 }
 
-func driveConformanceInventory(t *testing.T, drive func(*testing.T, conformanceDoc)) {
+func driveConformanceInventory(t *testing.T, driver string, drive func(*testing.T, conformanceDoc)) {
 	t.Helper()
 	for _, entry := range conformanceDocs {
 		t.Run(entry.Name, func(t *testing.T) {
-			driveConformanceEntry(t, entry, drive)
+			driveConformanceEntry(t, driver, entry, drive)
 		})
 	}
 }
 
+// drivenConformanceEntries returns the names of the entries the named driver
+// runs, in inventory order.
+func drivenConformanceEntries(t *testing.T, driver string) []string {
+	t.Helper()
+	var driven []string
+	driveConformanceInventory(t, driver, func(_ *testing.T, entry conformanceDoc) {
+		driven = append(driven, entry.Name)
+	})
+	return driven
+}
+
 func TestToonOutputConformance(t *testing.T) {
-	driveConformanceInventory(t, func(t *testing.T, entry conformanceDoc) {
+	driveConformanceInventory(t, conformanceToonDriver, func(t *testing.T, entry conformanceDoc) {
 		runConformanceDoc(t, entry)
 	})
 }
@@ -628,6 +705,7 @@ func TestToonOutputConformance(t *testing.T) {
 var jsonConformanceListKeys = []string{
 	"changed", "roots", "blocked_by", "blocks",
 	"tags", "refs", "notes", "children", "by_priority",
+	"removed", "deps_updated",
 }
 
 // decodeSingleJSONValue decodes a stream carrying exactly one JSON value,
@@ -1207,7 +1285,7 @@ func TestFieldSelectionExemptions(t *testing.T) {
 		}
 
 		t.Run(entry.Name, func(t *testing.T) {
-			driveConformanceEntry(t, entry, func(t *testing.T, entry conformanceDoc) {
+			driveConformanceEntry(t, conformanceToonDriver, entry, func(t *testing.T, entry conformanceDoc) {
 				runConformanceDoc(t, entry)
 			})
 		})
@@ -1531,21 +1609,31 @@ func TestToonMutationConformance(t *testing.T) {
 	})
 }
 
-// conformanceProseCommands are the commands whose output is a confirmation
-// message rather than a document.
+// conformanceProseCommands are the commands whose toon and pretty output is a
+// confirmation message rather than a document. Under json each returns an
+// object, which the json driver parses like any other document.
 var conformanceProseCommands = []string{"dep add", "dep remove", "remove", "init", "rebuild"}
+
+// conformanceDriverProseCommands returns the prose commands the named driver
+// declares.
+func conformanceDriverProseCommands(driver string) []string {
+	if driver == conformanceToonDriver {
+		return conformanceProseCommands
+	}
+	return nil
+}
 
 // conformanceOutOfScopeCommands are the commands that bypass the formatter and
 // print straight to the terminal.
 var conformanceOutOfScopeCommands = []string{"doctor", "migrate"}
 
-// conformanceMustParseCommands returns the commands the inventory covers, in
+// conformanceMustParseCommands returns the commands the named driver runs, in
 // the order the inventory first names them.
-func conformanceMustParseCommands() []string {
+func conformanceMustParseCommands(driver string) []string {
 	var commands []string
 	seen := make(map[string]bool, len(conformanceDocs))
 	for _, entry := range conformanceDocs {
-		if seen[entry.Command] {
+		if seen[entry.Command] || conformanceSkipReason(driver, entry) != "" {
 			continue
 		}
 		seen[entry.Command] = true
@@ -1579,13 +1667,28 @@ func conformanceCoverageProblems(registered CommandFlags, mustParse, prose, outO
 	return problems
 }
 
-func TestConformanceInventoryCoversEveryCommand(t *testing.T) {
-	t.Run("it covers every registered command", func(t *testing.T) {
-		problems := conformanceCoverageProblems(commandFlags, conformanceMustParseCommands(), conformanceProseCommands, conformanceOutOfScopeCommands)
+// assertConformanceCoverage asserts the sets the named driver declares claim
+// every registered command exactly once.
+func assertConformanceCoverage(t *testing.T, driver string) {
+	t.Helper()
+	problems := conformanceCoverageProblems(
+		commandFlags,
+		conformanceMustParseCommands(driver),
+		conformanceDriverProseCommands(driver),
+		conformanceOutOfScopeCommands,
+	)
+	for _, problem := range problems {
+		t.Error(problem)
+	}
+}
 
-		for _, problem := range problems {
-			t.Error(problem)
-		}
+func TestConformanceInventoryCoversEveryCommand(t *testing.T) {
+	t.Run("it covers every registered command under toon", func(t *testing.T) {
+		assertConformanceCoverage(t, conformanceToonDriver)
+	})
+
+	t.Run("it covers every registered command under json", func(t *testing.T) {
+		assertConformanceCoverage(t, conformanceJSONDriver)
 	})
 
 	t.Run("it fails when a command is declared nowhere", func(t *testing.T) {
@@ -1620,7 +1723,7 @@ func TestConformanceInventoryCoversEveryCommand(t *testing.T) {
 }
 
 func TestJSONOutputConformance(t *testing.T) {
-	driveConformanceInventory(t, func(t *testing.T, entry conformanceDoc) {
+	driveConformanceInventory(t, conformanceJSONDriver, func(t *testing.T, entry conformanceDoc) {
 		runJSONConformanceDoc(t, entry)
 	})
 }
@@ -1720,20 +1823,29 @@ func TestJSONConformanceChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it drives both formats from one inventory", func(t *testing.T) {
-		var driven []string
-		driveConformanceInventory(t, func(_ *testing.T, entry conformanceDoc) {
-			driven = append(driven, entry.Name)
-		})
-
-		var want []string
+	t.Run("it skips a toon-exempt entry in the toon driver and runs it under json", func(t *testing.T) {
+		var toonExempt, sharedByBoth []string
 		for _, entry := range conformanceDocs {
-			if entry.NotADocument == "" {
-				want = append(want, entry.Name)
+			switch {
+			case entry.NotADocument != "":
+			case entry.ToonNotADocument != "":
+				toonExempt = append(toonExempt, entry.Name)
+			default:
+				sharedByBoth = append(sharedByBoth, entry.Name)
 			}
 		}
-		if !slices.Equal(driven, want) {
-			t.Errorf("driven entries = %v, want %v", driven, want)
+		if len(toonExempt) == 0 {
+			t.Fatal("no inventory entry carries a toon exemption")
+		}
+
+		toonDriven := drivenConformanceEntries(t, conformanceToonDriver)
+		jsonDriven := drivenConformanceEntries(t, conformanceJSONDriver)
+
+		if !slices.Equal(toonDriven, sharedByBoth) {
+			t.Errorf("toon driver ran %v, want %v", toonDriven, sharedByBoth)
+		}
+		if !slices.Equal(jsonDriven, slices.Concat(sharedByBoth, toonExempt)) {
+			t.Errorf("json driver ran %v, want every entry carrying a setup", jsonDriven)
 		}
 	})
 }
@@ -1757,6 +1869,27 @@ func TestJSONTaskListConformance(t *testing.T) {
 			if len(items) == 0 {
 				t.Errorf("%s: decoded array is empty", name)
 			}
+		}
+	})
+}
+
+func TestJSONRemovalConformance(t *testing.T) {
+	t.Run("it carries a one-element removed list and an empty deps_updated list", func(t *testing.T) {
+		doc := decodeJSONConformanceEntry(t, "remove on a task nothing depends on")
+
+		rows := toonRows(t, doc, "removed")
+		if len(rows) != 1 {
+			t.Fatalf("removed has %d rows, want 1", len(rows))
+		}
+		if id := rows[0]["id"]; id != "tick-bbb222" {
+			t.Errorf("removed[0][\"id\"] = %#v, want \"tick-bbb222\"", id)
+		}
+		depsUpdated, ok := doc["deps_updated"].([]any)
+		if !ok {
+			t.Fatalf("deps_updated = %#v, want a list", doc["deps_updated"])
+		}
+		if len(depsUpdated) != 0 {
+			t.Errorf("deps_updated = %v, want an empty list", depsUpdated)
 		}
 	})
 }

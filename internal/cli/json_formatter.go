@@ -184,17 +184,17 @@ func toJSONRelated(related []RelatedTask) []jsonRelatedTask {
 
 // jsonDepChange represents a dependency change in JSON output.
 type jsonDepChange struct {
-	Action    string `json:"action"`
-	TaskID    string `json:"task_id"`
-	BlockedBy string `json:"blocked_by"`
+	Action  string `json:"action"`
+	TaskID  string `json:"task_id"`
+	Blocker string `json:"blocker"`
 }
 
 // FormatDepChange renders a dependency add/remove confirmation as a JSON object.
 func (f *JSONFormatter) FormatDepChange(action string, taskID string, depID string) string {
 	return marshalIndentJSON(jsonDepChange{
-		Action:    action,
-		TaskID:    taskID,
-		BlockedBy: depID,
+		Action:  action,
+		TaskID:  taskID,
+		Blocker: depID,
 	})
 }
 

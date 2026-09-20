@@ -463,8 +463,8 @@ func TestJSONFormatter(t *testing.T) {
 		if depAddObj["task_id"] != "tick-c3d4" {
 			t.Errorf("dep task_id = %v, want %q", depAddObj["task_id"], "tick-c3d4")
 		}
-		if depAddObj["blocked_by"] != "tick-a1b2" {
-			t.Errorf("dep blocked_by = %v, want %q", depAddObj["blocked_by"], "tick-a1b2")
+		if depAddObj["blocker"] != "tick-a1b2" {
+			t.Errorf("dep blocker = %v, want %q", depAddObj["blocker"], "tick-a1b2")
 		}
 
 		// Dep change - removed
