@@ -151,7 +151,6 @@ func BuildFullDepTree(tasks []task.Task) DepTreeResult {
 		}
 	}
 
-	// Count connected components (chains) using union-find over participants
 	chains := countChains(tasks, participants)
 
 	trees := slices.Concat(roots, unrooted)
