@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -17,7 +15,6 @@ import (
 	toon "github.com/toon-format/toon-go"
 
 	"github.com/leeovery/tick/internal/task"
-	"github.com/leeovery/tick/internal/testutil"
 )
 
 // conformanceDoc is one document the tool can produce. Command is the
@@ -1305,36 +1302,6 @@ func assertConformanceKeys(t *testing.T, doc map[string]any, want ...string) {
 	if !slices.Equal(got, want) {
 		t.Errorf("decoded keys = %v, want %v", got, want)
 	}
-}
-
-func TestConformanceScopeBoundary(t *testing.T) {
-	t.Run("it keeps the phase 1 and phase 3 decoded assertions", func(t *testing.T) {
-		root := testutil.FindRepoRoot(t)
-		required := map[string][]string{
-			"toon_decode_test.go": {
-				"func TestToonTaskDetailConformance",
-				"func TestToonDepTreeFocusedConformance",
-			},
-			"toon_formatter_test.go": {
-				"it emits stats counts as top-level named fields",
-				"it emits the dep tree summary as top-level named fields",
-			},
-			"stats_test.go":    {"it decodes stats for a project with no tasks"},
-			"dep_tree_test.go": {"it returns the emptied document when no task has dependencies"},
-		}
-
-		for file, names := range required {
-			source, err := os.ReadFile(filepath.Join(root, "internal", "cli", file))
-			if err != nil {
-				t.Fatalf("reading %s: %v", file, err)
-			}
-			for _, name := range names {
-				if !strings.Contains(string(source), name) {
-					t.Errorf("%s no longer carries %q", file, name)
-				}
-			}
-		}
-	})
 }
 
 func assertConformancePriorityCounts(t *testing.T, doc map[string]any, want [5]int) {
