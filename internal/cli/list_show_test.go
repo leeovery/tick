@@ -1092,12 +1092,18 @@ func TestShowFieldPositions(t *testing.T) {
 	tags := []string{"api", "ui"}
 	refs := []string{"https://example.com", "https://example.org"}
 	firstChild := RelatedTask{ID: "tick-c1c1c1", Title: "Child one", Status: "open"}
+	secondBlocker := RelatedTask{ID: "tick-b2b2b2", Title: "Blocker two", Status: "open"}
 
 	newProject := func(t *testing.T) string {
 		t.Helper()
 		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-b1b1b1", Title: "Blocker one", Status: task.StatusOpen, Priority: 2,
+				Created: created, Updated: created},
+			{ID: "tick-b2b2b2", Title: "Blocker two", Status: task.StatusOpen, Priority: 2,
+				Created: created, Updated: created},
 			{ID: "tick-a1b2c3", Title: "Add login", Status: task.StatusOpen, Priority: 2,
-				Created: created, Updated: created, Tags: tags, Refs: refs, Notes: notes},
+				Created: created, Updated: created, Tags: tags, Refs: refs, Notes: notes,
+				BlockedBy: []string{"tick-b1b1b1", "tick-b2b2b2"}},
 			{ID: "tick-c1c1c1", Title: "Child one", Status: task.StatusOpen, Priority: 2,
 				Parent: "tick-a1b2c3", Created: created, Updated: created},
 			{ID: "tick-c2c2c2", Title: "Child two", Status: task.StatusOpen, Priority: 2,
@@ -1158,6 +1164,10 @@ func TestShowFieldPositions(t *testing.T) {
 
 	t.Run("it narrows a table to one row", func(t *testing.T) {
 		assertToonRelatedRow(t, showToon(t, "children.1"), "children", firstChild)
+	})
+
+	t.Run("it narrows a blockers table to one row", func(t *testing.T) {
+		assertToonRelatedRow(t, showToon(t, "blocked_by.2"), "blocked_by", secondBlocker)
 	})
 
 	t.Run("it narrows to several positions in output order", func(t *testing.T) {
@@ -1265,6 +1275,15 @@ func TestShowFieldPositions(t *testing.T) {
 		stdout := show(t, newProject(t), "tick-a1b2c3", "--pretty", "--field", "title,children.2")
 
 		want := "Title:    Add login\n\nChildren:\n  tick-c2c2c2  Child two (open)\n"
+		if stdout != want {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("it narrows a pretty blocked-by block", func(t *testing.T) {
+		stdout := show(t, newProject(t), "tick-a1b2c3", "--pretty", "--field", "title,blocked_by.2")
+
+		want := "Title:    Add login\n\nBlocked by:\n  tick-b2b2b2  Blocker two (open)\n"
 		if stdout != want {
 			t.Errorf("stdout = %q, want %q", stdout, want)
 		}
