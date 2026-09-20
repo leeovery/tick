@@ -143,20 +143,19 @@ Cascaded:
 
 #### Toon Format
 
-One `changed` table carrying every task the command moved, plus the unchanged terminal children, as rows of the same shape.
+One `changed` table carrying every task whose status the command moved.
 
 **Downward cascade (cancel):**
 ```
-changed[6]{id,title,from,to,auto}:
+changed[5]{id,title,from,to,auto}:
   tick-parent1,Auth phase,in_progress,cancelled,false
   tick-child1,Login,in_progress,cancelled,true
   tick-child2,Signup,open,cancelled,true
   tick-grand1,Token refresh,open,cancelled,true
   tick-grand2,Session store,open,cancelled,true
-  tick-child3,Logout,done,done,true
 ```
 
-An unchanged child is the row whose `from` equals its `to`; the `auto` column distinguishes what the user asked for from what the cascade moved.
+A task that ends where it started carries no row — the table lists what changed. The `auto` column distinguishes what the user asked for from what the cascade moved.
 
 Both formats show unchanged terminal children so the user can see what was *not* affected by the cascade.
 
@@ -253,3 +252,5 @@ The existing `transition.go` and `dependency.go` logic is migrated into the new 
 ## Corrigenda
 
 > **Corrigendum 2026-09-20** (from `free-text-round-trip`): "Flat lines with `(auto)` and `(unchanged)` markers for machine parsing", with the arrow-and-marker lines as the worked example (Toon Format), and "The existing `FormatTransition` method remains for non-cascade (single-task) transitions" (Formatter Interface) — corrected on both points. The arrow lines were never machine-parseable: they are hand-assembled text no TOON reader accepts, and an agent had to learn the arrow, the `(auto)` suffix and the `(unchanged)` suffix from outside the output. `free-text-round-trip` §7.2 replaces them with one `changed` table — `changed[N]{id,title,from,to,auto}:` — carrying every task the command moved. The unchanged terminal children this document requires are still shown, as rows whose `from` equals their `to`, so the requirement stands and only its rendering changes; the pretty rendering above it is untouched. `FormatTransition` was removed from the Formatter interface rather than kept for the single-task case: pretty's zero-cascade branch already produced the identical line, so a single transition is the same table with one row. The JSON shape below, `{"transition":…,"cascaded":…,"unchanged":…}`, is likewise superseded by §7's `changed` list; it is left to supersession rather than corrected here.
+
+> **Corrigendum 2026-09-20** (from `free-text-round-trip`, correcting the amendment made to this document earlier the same day): that amendment wrote "One `changed` table carrying every task the command moved, plus the unchanged terminal children, as rows of the same shape", gave a `changed[6]` example whose last row was `tick-child3,Logout,done,done,true`, added "An unchanged child is the row whose `from` equals its `to`", and claimed in its corrigendum entry that the unchanged-children requirement "stands and only its rendering changes" — corrected: the table carries no such row and cannot. `statusChangeSet.rows()` (`internal/cli/transition.go:138`) drops every row where `From` equals `To`, and `free-text-round-trip` §7.2 fixes that "a task that ends where it started carries no row: the table lists what changed". The toon section now shows `changed[5]` with the five tasks the cascade actually moves. The requirement in the sentence beneath it — that both formats show unchanged terminal children — is restored to what it was before that amendment: a standing requirement of this document that nothing in `internal/` implements, which `free-text-round-trip` §7.6 explicitly declines to reinstate or decide and §12.2 bounded the amendment not to touch. Folding it into the table decided it, the wrong way, in the one route whose purpose is to stop a superseded claim being served as validated context. The earlier corrigendum's other correction — that the arrow-and-`(auto)` lines are replaced by the `changed` table, and that `FormatTransition` was removed rather than kept — stands unaffected.
