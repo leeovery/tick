@@ -43,7 +43,59 @@ is output an agent can read without a rule learned outside it. Every participant
 edge list, so the settled direction of phase 3's task 1 is completed, not reversed.
 
 **Outcome**: The edge list is the relation: one row per stored dependency, no row twice, and an
-agent's count of what a task blocks agrees with `tick show`.
+agent's count of what a task blocks agrees with `tick show`. Pretty and JSON full-graph output is
+byte-identical to today on every input, and the summary fields do not move. The dated §8 corrigendum
+recording this output change is the orchestrator's to write: this task touches code, tests and
+`README.md` only, and nothing under `.workflows/`.
+
+**Do**:
+- Add a `DepTreeEdge` type (`From`, `To` strings) beside `DepTreeTask` in `internal/cli/format.go`,
+  and an `Edges []DepTreeEdge` field in `DepTreeResult`'s full-graph block (`format.go:212-233`).
+  Focused mode leaves it nil.
+- Populate `Edges` in `BuildFullDepTree` (`internal/cli/dep_tree_graph.go:117-182`): one
+  `{From: dep, To: t.ID}` per `BlockedBy` entry, tasks in slice order and each task's `BlockedBy` in
+  stored order. Leave `Trees`, `ChainCount`, `LongestChain`, `BlockedCount` and `Message` exactly as
+  they are built today, and leave `BuildFocusedDepTree` untouched.
+- Render `result.Edges` in `ToonFormatter.formatFullDepTree`
+  (`internal/cli/toon_formatter.go:183-199`) — map each `DepTreeEdge` to a `toonEdgeRow` and hand it
+  to `buildEdgeSection("dep_tree", …)` — dropping the `collectDownstreamEdges` walk over
+  `result.Trees`. `collectDownstreamEdges` and `collectUpstreamEdges` stay for focused mode
+  (`toon_formatter.go:203-215`).
+- Repoint the existing expectations: the five full-graph subtests in `TestToonFormatDepTree` that
+  build `Trees` and assert edge rows (`internal/cli/toon_formatter_test.go:863`, `:882`, `:907`,
+  `:933`, `:989`) supply `Edges` instead, and the cycle assertion in
+  `internal/cli/dep_tree_test.go:307-310` swaps its two rows into record order
+  (`tick-bbb222,tick-aaa111` then `tick-aaa111,tick-bbb222`).
+- Narrow `README.md:321`'s closing sentence ("Diamond dependencies are duplicated at each path") to
+  the node-shaped renderings, so it no longer claims the duplication of the toon edge list.
+
+**Acceptance Criteria**:
+- [ ] `dep_tree` carries exactly one row per stored dependency: its row count equals the total number
+      of `BlockedBy` entries across all tasks, on every fixture in `internal/cli/dep_tree_test.go`.
+- [ ] Two blockers converging above a further-blocked task emit the shared subtree once — `create
+      Alpha`, `create Alpha2`, `create Beta --blocked-by=Alpha,Alpha2`, `create Gamma
+      --blocked-by=Beta` returns `dep_tree[3]` with the Beta→Gamma row present once.
+- [ ] A blocker ID no task record matches still reaches the edge list as the `from` of its
+      dependency's row, and emits nothing extra when its walk overlaps an already-emitted tree.
+- [ ] Row order is record order: tasks in stored order, each task's `BlockedBy` in stored order.
+- [ ] `chains`, `longest` and `blocked` are unchanged on every fixture, and an empty project still
+      emits `dep_tree[0]{from,to}:`.
+- [ ] Pretty and JSON full-graph output is byte for byte what it is today, including the diamond's
+      duplicated subtree; focused mode's `blocked_by` and `blocks` sections are unchanged.
+- [ ] `go test ./...`, `go vet ./...`, `gofmt -l ./internal ./cmd` and `golangci-lint run ./...` are
+      clean.
+
+**Tests**:
+- `"it emits one edge per stored dependency where two blockers converge"` — Alpha/Alpha2 → Beta →
+  Gamma: three rows, Beta→Gamma once, beside `chains: 1`.
+- `"it emits no repeated edge when a dangling blocker sits above a chain"` — `tick-aaa111` →
+  `tick-bbb222` → `tick-ccc333` plus a ghost ID blocking `tick-bbb222`: four rows for four stored
+  dependencies, none repeated.
+- `"it carries each edge of a cycle once"` — the `cycleTasks` fixture, two rows in record order.
+- `"it still emits the count-zero edge section when no task has dependencies"`.
+- `"it still duplicates the diamond in the pretty and JSON trees"` — the four-task diamond renders
+  `tick-ddd444` under both `tick-bbb222` and `tick-ccc333` in both formats while `dep_tree` carries
+  four rows.
 
 ## Task 2: A Participant Another Seeded Tree Reaches Is Not A Top-Level Tree
 
@@ -91,4 +143,57 @@ alongside the other dep-tree output changes.
 
 **Outcome**: Each dependency chain is drawn once. A top-level entry in pretty or JSON is a
 participant nothing else in the drawn graph reaches, which is what README.md:321 already promises,
-and the toon edge list for a two-edge graph carries two rows.
+and the toon edge list for a two-edge graph carries two rows. The summary fields and every existing
+cycle, dangling-blocker and rooted assertion stay as they are. The dated §8 corrigendum recording
+this output change is the orchestrator's to write: this task touches code and tests only, and
+nothing under `.workflows/`.
+
+**Do**:
+- In `buildSeededTrees` (`internal/cli/dep_tree_graph.go:223-241`), hold back a participant any
+  unemitted participant blocks: before seeding `id`, take its blockers — the `BlockedBy` of its
+  record in `taskIdx`, none when no record matches it — and skip it while any of them is unemitted.
+  Keep the two existing skips (`emitted[id]`, and `len(blocks[id]) == 0` for a participant that
+  blocks nothing).
+- Wrap the walk over `participants` in repeated passes in the same first-seen order, stopping when a
+  pass emits nothing, so a participant freed by an earlier seed in the same run is picked up.
+- When a pass emits nothing and a remaining participant still blocks something — every such
+  participant is then blocked by another remaining one, a cycle — seed the first of them in
+  first-seen order and resume the passes, so the loop always terminates and cycle coverage is what
+  it is today.
+- Leave the rest of the builder untouched: the root walk at `dep_tree_graph.go:123-144`, the
+  `emitted`/`collectTreeIDs` bookkeeping, `depTreeMissingStatus` for a participant no record
+  matches, and the `chains`/`longest`/`blocked` computation.
+- Add a two-level dangling-chain fixture beside `danglingBlockerTasks`
+  (`internal/cli/dep_tree_test.go:223-228`): `tick-aaa111` blocked by `tick-bbb222`, `tick-bbb222`
+  blocked by `tick-ghost1`, which no task record matches.
+
+**Acceptance Criteria**:
+- [ ] `BuildFullDepTree` on the two-level dangling chain returns exactly one tree: `tick-ghost1`
+      (status `missing`, empty title) → `tick-bbb222` → `tick-aaa111`.
+- [ ] Pretty draws that chain once, the ghost as the only top-level entry; no participant carrying a
+      `BlockedBy` entry is drawn as a top-level entry on that input.
+- [ ] JSON returns one object under `trees` for that input, with the `tick-bbb222` subtree appearing
+      once.
+- [ ] `dep_tree` carries two rows for the two-edge graph, one per stored dependency, neither
+      repeated.
+- [ ] The fixture's summary reads `1 chain, longest: 2, 2 blocked` in all three formats.
+- [ ] Cycle coverage is unchanged: `cycleTasks` still yields the single `tick-aaa111` →
+      `tick-bbb222` → `tick-aaa111` tree with `chains: 1`, `longest: 2`, `blocked: 2`
+      (`internal/cli/dep_tree_test.go:302`, `:367`, `:395`;
+      `internal/cli/dep_tree_graph_test.go:316`, `:647`).
+- [ ] The single dangling blocker and the rooted chain are unchanged
+      (`internal/cli/dep_tree_test.go:318`, `:385`, `:414`, `:432`, `:451`;
+      `internal/cli/dep_tree_graph_test.go:294`), and every participant still reaches every format.
+- [ ] `go test ./...`, `go vet ./...`, `gofmt -l ./internal ./cmd` and `golangci-lint run ./...` are
+      clean.
+
+**Tests**:
+- `"it seeds the dangling blocker rather than the chain beneath it"` — builder: one tree, rooted at
+  the ghost, `tick-bbb222` and `tick-aaa111` nested beneath it in that order.
+- `"it renders a two-level dangling chain once in the terminal"` — pretty, exact bytes: the ghost
+  line, `└── tick-bbb222`, `    └── tick-aaa111`, then `1 chain, longest: 2, 2 blocked`.
+- `"it nests a two-level dangling chain under the ghost in JSON"` — one entry under `trees`, the
+  `tick-bbb222` subtree present once.
+- `"it emits two edges for a two-edge dangling chain"` — toon: two rows, neither repeated.
+- `"it still covers a cycle where every participant is blocked"` — the fallback seed keeps
+  `cycleTasks` at one tree and its pinned counts.

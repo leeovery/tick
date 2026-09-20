@@ -169,7 +169,10 @@
             "free-text-round-trip-7-2": "tick-1f59f1",
             "free-text-round-trip-7-3": "tick-401dc3",
             "free-text-round-trip-7-4": "tick-02d03b",
-            "free-text-round-trip-7-5": "tick-5087a7"
+            "free-text-round-trip-7-5": "tick-5087a7",
+            "free-text-round-trip-8": "tick-a06bd5",
+            "free-text-round-trip-8-1": "tick-9e2a3b",
+            "free-text-round-trip-8-2": "tick-a69bd6"
           },
           "storage_paths": [
             ".tick/"
@@ -368,8 +371,8 @@
             },
             "c2": {
               "tasks": {
-                "1": "pending",
-                "2": "pending"
+                "1": "approved",
+                "2": "approved"
               }
             }
           },
