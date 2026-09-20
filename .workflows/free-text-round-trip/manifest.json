@@ -161,7 +161,9 @@
             "free-text-round-trip-4-12": "tick-e8d2eb",
             "free-text-round-trip-4-13": "tick-1267e8",
             "free-text-round-trip-5-7": "tick-3f0af1",
-            "free-text-round-trip-5-8": "tick-91fb2f"
+            "free-text-round-trip-5-8": "tick-91fb2f",
+            "free-text-round-trip-6-7": "tick-8246c5",
+            "free-text-round-trip-6-8": "tick-1f8606"
           },
           "storage_paths": [
             ".tick/"
@@ -203,7 +205,7 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "auto",
           "analysis_gate_mode": "gated",
-          "consolidation_gate_mode": "gated",
+          "consolidation_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle_total": 0,
           "linters": [
@@ -334,6 +336,12 @@
                 "1": "approved",
                 "2": "approved"
               }
+            },
+            "p6": {
+              "tasks": {
+                "1": "approved",
+                "2": "approved"
+              }
             }
           },
           "consolidated_phases": [
@@ -341,7 +349,8 @@
             2,
             3,
             4,
-            5
+            5,
+            6
           ],
           "completed_phases": [
             1,
@@ -349,18 +358,6 @@
             3,
             4,
             5
-          ],
-          "bank": [
-            {
-              "task": "free-text-round-trip-6-1",
-              "source": "reviewer",
-              "summary": "Nothing ties a conformanceDoc.Command to the arguments its Setup actually runs, so task 6-3's coverage guard can certify a command the suite never exercises.",
-              "failure": "6-3 matches Command against commandFlags keys to prove every structured command is covered. An entry whose Command says ready while its Setup runs list --ready, or a copy-pasted entry that keeps Command: list on a blocked setup, makes the guard green for a command no entry runs. Nobody notices until a malformed document ships in that command with the conformance suite passing.",
-              "detail": "conformanceDoc.Command at internal/cli/conformance_test.go:22 is written independently of the args returned by Setup (internal/cli/conformance_test.go:56-118), and TestConformanceInventoryWellFormed (internal/cli/conformance_test.go:188-248) checks names and the Setup/NotADocument exclusivity but never the two against each other. The cheap fix belongs with 6-3: assert that each entry's returned args begin with its Command's words.",
-              "files": [
-                "internal/cli/conformance_test.go"
-              ]
-            }
           ]
         }
       }
