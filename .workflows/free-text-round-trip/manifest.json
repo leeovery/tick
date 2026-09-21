@@ -460,7 +460,7 @@
     "review": {
       "items": {
         "free-text-round-trip": {
-          "status": "in-progress",
+          "status": "completed",
           "reviewed_tasks": [
             "free-text-round-trip-1-1",
             "free-text-round-trip-1-2",
@@ -533,18 +533,6 @@
             "free-text-round-trip-10-3",
             "free-text-round-trip-10-2",
             "free-text-round-trip-10-6"
-          ],
-          "out_of_scope": [
-            {
-              "id": "A5",
-              "summary": "64 KiB JSONL line bricks the store; doctor denies it",
-              "kind": "bug",
-              "fails": "An agent or user who pastes a large description loses access to every task in the project, with the built-in diagnostic reporting the store healthy and no route back but hand-editing tasks.jsonl.",
-              "files": [
-                "internal/storage/jsonl.go",
-                "internal/doctor/jsonl_reader.go"
-              ]
-            }
           ]
         }
       }
