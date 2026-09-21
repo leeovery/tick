@@ -1,7 +1,7 @@
 {
   "name": "free-text-round-trip",
   "work_type": "feature",
-  "status": "in-progress",
+  "status": "completed",
   "created": "2026-09-16",
   "description": "Make free-text fields (descriptions, notes) survive an agent read-edit-write round trip in the toon output format, with a field-extraction flag for raw single-field output",
   "phases": {
@@ -537,5 +537,6 @@
         }
       }
     }
-  }
+  },
+  "completed_at": "2026-09-21"
 }
