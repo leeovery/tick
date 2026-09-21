@@ -17,7 +17,7 @@ const path = require('path');
 const { loadManifest, loadProjectManifest } = require('./reads.cjs');
 const { signpost } = require('../kernel/render.cjs');
 const { TREE_WIDTH, titlecase, WORKLIST_GLYPH, DISCOVERY_GLYPH, discoveryLifecycleLabel } = require('./conventions.cjs');
-const { section, CONTINUE_INSTRUCTION, CONTINUE_MARKDOWN_INSTRUCTION, AUTO_GATE_INSTRUCTION, AUTO_GATE_MARKDOWN_INSTRUCTION, menu, menuFrame, MENU_GLYPH, cmdOption, bareOption, promptOption, callout, indentedBody, bulletRow, subDetail, treeList } = require('./projections/surfaces.cjs');
+const { section, titleSection, CONTINUE_INSTRUCTION, CONTINUE_MARKDOWN_INSTRUCTION, AUTO_GATE_INSTRUCTION, AUTO_GATE_MARKDOWN_INSTRUCTION, menu, menuFrame, MENU_GLYPH, cmdOption, bareOption, promptOption, callout, indentedBody, bulletRow, subDetail, treeList } = require('./projections/surfaces.cjs');
 const { buildOrderLive } = require('./build-order.cjs');
 const { worklist, escapeMarkdown } = require('./projections/worklist.cjs');
 const { blockedTasksMenu, taskGateSection, fixGateSection, cycleLimitDisplay, specCorrectionsDisplay, cycleGateMenu } = require('./projections/tasks.cjs');
@@ -30,6 +30,9 @@ const {
   baselineOfferGate,
 } = require('./projections/baseline.cjs');
 const { baselineState } = require('./baseline.cjs');
+const {
+  ORIGINS: WALKTHROUGH_ORIGINS, loadScreen, loadCard, walkthroughScreen, walkthroughHome, walkthroughTopics, walkthroughTopic,
+} = require('./projections/walkthrough.cjs');
 const { migrationGate, labelGate, knowledgeGate, KNOWLEDGE_GATE_VARIANTS } = require('./projections/boot.cjs');
 const { heldCodeSessions, heldDocument, beatQuietly, fmtAge, CODE_PHASES } = require('./presence.cjs');
 const { roadmapState } = require('./roadmap.cjs');
@@ -46,12 +49,12 @@ const { experimentRegister, experimentApprovalGate, experimentPick, experimentNe
 const { researchThreads } = require('./projections/research-threads.cjs');
 const { registerState } = require('./research-threads.cjs');
 const { waitGate, phasePaused, researchWaitState } = require('./projections/wait.cjs');
-const { compareExperimentIds, isParentExperimentId, DERIVED_PHASES, EXPERIMENT_TERMINAL_STATUSES, EXPERIMENT_SPAWN_PHASES, TERMINAL_STATUSES } = require('../kernel/manifest-schema.cjs');
+const { compareExperimentIds, isParentExperimentId, DERIVED_PHASES, EXPERIMENT_TERMINAL_STATUSES, EXPERIMENT_SPAWN_PHASES, WAITING_PHASES, TERMINAL_STATUSES } = require('../kernel/manifest-schema.cjs');
 const { WORK_UNIT_TYPES, typeConfig: workUnitTypeConfig, completedPhases } = require('./workunit-detail.cjs');
 const {
   phaseItems, computeNextPhase, computeTopicLifecycle, lifecyclePhrase, awaitedExperiments, waits, itemOf,
   outstandingResearch, outstandingResearchPhrase, CLOSED_LIFECYCLES,
-  sourceRows, OPEN_SOURCE_STATUSES, UNIT_PHASES, liveUnitItems, discoveryUnitExists, lockingSpecs, deliveryStarted, cancelPlan,
+  sourceRows, OPEN_SOURCE_STATUSES, specUnsettled, specUnsettledPhrase, UNIT_PHASES, liveUnitItems, discoveryUnitExists, lockingSpecs, deliveryStarted, cancelPlan,
 } = require('./derivations.cjs');
 const { manageDetail } = require('./workunit-manage.cjs');
 const { gateOf, counterOf, FIX_THRESHOLD, CYCLE_LIMIT } = require('./tasks.cjs');
@@ -527,10 +530,22 @@ function specReviewGate(cwd, { dotpath, variant }) {
 
 const CONVERGENCE_LOOPS = { fix: 'Fix Loop', analysis: 'Analysis', 'planning-review': 'Plan Review', 'spec-review': 'Spec Review' };
 const CONVERGENCE_TRENDS = {
-  churning: 'Findings resolve but are replaced at the same rate — the edits are generating the next cycle\'s findings. Read what the last cycle added before running another.',
-  converging: 'Continuing is likely to resolve remaining items.',
-  stable: 'Same issues are cycling. Consider manual intervention on the recurring items.',
-  diverging: 'Fixes are introducing new issues. Consider reviewing the approach.',
+  churning: 'Findings resolve but are replaced at the same rate — the edits are generating the next cycle\'s findings.',
+  converging: 'Resolved findings outnumber new ones — the cycles are closing ground.',
+  stable: 'Resolved and new findings match cycle for cycle — the loop is holding where it is.',
+  diverging: 'New findings outnumber resolved ones — the fixes are introducing new issues.',
+};
+const CONVERGENCE_GROWTH = {
+  'spec-review': {
+    document: 'construction',
+    churn: 'The cycles are adding words while findings churn — the review is writing rules the record never decided. A finding adds what a source states or removes what is wrong; anything else is a decision nobody made.',
+    note: 'Growth is the loop working only where each addition traces to a source; growth from review-authored rules is the review deciding for the user.',
+  },
+  'planning-review': {
+    document: 'plan',
+    churn: 'The cycles are adding words while findings churn — the review is writing mechanism the specification never decided. A finding restates a behaviour the record decides and the criterion that proves it, or removes what is wrong; a corrected mechanism is the builder\'s.',
+    note: 'Growth is the loop working only where each addition traces to the specification; growth from review-authored mechanism is the review deciding for the builder.',
+  },
 };
 
 /**
@@ -581,8 +596,8 @@ function convergenceDiagnostic(cwd, { dotpath, file }) {
   }
   const hasGrowth = p.review_baseline_words !== undefined || p.live_words !== undefined;
   if (hasGrowth) {
-    if (p.loop_type !== 'spec-review') {
-      throw new Error('render convergence-diagnostic: document growth belongs to spec-review — omit the word counts');
+    if (!multi) {
+      throw new Error('render convergence-diagnostic: document growth belongs to spec-review and planning-review — omit the word counts');
     }
     if (!Number.isInteger(p.review_baseline_words) || !Number.isInteger(p.live_words) || p.review_baseline_words < 0 || p.live_words < 0) {
       throw new Error('render convergence-diagnostic: "review_baseline_words" and "live_words" travel together as non-negative integers');
@@ -614,11 +629,12 @@ function convergenceDiagnostic(cwd, { dotpath, file }) {
   }
 
   const flags = [callout(CONVERGENCE_TRENDS[p.trend])];
-  if (p.loop_type === 'spec-review' && p.trend === 'churning' && growth > 0) {
-    flags.push(callout('The cycles are adding words while findings churn — the review is writing rules the record never decided. A finding adds what a source states or removes what is wrong; anything else is a decision nobody made. Check the additions against the sources before running another cycle.'));
+  const doc = hasGrowth ? CONVERGENCE_GROWTH[p.loop_type] : null;
+  if (doc && p.trend === 'churning' && growth > 0) {
+    flags.push(callout(doc.churn));
   }
-  if (hasGrowth && growth > p.review_baseline_words / 4) {
-    flags.push(callout(`Review has added ${growth} words to a ${p.review_baseline_words}-word construction. Growth is the loop working only where each addition traces to a source; growth from review-authored rules is the review deciding for the user.`));
+  if (doc && growth > p.review_baseline_words / 4) {
+    flags.push(callout(`Review has added ${growth} words to a ${p.review_baseline_words}-word ${doc.document}. ${doc.note}`));
   }
   parts.push(flags.join('\n'));
 
@@ -1759,7 +1775,7 @@ function reviewPresentation(cwd, { dotpath, file }) {
 
   const title = titlecase(p.topic);
   const sections = [
-    section('TITLE', "emit verbatim as markdown — the view's chrome heading", `# **\`■ Review — ${title}\`**`),
+    titleSection(`Review — ${title}`),
   ];
   if (p.verdict === 'fail') {
     const n = replan.length;
@@ -2715,17 +2731,28 @@ function experimentNextGateSurface(cwd, { dotpath }) {
 }
 
 /**
+ * Resolve an address restricted to a set of phases. Loud on any other.
+ * @param {string} cwd @param {string} dotpath @param {string} surface
+ * @param {string[]} phases  the phases the surface serves
+ * @param {string} noun      what the address names, for the refusal
+ * @returns {{phase: string, topic: string, manifest: object}}
+ */
+function resolvePhaseItem(cwd, dotpath, surface, phases, noun) {
+  const { phase, topic, manifest } = resolveAddress(cwd, dotpath, surface);
+  if (!phases.includes(phase)) {
+    throw new Error(`render ${surface}: address must be <work_unit>.<${phases.join('|')}>.<topic> — ${noun}; got phase "${phase}"`);
+  }
+  return { phase, topic, manifest };
+}
+
+/**
  * Resolve a conversation address — a research or discussion item, the two
- * phases that spawn experiments and hold waits. Loud on any other phase.
+ * phases that spawn experiments.
  * @param {string} cwd @param {string} dotpath @param {string} surface
  * @returns {{phase: string, topic: string, manifest: object}}
  */
 function resolveConversation(cwd, dotpath, surface) {
-  const { phase, topic, manifest } = resolveAddress(cwd, dotpath, surface);
-  if (!EXPERIMENT_SPAWN_PHASES.includes(phase)) {
-    throw new Error(`render ${surface}: address must be <work_unit>.<${EXPERIMENT_SPAWN_PHASES.join('|')}>.<topic> — the conversation's own item; got phase "${phase}"`);
-  }
-  return { phase, topic, manifest };
+  return resolvePhaseItem(cwd, dotpath, surface, EXPERIMENT_SPAWN_PHASES, "the conversation's own item");
 }
 
 /**
@@ -2746,15 +2773,16 @@ function experimentSpawnGateSurface(cwd, { dotpath, id }) {
 
 /**
  * The blocked-conclusion gate over every wait the item holds — the research
- * a discussion stands on, the experiments a conversation spawned. Empty
- * when nothing is owed: the calling flow branches on the response, so one
- * fetch stands in for the read-then-render pair.
+ * a discussion stands on, the specification a plan stands on, the
+ * experiments a conversation spawned. Empty when nothing is owed: the
+ * calling flow branches on the response, so one fetch stands in for the
+ * read-then-render pair.
  * @param {string} cwd
  * @param {{dotpath: string}} args
  * @returns {string} the gate's sections, or '' when nothing blocks conclusion
  */
 function waitGateSurface(cwd, { dotpath }) {
-  const { phase, topic, manifest } = resolveConversation(cwd, dotpath, 'wait-gate');
+  const { phase, topic, manifest } = resolvePhaseItem(cwd, dotpath, 'wait-gate', WAITING_PHASES, 'the waiting item itself');
   if (!itemOf(manifest, phase, topic)) {
     throw new Error(`render wait-gate: no ${phase} item "${topic}" — nothing to hold shut`);
   }
@@ -3595,11 +3623,11 @@ function phaseCompleted(cwd, { dotpath, phase, paths }) {
 }
 
 /**
- * The bridge's paused banner — `phase-completed`'s sibling for a
- * conversation leaving on a wait. Derived, never told: the phase's
- * in-progress items holding waits, each named with what it awaits. A peer
- * can land the wait between the gate and the bridge, so no holder left
- * renders the bare line rather than refusing.
+ * The bridge's paused banner — `phase-completed`'s sibling for a phase
+ * leaving on a wait. Derived, never told: the phase's in-progress items
+ * holding waits, each named with what it awaits. A peer can land the wait
+ * between the gate and the bridge, so no holder left renders the bare line
+ * rather than refusing.
  * @param {string} cwd
  * @param {{dotpath: string, phase?: string}} args
  * @returns {string}
@@ -3607,8 +3635,8 @@ function phaseCompleted(cwd, { dotpath, phase, paths }) {
 function phasePausedSurface(cwd, { dotpath, phase }) {
   const { workUnit, manifest } = resolveWorkUnit(cwd, dotpath, 'phase-paused');
   if (!isFilled(phase)) throw new Error('render phase-paused: --phase is required');
-  if (!EXPERIMENT_SPAWN_PHASES.includes(phase)) {
-    throw new Error(`render phase-paused: --phase must be <${EXPERIMENT_SPAWN_PHASES.join('|')}> — the conversations that pause on a wait; got "${phase}"`);
+  if (!WAITING_PHASES.includes(phase)) {
+    throw new Error(`render phase-paused: --phase must be <${WAITING_PHASES.join('|')}> — the phases that pause on a wait; got "${phase}"`);
   }
   const holders = phaseItems(manifest, phase)
     .filter((item) => item.status === 'in-progress')
@@ -4075,6 +4103,19 @@ function entryGate(cwd, { dotpath, own }) {
       return blocker(
         `"${t}" was promoted to the cross-cutting work unit "${String(spec.promoted_to || '')}"`,
         'Cross-cutting specifications inform other plans — they are not planned directly.',
+      );
+    }
+    // A specification reading `completed` can still be a record in motion —
+    // its input moved, or a source row is not yet extracted or has moved
+    // beneath the extraction — and a plan built from one is built from a
+    // document about to change.
+    const unsettled = specUnsettled(manifest, topic);
+    if (unsettled) {
+      return blocker(
+        `Entry blocked — the specification for "${t}" is unsettled (${specUnsettledPhrase(unsettled)})`,
+        manifest.work_type === 'epic'
+          ? 'Return to the epic menu — the specification is the way in: its row, or c/completed while it still reads completed.'
+          : 'Continue the work unit — the specification is its next step.',
       );
     }
     return '';
@@ -5177,6 +5218,48 @@ function baselineDocPickSurface(cwd, _args) {
   return baselineDocPick();
 }
 
+// ---------------------------------------------------------------------------
+// The walkthrough surfaces — project-level, no address, no state. A screen is
+// a content file, so the only things to resolve are which screen and where
+// the walk was entered from; the recorded answer drives the offer alone, and
+// no surface reads it.
+// ---------------------------------------------------------------------------
+
+/**
+ * One screen of the walk. `--from` carries the caller, which is what varies
+ * the exits: a first run can skip to the start menu, a walk opened from help
+ * goes back to it. `--menu-only` serves the return from a question — the
+ * screen is already on the reader's terminal.
+ * @param {string} _cwd @param {Record<string, string|undefined>} args @returns {string}
+ */
+function walkthroughScreenSurface(_cwd, args) {
+  const origin = args.from;
+  if (origin === undefined || !WALKTHROUGH_ORIGINS.includes(origin)) {
+    throw new Error(`render walkthrough-screen: --from must be one of ${WALKTHROUGH_ORIGINS.join(', ')}, got "${origin ?? ''}"`);
+  }
+  return walkthroughScreen(loadScreen(args.screen), origin, Boolean(args['menu-only']));
+}
+
+/** @param {string} _cwd @param {object} _args @returns {string} */
+function walkthroughHomeSurface(_cwd, _args) {
+  return walkthroughHome();
+}
+
+/** @param {string} _cwd @param {object} _args @returns {string} */
+function walkthroughTopicsSurface(_cwd, _args) {
+  return walkthroughTopics();
+}
+
+/**
+ * One reference card, addressed by the slug the topics menu's DATA table
+ * gives for the number the reader pressed. `--menu-only` serves the return
+ * from a question, as it does on a screen.
+ * @param {string} _cwd @param {Record<string, string|undefined>} args @returns {string}
+ */
+function walkthroughTopicSurface(_cwd, args) {
+  return walkthroughTopic(loadCard(args.name), Boolean(args['menu-only']));
+}
+
 /**
  * workflow-start's knowledge gate menus. `--provider` and `--model` belong to
  * the reuse variant alone — the system configuration its yes row names. A
@@ -5313,6 +5396,10 @@ const SURFACES = {
   'baseline-manage-gate': baselineManageGateSurface,
   'baseline-doc-pick': baselineDocPickSurface,
   'baseline-offer-gate': baselineOfferGateSurface,
+  'walkthrough-screen': walkthroughScreenSurface,
+  'walkthrough-home': walkthroughHomeSurface,
+  'walkthrough-topics': walkthroughTopicsSurface,
+  'walkthrough-topic': walkthroughTopicSurface,
   'migration-gate': () => migrationGate(),
   'label-gate': () => labelGate(),
   'knowledge-gate': knowledgeGateSurface,

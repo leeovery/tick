@@ -12,12 +12,14 @@ Re-read the specification in full before starting. Don't rely on memory — read
 
 ## What You're NOT Doing
 
-- **Not adding new requirements** — If the plan requires something of the product the spec never decided, the fix is to remove it from the plan or flag it with `[needs-info]`, not to justify its inclusion; how the plan builds a decided requirement is the planner's, not a requirement
+- **Not adding new requirements** — where the plan requires something of the product the spec never decided, the fix is to take it out of the plan, or to name the ground the specification owes and never decided; never to justify its inclusion. How the plan builds a decided requirement is the planner's, not a requirement
 - **Not expanding scope** — Missing spec content should be added as tasks; it shouldn't trigger re-architecture of the plan
-- **Not being lenient with hallucinated content** — Product content that can't be traced to the specification must be removed or the user must explicitly approve it as an intentional addition
+- **Not being lenient with hallucinated content** — product content that cannot be traced to the specification comes out of the plan, or stands as a gap the record must answer; it is never approved into the plan as an intentional addition
 - **Not re-litigating spec decisions** — The specification reflects validated decisions; you're checking the plan's fidelity to them
 
 ---
+
+→ Load **[finding-floor.md](../../workflow-implementation-process/references/finding-floor.md)** — the floor every finding clears. At planning it reads: a finding names what the implementer builds wrong or fails to build, for whom, and how it would be noticed — or it is not written.
 
 ## Direction 1: Specification → Plan (completeness)
 
@@ -64,9 +66,11 @@ Every finding names the **move** it owes the reader — what they have to do abo
 
 - **settled** — the record admits exactly one defensible answer. Write the **Proposal**: the fix and what determined it. Most traceability findings are this: the specification already decided, and carrying its decision into the plan is not a new decision.
 - **choice** — real options exist and only the reader can pick between them — a verdict earned by searching, never a default: anything the specification, the plan's own conventions, or a measurement yields is `settled`, that derivation its Proposal. It holds only where the fork is what the product's user gets or how it behaves, nothing in the specification, the plan's own conventions, or a measurement breaks the tie, a side visibly costs the user, and the tie-break is the reader's — appetite, product intent, or a fact only they hold. A fork in how the plan achieves it is the planner's, and a fork every side of which leaves the user well served is a preference, not a decision: either settles on what leans, and where nothing leans, on your honest call, the Proposal naming it as such and what it weighed. A staged choice names what was searched and where the record ran out. Write the **Options**, one line each, at most one marked `(recommended)`. Write no Proposal: a choice dressed as a decision already made is the failure this field exists to prevent.
-- Planning findings never route: the plan is the document under review, and its answers live in the specification or the record.
+- A finding that indicts the specification — the plan cannot trace because the record is silent or wrong on what the product does — names that in the Problem and takes `settled` or `choice` like any other; the walk lands the answer in the record before disposing it.
 
 A fix you cannot yourself stand behind is a **choice**, never a settled answer written on the reader's behalf. A choice that names no search is re-derived from scratch: name it. A preference nothing leans on is settled on your honest call, never staged as a choice.
+
+**Builder's — not a finding.** A mechanism, boundary, byte, ordering, or format detail any competent implementer settles the same way, or one where either way leaves the user well served, is theirs to settle with the code in front of them; the plan is not defective for leaving it open. A finding whose whole remedy is mechanism the specification leaves open is not written; at most it is an Observation. A finding may name that a prescribed mechanism builds the wrong behaviour — its Proposal then restates the behaviour the task must deliver and the criterion and test that prove it, and removes the mechanism the record never decided, never one mechanism swapped for another.
 
 The **Problem** is what is wrong in the terms the reader cares about — the product, the end result. Never the analysis that found it, and never the plan's own wording read back at them.
 
@@ -75,6 +79,8 @@ The **Problem** is what is wrong in the terms the reader cares about — the pro
 After completing the analysis, create a tracking file at `.workflows/{work_unit}/planning/{topic}/review-traceability-tracking-c{N}.md` (where N is the current review cycle).
 
 Tracking files are **never deleted** — pure markdown, no frontmatter; previous cycles' files persist as review history. The orchestrator records each file's gate state in the manifest (`tracking.{file stem}`: `in-progress` at dispatch, `complete` when all findings are processed).
+
+`## Observations` closes the file and holds what is below the floor — a point that names no failure the implementer would build, and anything minor enough that landing it would only be polish. One line each, never walked, never counted, never re-raised. Size never demotes what the record already answers: a user-facing string, value, or behaviour the specification holds is a `settled` finding whatever its size, and plan content that contradicts the specification is a finding; neither is ever an Observation.
 
 **Format**:
 ```markdown
@@ -112,4 +118,8 @@ Tracking files are **never deleted** — pure markdown, no frontmatter; previous
 
 ### 2. [Next Finding]
 ...
+
+## Observations
+
+- [One line each — a point below the floor, or one minor enough that landing it would only be polish. Never walked, never counted.]
 ```
