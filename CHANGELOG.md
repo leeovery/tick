@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-21
+
+✨ Added
+- `--` end-of-flags marker — pass a dash-leading or flag-spelled title, note, or other value literally, e.g. `tick create -- "--dry-run support"`.
+- `show --field`/`--fields` — select one or more detail fields by name, narrow list sections with `.N` (e.g. `notes.2`), and get a single selected value back bare.
+- `create` and `update` now report every status change they trigger (parent reopen, auto-completion) in a `changed` table, present even when nothing moved.
+- Dependency graph output now covers every task in a cycle or with a dangling blocker ID, not just rooted chains — full graph and `dep tree` toon/JSON both.
+- `dep tree`'s toon and JSON output now expose one row/edge per stored dependency in dedicated `dep_tree`/`blocked_by`/`blocks` sections.
+
+🔧 Changed
+- `--ready`/`--blocked` now also match `in_progress` tasks, not just `open`.
+- `start`/`done`/`cancel`/`reopen` now render every status change as a `changed{id,title,from,to,auto}` table in toon/JSON instead of flat transition lines.
+- TOON output now uses top-level named fields for single objects (`id: tick-a1b2`) and inline lists for scalar collections (`tags[2]: a,b`), replacing the old `task{...}:` wrapper and per-line tag/ref blocks.
+- TOON documents that cannot represent a value (a stray ANSI escape or other C0 control char) now fail the command with a diagnostic naming the field/section and task, instead of silently dropping the value.
+- Notes now carry a stable 1-based `index` across formats, sourced from storage order rather than a `created` sort.
+- `dep add`/`dep remove` now print a one-line confirmation in TOON/pretty; JSON gains `action`, `task_id`, `blocker` keys (renamed from `blocked_by`).
+- `dep tree` with no dependencies now returns a populated-but-empty document (count-zero sections) under TOON/JSON instead of a bare message; pretty still prints "No dependencies found."
+- Imported titles and descriptions are now trimmed of leading/trailing whitespace on migration, matching `create`.
+- `tick help` flag columns now align to the widest label per command instead of a fixed width.
+
+🐛 Fixed
+- Notes added out of order with backdated timestamps now render in actual storage order instead of being resorted by `created`.
+
 ## [0.2.9] - 2026-07-12
 
 ✨ Added
