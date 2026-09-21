@@ -34,6 +34,8 @@ Tasks created within the same wall-clock second come back in task-ID order, whic
 - **Severity:** Medium — silent wrong ordering, no data loss
 - **Scope:** Every consumer that treats tick as an ordered list rather than a bag of tasks: the workflow system's plan adapter and its implementation loop, `tick list` on a freshly imported project, the migration framework's output, a dependency chain authored in one pass
 - **Business impact:** Trust in tick as a plan store. The observed case had independent tasks so nothing broke; a sequenced batch would run out of order undetected.
+- **Live exposure:** None. No active work units — every plan authored into tick has been executed, so no stored batch is currently being read in the wrong order. Nothing is being worked around by hand.
+- **Urgency:** None. The investigation can take the time it needs; no pressure to land a narrow fix fast.
 
 ### References
 
@@ -44,6 +46,8 @@ Tasks created within the same wall-clock second come back in task-ID order, whic
 ### Scope Note (from discovery)
 
 Getting creation order right for new tasks going forward is confirmed sufficient. What the fix should do about tasks already stored at second granularity — existing `tasks.jsonl` files that already carry ties — was deliberately left to this investigation.
+
+Confirmed at symptom gathering: there is no live affected data. Existing-tie handling is a question about other people's projects and about tick's own tolerance for older files, not about rescuing a plan currently on disk.
 
 ---
 
@@ -90,4 +94,4 @@ Getting creation order right for new tasks going forward is confirmed sufficient
 
 ## Notes
 
-(none yet)
+**User's fix lean (symptom gathering, 2026-09-21):** raise timestamp precision — store creation times at millisecond granularity or finer so the sort no longer ties. Stated as a lean, explicitly open to alternatives. To be tested against the root cause at Step 10 rather than assumed.
