@@ -41,6 +41,9 @@
     },
     "free-text-round-trip": {
       "work_type": "feature"
+    },
+    "same-second-tasks-sort-by-id": {
+      "work_type": "bugfix"
     }
   },
   "defaults": {
