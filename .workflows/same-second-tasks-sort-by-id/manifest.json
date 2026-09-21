@@ -4,7 +4,15 @@
   "status": "in-progress",
   "created": "2026-09-21",
   "description": "Tasks created within the same wall-clock second come back in random ID order instead of authoring order, because creation timestamps are stored at second granularity and the sort tie falls through to the task ID",
-  "phases": {},
+  "phases": {
+    "investigation": {
+      "items": {
+        "same-second-tasks-sort-by-id": {
+          "status": "in-progress"
+        }
+      }
+    }
+  },
   "seeds": [
     {
       "path": "seeds/2026-09-21-same-second-tasks-sort-by-id.md",
