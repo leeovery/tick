@@ -11,10 +11,11 @@ import (
 )
 
 // createOpts holds parsed options for the create command.
+// description is a pointer to distinguish "not provided" from "provided with empty value".
 type createOpts struct {
 	title       string
 	priority    int
-	description string
+	description *string
 	blockedBy   []string
 	blocks      []string
 	parent      string
@@ -57,7 +58,7 @@ func parseCreateArgs(flagArgs, literals []string) (createOpts, error) {
 			if !ok {
 				return opts, fmt.Errorf("--description requires a value")
 			}
-			opts.description = v
+			opts.description = &v
 		case "--blocked-by":
 			v, ok := s.value()
 			if !ok {
@@ -123,6 +124,15 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals [
 	trimmedTitle := task.TrimTitle(opts.title)
 	if err := task.ValidateTitle(trimmedTitle); err != nil {
 		return err
+	}
+
+	// Validate description if provided.
+	var trimmedDescription string
+	if opts.description != nil {
+		trimmedDescription = task.TrimDescription(*opts.description)
+		if err := task.ValidateDescriptionFlag(trimmedDescription, "--description cannot be empty; omit the flag to create the task without one"); err != nil {
+			return err
+		}
 	}
 
 	// Validate priority.
@@ -215,7 +225,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals [
 			Type:        opts.taskType,
 			Tags:        opts.tags,
 			Refs:        opts.refs,
-			Description: task.TrimDescription(opts.description),
+			Description: trimmedDescription,
 			BlockedBy:   opts.blockedBy,
 			Parent:      opts.parent,
 			Created:     now,

@@ -94,7 +94,7 @@ tick create <title> [flags]
 | Flag | Type | Default | Description |
 |---|---|---|---|
 | `--priority` | `0-4` | `2` | `0` critical, `1` high, `2` medium, `3` low, `4` backlog |
-| `--description` | string | | Task description (supports multi-line) |
+| `--description` | string | | Task description (supports multi-line; must not be empty — omit the flag for none) |
 | `--type` | string | | Task type: `bug`, `feature`, `task`, `chore` |
 | `--tags` | strings | | Comma-separated tags (kebab-case, max 10) |
 | `--refs` | strings | | Comma-separated external references (URLs, issue keys) |

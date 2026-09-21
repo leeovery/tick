@@ -194,11 +194,11 @@ func TrimDescription(desc string) string {
 	return strings.TrimSpace(desc)
 }
 
-// ValidateDescriptionUpdate checks that a description update is not empty or whitespace-only.
-// Empty descriptions should use --clear-description instead.
-func ValidateDescriptionUpdate(desc string) error {
+// ValidateDescriptionFlag checks that a --description value is not empty or
+// whitespace-only, reporting emptyErr — which names the caller's remedy — when it is.
+func ValidateDescriptionFlag(desc string, emptyErr string) error {
 	if strings.TrimSpace(desc) == "" {
-		return errors.New("--description cannot be empty; use --clear-description to remove the description")
+		return errors.New(emptyErr)
 	}
 	return nil
 }

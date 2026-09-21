@@ -288,15 +288,30 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
-	t.Run("it allows empty --description on create", func(t *testing.T) {
-		dir, tickDir := setupTickProject(t)
-		_, _, exitCode := runCreate(t, dir, "No desc", "--description", "")
-		if exitCode != 0 {
-			t.Fatalf("exit code = %d, want 0", exitCode)
+	t.Run("it rejects an empty --description on create", func(t *testing.T) {
+		emptyDescription := []struct {
+			name string
+			args []string
+		}{
+			{"empty value", []string{"No desc", "--description", ""}},
+			{"whitespace-only value", []string{"No desc", "--description", "   "}},
+			{"attached empty value", []string{"No desc", "--description="}},
 		}
-		tasks := readPersistedTasks(t, tickDir)
-		if tasks[0].Description != "" {
-			t.Errorf("description = %q, want empty", tasks[0].Description)
+
+		for _, tt := range emptyDescription {
+			t.Run(tt.name, func(t *testing.T) {
+				dir, tickDir := setupTickProject(t)
+				_, stderr, exitCode := runCreate(t, dir, tt.args...)
+				if exitCode != 1 {
+					t.Fatalf("exit code = %d, want 1", exitCode)
+				}
+				if !strings.Contains(stderr, "--description cannot be empty; omit the flag to create the task without one") {
+					t.Errorf("stderr should name the remedy, got %q", stderr)
+				}
+				if tasks := readPersistedTasks(t, tickDir); len(tasks) != 0 {
+					t.Errorf("persisted %d tasks, want none", len(tasks))
+				}
+			})
 		}
 	})
 

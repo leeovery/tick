@@ -193,7 +193,7 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals [
 	}
 	if opts.description != nil {
 		trimmed := task.TrimDescription(*opts.description)
-		if err := task.ValidateDescriptionUpdate(trimmed); err != nil {
+		if err := task.ValidateDescriptionFlag(trimmed, "--description cannot be empty; use --clear-description to remove the description"); err != nil {
 			return err
 		}
 	}

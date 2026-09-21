@@ -152,29 +152,42 @@ func TestTrimDescription(t *testing.T) {
 	})
 }
 
-func TestValidateDescriptionUpdate(t *testing.T) {
+func TestValidateDescriptionFlag(t *testing.T) {
+	const updateErr = "--description cannot be empty; use --clear-description to remove the description"
+	const createErr = "--description cannot be empty; omit the flag to create the task without one"
+
 	t.Run("it rejects empty description", func(t *testing.T) {
-		err := ValidateDescriptionUpdate("")
+		err := ValidateDescriptionFlag("", updateErr)
 		if err == nil {
 			t.Fatal("expected error for empty description, got nil")
 		}
-		if !strings.Contains(err.Error(), "--clear-description") {
-			t.Errorf("error should mention --clear-description, got %q", err.Error())
+		if err.Error() != updateErr {
+			t.Errorf("error = %q, want %q", err.Error(), updateErr)
 		}
 	})
 
 	t.Run("it rejects whitespace-only description", func(t *testing.T) {
-		err := ValidateDescriptionUpdate("   ")
+		err := ValidateDescriptionFlag("   ", updateErr)
 		if err == nil {
 			t.Fatal("expected error for whitespace-only description, got nil")
 		}
-		if !strings.Contains(err.Error(), "--clear-description") {
-			t.Errorf("error should mention --clear-description, got %q", err.Error())
+		if err.Error() != updateErr {
+			t.Errorf("error = %q, want %q", err.Error(), updateErr)
+		}
+	})
+
+	t.Run("it reports the caller's remedy", func(t *testing.T) {
+		err := ValidateDescriptionFlag("", createErr)
+		if err == nil {
+			t.Fatal("expected error for empty description, got nil")
+		}
+		if err.Error() != createErr {
+			t.Errorf("error = %q, want %q", err.Error(), createErr)
 		}
 	})
 
 	t.Run("it accepts valid description", func(t *testing.T) {
-		err := ValidateDescriptionUpdate("A valid description")
+		err := ValidateDescriptionFlag("A valid description", updateErr)
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
