@@ -28,6 +28,7 @@ const (
 	readmeTransitionAnchor       = "changed[1]{id,title,from,to,auto}:"
 	readmeCascadeAnchor          = "changed[2]{id,title,from,to,auto}:"
 	readmeDepTreeAnchor          = "dep_tree[2]{from,to}:"
+	readmeStatsAnchor            = "total: 3"
 	readmeEmptyTypeRow           = `tick-d5c6,Update docs,open,3,""`
 	readmeMissingAnchorFixture   = "tasks[9]{nothing}:"
 	readmeShellPromptLinePrefix  = "$ tick"
@@ -376,6 +377,12 @@ func readmeSampleGroups(t *testing.T) []readmeSampleGroup {
 				{name: "start json", info: "json", firstLine: readmeJSONObjectAnchor, occurrence: 1, format: "--json", args: []string{"start", "tick-a1b2"}, tasks: startTasks},
 				{name: "done toon", firstLine: readmeCascadeAnchor, occurrence: 1, format: "--toon", args: []string{"done", "tick-a1b2"}, tasks: cascadeTasks},
 				{name: "done pretty", firstLine: readmePrettyDoneAnchor, occurrence: 1, format: "--pretty", args: []string{"done", "tick-a1b2"}, tasks: cascadeTasks},
+			},
+		},
+		{
+			name: "it reproduces the README stats sample",
+			samples: []readmeSample{
+				{name: "stats toon", firstLine: readmeStatsAnchor, occurrence: 1, format: "--toon", args: []string{"stats"}, tasks: threeTaskList},
 			},
 		},
 		{

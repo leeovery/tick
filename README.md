@@ -85,7 +85,7 @@ tick init
 
 ### `create`
 
-Create a new task. Returns the full task detail on success.
+Create a new task. Returns the full task detail on success, with a `changed` section listing any task whose status moved as a result — creating under a done parent reopens it (see [Transition & Cascade Output](#transition--cascade-output)).
 
 ```bash
 tick create <title> [flags]
@@ -125,8 +125,8 @@ tick list [flags]
 | `--type` | string | | Filter by type: `bug`, `feature`, `task`, `chore` |
 | `--tag` | string | | Filter by tag (repeatable, see below) |
 | `--parent` | ID | | Show descendants of a task |
-| `--ready` | bool | `false` | Show only ready tasks (open, no unresolved blockers, no open children, no dependency-blocked ancestor) |
-| `--blocked` | bool | `false` | Show only blocked tasks (open with unresolved blockers, open children, or dependency-blocked ancestor) |
+| `--ready` | bool | `false` | Show only ready tasks (open or in_progress, no unresolved blockers, no open children, no dependency-blocked ancestor) |
+| `--blocked` | bool | `false` | Show only blocked tasks (open or in_progress with unresolved blockers, open children, or dependency-blocked ancestor) |
 | `--count` | int | | Limit results to N tasks |
 
 `--ready` and `--blocked` are mutually exclusive.
@@ -148,7 +148,7 @@ tick list --count 5                 # first 5 results
 
 ### `ready`
 
-Alias for `tick list --ready`. Shows tasks that are open, have no unresolved blockers, no open children, and no dependency-blocked ancestor. Accepts the same filter flags as `list` (`--status`, `--priority`, `--type`, `--tag`, `--parent`, `--count`).
+Alias for `tick list --ready`. Shows tasks that are open or in progress, have no unresolved blockers, no open children, and no dependency-blocked ancestor. Accepts the same filter flags as `list` (`--status`, `--priority`, `--type`, `--tag`, `--parent`, `--count`).
 
 ```bash
 tick ready
@@ -158,7 +158,7 @@ tick ready --type bug --count 3
 
 ### `blocked`
 
-Alias for `tick list --blocked`. Shows tasks that are open but waiting on dependencies, have open children, or have an ancestor with unresolved blockers. Accepts the same filter flags as `list`.
+Alias for `tick list --blocked`. Shows tasks that are open or in progress but waiting on dependencies, have open children, or have an ancestor with unresolved blockers. Accepts the same filter flags as `list`.
 
 ```bash
 tick blocked
@@ -179,7 +179,7 @@ tick show <task-id> --field <name,...>
 | `--field` | strings | Select fields by name (comma-separated) |
 | `--fields` | strings | Alias of `--field` |
 
-The accepted names are the ones the output document uses: `id`, `title`, `status`, `priority`, `type`, `parent`, `created`, `updated`, `closed`, `description`, `notes`, `tags`, `refs`, `children`, `blocked_by`. Every list section — `notes`, `tags`, `refs`, `children`, `blocked_by` — also accepts a 1-based position, written `notes.2`.
+The accepted names are the ones the output document uses: `id`, `title`, `status`, `priority`, `type`, `parent`, `created`, `updated`, `closed`, `description`, `notes`, `tags`, `refs`, `children`, `blocked_by`. Every list section — `notes`, `tags`, `refs`, `children`, `blocked_by` — also accepts a 1-based position, written `notes.2`. The flag may be repeated, so `--field title --field status` selects both; whitespace around a name is ignored, and a name given twice counts once.
 
 One name returns the bare value: no key, no quoting, nothing around it. The two lines below are the description's own bytes, not a formatted block.
 
@@ -213,7 +213,7 @@ A request that returns a bare value ignores `--toon`, `--pretty` and `--json`; a
 
 ### `update`
 
-Modify one or more fields on an existing task. At least one flag is required.
+Modify one or more fields on an existing task. At least one flag is required. Returns the full task detail, with a `changed` section for any task whose status moved as a result: moving a task under a done parent reopens it, and moving the last unfinished child away from a parent auto-completes it.
 
 ```bash
 tick update <task-id> [flags]
@@ -311,6 +311,8 @@ tick dep add    tick-a1b2 tick-c3d4    # tick-a1b2 is now blocked by tick-c3d4
 tick dep remove tick-a1b2 tick-c3d4    # remove that dependency
 ```
 
+In TOON and pretty, `dep add` and `dep remove` print a one-line confirmation. Under `--json` they return an object with `action`, `task_id` and `blocker` keys.
+
 **`dep tree`** — Visualize dependency chains. Two modes:
 
 ```bash
@@ -319,6 +321,8 @@ tick dep tree tick-a1b2                # focused: upstream + downstream from a t
 ```
 
 Full graph covers every task that participates in a dependency, plus a summary line. All three formats cover every participant: the pretty tree draws root tasks (tasks that block others but aren't blocked themselves) with their downstream chains, then seeds a tree from each participant nothing already drawn reaches — a cycle's member, or a blocker ID that no longer matches a task — with its downstream chain nested beneath it. A dangling blocker ID is thus the top-level entry itself, drawn with status `missing` and no title, above the task it blocks. Focused view walks both directions from the target — what blocks it and what it unblocks. The pretty and JSON trees draw a diamond's shared branch under each of its blockers; the toon edge lists carry one row per stored dependency — `dep_tree` over the whole graph, and the focused `blocked_by`/`blocks` sections over the dependencies inside the target's neighbourhood.
+
+When no task is blocked, pretty prints `No dependencies found.`; TOON and JSON return the populated document emptied — a count-zero `dep_tree` section beside `chains: 0`, `longest: 0` and `blocked: 0` — so an agent parses one shape either way and reads the counts. The focused TOON and JSON documents open with the target's `id`, `title` and `status`, then its `blocked_by` and `blocks` edge sections, which carry a count-zero header when the task has no dependencies in that direction.
 
 <table>
 <tr>
@@ -359,6 +363,26 @@ Show aggregate task counts grouped by status, workflow state (ready/blocked), an
 
 ```bash
 tick stats
+```
+
+In TOON the counts are top-level fields beside a per-priority table:
+
+```
+$ tick stats
+total: 3
+open: 2
+in_progress: 1
+done: 0
+cancelled: 0
+ready: 3
+blocked: 0
+
+by_priority[5]{priority,count}:
+  0,0
+  1,1
+  2,1
+  3,1
+  4,0
 ```
 
 ### `doctor`
@@ -418,6 +442,8 @@ tick migrate --from <provider> [flags]
 tick migrate --from beads
 tick migrate --from beads --dry-run --pending-only
 ```
+
+Imported titles and descriptions are trimmed of leading and trailing whitespace, as `create` does, so a value read back out of `tick show` and written back lands unchanged.
 
 ## Output Formats
 
@@ -507,6 +533,8 @@ tick-c3d4   open    1    task     Login endpoint
 
 When you run `start`, `done`, `cancel`, or `reopen`, the output lists every task whose status changed: the task you named first, then any task the change cascaded to. The `auto` column marks the cascaded ones.
 
+`create` and `update` can move other tasks' statuses too, through the cascade rules above. Their output is the task's detail document with the same `changed` table as a section after `notes`, present even when nothing moved (`changed[0]{id,title,from,to,auto}:`); pretty prints the transition lines after the detail instead. `show`, `note add` and `note remove` carry no `changed` section.
+
 <table>
 <tr>
 <td>
@@ -581,7 +609,7 @@ Cascaded:
 
 ### JSON
 
-Standard 2-space indented JSON with snake_case keys.
+Standard 2-space indented JSON with snake_case keys. A task detail carries each note with its 1-based `index`, and `create`/`update` add a `changed` list mirroring the TOON table.
 
 ```json
 [
