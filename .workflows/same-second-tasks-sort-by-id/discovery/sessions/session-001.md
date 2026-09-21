@@ -43,4 +43,4 @@ Shape confirmed as a bugfix. Behaviour that is claimed and not delivered, with a
 
 ## Conclusion
 
-(none)
+Routed to investigation.
