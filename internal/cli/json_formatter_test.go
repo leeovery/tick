@@ -1793,8 +1793,14 @@ func TestJSONFilteredTaskDetail(t *testing.T) {
 	t.Run("it renders a full document's keys in the declared order", func(t *testing.T) {
 		want := []string{"id", "title", "status", "priority", "type", "tags", "refs", "notes",
 			"description", "parent", "created", "updated", "closed", "blocked_by", "children"}
-		if got := jsonKeyOrder(t, formatted(t).of(f.FormatTaskDetail(richDetail()))); !slices.Equal(got, want) {
+		rendered := formatted(t).of(f.FormatTaskDetail(richDetail()))
+		if got := jsonKeyOrder(t, rendered); !slices.Equal(got, want) {
 			t.Errorf("key order = %v, want %v", got, want)
+		}
+
+		// The raw bytes, not a decoded map: a two-space indent and a ": " key separator.
+		if opening := "{\n  \"id\": \"tick-a1b2\",\n"; !strings.HasPrefix(rendered, opening) {
+			t.Errorf("document opens %q, want it to open %q", rendered[:min(len(rendered), len(opening))], opening)
 		}
 
 		detail := richDetail()

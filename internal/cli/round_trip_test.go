@@ -27,9 +27,9 @@ var (
 // carriage return.
 const (
 	refusedChar        = "\x1b"
-	refusedTitle       = "bell " + refusedChar + " title"
-	refusedDescription = "bell " + refusedChar + " description"
-	refusedNoteText    = "bell " + refusedChar + " note"
+	refusedTitle       = "escape " + refusedChar + " title"
+	refusedDescription = "escape " + refusedChar + " description"
+	refusedNoteText    = "escape " + refusedChar + " note"
 )
 
 // setupFixtureTask creates the awkward fixture task and its note, returning the

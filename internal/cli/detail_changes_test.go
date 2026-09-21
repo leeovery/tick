@@ -190,6 +190,16 @@ func TestTaskDetailChangedSectionPretty(t *testing.T) {
 			t.Errorf("result = %q, want %q", got, want)
 		}
 	})
+
+	t.Run("it appends nothing in pretty when the change set holds no blocks", func(t *testing.T) {
+		want := formatted(t).of(f.FormatTaskDetail(detailWithChanges(nil)))
+
+		got := formatted(t).of(f.FormatTaskDetail(detailWithChanges(&StatusChanges{})))
+
+		if got != want {
+			t.Errorf("result = %q, want the body alone %q", got, want)
+		}
+	})
 }
 
 func TestDetailCommandsCarryNoChangedSection(t *testing.T) {

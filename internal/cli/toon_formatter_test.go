@@ -843,7 +843,7 @@ func TestToonFormatter(t *testing.T) {
 	})
 
 	t.Run("it returns the encoder's error from encodeToonFields", func(t *testing.T) {
-		got, err := encodeToonFields(toon.Field{Key: "description", Value: "bell " + refusedChar + " here"})
+		got, err := encodeToonFields(toon.Field{Key: "description", Value: "escape " + refusedChar + " here"})
 		if err == nil {
 			t.Fatalf("encodeToonFields error = nil, want the encoder's refusal")
 		}
@@ -856,7 +856,7 @@ func TestToonFormatter(t *testing.T) {
 	})
 
 	t.Run("it returns the encoder's error from encodeToonSection", func(t *testing.T) {
-		got, err := encodeToonSection("notes", []toonNoteRow{{Index: 1, Text: "bell " + refusedChar + " here"}})
+		got, err := encodeToonSection("notes", []toonNoteRow{{Index: 1, Text: "escape " + refusedChar + " here"}})
 		if err == nil {
 			t.Fatalf("encodeToonSection error = nil, want the encoder's refusal")
 		}
@@ -870,7 +870,7 @@ func TestToonFormatter(t *testing.T) {
 
 	t.Run("it falls back to the section name when the section refuses but no single row does", func(t *testing.T) {
 		rows := []toonTaskRow{{ID: "tick-aaa111", Title: "an ordinary title"}, {ID: "tick-bbb222", Title: "another ordinary title"}}
-		_, want := encodeToonSection("tasks", []toonTaskRow{{ID: "tick-aaa111", Title: "bell " + refusedChar + " title"}})
+		_, want := encodeToonSection("tasks", []toonTaskRow{{ID: "tick-aaa111", Title: "escape " + refusedChar + " title"}})
 
 		got := sectionRefusal("tasks", rows, func(r toonTaskRow) string { return r.ID }, errors.Unwrap(want))
 
