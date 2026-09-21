@@ -82,5 +82,8 @@
   },
   "baseline": {
     "status": "native"
+  },
+  "walkthrough": {
+    "status": "walked"
   }
 }
