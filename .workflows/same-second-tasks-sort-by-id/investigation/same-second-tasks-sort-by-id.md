@@ -57,37 +57,65 @@ Confirmed at symptom gathering: there is no live affected data. Existing-tie han
 
 **Checkpoint depth:** straight-through
 
-- **H1: Creation timestamps are truncated to whole-second granularity before storage, so a batch written inside one wall-clock second stores identical `created` values and the ordering information never reaches disk.** [suspected]
-  Basis: `task.TimestampFormat = "2006-01-02T15:04:05Z"` carries no fractional part, and every stamping site applies `time.Now().UTC().Truncate(time.Second)` — `create.go:208`, `task.go:285` (`NewTask`), `state_machine.go:49`, `note.go:71`, `update.go:318`, `dep.go:116,186`, `migrate/store_creator.go:62`.
+- **H1: Creation timestamps are truncated to whole-second granularity before storage, so a batch written inside one wall-clock second stores identical `created` values and the ordering information never reaches disk.** [confirmed]
+  Basis: `task.TimestampFormat = "2006-01-02T15:04:05Z"` carries no fractional part, and every stamping site applies `time.Now().UTC().Truncate(time.Second)`.
+  Evidence: `task.go:41` fixes the format. Truncation at `create.go:208`, `task.go:285` (`NewTask`), `state_machine.go:49`, `note.go:71`, `update.go:318`, `dep.go:116,186`, `migrate/store_creator.go:62`. The truncation is belt-and-braces — `FormatTimestamp` (`task.go:264`) would drop any fraction anyway, since Go's `Format` emits only what the layout names. Reproduced: eight tasks created in a loop all recorded `2026-09-22T09:24:49Z`.
 
-- **H2: The list-family `ORDER BY` terminates at `t.created ASC` with no deterministic tiebreak, so tied rows emerge in whatever order the SQLite query plan produces — empirically task-ID order.** [suspected]
-  Basis: `list.go:317` (`ready` view) and `list.go:319` (neutral view) both end on `t.created ASC`; no ID term is written anywhere. `tasks` is a rowid table with `id TEXT PRIMARY KEY`, so the observed ID ordering is emergent from the plan, not requested by the code.
+- **H2: The list-family `ORDER BY` terminates at `t.created ASC` with no deterministic tiebreak, so tied rows emerge in whatever order the SQLite query plan produces.** [confirmed — refined]
+  Original basis: `list.go:317` (ready view) and `list.go:319` (neutral view) both end on `t.created ASC`; no ID term is written anywhere.
+  Evidence: the seed's "falls through to the task ID" is true only for *some* queries. Measured against a seeded project (7 tasks, one second, one parent):
+  - **Unfiltered `tick list` / `tick ready`** — plan is `SCAN t USING INDEX idx_tasks_priority` + `USE TEMP B-TREE FOR LAST TERM OF ORDER BY`. Rows reach the sorter in priority-index order, whose own internal tiebreak is rowid; the sorter preserves that for equal `created`, so output is **file order — the right answer, reached by accident**.
+  - **`--parent` filtered (`tick list --parent X`, `tick ready --parent X`)** — the parent filter adds `t.id IN (?,?,…)` (`list.go:302`, fed by `queryDescendantIDs` at `list.go:233`). Plan becomes `SEARCH t USING INDEX sqlite_autoindex_tasks_1 (id=?)` + `USE TEMP B-TREE FOR ORDER BY`. Rows reach the sorter already in primary-key order, so output is **exact ascending task-ID order** — the reported symptom.
+  This is the mechanism behind the original report: the workflow plan adapter reads a phase's tasks, which is a parent-filtered query.
+  Consequence: the unfiltered case is not *correct*, it is *unspecified*. Nothing in the code or in SQLite's contract guarantees it; a different index, a statistics change or a SQLite version bump can flip it without warning.
 
-- **H3: The JSONL source of truth still holds true authoring order — records are written from the in-memory slice, which appends — so ordering is lost on read, not on write.** [suspected]
-  Basis: `jsonl.go:16` `MarshalJSONL(tasks)` serialises slice order; creation appends. If it holds, existing files are repairable and row position is available as a tiebreak.
+- **H3: The JSONL source of truth still holds true authoring order — records are written from the in-memory slice, which appends — so ordering is lost on read, not on write.** [confirmed]
+  Evidence: `ParseJSONL` (`jsonl.go:89`) appends one task per line in file order. `create.go:253` appends the new task to the slice. No handler reorders the slice — the only other slice writes are field-level (`dep.go`, `note.go`, `helpers.go`). `Store.Mutate` (`store.go:174`) marshals the slice straight back out and rebuilds the cache from the same bytes. `Cache.Rebuild` (`cache.go:103`) does `DELETE FROM tasks` then inserts in slice order, so `rowid` restarts at 1 and tracks the JSONL line number exactly. Measured: `SELECT rowid, id FROM tasks ORDER BY rowid` returned lines 1–7 in file order.
+  Consequence: authoring order is fully recoverable today, from either the file or `rowid` — no data is lost, and existing projects need no repair to be ordered correctly.
 
-- **H4: Other fixed-order presentation paths share the defect or sort by ID deliberately — the blast radius exceeds the three list views.** [suspected]
-  Basis: `show.go:137` (blockers), `show.go:146` (children) both `ORDER BY t.id` / `ORDER BY id`; `show.go:173` (notes) uses `ORDER BY rowid ASC`. The migrate framework builds many tasks in one pass and hits the same second every time.
+- **H4: Other fixed-order presentation paths share the defect or sort by ID deliberately — the blast radius exceeds the three list views.** [confirmed]
+  Evidence:
+  - `show.go:146` children — `ORDER BY id`. Explicit and unconditional: a task's sub-tasks are always ID-ordered, never authoring-ordered. Not a tie-break accident; a deliberate choice that produces the same wrong answer.
+  - `show.go:137` blockers — `ORDER BY t.id`. Same.
+  - `show.go:173` notes — `ORDER BY rowid ASC`, which is insertion order. Correct.
+  - `dep tree` (`dep_tree.go:26`) reads via `store.ReadTasks()` — straight from JSONL, so it is in file order and **sidesteps the bug entirely**.
+  - `migrate` (`migrate/store_creator.go`) appends per task and stamps `time.Now().UTC().Truncate(time.Second)` when the provider gives no creation time — so a whole import lands in one second. When the provider *does* supply a time (`beads.go:119` parses RFC3339, which may carry a fraction), `FormatTimestamp` flattens it to the second on write, so imported sub-second precision is discarded too.
 
-- **H5: Second granularity is structural across every timestamp field, so raising precision changes the on-disk format for all of them and for files written by other versions.** [suspected]
-  Basis: `created`, `updated`, `closed`, note `created` and transition `at` all share `TimestampFormat`; `task.go:112,116,137` parse with strict `time.Parse(TimestampFormat, …)`, which rejects a value carrying a fraction.
+- **H5: Second granularity is structural across every timestamp field, so raising precision changes the on-disk format for all of them and for files written by other versions.** [confirmed — basis corrected]
+  Original basis claimed reading is strict. **That is wrong.** Go's `time.Parse` accepts a fractional second immediately after the seconds field even when the layout does not name one. Measured: `time.Parse("2006-01-02T15:04:05Z", "2026-09-21T12:00:00.123456789Z")` parses cleanly and retains the nanoseconds. Every parse site in tick uses this constant (`task.go:112,116,137`, `notes.go:41`, `transition_history.go:44`, `show.go:186,239,240,255`), so **an older tick binary reads a finer-grained file without error** — there is no forward-compatibility break on read.
+  What *is* structural: one `FormatTimestamp` serves both storage and display. It is called by JSONL marshalling (`task.go:96`), by the cache writer (`cache.go:203,204,229,239`) **and** by all three formatters (`json_formatter.go:128`, `toon_formatter.go:249`, `pretty_formatter.go:170`, `show_fields.go:57`). Raising storage precision therefore also changes every user-visible timestamp unless the two are split. Test surface: 223 literal `…T..:..:..Z` occurrences across 16 test files, plus README samples at `README.md:197,198,502,503,515` which `readme_samples_test.go` compares byte-for-byte.
+
+- **H6: A naive precision increase introduces a *new* ordering defect on mixed-precision data, because the cache sorts `created` as text and `Z` sorts after `.`.** [confirmed]
+  Discovered mid-trace. The cache column is `created TEXT NOT NULL` (`cache.go:26`) and `ORDER BY t.created ASC` is a string comparison. Measured in Go: `"2026-09-21T12:00:00Z" < "2026-09-21T12:00:00.500Z"` is **false** — `'Z'` (0x5A) sorts above `'.'` (0x2E).
+  Consequence: once a file holds both old whole-second records and new fractional ones, a task created at `12:00:00Z` sorts *after* one created at `12:00:00.500Z` — a fresh wrong-order case, confined to within-second comparisons (across seconds the leading digits still decide correctly). A fix that raises precision must therefore either write a fixed-width fraction on **every** record including rewrites of old ones, or stop relying on lexical comparison of the text column.
 
 **Trace lines (in intended order):**
-1. `internal/task/task.go` — `TimestampFormat`, `NewTask`, the JSON marshal/unmarshal round trip
-2. Every stamping site: `create.go`, `update.go`, `note.go`, `dep.go`, `state_machine.go`, `migrate/store_creator.go`
-3. `internal/cli/list.go:310-322` — the `ORDER BY`, plus an empirical `EXPLAIN QUERY PLAN` and live ordering check against a seeded project
-4. `internal/storage/jsonl.go` and `cache.go` `Rebuild()` — whether authoring order survives the round trip and whether `rowid` tracks it
-5. Other ordered read paths — `show.go` children/blockers/notes, dep tree, migrate output
-6. Compatibility surface — strict `time.Parse`, `schemaVersion`, `internal/doctor/` checks, tests pinning the format
+1. `internal/task/task.go` — `TimestampFormat`, `NewTask`, the JSON marshal/unmarshal round trip — **done**
+2. Every stamping site: `create.go`, `update.go`, `note.go`, `dep.go`, `state_machine.go`, `migrate/store_creator.go` — **done**
+3. `internal/cli/list.go:310-322` — the `ORDER BY`, plus an empirical `EXPLAIN QUERY PLAN` and live ordering check against a seeded project — **done**
+4. `internal/storage/jsonl.go` and `cache.go` `Rebuild()` — whether authoring order survives the round trip and whether `rowid` tracks it — **done**
+5. Other ordered read paths — `show.go` children/blockers/notes, dep tree, migrate output — **done**
+6. Compatibility surface — strict `time.Parse`, `schemaVersion`, `internal/doctor/` checks, tests pinning the format — **done**
 
 ### Code Trace
 
-(to be populated)
+**Entry point:** `RunList` → `buildListQuery` (`internal/cli/list.go:262`) → `Store.Query` → SQLite.
 
-**Ground named by the seed:**
-- `internal/cli/query_helpers.go` and the list/ready/blocked query paths carrying the `ORDER BY` clauses
-- the task record's `created` field in `internal/task/`
-- the SQLite cache schema in `internal/storage/cache.go`
+**Execution path (the reported symptom — a parent-filtered list):**
+1. `internal/cli/list.go:233` — `queryDescendantIDs` walks the parent chain with a recursive CTE, returning descendant IDs in walk order
+2. `internal/cli/list.go:302` — those IDs become `t.id IN (?,?,…)`
+3. `internal/cli/list.go:317` or `:319` — `ORDER BY … t.created ASC`, with no further term
+4. SQLite plans `SEARCH t USING INDEX sqlite_autoindex_tasks_1 (id=?)` — rows are produced in primary-key order
+5. `USE TEMP B-TREE FOR ORDER BY` sorts on priority and `created`; every row ties on both, so the incoming primary-key order survives to the output
+6. The caller receives tasks in ascending task-ID order — task IDs being `tick-` plus three random bytes (`task.go` `GenerateID`), this is indistinguishable from random
+
+**Key files involved:**
+- `internal/task/task.go:41` — `TimestampFormat`, the single constant governing both storage and display precision
+- `internal/task/task.go:264` — `FormatTimestamp`, the only writer of that format
+- `internal/cli/list.go:262-325` — `buildListQuery`, both `ORDER BY` variants and the `id IN (…)` condition
+- `internal/storage/cache.go:18-28` — the `tasks` table; `created` is `TEXT`, so the sort is lexical
+- `internal/storage/store.go:174` — `Mutate`, full JSONL rewrite plus full cache rebuild on every write
+- `internal/cli/show.go:137,146` — children and blockers, explicitly `ORDER BY id`
 
 ### Root Cause
 
