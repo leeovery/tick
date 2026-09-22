@@ -30,6 +30,44 @@ The guarantee is **total**: every query in the list family produces one defined 
 
 Creation time stops being load-bearing for ordering. The timestamp format is unchanged, and no stored timestamp changes value.
 
+### 2. The Creation Sequence
+
+#### 2.1 The decision
+
+Every task carries an explicit creation sequence — a monotonic number assigned when the task is created and never renumbered afterwards. The list-family sort ends on it, and it is the only thing tick relies on for authoring order.
+
+**Why an explicit field rather than finer timestamps or file position.** A timestamp is an *observation*, not a statement of sequence: it records when something happened and implies order only as a side effect, which is precisely the accident this bug is made of. Two alternatives were explored and reversed.
+
+Sub-second timestamp precision was ruled out by measurement. It only ever covers tasks created by separate command invocations: 100 in-process stamps taken with tick's own ID generation in the loop produce **one** distinct millisecond; a microsecond layout gives ~40 distinct values with tie groups of 3–5, nanosecond ~37 with groups of 4. The whole `internal/migrate` surface is therefore untouched by it. Already-stored tasks gain nothing either — the first write re-emits an old whole-second value as `.000` rather than inventing precision. Its costs were real: 14 top-level tests across three packages (31 subtests), a read/write format split, a fixed-width-fraction requirement that inverts order if missed, and a new failure mode precision itself introduces — clock steps and hand-edited records produce times that *differ but are wrong*, which no tiebreak can catch because there is no tie.
+
+Position-in-file was rejected because the ordering is invisible: nobody reading a task can see why two tasks came back in that order, no direct consumer of `tasks.jsonl` can reproduce it, and correctness would rest on an invariant of an artefact the design calls expendable — one that no test states and that any future incremental cache-update path would break silently. The sequence is that option's information promoted to a first-class, assertable field.
+
+An explicit sequence is the only option where a clash is **impossible by construction** rather than improbable, and the only one that puts the order somewhere both a reader of `tasks.jsonl` and a test can see it.
+
+#### 2.2 Assignment
+
+A new task takes the next number above the highest sequence currently in the file.
+
+Clashes cannot occur. Writes are serialised by the exclusive file lock, and `Store.Mutate` (`internal/storage/store.go:174`) reads the current task set inside that lock before calling the mutation function, so the next number is computed with no race.
+
+**Numbers are not guaranteed unreused.** Removing the highest-numbered task frees its number for the next creation. Ordering does not need the guarantee — a reused number cannot collide, because the task that held it is gone.
+
+#### 2.3 Backfill for records with no sequence
+
+A record lacking a sequence is assigned one on read: walk the records in order, tracking the highest sequence seen so far, and give the next number to any record that has none.
+
+This is a running-maximum rule, **not** line position. On a file where some records carry a sequence and some do not — the shape produced by a merge, or by a write from a binary that does not know the field — assigning line position would sort the newest record first. Running maximum gets it right and collapses backfill and new-task numbering into a single rule.
+
+For a file with no sequences at all this yields line order, which *is* authoring order. Verified across the project's entire history: `git log -S "sort." -- internal/storage/ internal/task/ internal/cli/create.go` returns no commits — no sort call has ever existed on those paths — and the first `MarshalJSONL` (commit `4278ba09`) iterated the task slice unsorted exactly as today.
+
+Backfill lives in `ParseJSONL` (`internal/storage/jsonl.go:89`), which is the single funnel for every read path (`rg -n 'ParseJSONL' internal/storage/store.go` → `:164` `ReadTasks`, used by `dep tree`; `:246` `Rebuild`; `:363` `readAndEnsureFresh`, used by every query and mutation). Anywhere else leaves one of those paths on a different rule.
+
+Existing projects need no migration and no repair. The assignment becomes permanent on the next write.
+
+#### 2.4 The sequence is not surfaced in command output
+
+The sequence appears in `tasks.jsonl` and in the cache, and nowhere a command prints. No detail-document section, no field registry entry, no `--field` address, no README sample. It is an ordering mechanism, not information about the work; the guarantee it delivers is stated in the documentation (§6) and the one case where the sequence itself is worth inspecting is covered by the doctor check (§5.2).
+
 ---
 
 ## Working Notes
