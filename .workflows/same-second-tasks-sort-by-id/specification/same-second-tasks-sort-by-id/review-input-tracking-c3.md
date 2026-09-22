@@ -26,8 +26,8 @@ Add a second documentation site to §6: the README's `tick doctor` check enumera
 `README.md:396` is the second site the work touches: it enumerates what `tick doctor` checks for — JSONL syntax errors, invalid IDs, duplicates, orphaned references, self-referential dependencies, dependency cycles, parent/child constraint violations and cache staleness. The duplicate-sequence check (§5.2) joins that enumeration, named as duplicate creation sequences rather than folded into the existing "duplicates", which reads as duplicate IDs — a user whose tasks lost their authoring order after a merge has to be able to find the diagnostic that reports it. The sentence is prose outside every fence, so no README sample renders it.
 ```
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: The call is this session's — the record decides the check exists and treats the README as documentation the work must keep true, but its documentation analysis was scoped to the sort contract — so it landed first in the investigation ("Testing Recommendations" → "Documentation and regression floor"), which now names `README.md:396` as a second documentation site and records the alternative it was preferred over. §6 is re-aligned to it.
 
 ---
 
