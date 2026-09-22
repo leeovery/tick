@@ -119,19 +119,61 @@ Confirmed at symptom gathering: there is no live affected data. Existing-tie han
 
 ### Root Cause
 
-(to be populated)
+Two independent defects compound. Neither alone produces the reported symptom; together they mean authoring order is sometimes preserved, sometimes scrambled, with nothing to tell the two cases apart.
+
+**1 — The ordering information is never recorded.** Tick stores creation times to whole-second granularity. `TimestampFormat` (`task.go:41`) has no fractional component, so `FormatTimestamp` cannot emit one; every stamping site additionally truncates with `Truncate(time.Second)` before the value is even held. A batch of tasks authored inside one wall-clock second therefore records the *same instant* for every member. The order the user intended is not degraded in storage — it is absent from it.
+
+**2 — The sort has no deterministic final term, so tied rows are ordered by whatever the query plan happens to do.** `buildListQuery` ends its `ORDER BY` at `t.created ASC` (`list.go:317`, `:319`). SQLite is free to emit tied rows in any order, and in practice emits them in the order the chosen plan feeds the sorter — which differs by filter:
+
+| Query | Plan | Tie order | Correct? |
+|---|---|---|---|
+| `tick list`, `tick ready` (unfiltered) | `SCAN t USING INDEX idx_tasks_priority` | rowid, i.e. file order | Right — by accident |
+| `tick list --parent X`, `tick ready --parent X` | `SEARCH t USING INDEX sqlite_autoindex_tasks_1 (id=?)` | primary key, i.e. task ID | Wrong |
+
+The parent-filtered shape is what the reporter hit: reading a phase's tasks *is* a parent-filtered query. Task IDs are `tick-` plus three random bytes, so ID order scrambles a deliberate sequence into what looks like noise.
+
+The second defect is the more important finding, because it reframes the bug. The unfiltered case is not correct, it is **unspecified**: nothing in tick's code, and nothing in SQLite's contract, promises that order. A new index, a statistics change or a SQLite version bump can flip it silently — including on the queries that work today.
+
+**Why this happens:** tick treats creation time as both a timestamp and an ordering key, but only the timestamp role shaped the format. Second granularity is a reasonable choice for a human-readable audit field and a poor one for a sort key, and nothing in the design separates the two roles or supplies a fallback when the key ties.
 
 ### Contributing Factors
 
-(to be populated)
+- **IDs are random.** `GenerateID` uses three bytes from `crypto/rand`, so when the tie resolves to ID order the result is not merely arbitrary — it actively shuffles, and looks like a bug in the consumer rather than in tick.
+- **The bug is filter-dependent and therefore invisible to casual checking.** The obvious manual test (`tick list` after creating a batch) returns the right answer. Only the parent-filtered path — the one machines use — goes wrong.
+- **Machine writers are the normal case now.** Tick is used as a plan store by an agent that authors a whole phase in one pass; the migration framework stamps an entire import with one `time.Now()` (`migrate/store_creator.go:62`). Human-speed use never reaches the tie; every scripted use does.
+- **Sub-second precision is discarded even when a source has it.** `migrate/beads/beads.go:119` parses RFC3339 creation times that may carry a fraction; `FormatTimestamp` flattens them on write.
+- **The documented contract stops short of the tie.** `README.md:115` promises "sorted by priority (ascending), then creation date" and says nothing about what happens when creation dates are equal — so neither the code nor the docs commit to an answer, and the workflow plan adapter's own reading instructions assume one that tick does not give.
 
 ### Why It Wasn't Caught
 
-(to be populated)
+- **No test constructs a creation-time tie.** Every ordering test gives each task in a priority band a distinct `Created` — `ready_test.go:306` uses `now`, `now+1s`, `now+2s`; `blocked_test.go:212` and `list_filter_test.go:368` follow the same fixture shape. The tie branch has never executed under test.
+- **And it would pass by coincidence if it did.** Those fixtures use hand-written IDs (`tick-hi1111`, `tick-low111`, `tick-low222`) that already sort into the expected order, so an ID-ordered tie would satisfy the assertions.
+- **No test exercises ordering under a parent filter.** The two plans are never compared, so the divergence between filtered and unfiltered results is untested ground.
+- **The correct-looking case masks the broken one.** Unfiltered output being right is what makes the bug survive both manual use and code review.
 
 ### Blast Radius
 
-(to be populated)
+**Directly affected — wrong order today:**
+- `tick list --parent`, `tick ready --parent`, `tick blocked --parent` — any same-second batch under a parent returns in random ID order. This is the workflow plan adapter's read path and the reported symptom.
+- `tick show <id>` sub-task list (`show.go:146`, `ORDER BY id`) and blocker list (`show.go:137`, `ORDER BY t.id`) — unconditionally ID-ordered regardless of timestamps. Same wrong answer, reached by an explicit choice rather than a tie.
+- Anything importing through `internal/migrate/` — the whole import shares one second, so every parent-filtered read of imported tasks is scrambled.
+
+**Correct today, but only by accident:**
+- `tick list`, `tick ready`, `tick blocked` unfiltered, and every non-parent filter combination (`--tag`, `--type`, `--status`, `--priority`) that does not introduce an `id IN (…)` condition. These depend on an unspecified SQLite behaviour and could flip at any time.
+- `tick stats` counts are order-independent — unaffected either way.
+
+**Correct by construction:**
+- `tick dep tree` reads from JSONL via `store.ReadTasks()` (`dep_tree.go:26`), so it is in file order and never touches the cache sort.
+- `tick show` notes (`show.go:173`, `ORDER BY rowid ASC`) — insertion order.
+
+**Surface any fix must cross:**
+- **Authoring order is not lost and needs no recovery.** JSONL holds it (append-only writes from a slice nothing reorders), and `Cache.Rebuild` deletes and re-inserts in that order, so `rowid` equals the JSONL line number after every mutation. Both the file and `rowid` are usable today as a true authoring-order key — and existing projects are already repairable without a migration.
+- **Timestamp precision is one knob for storage and display.** `FormatTimestamp` is called by the JSONL marshaller (`task.go:96`), the cache writer (`cache.go:203`) **and** all three formatters (`json_formatter.go:128`, `toon_formatter.go:249`, `pretty_formatter.go:170`, `show_fields.go:57`). Raising storage precision also changes every user-visible timestamp unless the roles are split.
+- **Reading is already tolerant, so there is no forward-compatibility break.** Go's `time.Parse` accepts a fractional second even when the layout omits one — measured against nanosecond input. Every parse site in tick uses `TimestampFormat`, so an older tick binary reads a finer-grained file without error.
+- **But mixed precision breaks the lexical sort.** The cache column is `created TEXT` and the comparison is a string comparison; `'Z'` (0x5A) sorts above `'.'` (0x2E), so `"12:00:00Z" < "12:00:00.500Z"` is false. A file holding both old whole-second and new fractional records orders them wrongly within a second. Any precision change must write a fixed-width fraction on every record, or stop comparing the text column.
+- **Test and doc surface:** 223 literal `…T..:..:..Z` timestamps across 16 test files, and README samples at `README.md:197,198,502,503,515` that `readme_samples_test.go` compares byte-for-byte.
+- **Cache schema:** no version bump needed for a value-format change — the SHA256 freshness hash changes with the file and forces a rebuild. A bump from `schemaVersion = 2` would only be needed if a column were added.
+- **`internal/doctor/` holds no timestamp logic at all** — nothing there to update either way.
 
 ---
 
