@@ -69,3 +69,12 @@ status: draft
 - [ ] The check is registered in RunDoctor and the doc comment's check count and names reflect it
 - [ ] README's sort-contract sentence states that tasks tied on creation date within a priority band come back in creation order, and a prose test fails if it is removed
 - [ ] README's doctor enumeration names duplicate creation sequences as its own entry, and a prose test fails if it is folded back into "duplicates"
+- [ ] A tasks.jsonl in the merge shape (unnumbered records lying above numbered ones, one shared creation second): after the next write, `tick doctor` reports the duplicate-sequence check passing
+
+#### Tasks
+
+| Internal ID | Name | Edge Cases |
+|-------------|------|------------|
+| same-second-tasks-sort-by-id-3-1 | Detect duplicate creation sequences in a read-only doctor check | records with an absent or zero seq are not compared, because backfill numbers each one above every sequence the file carries, so a project that predates the field reports clean (§2.2, §2.3, §5.2), each duplicate group is reported as its own result with its line numbers (§5.2, §8.3), a clean file returns a single passing result (§5.2, §8.3), a duplicate reports at warning severity, not error (§5.2, §8.3), the check never modifies tasks.jsonl (§5.2) |
+| same-second-tasks-sort-by-id-3-2 | Run the duplicate-sequence check from tick doctor | `tick doctor` exits zero on a file carrying a duplicate (§5.2, §8.3), a file whose unnumbered records lie above numbered ones (the merge shape) reports clean after the next write (§2.3, §8.2), RunDoctor's doc comment check count and names update with the addition (§5.2) |
+| same-second-tasks-sort-by-id-3-3 | Document the creation-order tiebreak and the duplicate-sequence check in the README | the doctor entry is named as duplicate creation sequences, not folded into the existing "duplicates" (§6, §8.6), both sentences are prose outside every fence, so the README sample run never reads them and each needs its own assertion (§6, §8.6), internal/cli/help.go makes no statement about sort order and stays unchanged (§6) |
