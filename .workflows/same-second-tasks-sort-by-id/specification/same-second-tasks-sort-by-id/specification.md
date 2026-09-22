@@ -24,7 +24,7 @@ No live exposure — no stored batch is currently being read in the wrong order,
 
 #### 1.3 What tick guarantees after the fix
 
-Tasks come back in the order they were created, within a priority band — and within the `in_progress` band for `ready`, which floats above the priority terms. A batch written one after another by an agent, an importer or a shell loop reads back in the sequence it was written.
+Tasks come back in the order they were created, within a priority band — and within the `in_progress` band for `ready`, which floats above the priority terms. A batch written one after another by an agent or a shell loop reads back in the sequence it was written, as does an import whose source carries no creation times of its own. An import that supplies real historical creation times is ordered by those times instead: recorded chronology outranks the sequence (§4.2).
 
 The guarantee is **total**: every query in the list family produces one defined order under every condition, with no dependence on which plan SQLite chooses. A mixed-priority batch still does not read back in write order — priority and the `ready` band are semantic ordering and continue to outrank creation order.
 
@@ -46,7 +46,7 @@ An explicit sequence is the only option where a clash is **impossible by constru
 
 #### 2.2 Assignment
 
-A new task takes the next number above the highest sequence currently in the file. Sequences are positive: numbering begins at 1, so an absent or zero value on a record means it carries no sequence.
+A new task takes the next number above the highest sequence currently in the file. Sequences are positive: numbering begins at 1, so an absent or zero value on a record means it carries no sequence. The highest is taken from the task set as read, not from the stored bytes: backfill (§2.3) runs first, so records that reached the file without a sequence already carry one and the next number sits above those too.
 
 Clashes cannot occur. Writes are serialised by the exclusive file lock, and `Store.Mutate` (`internal/storage/store.go:174`) reads the current task set inside that lock before calling the mutation function, so the next number is computed with no race.
 
@@ -139,7 +139,9 @@ Every clause in §4.1 ends on the task ID, as does `tick show`'s children clause
 
 #### 5.2 A duplicate-sequence doctor check
 
-A new check mirrors `DuplicateIdCheck` (`internal/doctor/duplicate_id.go`) exactly: read-only, never modifies the file, reports each duplicate group with its line numbers and returns a single passing result on a clean file. It registers alongside the others in `RunDoctor` (`internal/cli/doctor.go:22`), whose doc comment enumerates the registered checks by name and count (`sed -n '11,15p' internal/cli/doctor.go` → "registers all 10 checks") and updates with the addition.
+A new check mirrors `DuplicateIdCheck` (`internal/doctor/duplicate_id.go`): read-only, never modifies the file, reports each duplicate group with its line numbers and returns a single passing result on a clean file. Records carrying no sequence — absent or zero (§2.2) — are not compared with one another: backfill gives each of them a distinct number on read (§2.3), so they cannot collide, and `DuplicateIdCheck` already skips records with no ID. A project that predates the field reports clean.
+
+The report does not fail the run. Tick's diagnostics carry the distinction already (`sed -n '13,17p' internal/doctor/doctor.go` → `SeverityError` is "a failure that breaks tick and affects exit code", `SeverityWarning` "a suspicious but allowed state that does not affect exit code"), and a duplicate sequence breaks nothing: order stays total (§5.1) and the group falls back to ID order among themselves. It reports at warning severity, joining `ParentDoneWithOpenChildrenCheck` (`internal/doctor/parent_done_open_children.go:59`), the one existing warning against nine errors. Failing the run would leave a project permanently red to any script or CI gate after a routine branch merge, clearable only by hand, since tick offers no command that renumbers a sequence. What the report tells the user is which tasks share a number, on which lines, and that those tasks have lost their authoring order relative to one another; restoring it means editing the sequences in `tasks.jsonl` so they differ. It registers alongside the others in `RunDoctor` (`internal/cli/doctor.go:22`), whose doc comment enumerates the registered checks by name and count (`sed -n '11,15p' internal/cli/doctor.go` → "registers all 10 checks") and updates with the addition.
 
 Tick's established handling for a duplicate-identity condition is a doctor check rather than a hard refusal on read. A refusal would block every command after a merge; detection plus a defined fallback gives both properties.
 

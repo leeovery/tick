@@ -2,7 +2,7 @@
 
 ## Findings
 
-### 1. What "the highest sequence currently in the file" means when a batch is created, or when records arrived without a sequence
+### 1. What "the highest sequence currently in the file" means on a file whose records arrived without one
 
 **Source**: Specification analysis
 **Category**: Gap/Ambiguity
@@ -11,22 +11,18 @@
 **Affects**: §2.2 (Assignment), with §2.3 (Backfill) as context
 
 **Problem**:
-The assignment rule reads as a single lookup — take the highest number in the file, add one — and two everyday situations break under that reading.
-
-A single write that creates many tasks at once is the headline case for the whole fix: an import of a whole project, or an agent authoring a phase, goes through one locked mutation. Take the maximum once and every task in that batch carries the same number, so the entire import falls back to ID order — a shuffle, which is exactly the defect being fixed — and then trips the duplicate report as well. The one test the spec names for in-process batches uses the migration framework, so the product's flagship scripted writer is the case most likely to ship wrong.
-
-The second situation is a file where some records reached it without a sequence. Those records are given numbers as the file is read, but the stored bytes still lack them. An implementer who computes the maximum from the stored values alone hands the next new task a number a just-numbered record already holds — a fresh duplicate minted by the upgrade itself, on the first task created after a merge, with two tasks then ordered by random ID and a doctor report the user cannot account for.
+The assignment rule reads as a single lookup — take the highest number in the file, add one — and the phrase "in the file" points at the stored bytes. That breaks on a file where some records reached it without a sequence. Those records are given numbers as the file is read, but the stored bytes still lack them. An implementer who computes the maximum from the stored values alone hands the next new task a number a just-numbered record already holds — a fresh duplicate minted by the upgrade itself, on the first task created after a merge, with two tasks then ordered by random ID and a doctor report the user cannot account for.
 
 **Proposal**:
-State both in the assignment rule. The maximum is taken over the task set as read — backfill has already run, so records that arrived without a number are included — and the number advances once per task within a single write, in the order the tasks are appended. Both follow from what the specification already decided: backfill is placed in the single read funnel that every mutation goes through, and clashes are said to be impossible by construction, which only holds if each task in a batch takes its own number.
+Say the maximum is taken over the task set as read rather than over the stored bytes. The record already determines it: backfill is placed in the single read funnel every mutation passes through (§2.3), so by the time a new task is numbered every record in hand already carries a sequence. Only the word "file" leaves the other reading open.
 
 **Proposed Text**:
 Append to the first paragraph of §2.2, after "so an absent or zero value on a record means it carries no sequence.":
 
-"The highest is taken from the task set as read: backfill (§2.3) runs first, so records that reached the file without a sequence already carry one and the next number sits above those too. A write that creates more than one task — an import of a whole project, for instance — advances the number once per task, in the order the tasks are appended, so a batch of *n* takes *n* consecutive numbers rather than sharing one."
+"The highest is taken from the task set as read, not from the stored bytes: backfill (§2.3) runs first, so records that reached the file without a sequence already carry one and the next number sits above those too."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Narrowed at dispose. The finding's other half — that a single write creating many tasks would share one number — rests on a premise measured false: the migration framework opens its own `store.Mutate` per task (`internal/migrate/store_creator.go:36`), and every `Mutate` call site in the tree (`create.go:187`, `dep.go:78,156`, `remove.go:184`, `update.go:275`, `transition.go:36`, `note.go:68,124`, `store_creator.go:36`) creates at most one task. With no multi-task write path in existence, a rule for one is the builder's to settle if such a path is ever added. The same half was raised and declined in input review (finding 2). The surviving half applied to §2.2 as staged — the derivation is the record's own, §2.3 already placing backfill in the single read funnel every write passes through. Narrowed at dispose. The finding's other half — that a single write creating many tasks would share one number — rests on a premise measured false: the migration framework opens its own `store.Mutate` per task (`internal/migrate/store_creator.go:36`), and every `Mutate` call site in the tree (`create.go:187`, `dep.go:78,156`, `remove.go:184`, `update.go:275`, `transition.go:36`, `note.go:68,124`, `store_creator.go:36`) creates at most one task. With no multi-task write path in existence, a rule for one is the builder's to settle if such a path is ever added. The same half was raised and declined in input review (finding 2).
 
 ---
 
@@ -49,8 +45,8 @@ Append to the first paragraph of §5.2, after "returns a single passing result o
 
 "Records carrying no sequence — absent or zero (§2.2) — are not compared with one another: backfill gives each of them a distinct number on read (§2.3), so they cannot collide. A project that predates the field reports clean."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied to §5.2 as staged. The derivation is the record's own on two counts: §2.3 gives every unnumbered record its own number on read, and `DuplicateIdCheck` — the check §5.2 mirrors — already skips records with no ID (`internal/doctor/duplicate_id.go:24`, "missing/empty IDs are silently skipped").
 
 ---
 
@@ -68,15 +64,15 @@ The check's verdict is left open on the two points a user experiences. First, do
 Second, a failing check owes the user an action. Nothing states what a person should do when the report names a duplicate group, and the plausible guesses are actively misleading — rebuilding the cache, for instance, changes nothing, because the duplicate lives in the file.
 
 **Proposal**:
-Report the duplicate without failing the run, and say in the report what it costs and what would undo it. What leaned: §5.1 makes the order total under every condition, so nothing is broken by the duplicate — the tasks in the group simply fall back to ID order among themselves; and §5.2's own reasoning for preferring a check over a refusal is that a merge must not block work, which a failing outcome would keep doing indefinitely given there is no repair command. The alternative that also fits is failing the run, on the strength of the duplicate-identity check being mirrored, whose duplicates are a genuine corruption rather than a bounded loss of ordering information.
+Report the duplicate as a warning rather than an error, and say in the report what it costs and what would undo it. Tick's diagnostics already carry the distinction and define it: `sed -n '13,17p' internal/doctor/doctor.go` → `SeverityError` is "a failure that breaks tick and affects exit code", `SeverityWarning` "a suspicious but allowed state that does not affect exit code". A duplicate sequence breaks nothing — §5.1 keeps the order total, the group simply falls back to ID order among themselves — so it is the second of those by the codebase's own definition. The precedent matches: `grep -rn SeverityWarning internal/doctor` → the single existing user is `ParentDoneWithOpenChildrenCheck` (`parent_done_open_children.go:59`), a state tick permits and flags; the other nine checks are errors. The alternative that also fits is failing the run, on the strength of §5.2 mirroring the duplicate-identity check — rejected because that check's duplicates break task identity and partial-ID resolution outright, where this one costs bounded ordering information, and because a merge leaves no command that could clear a failing verdict.
 
 **Proposed Text**:
 Append to §5.2, after the first paragraph:
 
 "The report does not fail the run — a duplicate does not break anything, since order stays total (§5.1), and the condition arrives through a merge that tick offers no command to undo, so a failing outcome would be a state the user could clear only by hand. What the report tells the user is which tasks share a number, on which lines, and that those tasks have lost their authoring order relative to one another and fall back to ID order among themselves; restoring the order means editing the sequences in `tasks.jsonl` so they differ."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: The call is this session's, derived from the tree rather than from the sources, so it landed first in the investigation (Fix Direction → resolution 1), which now records the warning severity, the `SeverityError`/`SeverityWarning` definitions it rests on, the `ParentDoneWithOpenChildrenCheck` precedent, and the failing alternative it was preferred over. §5.2 is re-aligned to it.
 
 ---
 
@@ -102,8 +98,8 @@ Keep the sort rule and qualify the guarantee to match it: a batch that records o
 **Proposed Text**:
 "A batch written one after another by an agent or a shell loop reads back in the sequence it was written, as does an import whose source carries no creation times of its own. An import that supplies real historical creation times is ordered by those times instead: recorded chronology outranks the sequence (§4.2)."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied to §1.3 as staged. The derivation is the record's own — §4.2 decides import chronology explicitly and trades against it, so the guarantee was the loose statement of the two.
 
 ---
 
