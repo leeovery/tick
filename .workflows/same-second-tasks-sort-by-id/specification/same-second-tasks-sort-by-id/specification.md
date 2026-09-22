@@ -58,7 +58,7 @@ A record lacking a sequence is assigned one on read: walk the records in order, 
 
 This is a running-maximum rule, **not** line position. On a file where some records carry a sequence and some do not — the shape produced by a merge, or by a write from a binary that does not know the field — assigning line position would sort the newest record first. Running maximum gets it right and collapses backfill and new-task numbering into a single rule.
 
-For a file with no sequences at all this yields line order, which *is* authoring order. Verified across the project's entire history: `git log -S "sort." -- internal/storage/ internal/task/ internal/cli/create.go` returns no commits — no sort call has ever existed on those paths — and the first `MarshalJSONL` (commit `4278ba09`) iterated the task slice unsorted exactly as today.
+For a file with no sequences at all this yields line order, which *is* authoring order. Verified across the project's entire history: `git log -S "sort." -- internal/storage/ internal/task/ internal/cli/create.go` returns no commits — no sort call has ever existed on those paths — and every JSONL writer since the first has iterated the task slice unsorted exactly as today (`WriteJSONL` at commit `4278ba09`, `MarshalJSONL` from `23e0dc0f`).
 
 Backfill lives in `ParseJSONL` (`internal/storage/jsonl.go:89`), which is the single funnel for every read path (`rg -n 'ParseJSONL' internal/storage/store.go` → `:164` `ReadTasks`, used by `dep tree`; `:246` `Rebuild`; `:363` `readAndEnsureFresh`, used by every query and mutation). Anywhere else leaves one of those paths on a different rule.
 

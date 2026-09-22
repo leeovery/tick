@@ -53,8 +53,8 @@ Source carrying the claim: `.workflows/same-second-tasks-sort-by-id/investigatio
 
 **Proposed Text**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: Re-measured before classifying: `git show 4278ba09:internal/storage/jsonl.go | grep -n '^func'` returns `toJSONL`, `fromJSONL`, `WriteJSONL`, `ReadJSONL`, and `git log --oneline --reverse -S 'func MarshalJSONL' -- internal/storage/jsonl.go` puts the first `MarshalJSONL` in `23e0dc0f`. The proposition survives under the corrected names — both writers iterate the slice unsorted, and `git log -S "sort." -- internal/storage/ internal/task/ internal/cli/create.go` still returns no commits — so the repair is the citation alone. It landed in the investigation at both sites that carry the pairing (H3's history verification and Fix Direction's "Existing files need no migration"); §2.3 is re-aligned to it.
 
 ---
 
