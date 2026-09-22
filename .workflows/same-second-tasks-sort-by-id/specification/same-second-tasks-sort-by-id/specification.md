@@ -28,7 +28,7 @@ Tasks come back in the order they were created, within a priority band — and w
 
 The guarantee is **total**: every query in the list family produces one defined order under every condition, with no dependence on which plan SQLite chooses. A mixed-priority batch still does not read back in write order — priority and the `ready` band are semantic ordering and continue to outrank creation order.
 
-Creation time stops being load-bearing for ordering. The timestamp format is unchanged, and no stored timestamp changes value.
+Creation time stops being the last word on ordering: where two tasks record the same second, the sequence decides. Dates that differ still order the tasks — recorded chronology outranks the sequence (§4.2) — so a wall-clock step backwards of a second or more between two creations still misorders them (§7.2). The timestamp format is unchanged, and no stored timestamp changes value.
 
 ### 2. The Creation Sequence
 
@@ -213,6 +213,7 @@ Two constraints therefore apply to every ordering fixture below.
 - Two tasks sharing a sequence produce a **deterministic** order — the ID tiebreak — under both the filtered and unfiltered query plans. The assertion is that tie order can no longer vary with the plan.
 - `tick show`'s children under a shared sequence are deterministic too — the same ID tiebreak, asserted on the parent's detail document.
 - The new doctor check reports a duplicate with its line numbers, mirroring `DuplicateIdCheck`'s existing tests, and reports nothing on a clean file.
+- A duplicate does not fail the run: the check reports at warning severity and `tick doctor` still exits zero on a file carrying one (§5.2).
 
 #### 8.4 `tick show`'s sub-lists
 

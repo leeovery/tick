@@ -24,8 +24,8 @@ Correct the guarantee to say what the sort rule decides: creation time stops bei
 **Proposed Text**:
 "Creation time stops being the last word on ordering: where two tasks record the same second, the sequence decides. Dates that differ still order the tasks — recorded chronology outranks the sequence (§4.2) — so a wall-clock step backwards of a second or more between two creations still misorders them (§7.2). The timestamp format is unchanged, and no stored timestamp changes value."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied to §1.3 as staged. The derivation is the record's own — §4.2 decides the created-above-sequence ranking explicitly and §7.2 registers the failure it buys, so the guarantee was the loose statement of the three.
 
 ---
 
@@ -50,8 +50,8 @@ Append a bullet to §8.3, after "The new doctor check reports a duplicate with i
 
 "- A duplicate does not fail the run: the check reports at warning severity and `tick doctor` still exits zero on a file carrying one (§5.2)."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied to §8.3 as staged. §5.2 already decides the warning severity and why; only the assertion was missing.
 
 ---
 
