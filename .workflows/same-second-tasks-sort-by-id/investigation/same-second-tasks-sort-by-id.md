@@ -55,9 +55,30 @@ Confirmed at symptom gathering: there is no live affected data. Existing-tie han
 
 ### Hypotheses
 
-**Checkpoint depth:** {to be agreed}
+**Checkpoint depth:** straight-through
 
-(ledger to be populated at Step 5)
+- **H1: Creation timestamps are truncated to whole-second granularity before storage, so a batch written inside one wall-clock second stores identical `created` values and the ordering information never reaches disk.** [suspected]
+  Basis: `task.TimestampFormat = "2006-01-02T15:04:05Z"` carries no fractional part, and every stamping site applies `time.Now().UTC().Truncate(time.Second)` — `create.go:208`, `task.go:285` (`NewTask`), `state_machine.go:49`, `note.go:71`, `update.go:318`, `dep.go:116,186`, `migrate/store_creator.go:62`.
+
+- **H2: The list-family `ORDER BY` terminates at `t.created ASC` with no deterministic tiebreak, so tied rows emerge in whatever order the SQLite query plan produces — empirically task-ID order.** [suspected]
+  Basis: `list.go:317` (`ready` view) and `list.go:319` (neutral view) both end on `t.created ASC`; no ID term is written anywhere. `tasks` is a rowid table with `id TEXT PRIMARY KEY`, so the observed ID ordering is emergent from the plan, not requested by the code.
+
+- **H3: The JSONL source of truth still holds true authoring order — records are written from the in-memory slice, which appends — so ordering is lost on read, not on write.** [suspected]
+  Basis: `jsonl.go:16` `MarshalJSONL(tasks)` serialises slice order; creation appends. If it holds, existing files are repairable and row position is available as a tiebreak.
+
+- **H4: Other fixed-order presentation paths share the defect or sort by ID deliberately — the blast radius exceeds the three list views.** [suspected]
+  Basis: `show.go:137` (blockers), `show.go:146` (children) both `ORDER BY t.id` / `ORDER BY id`; `show.go:173` (notes) uses `ORDER BY rowid ASC`. The migrate framework builds many tasks in one pass and hits the same second every time.
+
+- **H5: Second granularity is structural across every timestamp field, so raising precision changes the on-disk format for all of them and for files written by other versions.** [suspected]
+  Basis: `created`, `updated`, `closed`, note `created` and transition `at` all share `TimestampFormat`; `task.go:112,116,137` parse with strict `time.Parse(TimestampFormat, …)`, which rejects a value carrying a fraction.
+
+**Trace lines (in intended order):**
+1. `internal/task/task.go` — `TimestampFormat`, `NewTask`, the JSON marshal/unmarshal round trip
+2. Every stamping site: `create.go`, `update.go`, `note.go`, `dep.go`, `state_machine.go`, `migrate/store_creator.go`
+3. `internal/cli/list.go:310-322` — the `ORDER BY`, plus an empirical `EXPLAIN QUERY PLAN` and live ordering check against a seeded project
+4. `internal/storage/jsonl.go` and `cache.go` `Rebuild()` — whether authoring order survives the round trip and whether `rowid` tracks it
+5. Other ordered read paths — `show.go` children/blockers/notes, dep tree, migrate output
+6. Compatibility surface — strict `time.Parse`, `schemaVersion`, `internal/doctor/` checks, tests pinning the format
 
 ### Code Trace
 
