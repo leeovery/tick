@@ -183,9 +183,54 @@ The second defect is the more important finding, because it reframes the bug. **
 
 ## Fix Direction
 
-(to be populated after findings sign-off)
+### Chosen Approach
 
----
+**Give the sort a deterministic final term: authoring position, taken from the task's position in `tasks.jsonl`.** Every list-family query ends its `ORDER BY` on that key instead of stopping at `t.created ASC`, and the two sub-lists in `tick show` that currently sort by `id` outright switch to the same key. Nothing about the stored record format changes.
+
+**Deciding factor:** the authoring order is not lost and never was — it is the line order of `tasks.jsonl`, which has appended and never sorted across the project's entire history (verified by `git log -S "sort."` returning no commits on the storage, task and create paths). The fix asks for information that is already recorded exactly. Every alternative reconstructs it approximately, at real cost.
+
+**Scope the approach covers:** all three list views under any filter and any query plan; `--count` selection; `tick show` children and blockers; imported projects where every task shares one second. That is the entire blast radius bar the two paths already correct by construction (`dep tree`, note lists).
+
+**Left to specification:** whether the ordering key is the cache's existing implicit row number or an explicit column populated from the JSONL index. The implicit row number is free and already correct (`Cache.Rebuild` does `DELETE FROM tasks` then inserts in slice order, so it restarts at 1 and tracks the line number); an explicit column makes the invariant visible and testable at the cost of a `schemaVersion` bump from 2 to 3, which the existing delete-and-rebuild machinery absorbs automatically. The investigation's position: the invariant must become explicit and tested either way — relying on it silently is how this class of bug is made.
+
+### Options Explored
+
+**A — Authoring position as the sort's final term. CHOSEN.** As above.
+
+**B — Record creation times to the millisecond (the reporter's initial lean). Not chosen.** It reduces ties rather than deciding what happens on one, so the sort stays undefined — just less often exercised; two tasks can still share a millisecond. It does not touch `tick show`'s sub-lists, which sort by `id` deliberately rather than as a tie fall-through, so those stay wrong. And it carries every compatibility cost the investigation found: 222 test literals and five README samples move with the format; mixed-precision records sort wrongly against each other because the cache compares `created` as text and `'Z'` (0x5A) sorts above `'.'` (0x2E); and an older binary writing to a fractional file flattens every timestamp in it on the next mutation, reinstating the bug wholesale (measured, not theorised).
+
+**C — Both. Not chosen.** Once authoring position is the tiebreak, precision adds nothing to the ordering guarantee — it buys an honest audit field and brings B's full risk surface with it. Two changes for one bug, the second carrying all the risk and none of the fix.
+
+**D — An explicit sequence number stored in the JSONL record. Not presented.** Discarded during exploration: it duplicates what line order already states, changes the record format for every task, and obliges every import path to invent a value. The line order is the sequence number.
+
+### Discussion
+
+The exploration turned on a finding from the trace rather than on preference. The reporter's instinct — raise the precision — is the natural reading of "creation timestamps are stored at second granularity", and it is the framing the seed and the discovery session both carry. What changed it was H3: the JSONL holds true authoring order, the cache's row numbering tracks it exactly, and nothing in tick's history has ever reordered either. Once that is established, precision stops being a fix and becomes an independent question about what a creation time should mean.
+
+Two findings from the trace made the choice one-sided rather than close. First, the `--count` measurement: with a tie, `LIMIT 1` returns the ID-lowest row, so the implementation loop's "take the next available task" is handed the wrong task outright — a correctness failure, not a presentation one, and one that a probabilistic fix leaves live at lower frequency. Second, the validation agent's plan measurement: the same command returns file order in one project and ID order in another of nearly the same size. That kills any fix whose correctness depends on the optimiser's choice, and it means only a deterministic final sort term can be tested at all — a regression test keyed to "this command returns ID order" would be asserting a coincidence of its own fixture.
+
+The downgrade hazard settled the remaining doubt about B. A released precision change means a user on an older tick destroys the new ordering data on their next write, silently. Option A has no version surface at all: the query cache is disposable and rebuilt from the file, so old and new binaries cannot disagree about anything on disk.
+
+**Open question carried forward, not resolved here:** whether finer timestamps are wanted anyway, as a separate improvement to what a creation time records. Choosing A over C answers it for this bugfix — no — but does not close the underlying question. It is a candidate for its own work unit, and the investigation's compatibility findings (read tolerance, the lexical mixed-precision anomaly, the downgrade flattening) are the ground it would start from.
+
+### Testing Recommendations
+
+- **A same-second ordering test, which does not exist today.** Every current ordering test gives each task in a priority band a distinct `Created` (`ready_test.go:306`, `blocked_test.go:212`, `list_filter_test.go:368`), so the tie branch has never executed. The new test must construct an explicit tie.
+- **The fixture must discriminate the tiebreak from the ID.** Current fixtures use hand-written IDs (`tick-hi1111`, `tick-low111`) that already sort into the asserted order, so an ID-ordered result would pass. The new fixture needs IDs whose ascending order *contradicts* the authoring order, or the test proves nothing.
+- **Cover both query plans.** Assert the same order from an unfiltered list and from a `--parent`-filtered one, since those take different plans and the unfiltered case passes today by accident. Fixture size must not be load-bearing — the measurements show the plan can flip on data shape.
+- **`--count 1` under a tie returns the first-authored task**, not the ID-lowest. This is the sharpest symptom and needs its own assertion.
+- **`tick show` children and blockers follow authoring order**, not ID order — a behaviour change from today, so the existing expectations move with it.
+- **Imported projects order correctly** — the migration framework stamps a whole import with one `time.Now()`, making it the natural end-to-end fixture.
+- **The position invariant is asserted directly**, not just through its effects: after a create, an update, a remove and a `tick rebuild`, the ordering key still matches JSONL line order.
+- **Existing ordering tests stay green unchanged** — adding a final term must not disturb any result where `created` already differs.
+
+### Risk Assessment
+
+- **Fix complexity:** Low. Two `ORDER BY` clauses in `buildListQuery` and two sub-queries in `show.go`, plus whatever makes the position key explicit.
+- **Regression risk:** Low. Appending a final sort term cannot change the order of any result whose earlier keys already differ. The one intended behaviour change is `tick show`'s children and blockers moving from ID order to authoring order, which is the fix rather than a side effect.
+- **Compatibility risk:** None. No change to `tasks.jsonl`, so no file written by any version becomes unreadable and no binary flattens another's data. A cache schema bump, if the explicit-column route is taken, is absorbed by the existing delete-and-rebuild path (`schemaVersion` check in `ensureFresh`).
+- **Recommended approach:** Regular release. No urgency — confirmed at symptom gathering that no active work unit holds affected data.
+- **Principal residual risk:** the ordering key's correctness rests on `Cache.Rebuild` deleting and re-inserting in slice order. That is true today and has always been true, but it is an invariant no test currently states. Any future incremental cache-update path would silently break the fix. Making the invariant explicit and tested is the mitigation, and it is the one thing specification must not treat as incidental.
 
 ## Notes
 
