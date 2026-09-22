@@ -45,7 +45,15 @@ status: draft
 - [ ] Children sharing a seq and a creation second: `tick show P` lists them in task-ID order, the same every run
 - [ ] Task whose blocker created later was declared first in blocked_by: `tick show` lists that blocker first, matching `tick dep tree` edge order and the record's blocked_by array
 - [ ] `create`, `update`, `note add` and `note remove` output detail documents whose children and blocked_by sections follow the same order as `tick show`. The conformance inventory still decodes each one
-- [ ] `tick show P --field children.0` returns the first-authored child and `--field blocked_by.0` returns the first-declared blocker
+- [ ] `tick show P --field children.1` returns a one-row section holding the first-authored child, and `--field blocked_by.1` one holding the first-declared blocker
+
+#### Tasks
+
+| Internal ID | Name | Edge Cases |
+|-------------|------|------------|
+| same-second-tasks-sort-by-id-2-1 | Order show's children by creation, not task ID | a later-created child with better priority still lists after its earlier-created sibling (§4.3, §8.4), children with different creation seconds order by created above the sequence (§4.2, §4.3), children sharing a non-zero sequence and one creation second list in ascending task-ID order, the same on every run (§2.2, §5.1, §8.3), `--field children.N` picks by the new order (§4.4, §8.4) |
+| same-second-tasks-sort-by-id-2-2 | Order show's blockers by declaration order | a blocker created later but declared first lists first, with declaration order contradicting both ascending-ID and blocker creation order (§4.3, §8 fixture constraints, §8.4), `tick show` matches `tick dep tree` edge order and the record's `blocked_by` array on the same fixture (§3.3, §4.3, §8.4), the ordinal is unique within a task's blocker set so blocker order is total without an ID term (§5.1), a v2 cache rebuilds with the ordinal filled in, with no second version bump (§3.4), `--field blocked_by.N` picks by declaration order (§4.4, §8.4) |
+| same-second-tasks-sort-by-id-2-3 | Carry the sub-list order into mutation detail documents | `create`, `update`, `note add` and `note remove` all render through `outputMutationResult` (§4.4, §8.4), the conformance inventory still decodes each document (§4.4, §8.4), `dep add`/`dep rm` render through `FormatDepChange`, carry neither section and are out of scope (§4.4) |
 
 ### Phase 3: Duplicate-sequence visibility and the documented contract
 status: draft
