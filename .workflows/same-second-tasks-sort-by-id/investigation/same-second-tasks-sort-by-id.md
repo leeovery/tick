@@ -223,7 +223,7 @@ Each task gains a monotonic creation sequence — the next number above the high
 
 **Factual correction to this record:** an earlier revision stated that `help.go:58` documents the sort contract. It does not — `internal/cli/help.go` contains no statement about sort order at all. Only `README.md:115` does, and it is the only documentation site the fix must update.
 
-**Open question left for specification:** whether the sequence surfaces in command output or stays an internal ordering key visible only in `tasks.jsonl`. Nothing about the fix turns on it; it bears on the conformance inventory and README samples if it does surface.
+**The sequence does not surface in command output.** It is written to `tasks.jsonl` and carried in the cache, and nothing a command prints exposes it — no detail-document section, no field registry entry, no `--field` address, no README sample. *Derivation: every field tick's detail document carries is information about the work itself — title, status, priority, parent, dependencies, type, tags, refs, notes, transitions — and the sequence is an ordering mechanism, whose payoff reaches the user as correct output rather than as a number to read. The alternative that also fits is surfacing it as an addressable field for anyone diagnosing an ordering problem; it loses because `DuplicateSeqCheck` already covers the one condition worth inspecting and `tasks.jsonl` stays readable, while surfacing it grows every detail document, the conformance inventory and the README samples for a value that says nothing about the task.* Nothing about the fix turns on it either way.
 
 ### Options Explored
 
