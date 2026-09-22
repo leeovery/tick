@@ -52,11 +52,12 @@
           "finding_gate_mode": "gated",
           "review_cycle": 0,
           "phase": 1,
-          "task": "same-second-tasks-sort-by-id-1-3",
+          "task": "same-second-tasks-sort-by-id-1-4",
           "task_map": {
             "same-second-tasks-sort-by-id-1-1": "tick-33a556",
             "same-second-tasks-sort-by-id-1": "tick-11a935",
-            "same-second-tasks-sort-by-id-1-2": "tick-69d78d"
+            "same-second-tasks-sort-by-id-1-2": "tick-69d78d",
+            "same-second-tasks-sort-by-id-1-3": "tick-0bb4f7"
           },
           "storage_paths": [
             ".tick/"
