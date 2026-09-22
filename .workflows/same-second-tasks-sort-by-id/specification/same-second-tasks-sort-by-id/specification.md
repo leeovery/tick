@@ -94,6 +94,39 @@ The array order is **explicit in the record** — a JSON array is ordered — an
 
 No migration is needed. `ensureFresh` checks the version before every query and before every mutation; a mismatch deletes the cache file, recreates it and rebuilds from `tasks.jsonl`. The two new columns arrive through that existing path.
 
+### 4. Query Changes
+
+#### 4.1 The list-family sort
+
+Both clauses in `buildListQuery` gain two terms, ending on the sequence and then the task ID:
+
+- neutral view (`internal/cli/list.go:319`) — priority, created, sequence, id
+- ready view (`internal/cli/list.go:317`) — the `in_progress` band, then priority, created, sequence, id
+
+This covers `tick list`, `tick ready` and `tick blocked`, filtered and unfiltered alike, since all three run through the same builder. `tick blocked` needs its own tie assertion regardless: `BlockedConditions()` builds a different `WHERE` shape (`internal/cli/query_helpers.go:66-80`), so it reaches the sorter by a different route.
+
+#### 4.2 Creation date stays above the sequence
+
+`created` outranks `seq`. Two tasks whose recorded creation dates differ are ordered by those dates; the sequence speaks only when they tie.
+
+This cuts both ways and the trade is deliberate. Keeping `created` above preserves true chronology on imports, where the provider supplies real historical timestamps (`internal/migrate/beads/beads.go:119` parses RFC3339) and import order would otherwise override them; it also confines duplicate-sequence damage (§5) to within a single second. The cost: a backwards wall-clock step of a second or more between two creations still misorders them, and the sequence never gets to speak because the dates differ — the same failure mode cited against sub-second precision (§2.1), knowingly retained. A backwards step of ≥1s between two task creations on an NTP-synced machine is rare enough to trade against an everyday import benefit, and the final ID term (§5.1) bounds the damage when it happens.
+
+#### 4.3 `tick show`'s sub-lists
+
+Both sub-lists move off `ORDER BY id`, which is unconditional today and produces the same wrong answer as the tie — by explicit choice rather than by accident.
+
+**Children** (`internal/cli/show.go:146`) order by created, then sequence. **Priority does not participate** — today's clause has no priority term, and adding one would be a second, unrequested behaviour change. A child with better priority does not float above an earlier-created sibling.
+
+**Blockers** (`internal/cli/show.go:137`) order by the dependency ordinal (§3.3) — the order the dependencies were declared, matching the `blocked_by` array in the record and the edges `tick dep tree` already emits. The alternative — the blocker task's own creation order — would put `tick show` out of step with both `dep tree` and the stored record.
+
+#### 4.4 What the sub-list change reaches
+
+The two sections render from five sites, not one. `FormatTaskDetail` is called from `internal/cli/show.go:84` and from `outputMutationResult` (`internal/cli/helpers.go:30`), the latter serving `create.go:278`, `update.go:398`, `note.go:87` and `note.go:145`. Their detail documents and the conformance inventory are in scope, not only `tick show`. (`dep add` and `dep rm` render through `FormatDepChange` and do not carry these sections.)
+
+`--field children.N` and `--field blocked_by.N` change meaning — positional addressing over a list whose order is changing. This is the intended fix applied to an addressing interface; the positional form is documented at `README.md:206`.
+
+**Nothing in the suite pins the sub-list order today.** Changing both queries broke zero tests across `internal/cli`, conformance and README samples included. The new assertions (§8) are the only guard against the key drifting back.
+
 ---
 
 ## Working Notes
