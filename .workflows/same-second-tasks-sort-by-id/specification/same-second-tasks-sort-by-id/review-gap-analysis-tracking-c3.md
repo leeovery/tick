@@ -33,8 +33,8 @@ Three constraints therefore apply to every ordering fixture below.
 - **Creation seconds must tie wherever the sequence or the ID term is what is under test.** A recorded creation date outranks the sequence (§4.2), so a fixture whose records carry distinct seconds returns the expected order whether the sequence works or not — the backfill and duplicate-sequence assertions (§8.2, §8.3) would pass over a backfill that gave every record the same number, and over a duplicate group the ID term never reached. Records in those fixtures record one creation second.
 - **Fixture size must not be load-bearing.** The query plan flips on data shape alone (§1.1), so a test keyed to "this command returns this order at this size" would be asserting a coincidence of its own fixture. Assertions state the required order, never the plan.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied to the §8 preamble as staged. The derivation is the record's own — §4.2 puts `created` above `seq`, so a fixture with distinct seconds never reaches the terms under test, and the preamble's first constraint is the same argument about the other tiebreak key.
 
 ---
 
@@ -60,8 +60,8 @@ Qualify the claim to what the section is actually arguing: the sequence is the o
 **Proposed Text**:
 "The list-family sort ends on it, and it is the only explicit statement of authoring order tick stores — a recorded creation date still outranks it, and the sequence decides where two dates tie (§4.2)."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied to §2.1 as staged. The derivation is the record's own — §4.2 argues the ranking explicitly and §1.3 already states it, so §2.1 was the loose statement of the three.
 
 ---
 
@@ -88,8 +88,8 @@ Pin the doctor enumeration the same way as the sort sentence. §6 already decide
 - The README's sort-contract sentence is pinned by a prose assertion, following the two the suite already carries for README prose — `TestREADMEDocumentsFieldSelection` (`internal/cli/readme_samples_test.go:570`) and `TestREADMEDocumentsEndOfFlagsMarker` (`:637`). It is the only user-facing statement of the guarantee this work delivers, and the sample run never reads it (§6).
 - The README's doctor enumeration is pinned the same way: a prose assertion requires it to name the duplicate-sequence check as its own entry (§6). It is the only place a user meets the new diagnostic, it is prose the sample run never reads, and folding it back into the generic "duplicates" would otherwise pass unnoticed.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: The call is this session's — the record pins the sort sentence but never extends the pin to the second documentation site — so it landed first in the investigation ("Testing Recommendations" → "Documentation and regression floor"), which now carries the requirement and the alternative it was preferred over. §8.6 is re-aligned to it.
 
 ---
 

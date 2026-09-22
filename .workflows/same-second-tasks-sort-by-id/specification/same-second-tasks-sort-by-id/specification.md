@@ -34,7 +34,7 @@ Creation time stops being the last word on ordering: where two tasks record the 
 
 #### 2.1 The decision
 
-Every task carries an explicit creation sequence — a monotonic number assigned when the task is created and never renumbered afterwards. The list-family sort ends on it, and it is the only thing tick relies on for authoring order.
+Every task carries an explicit creation sequence — a monotonic number assigned when the task is created and never renumbered afterwards. The list-family sort ends on it, and it is the only explicit statement of authoring order tick stores — a recorded creation date still outranks it, and the sequence decides where two dates tie (§4.2).
 
 **Why an explicit field rather than finer timestamps or file position.** A timestamp is an *observation*, not a statement of sequence: it records when something happened and implies order only as a side effect, which is precisely the accident this bug is made of. Two alternatives were explored and reversed.
 
@@ -187,9 +187,10 @@ Regression risk is low: a final sort term cannot reorder any result whose earlie
 
 No test constructs a creation-time tie today. Every ordering test gives each task in a priority band a distinct `Created` — `ready_test.go:306` uses `now`, `now+1s`, `now+2s`; `blocked_test.go:212` and `list_filter_test.go:368` follow the same fixture shape — so the tie branch has never executed. And it would pass by coincidence if it had: those fixtures use hand-written IDs (`tick-hi1111`, `tick-low111`, `tick-low222`) that already sort into the expected order, so an ID-ordered result would satisfy the assertions.
 
-Two constraints therefore apply to every ordering fixture below.
+Three constraints therefore apply to every ordering fixture below.
 
 - **IDs must contradict the authoring order.** An ascending-ID result and a creation-order result must be distinguishable, or the assertion proves nothing.
+- **Creation seconds must tie wherever the sequence or the ID term is what is under test.** A recorded creation date outranks the sequence (§4.2), so a fixture whose records carry distinct seconds returns the expected order whether the sequence works or not — the backfill and duplicate-sequence assertions (§8.2, §8.3) would pass over a backfill that gave every record the same number, and over a duplicate group the ID term never reached. Records in those fixtures record one creation second.
 - **Fixture size must not be load-bearing.** The query plan flips on data shape alone (§1.1), so a test keyed to "this command returns this order at this size" would be asserting a coincidence of its own fixture. Assertions state the required order, never the plan.
 
 #### 8.1 Ordering
@@ -231,6 +232,7 @@ Existing ordering tests stay green **unchanged**. A final sort term must not dis
 #### 8.6 The documented contract
 
 - The README's sort-contract sentence is pinned by a prose assertion, following the two the suite already carries for README prose — `TestREADMEDocumentsFieldSelection` (`internal/cli/readme_samples_test.go:570`) and `TestREADMEDocumentsEndOfFlagsMarker` (`:637`). It is the only user-facing statement of the guarantee this work delivers, and the sample run never reads it (§6).
+- The README's doctor enumeration is pinned the same way: a prose assertion requires it to name the duplicate-sequence check as its own entry (§6). It is the only place a user meets the new diagnostic, it is prose the sample run never reads, and folding it back into the generic "duplicates" would otherwise pass unnoticed.
 
 ---
 
