@@ -143,6 +143,14 @@ A new check mirrors `DuplicateIdCheck` (`internal/doctor/duplicate_id.go`) exact
 
 Tick's established handling for a duplicate-identity condition is a doctor check rather than a hard refusal on read. A refusal would block every command after a merge; detection plus a defined fallback gives both properties.
 
+### 6. Documentation
+
+`README.md:115` is the only site stating the sort contract (`rg -n 'sorted by|creation date' README.md` → one hit). It promises "sorted by priority (ascending), then creation date" and says nothing about what happens when creation dates are equal, so neither the code nor the docs commit to an answer today. It gains the tiebreak: within a priority band, tasks tied on creation date come back in creation order.
+
+An earlier revision of the investigation stated that `internal/cli/help.go:58` also documents the sort contract. It does not — `internal/cli/help.go` contains no statement about sort order at all, and needs no change.
+
+Whatever lands in the README is covered by the README-sample run (`readme_samples_test.go`), which compares each prompted fence byte-for-byte.
+
 ---
 
 ## Working Notes
