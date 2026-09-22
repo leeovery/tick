@@ -68,6 +68,32 @@ Existing projects need no migration and no repair. The assignment becomes perman
 
 The sequence appears in `tasks.jsonl` and in the cache, and nowhere a command prints. No detail-document section, no field registry entry, no `--field` address, no README sample. It is an ordering mechanism, not information about the work; the guarantee it delivers is stated in the documentation (§6) and the one case where the sequence itself is worth inspecting is covered by the doctor check (§5.2).
 
+### 3. Storage and Cache Representation
+
+#### 3.1 The record
+
+The sequence is a field on the stored task record in `tasks.jsonl`, alongside the existing fields (`sed -n '44,60p' internal/task/task.go` → the `Task` struct and its JSON tags). It round-trips through the file unchanged: written, read back, identical.
+
+**Adding the field breaks an invariant currently asserted in the suite.** `internal/cli/migrate_test.go:702` asserts "it leaves values already in storage untouched"; every record gains the new field on the next write, so that test changes with this work. With `.tick/tasks.jsonl` git-tracked in this project, the first post-upgrade write produces a whole-file diff — accepted as a one-off.
+
+#### 3.2 The cache
+
+The `tasks` table gains a column for the sequence (`sed -n '17,28p' internal/storage/cache.go` → the current ten-column definition), populated by the rebuild insert (`internal/storage/cache.go:137`). The list-family sort reads it from there.
+
+The cache column is asserted directly by test, not only through an ordering result — an ordering assertion alone cannot distinguish a working sequence from an accidentally-correct query plan (§1.1).
+
+#### 3.3 Dependency declaration order
+
+The `dependencies` table gains an ordinal carrying each blocker's position in the record's `blocked_by` array (`sed -n '31,35p' internal/storage/cache.go` → the current two-column definition, whose primary key is the pair), populated by the dependency insert (`internal/storage/cache.go:143`). This is what `tick show`'s blocker list orders on (§4.3).
+
+The array order is **explicit in the record** — a JSON array is ordered — and is lost only because the cache flattens it into a junction table. Carrying it across applies the same principle driving the whole fix: the order is in the record, so the cache should carry it rather than the query inventing one. `tick dep tree` already emits edges in this order, reading the task slice directly (`internal/cli/dep_tree_graph.go:186-198` — "one edge per `BlockedBy` entry, tasks in slice order and each task's blockers in stored order").
+
+#### 3.4 Schema version
+
+`schemaVersion` goes from 2 to 3 (`sed -n 15p internal/storage/cache.go` → `const schemaVersion = 2`).
+
+No migration is needed. `ensureFresh` checks the version before every query and before every mutation; a mismatch deletes the cache file, recreates it and rebuilds from `tasks.jsonl`. The two new columns arrive through that existing path.
+
 ---
 
 ## Working Notes
