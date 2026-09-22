@@ -127,6 +127,22 @@ The two sections render from five sites, not one. `FormatTaskDetail` is called f
 
 **Nothing in the suite pins the sub-list order today.** Changing both queries broke zero tests across `internal/cli`, conformance and README samples included. The new assertions (§8) are the only guard against the key drifting back.
 
+### 5. Duplicate Sequences
+
+A duplicate sequence is reachable in this project specifically. `.tick/tasks.jsonl` is git-tracked — `.gitignore` excludes only `cache.db`, `lock` and temp files — and implementation runs in worktrees on branches, so two branches each numbering from the same maximum merge into duplicates. Demonstrated: seven children forced to the same sequence returned plan-dependent garbage with no warning.
+
+Two mechanisms answer it, one making the outcome defined and one making it visible.
+
+#### 5.1 Task ID is the absolute final sort term
+
+Every clause in §4.1 ends on the task ID. Order is then total under every condition, so the worst a duplicate sequence can do is fall back to today's ID ordering **deterministically**, rather than varying with the query plan. The current failure is that tie order changes with the plan; after this change it cannot.
+
+#### 5.2 A duplicate-sequence doctor check
+
+A new check mirrors `DuplicateIdCheck` (`internal/doctor/duplicate_id.go`) exactly: read-only, never modifies the file, reports each duplicate group with its line numbers and returns a single passing result on a clean file. It registers alongside the others in `RunDoctor` (`internal/cli/doctor.go:22`), whose doc comment enumerates the registered checks by name and count (`sed -n '11,15p' internal/cli/doctor.go` → "registers all 10 checks") and updates with the addition.
+
+Tick's established handling for a duplicate-identity condition is a doctor check rather than a hard refusal on read. A refusal would block every command after a merge; detection plus a defined fallback gives both properties.
+
 ---
 
 ## Working Notes
