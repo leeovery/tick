@@ -50,7 +50,7 @@
           "task_list_gate_mode": "auto",
           "author_gate_mode": "auto",
           "finding_gate_mode": "gated",
-          "review_cycle": 0,
+          "review_cycle": 1,
           "phase": 4,
           "task": null,
           "task_map": {
@@ -81,7 +81,8 @@
             }
           },
           "staging": {},
-          "external_id": "tick-9209eb"
+          "external_id": "tick-9209eb",
+          "review_baseline_words": 11060
         }
       }
     }
