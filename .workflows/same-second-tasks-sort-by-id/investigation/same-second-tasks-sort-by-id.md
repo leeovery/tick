@@ -302,4 +302,6 @@ The direction reversed twice. Both reversals came from measurement correcting an
 
 ## Notes
 
-**User's fix lean (symptom gathering, 2026-09-21):** raise timestamp precision — store creation times at millisecond granularity or finer so the sort no longer ties. Stated as a lean, explicitly open to alternatives. To be tested against the root cause at Step 10 rather than assumed.
+**User's fix lean (symptom gathering, 2026-09-21) — resolved.** The lean was to raise timestamp precision so the sort no longer ties. It was taken seriously: adopted as the direction at one point, then ruled out by measurement (100 in-process stamps share one millisecond; already-stored tasks never gain precision). The reporter's own reframing replaced it — a timestamp is an observation, not a statement of sequence — which produced the chosen direction. Full journey in Fix Direction → Discussion.
+
+**Scope note on the chosen direction.** Blocker-list ordering (resolution 5) is the one place the fix reaches past the reported symptom: it requires the `blocked_by` array's order to be carried into the cache so `tick show` stops disagreeing with `tick dep tree` and with the stored record. Flagged here because a specification could reasonably split it out.
