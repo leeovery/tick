@@ -185,52 +185,85 @@ The second defect is the more important finding, because it reframes the bug. **
 
 ### Chosen Approach
 
-**Give the sort a deterministic final term: authoring position, taken from the task's position in `tasks.jsonl`.** Every list-family query ends its `ORDER BY` on that key instead of stopping at `t.created ASC`, and the two sub-lists in `tick show` that currently sort by `id` outright switch to the same key. Nothing about the stored record format changes.
+**Record creation times with sub-second precision, and give the sort a deterministic final term as a floor beneath it.**
 
-**Deciding factor:** the authoring order is not lost and never was — it is the line order of `tasks.jsonl`, which has appended and never sorted across the project's entire history (verified by `git log -S "sort."` returning no commits on the storage, task and create paths). The fix asks for information that is already recorded exactly. Every alternative reconstructs it approximately, at real cost.
+Two mechanisms, with distinct jobs:
 
-**Scope the approach covers:** all three list views under any filter and any query plan; `--count` selection; `tick show` children and blockers; imported projects where every task shares one second. That is the entire blast radius bar the two paths already correct by construction (`dep tree`, note lists).
+1. **Precision (the fix).** Creation times gain a fractional part and stop being rounded to the second, so the *record itself* carries the order. Any consumer reading `tasks.jsonl` gets it, not just tick's own queries. This also makes the already-documented contract at `README.md:115` — "sorted by priority (ascending), then creation date" — true, rather than needing a new clause.
+2. **Authoring position as the sort's final term (the floor).** Each list-family query ends on the task's position rather than stopping at `t.created ASC`. One extra term, closing the residue precision structurally cannot reach.
 
-**Left to specification:** whether the ordering key is the cache's existing implicit row number or an explicit column populated from the JSONL index. The implicit row number is free and already correct (`Cache.Rebuild` does `DELETE FROM tasks` then inserts in slice order, so it restarts at 1 and tracks the line number); an explicit column makes the invariant visible and testable at the cost of a `schemaVersion` bump from 2 to 3, which the existing delete-and-rebuild machinery absorbs automatically. The investigation's position: the invariant must become explicit and tested either way — relying on it silently is how this class of bug is made.
+**Deciding factor:** precision puts the ordering information in the record, where nothing can lose it. That removes what this investigation itself named as the principal residual risk of the position-only route — ordering correctness living in a cache the design calls expendable. The tiebreak stays because it costs a single sort term and covers the one reachable case precision cannot: an import whose *source* recorded whole-second timestamps ties in the incoming data, and `beads.go:119` uses the provider's `created` verbatim.
+
+**Hard constraint discovered by measurement — the read format must not widen.** Go's `time.Parse` tolerance runs one way only: a layout *without* a fractional component accepts an input that has one, but a layout *with* one **requires** it. Widening the single `TimestampFormat` constant makes every existing `tasks.jsonl` unreadable (`cannot parse "Z" as ".000"`, 41 test failures across three packages). The parse layout must stay exactly as it is; only the write layout widens.
+
+**Measured cost, not estimated.** With the stored format widened and the *displayed* format left at whole seconds, six tests fail — `cache_test.go` round-trip, notes and transitions; `jsonl_test.go` format-spec; `task_test.go` marshal. All six assert the on-disk shape, which is precisely what changes. The entire `internal/cli` package passes: README samples, all three formatters, the conformance inventory. The earlier figure of 222 test literals was a raw grep count, not breakage.
+
+**Still to settle at specification:**
+- **Whether the displayed timestamp gains the fraction too.** Keeping display at whole seconds is what collapses the churn to six tests and leaves every README sample untouched; showing it makes the order visible to a human reading `tick show`. A product call about what a creation time should look like, not an ordering question.
+- **The precision itself** — milliseconds suffice for the measured case; finer costs nothing extra.
+- **How authoring position is carried** — the cache's existing implicit row number, or an explicit column (a `schemaVersion` bump from 2 to 3, absorbed by the existing delete-and-rebuild path). Fix validation established that an explicit column buys a nameable thing to assert on, not protection: both routes go stale identically under any future incremental cache-update path. The asserted invariant is the mitigation either way.
 
 ### Options Explored
 
-**A — Authoring position as the sort's final term. CHOSEN.** As above.
+**A — Precision plus the position tiebreak. CHOSEN.** As above.
 
-**B — Record creation times to the millisecond (the reporter's initial lean). Not chosen.** It reduces ties rather than deciding what happens on one, so the sort stays undefined — just less often exercised; two tasks can still share a millisecond. It does not touch `tick show`'s sub-lists, which sort by `id` deliberately rather than as a tie fall-through, so those stay wrong. And it carries every compatibility cost the investigation found: 222 test literals and five README samples move with the format; mixed-precision records sort wrongly against each other because the cache compares `created` as text and `'Z'` (0x5A) sorts above `'.'` (0x2E); and an older binary writing to a fractional file flattens every timestamp in it on the next mutation, reinstating the bug wholesale (measured, not theorised).
+**B — Precision alone. Not chosen.** It covers every reported symptom in practice: separate `tick create` invocations cannot plausibly share a millisecond. But the sort keeps no final term, so ordering is *undefined* when a tie does occur rather than merely unlikely — and the reachable case (imports carrying tied source timestamps) is one no tick-side precision fixes. The floor costs one sort term; going without it buys nothing.
 
-**C — Both. Not chosen.** Once authoring position is the tiebreak, precision adds nothing to the ordering guarantee — it buys an honest audit field and brings B's full risk surface with it. Two changes for one bug, the second carrying all the risk and none of the fix.
+**C — Position tiebreak alone. Agreed, then reversed.** Deterministic and cheapest, but it leaves the record dishonest — two tasks created in one second still claim the same instant, and the order is legible only as position in a file, not as a value. It also leaves `README.md:115` untrue, needing a new sentence rather than being satisfied, which repeats the missing-contract factor this investigation identified as contributing to the bug.
 
-**D — An explicit sequence number stored in the JSONL record. Not presented.** Discarded during exploration: it duplicates what line order already states, changes the record format for every task, and obliges every import path to invent a value. The line order is the sequence number.
+**D — An explicit sequence number stored in the JSONL record. Not presented.** Duplicates what a precise creation time states, changes the record format for every task, and obliges every import path to invent a value.
 
 ### Discussion
 
-The exploration turned on a finding from the trace rather than on preference. The reporter's instinct — raise the precision — is the natural reading of "creation timestamps are stored at second granularity", and it is the framing the seed and the discovery session both carry. What changed it was H3: the JSONL holds true authoring order, the cache's row numbering tracks it exactly, and nothing in tick's history has ever reordered either. Once that is established, precision stops being a fix and becomes an independent question about what a creation time should mean.
+The direction reversed mid-exploration, and the reversal is the substance of this section.
 
-Two findings from the trace made the choice one-sided rather than close. First, the `--count` measurement: with a tie, `LIMIT 1` returns the ID-lowest row, so the implementation loop's "take the next available task" is handed the wrong task outright — a correctness failure, not a presentation one, and one that a probabilistic fix leaves live at lower frequency. Second, the validation agent's plan measurement: the same command returns file order in one project and ID order in another of nearly the same size. That kills any fix whose correctness depends on the optimiser's choice, and it means only a deterministic final sort term can be tested at all — a regression test keyed to "this command returns ID order" would be asserting a coincidence of its own fixture.
+The first recommendation was the position tiebreak alone (option C), reasoning that authoring order is already recorded in `tasks.jsonl` line order and the fix merely has to ask for it. That reasoning is sound and the empirical basis for it held up — the fix-validation agent reproduced both the symptom and the mechanism against a live project, and verified the invariant through create, remove, update and rebuild. It was agreed and sent for pressure-testing.
 
-The downgrade hazard settled the remaining doubt about B. A released precision change means a user on an older tick destroys the new ordering data on their next write, silently. Option A has no version surface at all: the query cache is disposable and rebuilt from the file, so old and new binaries cannot disagree about anything on disk.
+The reporter then reopened it, asking whether sub-second timestamps were not simply the obvious answer, and whether the objections were overcooked. Two things settled it against the earlier recommendation:
 
-**Open question carried forward, not resolved here:** whether finer timestamps are wanted anyway, as a separate improvement to what a creation time records. Choosing A over C answers it for this bugfix — no — but does not close the underlying question. It is a candidate for its own work unit, and the investigation's compatibility findings (read tolerance, the lexical mixed-precision anomaly, the downgrade flattening) are the ground it would start from.
+**The cost argument was wrong, and measurably so.** The claim that a format change moves 222 test literals and five README samples used the raw grep count as if every occurrence were breakage. Measured by actually making the change: with the storage and display formats separated, six tests fail and the entire command layer passes untouched. The cost that justified preferring the cheaper option was roughly two orders of magnitude smaller than stated.
+
+**The honesty argument answers this investigation's own strongest objection to its own recommendation.** The Risk Assessment for option C named the principal residual risk as ordering correctness moving into a disposable cache, resting on an invariant no test states. Precision dissolves exactly that: the order lives in the record. It also dissolves two of the six risks the fix validation raised — the documented contract becomes true instead of needing amendment, and there is no cache-version thrash.
+
+Three of those six risks survive the change of direction unaltered, because they are orthogonal to the mechanism: the blocker-list key, the six-command surface behind `tick show`'s sub-lists, and the within-a-priority-band scope of the guarantee. `show.go:137,146` sort by `id` **explicitly, not as a tie fall-through** — precision does not touch them, so those queries change under any option, and the same key question follows.
+
+Two hazards are accepted rather than solved. Old and new records sort wrongly against each other within a single second, because the cache compares `created` as text and `'Z'` (0x5A) sorts above `'.'` (0x2E) — the window closes at the first write, which rewrites every record through the new format. And a user on an older binary flattens a fractional file on their next mutation (measured: one `tick create` on tick 0.3.0 turned `…30.100Z` and `…30.500Z` into `…30Z`). That reverts to today's behaviour rather than corrupting anything, and the position tiebreak keeps the ordering correct through it — which is a second reason to keep the floor.
 
 ### Testing Recommendations
 
-- **A same-second ordering test, which does not exist today.** Every current ordering test gives each task in a priority band a distinct `Created` (`ready_test.go:306`, `blocked_test.go:212`, `list_filter_test.go:368`), so the tie branch has never executed. The new test must construct an explicit tie.
-- **The fixture must discriminate the tiebreak from the ID.** Current fixtures use hand-written IDs (`tick-hi1111`, `tick-low111`) that already sort into the asserted order, so an ID-ordered result would pass. The new fixture needs IDs whose ascending order *contradicts* the authoring order, or the test proves nothing.
-- **Cover both query plans.** Assert the same order from an unfiltered list and from a `--parent`-filtered one, since those take different plans and the unfiltered case passes today by accident. Fixture size must not be load-bearing — the measurements show the plan can flip on data shape.
-- **`--count 1` under a tie returns the first-authored task**, not the ID-lowest. This is the sharpest symptom and needs its own assertion.
-- **`tick show` children and blockers follow authoring order**, not ID order — a behaviour change from today, so the existing expectations move with it.
-- **Imported projects order correctly** — the migration framework stamps a whole import with one `time.Now()`, making it the natural end-to-end fixture.
-- **The position invariant is asserted directly**, not just through its effects: after a create, an update, a remove and a `tick rebuild`, the ordering key still matches JSONL line order.
-- **Existing ordering tests stay green unchanged** — adding a final term must not disturb any result where `created` already differs.
+**Ordering — the core, none of which exists today.** Every current ordering test gives each task in a priority band a distinct `Created` (`ready_test.go:306`, `blocked_test.go:212`, `list_filter_test.go:368`), so the tie branch has never executed.
+
+- A same-second tie ordering correctly, with **IDs whose ascending order contradicts the authoring order** — current fixtures use hand-written IDs that already sort into the asserted order, so an ID-ordered result would pass and prove nothing.
+- The same assertion from an unfiltered list **and** a `--parent`-filtered one: those take different query plans and the unfiltered case passes today by accident. Fixture size must not be load-bearing — measurements show the plan can flip on data shape alone.
+- **`blocked` gets its own tie assertion.** `BlockedConditions()` builds a different WHERE shape (`query_helpers.go:66-80`) and is not covered by the list/ready cases.
+- **The `ready` band interaction:** an `in_progress` task authored *after* tied `open` tasks — the band must still win over authoring position. Otherwise a final term inserted before the band term passes everything else.
+- **`--count 1` under a tie returns the first-authored task**, not the ID-lowest. The sharpest symptom; needs its own assertion.
+
+**Precision.**
+- A batch created in one wall-clock second records *distinct* creation times end to end.
+- **An existing whole-second file still reads.** The parse-layout constraint is the trap; a fixture file with no fractions must load without error.
+- Mixed-precision records order correctly, and the first write normalises the file.
+- Round-trip: a value written at the new precision reads back equal.
+
+**The `show` sub-lists — a behaviour change reaching six commands.**
+- Children and blockers follow authoring order, not ID order, and existing expectations move with them.
+- The same sections render under `create`, `update` and both `note` handlers via `helpers.go:23,28` — their detail documents and the conformance inventory (`conformance_test.go`) are in scope, not just `tick show`.
+- **The blocker key is pinned by a test**: a blocker authored *after* the blocked task's other blocker, so the blocker's own creation order differs from the declaration order. Whichever key is specified, this test stops it drifting.
+- `--field children.N` / `blocked_by.N` positional addressing changes meaning — intended, but assert it rather than discover it.
+
+**Invariants and documentation.**
+- The position key holds after create, update, remove **and** `tick rebuild`. Phrase it as "position order equals record order", not "equals line number" — `ParseJSONL` skips blank lines (`jsonl.go:99-101`).
+- Imported projects order correctly — the migration framework stamps a whole import inside one second, making it the natural end-to-end fixture.
+- `README.md:115` and the `list` help text (`help.go:58`) state the sort contract; the README-sample run must cover whatever lands there.
+- Existing ordering tests stay green **unchanged** — neither mechanism may disturb a result whose earlier keys already differ.
 
 ### Risk Assessment
 
-- **Fix complexity:** Low. Two `ORDER BY` clauses in `buildListQuery` and two sub-queries in `show.go`, plus whatever makes the position key explicit.
-- **Regression risk:** Low. Appending a final sort term cannot change the order of any result whose earlier keys already differ. The one intended behaviour change is `tick show`'s children and blockers moving from ID order to authoring order, which is the fix rather than a side effect.
-- **Compatibility risk:** None. No change to `tasks.jsonl`, so no file written by any version becomes unreadable and no binary flattens another's data. A cache schema bump, if the explicit-column route is taken, is absorbed by the existing delete-and-rebuild path (`schemaVersion` check in `ensureFresh`).
-- **Recommended approach:** Regular release. No urgency — confirmed at symptom gathering that no active work unit holds affected data.
-- **Principal residual risk:** the ordering key's correctness rests on `Cache.Rebuild` deleting and re-inserting in slice order. That is true today and has always been true, but it is an invariant no test currently states. Any future incremental cache-update path would silently break the fix. Making the invariant explicit and tested is the mitigation, and it is the one thing specification must not treat as incidental.
+- **Fix complexity:** Low-to-moderate. A second timestamp format constant and the write-path call sites, the nine `Truncate(time.Second)` removals, two `ORDER BY` clauses in `buildListQuery`, two sub-queries in `show.go`, and six on-disk-shape test updates.
+- **Regression risk:** Low. A final sort term cannot reorder any result whose earlier keys already differ; widening the write format cannot break reads, given the parse layout is held. The one intended behaviour change is `tick show`'s children and blockers moving from ID order to authoring order.
+- **Compatibility risk:** Moderate and bounded, entirely on the downgrade side. A newer tick reads any older file (parse layout unchanged). An older tick reads a newer file (Go accepts an unnamed fraction) but **flattens it on its next write**, reverting to today's behaviour — measured, not theorised. No file becomes unreadable in either direction and nothing is corrupted; the position tiebreak keeps ordering correct even through a flattening.
+- **Recommended approach:** Regular release. No urgency — confirmed at symptom gathering that no active work unit holds affected data. Worth a release note about the downgrade behaviour.
+- **Principal residual risk:** the mixed-precision lexical anomaly during the window between upgrade and first write. Bounded to comparisons *within one second* between an old and a new record, and closed permanently by the first mutation. The position tiebreak covers the window.
 
 ## Notes
 
