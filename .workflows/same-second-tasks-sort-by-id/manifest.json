@@ -11,6 +11,22 @@
           "status": "completed"
         }
       }
+    },
+    "specification": {
+      "items": {
+        "same-second-tasks-sort-by-id": {
+          "status": "in-progress",
+          "sources": {
+            "same-second-tasks-sort-by-id": {
+              "status": "pending"
+            }
+          },
+          "review_cycle": 0,
+          "finding_gate_mode": "gated",
+          "construction_gate_mode": "gated",
+          "date": "2026-09-22"
+        }
+      }
     }
   },
   "seeds": [
