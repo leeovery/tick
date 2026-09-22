@@ -47,18 +47,21 @@
           "status": "in-progress",
           "format": "tick",
           "spec_commit": "e75d42f600fff447e98d827defff5a03730d34b7",
-          "task_list_gate_mode": "gated",
+          "task_list_gate_mode": "auto",
           "author_gate_mode": "gated",
           "finding_gate_mode": "gated",
           "review_cycle": 0,
           "phase": 1,
-          "task": null,
+          "task": "same-second-tasks-sort-by-id-1-1",
           "task_map": {},
           "storage_paths": [
             ".tick/"
           ],
           "approvals": {
-            "structure": "2026-09-22"
+            "structure": "2026-09-22",
+            "tasks": {
+              "p1": "2026-09-22"
+            }
           }
         }
       }
