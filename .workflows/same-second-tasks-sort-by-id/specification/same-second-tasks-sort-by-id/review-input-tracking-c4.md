@@ -23,8 +23,8 @@ A new task takes the next number above the highest sequence currently in the fil
 
 The rule is per task, not per write. Where one write creates several tasks — an import through `internal/migrate`, whose whole batch shares a single creation second — each takes the next number above every task already in the set, including the ones added earlier in that same write. A batch is therefore numbered in the order its tasks are appended, which is the order it was authored.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Declined
+**Notes**: Fourth raise of this premise, and it measures false again — traced end to end this time, not grepped. `migrate.Engine.Run` loops the source tasks (`internal/migrate/engine.go:71`) and calls `e.creator.CreateTask(mt)` per task (`:80`); `StoreTaskCreator.CreateTask` opens its own `store.Mutate` (`internal/migrate/store_creator.go:36`). An import of *n* tasks is therefore *n* separate writes, each numbered against a file that already holds its predecessors. Every `Mutate` call site in the tree creates at most one task (`create.go:187`, `dep.go:78,156`, `remove.go:184`, `update.go:275`, `transition.go:36`, `note.go:68,124`, `store_creator.go:36`). The investigation's "the whole import lands in one second" is about the timestamp — which is exactly why the sequence matters there — not about the write. With no multi-task write path in existence, a rule for one is the builder's to settle if such a path is ever added, and writing it in to quiet a recurring finding would be the review adding scope no source asked for. Previously declined in input review c1 (finding 2) and c2 (finding 1), and narrowed out of gap analysis c1 (finding 1).
 
 ---
 
