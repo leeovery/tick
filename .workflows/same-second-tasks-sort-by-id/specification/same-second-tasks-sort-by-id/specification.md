@@ -155,6 +155,8 @@ Tick's established handling for a duplicate-identity condition is a doctor check
 
 An earlier revision of the investigation stated that `internal/cli/help.go:58` also documents the sort contract. It does not — `internal/cli/help.go` contains no statement about sort order at all, and needs no change.
 
+`tick help doctor` does list checks — its description (`internal/cli/help.go:217`) names "JSONL syntax, ID format, duplicates, orphaned references, dependency cycles, and cache staleness" — but as a summary, not a standing enumeration: it already omits self-referential dependencies, parent/child constraint violations and a done parent with open children. The rule that puts the duplicate-sequence check in the README's list — a standing list of every check either gains it or is wrong — does not reach a list that makes no claim to completeness, so the help description is unchanged too.
+
 The README-sample run does not cover it: `readme_samples_test.go` re-renders only fenced blocks carrying a `$ tick` prompt line (`sed -n 492p internal/cli/readme_samples_test.go` → `if fence.prompt == "" {`), and the sort-contract sentence is prose outside every fence. Nothing in the suite reads it today (`rg -n 'sorted by|priority \(ascending\)' internal/cli/*_test.go` → no output), so the sentence gets a prose assertion of its own (§8.6).
 
 ### 7. Scope Boundaries and Accepted Risks
@@ -244,3 +246,4 @@ Existing ordering tests stay green **unchanged**. A final sort term must not dis
 ## Corrigenda
 
 > **Corrigendum 2026-09-22** (from `planning/same-second-tasks-sort-by-id`): "walk the records in order, tracking the highest sequence seen so far — starting at 0 — and give the next number to any record that has none … This is a running-maximum rule" (§2.3), with §5.2's "backfill gives each of them a distinct number on read (§2.3), so they cannot collide" — corrected: a running maximum collides when an unnumbered record lies above a numbered one after a merge, contradicting §5.2; per the investigation's resolution 2, backfill numbers each unnumbered record, in line order, above the highest sequence the file carries — new-task numbering applied per record — so a backfilled number never equals a carried one. §2.3, §5.2 and §8.2 updated, §8.2 gaining the merge-shape case.
+> **Corrigendum 2026-09-22** (from `planning/same-second-tasks-sort-by-id`): §6 left open whether `tick help doctor`'s check list (`internal/cli/help.go:217`) gains the duplicate-sequence check — settled: it does not. That list is a summary already omitting three existing checks, and the README's inclusion rule (a standing enumeration of every check gains each new one) does not reach it. §6 updated.
