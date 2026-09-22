@@ -57,8 +57,8 @@ State that numbering advances within the write: each new task takes the next num
 >
 > Clashes cannot occur. Writes are serialised by the exclusive file lock, and `Store.Mutate` (`internal/storage/store.go:174`) reads the current task set inside that lock before calling the mutation function, so the next number is computed with no race.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Declined
+**Notes**: Premise measured false. The migration framework does not create its tasks in one write — `StoreTaskCreator.CreateTask` (`internal/migrate/store_creator.go:36`) opens its own `store.Mutate` per task, so every imported task is numbered against a file that already contains its predecessors. Every `Mutate` call site in the tree (`create.go:187`, `dep.go:78,156`, `remove.go:184`, `update.go:275`, `transition.go:36`, `note.go:68,124`, `store_creator.go:36`) creates at most one task. With no multi-task write path in existence, "the highest sequence currently in the file" is unambiguous, and a rule for a path that does not exist is the builder's to settle if one is ever added.
 
 ---
 
@@ -73,7 +73,7 @@ State that numbering advances within the write: each new task takes the next num
 Backfill has to tell a record that carries no sequence from one that carries the very first sequence ever issued. If numbering starts at zero, those two are the same value on every read: the first task a project ever created is treated as unnumbered and pushed behind tasks written after it, and on a file where later records do carry sequences it is handed a number one of them already holds. The user sees their oldest task drift to the end of the list, and `tick doctor` reports a duplicate on a file nobody merged or hand-edited.
 
 **Proposal**:
-Sequences are positive — numbering begins at 1, and an absent or zero value means the record has no sequence, with the running maximum starting at 0. This is what the backfill rule needs to function at all: it is the only value domain where the first task and a legacy record are distinguishable without adding a second field to the record.
+Sequences are positive — numbering begins at 1, and an absent or zero value means the record has no sequence, with the running maximum starting at 0. The sources set no starting value, so this is a call this session makes: what leans it is that the backfill rule cannot function without the distinction, and a zero-valued sequence vanishes from the record under Go's `omitempty`, so the first task a project ever created would be re-backfilled to a different number on every read until a write froze it wrong. The alternative that also fits is a nullable field (`*int`), distinguishing absent from zero without reserving a value — rejected because it adds a nullable field to the record for no gain the reader can see, where 1-based numbering falls out of the backfill rule's own running maximum starting at 0.
 
 **Current**:
 > A record lacking a sequence is assigned one on read: walk the records in order, tracking the highest sequence seen so far, and give the next number to any record that has none.
@@ -99,7 +99,7 @@ Sequences are positive — numbering begins at 1, and an absent or zero value me
 Two branches numbering from the same maximum merge into two children of one parent sharing a sequence. `tick list` and `tick ready` handle that deterministically, but `tick show` on the parent orders its children by created and sequence alone, so they emerge in whatever order the query plan feeds the sorter — and that can change between runs, after a `tick rebuild`, or with a SQLite version bump, silently. The user gets a stable order from the list commands and a shifting one from the command they use to read a phase's children, with nothing to tell them why.
 
 **Proposal**:
-End the children clause on the task ID, the same absolute final term the list clauses carry, so no condition leaves the sub-list order undefined. Blockers need no extra term — the dependency ordinal is unique within one task's blocker set by construction.
+End the children clause on the task ID, the same absolute final term the list clauses carry, so no condition leaves the sub-list order undefined. Blockers need no extra term — the dependency ordinal is unique within one task's blocker set by construction. The sources hold both sides of this and settle neither: resolution 1 promises order "total under every condition", resolution 5 gives children `created, seq` only. The fork has one live side — the other is leaving a user-facing list plan-dependent after a merge, which nothing recommends and which the duplicate-sequence resolution exists to rule out.
 
 **Current**:
 §4.3, children paragraph:
