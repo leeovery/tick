@@ -15,7 +15,7 @@
     "specification": {
       "items": {
         "same-second-tasks-sort-by-id": {
-          "status": "in-progress",
+          "status": "completed",
           "sources": {
             "same-second-tasks-sort-by-id": {
               "status": "incorporated"
