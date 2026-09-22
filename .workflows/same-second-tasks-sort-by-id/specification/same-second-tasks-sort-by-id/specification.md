@@ -151,7 +151,7 @@ Tick's established handling for a duplicate-identity condition is a doctor check
 
 An earlier revision of the investigation stated that `internal/cli/help.go:58` also documents the sort contract. It does not — `internal/cli/help.go` contains no statement about sort order at all, and needs no change.
 
-Whatever lands in the README is covered by the README-sample run (`readme_samples_test.go`), which compares each prompted fence byte-for-byte.
+The README-sample run does not cover it: `readme_samples_test.go` re-renders only fenced blocks carrying a `$ tick` prompt line (`sed -n 492p internal/cli/readme_samples_test.go` → `if fence.prompt == "" {`), and the sort-contract sentence is prose outside every fence. Nothing in the suite reads it today (`rg -n 'sorted by|priority \(ascending\)' internal/cli/*_test.go` → no output), so the sentence gets a prose assertion of its own (§8.6).
 
 ### 7. Scope Boundaries and Accepted Risks
 
@@ -224,6 +224,10 @@ Two constraints therefore apply to every ordering fixture below.
 #### 8.5 Regression floor
 
 Existing ordering tests stay green **unchanged**. A final sort term must not disturb any result whose earlier keys already differ, and this is empirically satisfiable (§7.3).
+
+#### 8.6 The documented contract
+
+- The README's sort-contract sentence is pinned by a prose assertion, following the two the suite already carries for README prose — `TestREADMEDocumentsFieldSelection` (`internal/cli/readme_samples_test.go:570`) and `TestREADMEDocumentsEndOfFlagsMarker` (`:637`). It is the only user-facing statement of the guarantee this work delivers, and the sample run never reads it (§6).
 
 ---
 

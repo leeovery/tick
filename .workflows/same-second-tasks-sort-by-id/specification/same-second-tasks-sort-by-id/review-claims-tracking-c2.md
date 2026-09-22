@@ -58,8 +58,8 @@ Source carrying the claim: `.workflows/same-second-tasks-sort-by-id/investigatio
 
 **Proposed Text**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: Re-measured before classifying and confirmed: `README.md:115` sits outside every fence, `readme_samples_test.go:492` skips any fence with no `$ tick` prompt, and nothing in the suite reads the sentence. Every conclusion citing the claim survives the correction — §6's change to `README.md:115` is unaffected — so the repair is the claim itself. It landed in the investigation ("Testing Recommendations" → "Documentation and regression floor"), which now records the measurement and, derived from the two prose assertions the suite already carries, the requirement that the new sentence be pinned by one of its own. §6 is re-aligned and §8.6 carries the requirement.
 
 ---
 
