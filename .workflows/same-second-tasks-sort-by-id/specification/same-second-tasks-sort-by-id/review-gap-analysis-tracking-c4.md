@@ -22,8 +22,8 @@ Make what the report claims conditional on the creation dates also tying, which 
 **Proposed Text**:
 "What the report tells the user is which tasks share a number and on which lines. Sharing a number costs the authoring order only where the tasks also record the same creation second — there the group falls back to ID order among themselves; where their recorded creation dates differ, those dates decide and the listed order is unaffected (§4.2). Where the order was lost, restoring it means editing the sequences in `tasks.jsonl` so they differ."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied to §5.2 as staged. The derivation is the record's own — §4.2 puts `created` above `seq`, so a duplicate costs nothing unless the seconds tie too; the sentence was claiming more than the rule allows.
 
 ---
 
@@ -47,8 +47,8 @@ Say what is actually bounded. The ID term cannot bound a backwards step, because
 **Proposed Text**:
 "A backwards step of ≥1s between two task creations on an NTP-synced machine is rare enough to trade against an everyday import benefit, and the misordering it produces is confined to the pair straddling the step: every other pair is ordered on keys the step did not touch, and the result is still one defined order rather than a plan-dependent one (§5.1)."
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied to §4.2 as staged. The derivation is the record's own — §4.2's own ranking puts the sort's stopping point at `created` when the dates differ, and §7.2 already records the risk as unmitigated.
 
 ---
 
