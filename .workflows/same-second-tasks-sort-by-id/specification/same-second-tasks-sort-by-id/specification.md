@@ -151,6 +151,34 @@ An earlier revision of the investigation stated that `internal/cli/help.go:58` a
 
 Whatever lands in the README is covered by the README-sample run (`readme_samples_test.go`), which compares each prompted fence byte-for-byte.
 
+### 7. Scope Boundaries and Accepted Risks
+
+#### 7.1 Out of scope
+
+**Timestamp precision.** `TimestampFormat` (`internal/task/task.go:41`) is unchanged, the nine `Truncate(time.Second)` calls stay, and no stored or displayed timestamp changes value. The format constant serves both storage and display and splitting those roles is not part of this work.
+
+**Mixed-version reasoning.** Only one tick binary is ever in use. No compatibility layer and no versioned migration. The chosen mechanism happens to be downgrade-tolerant — a binary that does not know the sequence field drops it on write but preserves line order, and the backfill rule (§2.3) restores it correctly on the next read — but nothing depends on that property.
+
+**`tick stats`** is order-independent and unaffected. **`tick dep tree`** reads from `tasks.jsonl` via `store.ReadTasks()` (`internal/cli/dep_tree.go:26`), so it is already in file order and never touches the cache sort. **`tick show`'s notes** already order by insertion (`internal/cli/show.go:173`, `ORDER BY rowid ASC`). **Tags and refs** sort alphabetically by design (`internal/cli/show.go:155`, `:164`) and are untouched.
+
+**`internal/doctor/` holds no timestamp logic** — nothing there changes beyond the new check (§5.2).
+
+#### 7.2 Accepted risks
+
+**The backfill rests on a historical claim, not an enforced invariant.** For files written before this change, line order is authoring order — verified across the full git history (§2.3). But a `tasks.jsonl` whose lines were reordered by hand or by a git merge is backfilled in the wrong order, silently and permanently, since the next write freezes the assignment. The duplicate-sequence check (§5.2) catches the collision case; it cannot catch a reordering that produces no duplicates.
+
+**A backwards wall-clock step of ≥1s between two creations misorders them**, because `created` outranks `seq` and the sequence never gets to speak. Accepted deliberately in exchange for import chronology (§4.2).
+
+**Sequence numbers are reusable after a removal** (§2.2). This is a dropped claim, not a defect — a reused number cannot collide, because the task that held it is gone.
+
+**The stored-record byte-immutability break** (§3.1) — every record gains a field on the next write.
+
+#### 7.3 Release posture
+
+Regular release. No urgency — no active work unit holds affected data (§1.2), and no existing file becomes unreadable at any point.
+
+Regression risk is low: a final sort term cannot reorder any result whose earlier keys already differ, verified empirically by adding the terms and observing zero new failures. The one intended behaviour change is `tick show`'s children and blockers moving from ID order to creation and declaration order, which has no existing coverage to update and needs new assertions instead (§4.4, §8).
+
 ---
 
 ## Working Notes
