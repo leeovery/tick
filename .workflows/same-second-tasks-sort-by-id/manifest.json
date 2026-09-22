@@ -21,11 +21,10 @@
               "status": "incorporated"
             }
           },
-          "review_cycle": 1,
+          "review_cycle": 0,
           "finding_gate_mode": "gated",
           "construction_gate_mode": "auto",
-          "date": "2026-09-22",
-          "review_baseline_words": 3659
+          "date": "2026-09-22"
         }
       }
     }
