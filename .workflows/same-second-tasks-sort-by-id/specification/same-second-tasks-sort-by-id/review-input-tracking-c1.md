@@ -120,8 +120,8 @@ End the children clause on the task ID, the same absolute final term the list cl
 §8.3, new bullet after the first:
 > - `tick show`'s children under a shared sequence are deterministic too — the same ID tiebreak, asserted on the parent's detail document.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: The call is this session's, so it landed first in the investigation — resolution 1 now carries the final term through to `show`'s children and states why blockers need none, resolution 5's children key becomes `created, seq, id`, the Chosen Approach restatement and the testing recommendations follow — and the specification is re-aligned to it across §4.3, §5.1 and §8.3.
 
 ---
 
@@ -136,7 +136,7 @@ End the children clause on the task ID, the same absolute final term the list cl
 Whether a user can ask for the sequence — a `--field seq` address, a line in the detail document, a documented key — is a visible product call, and the investigation records it as open rather than answered. The specification answers it (nowhere a command prints), and that answer carries real consequence in both directions: hidden, a user who suspects an ordering problem has only `tasks.jsonl` and the doctor check to look at; surfaced, every detail document grows a section and the conformance inventory and README samples move with it. The record that is supposed to hold the decision does not hold it, so nothing outside this specification stands behind the call.
 
 **Resolution**: Routed
-**Notes**: The call is this session's, so it landed first in the investigation — resolution 1 now carries the final term through to `show`'s children and states why blockers need none, resolution 5's children key becomes `created, seq, id`, the Chosen Approach restatement and the testing recommendations follow — and the specification is re-aligned to it across §4.3, §5.1 and §8.3.
+**Notes**: Derived rather than asked — the fork whittles to one answer over the decisions the record made. The call landed in the investigation (Fix Direction → Chosen Approach), which now decides the sequence does not surface in command output and records both the derivation and the alternative that also fit. §2.4 already states exactly that, so the specification needed no change to align.
 
 ---
 
