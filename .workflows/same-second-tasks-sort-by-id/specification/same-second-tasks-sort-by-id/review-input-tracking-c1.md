@@ -29,8 +29,8 @@ Name the JSON key `seq` and the cache column likewise. The sources use `seq` con
 §3.2, first sentence:
 > The `tasks` table gains a `seq` column (`sed -n '17,28p' internal/storage/cache.go` → the current ten-column definition), populated by the rebuild insert (`internal/storage/cache.go:137`).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Applied to §3.1 and §3.2 as staged — the sources name the field, so the derivation is the record's own.
 
 ---
 
@@ -79,12 +79,14 @@ Sequences are positive — numbering begins at 1, and an absent or zero value me
 > A record lacking a sequence is assigned one on read: walk the records in order, tracking the highest sequence seen so far, and give the next number to any record that has none.
 
 **Proposed Text**:
-> Sequences are positive: numbering begins at 1, and an absent or zero value on a record means it carries no sequence.
->
+§2.2, first paragraph (the value domain's home — §2.2 owns assignment, so the rule is stated there once rather than restated in §2.3):
+> A new task takes the next number above the highest sequence currently in the file. Sequences are positive: numbering begins at 1, so an absent or zero value on a record means it carries no sequence.
+
+§2.3, first paragraph:
 > A record lacking a sequence is assigned one on read: walk the records in order, tracking the highest sequence seen so far — starting at 0 — and give the next number to any record that has none.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: The call is this session's, so it landed first in the investigation (Fix Direction → resolution 2), which now states the positive value domain and the `*int` alternative it was preferred over; the specification is re-aligned to it. Placement revised against the one-home rule: the value domain sits in §2.2, which owns assignment, rather than being restated in §2.3.
 
 ---
 
@@ -133,8 +135,8 @@ End the children clause on the task ID, the same absolute final term the list cl
 **Problem**:
 Whether a user can ask for the sequence — a `--field seq` address, a line in the detail document, a documented key — is a visible product call, and the investigation records it as open rather than answered. The specification answers it (nowhere a command prints), and that answer carries real consequence in both directions: hidden, a user who suspects an ordering problem has only `tasks.jsonl` and the doctor check to look at; surfaced, every detail document grows a section and the conformance inventory and README samples move with it. The record that is supposed to hold the decision does not hold it, so nothing outside this specification stands behind the call.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: The call is this session's, so it landed first in the investigation — resolution 1 now carries the final term through to `show`'s children and states why blockers need none, resolution 5's children key becomes `created, seq, id`, the Chosen Approach restatement and the testing recommendations follow — and the specification is re-aligned to it across §4.3, §5.1 and §8.3.
 
 ---
 

@@ -46,7 +46,7 @@ An explicit sequence is the only option where a clash is **impossible by constru
 
 #### 2.2 Assignment
 
-A new task takes the next number above the highest sequence currently in the file.
+A new task takes the next number above the highest sequence currently in the file. Sequences are positive: numbering begins at 1, so an absent or zero value on a record means it carries no sequence.
 
 Clashes cannot occur. Writes are serialised by the exclusive file lock, and `Store.Mutate` (`internal/storage/store.go:174`) reads the current task set inside that lock before calling the mutation function, so the next number is computed with no race.
 
@@ -54,7 +54,7 @@ Clashes cannot occur. Writes are serialised by the exclusive file lock, and `Sto
 
 #### 2.3 Backfill for records with no sequence
 
-A record lacking a sequence is assigned one on read: walk the records in order, tracking the highest sequence seen so far, and give the next number to any record that has none.
+A record lacking a sequence is assigned one on read: walk the records in order, tracking the highest sequence seen so far — starting at 0 — and give the next number to any record that has none.
 
 This is a running-maximum rule, **not** line position. On a file where some records carry a sequence and some do not — the shape produced by a merge, or by a write from a binary that does not know the field — assigning line position would sort the newest record first. Running maximum gets it right and collapses backfill and new-task numbering into a single rule.
 
@@ -72,13 +72,13 @@ The sequence appears in `tasks.jsonl` and in the cache, and nowhere a command pr
 
 #### 3.1 The record
 
-The sequence is a field on the stored task record in `tasks.jsonl`, alongside the existing fields (`sed -n '44,60p' internal/task/task.go` → the `Task` struct and its JSON tags). It round-trips through the file unchanged: written, read back, identical.
+The sequence is the `seq` field on the stored task record in `tasks.jsonl`, alongside the existing fields (`sed -n '44,60p' internal/task/task.go` → the `Task` struct and its JSON tags). It round-trips through the file unchanged: written, read back, identical.
 
 **Adding the field breaks an invariant currently asserted in the suite.** `internal/cli/migrate_test.go:702` asserts "it leaves values already in storage untouched"; every record gains the new field on the next write, so that test changes with this work. With `.tick/tasks.jsonl` git-tracked in this project, the first post-upgrade write produces a whole-file diff — accepted as a one-off.
 
 #### 3.2 The cache
 
-The `tasks` table gains a column for the sequence (`sed -n '17,28p' internal/storage/cache.go` → the current ten-column definition), populated by the rebuild insert (`internal/storage/cache.go:137`). The list-family sort reads it from there.
+The `tasks` table gains a `seq` column (`sed -n '17,28p' internal/storage/cache.go` → the current ten-column definition), populated by the rebuild insert (`internal/storage/cache.go:137`). The list-family sort reads it from there.
 
 The cache column is asserted directly by test, not only through an ordering result — an ordering assertion alone cannot distinguish a working sequence from an accidentally-correct query plan (§1.1).
 
@@ -115,7 +115,7 @@ This cuts both ways and the trade is deliberate. Keeping `created` above preserv
 
 Both sub-lists move off `ORDER BY id`, which is unconditional today and produces the same wrong answer as the tie — by explicit choice rather than by accident.
 
-**Children** (`internal/cli/show.go:146`) order by created, then sequence. **Priority does not participate** — today's clause has no priority term, and adding one would be a second, unrequested behaviour change. A child with better priority does not float above an earlier-created sibling.
+**Children** (`internal/cli/show.go:146`) order by created, then sequence, then task ID — the same absolute final term the list clauses carry (§5.1), so a duplicate sequence cannot leave the list plan-dependent. **Priority does not participate** — today's clause has no priority term, and adding one would be a second, unrequested behaviour change. A child with better priority does not float above an earlier-created sibling.
 
 **Blockers** (`internal/cli/show.go:137`) order by the dependency ordinal (§3.3) — the order the dependencies were declared, matching the `blocked_by` array in the record and the edges `tick dep tree` already emits. The alternative — the blocker task's own creation order — would put `tick show` out of step with both `dep tree` and the stored record.
 
@@ -135,7 +135,7 @@ Two mechanisms answer it, one making the outcome defined and one making it visib
 
 #### 5.1 Task ID is the absolute final sort term
 
-Every clause in §4.1 ends on the task ID. Order is then total under every condition, so the worst a duplicate sequence can do is fall back to today's ID ordering **deterministically**, rather than varying with the query plan. The current failure is that tie order changes with the plan; after this change it cannot.
+Every clause in §4.1 ends on the task ID, as does `tick show`'s children clause (§4.3); blockers order on the dependency ordinal, which is unique within a task's blocker set, so they are total already. Order is then total under every condition, so the worst a duplicate sequence can do is fall back to today's ID ordering **deterministically**, rather than varying with the query plan. The current failure is that tie order changes with the plan; after this change it cannot.
 
 #### 5.2 A duplicate-sequence doctor check
 
@@ -209,6 +209,7 @@ Two constraints therefore apply to every ordering fixture below.
 #### 8.3 Duplicate sequences
 
 - Two tasks sharing a sequence produce a **deterministic** order — the ID tiebreak — under both the filtered and unfiltered query plans. The assertion is that tie order can no longer vary with the plan.
+- `tick show`'s children under a shared sequence are deterministic too — the same ID tiebreak, asserted on the parent's detail document.
 - The new doctor check reports a duplicate with its line numbers, mirroring `DuplicateIdCheck`'s existing tests, and reports nothing on a clean file.
 
 #### 8.4 `tick show`'s sub-lists
