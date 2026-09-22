@@ -23,8 +23,8 @@ A new task takes the next number above the highest sequence currently in the fil
 
 Where a single write creates several tasks — an import, or any batch authored in one pass — the maximum advances with each assignment rather than being taken once for the write. The first task of the batch takes the next number above the file's highest, the second takes the number above that, and so on. Taking one number for the whole batch would give every member of an import the same sequence and drop it straight back to ID order, which is the case this work exists to fix.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Declined
+**Notes**: Third raise of this premise, and it measures false each time. No path in tick creates more than one task in a single write: the migration framework opens its own `store.Mutate` per task (`internal/migrate/store_creator.go:36`), and every `Mutate` call site in the tree (`create.go:187`, `dep.go:78,156`, `remove.go:184`, `update.go:275`, `transition.go:36`, `note.go:68,124`, `store_creator.go:36`) creates at most one. The investigation's "the whole import shares one second" is about the timestamp, not the write, and its "in-process batch" fixture is a sequence of separate mutations. With no multi-task write path in existence, a rule for one is the builder's to settle if such a path is ever added; writing it in to quiet a recurring finding would be the review adding scope no source asked for. Previously declined in input review c1 (finding 2) and narrowed out of gap analysis c1 (finding 1).
 
 ---
 
@@ -51,8 +51,8 @@ Qualify the guarantee at whole-second resolution in both places it is stated. Th
 
 (§4.2) This cuts both ways and the trade is deliberate. Keeping `created` above preserves true chronology on imports, where the provider supplies real historical timestamps (`internal/migrate/beads/beads.go:119` parses RFC3339) and import order would otherwise override them; it also confines duplicate-sequence damage (§5) to within a single second. The chronology carried across is whole-second: a fraction in the source is flattened on write as it is today, so imported tasks that share a second tie on `created` and fall to the sequence — within one second the import's own order decides, not the source's.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Adjusted
+**Notes**: Applied to §1.3 and §4.2; the derivation is the record's own — H4 states the flattening directly. §1.3's wording adjusted from "to the second" to "to whole-second resolution", which reads as the guarantee rather than as an aside; §4.2's addition landed as staged.
 
 ---
 

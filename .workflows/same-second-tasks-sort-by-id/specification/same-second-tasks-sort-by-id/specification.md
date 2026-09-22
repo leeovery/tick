@@ -24,7 +24,7 @@ No live exposure — no stored batch is currently being read in the wrong order,
 
 #### 1.3 What tick guarantees after the fix
 
-Tasks come back in the order they were created, within a priority band — and within the `in_progress` band for `ready`, which floats above the priority terms. A batch written one after another by an agent or a shell loop reads back in the sequence it was written, as does an import whose source carries no creation times of its own. An import that supplies real historical creation times is ordered by those times instead: recorded chronology outranks the sequence (§4.2).
+Tasks come back in the order they were created, within a priority band — and within the `in_progress` band for `ready`, which floats above the priority terms. A batch written one after another by an agent or a shell loop reads back in the sequence it was written, as does an import whose source carries no creation times of its own. An import that supplies real historical creation times is ordered by those times instead, to whole-second resolution: recorded chronology outranks the sequence (§4.2).
 
 The guarantee is **total**: every query in the list family produces one defined order under every condition, with no dependence on which plan SQLite chooses. A mixed-priority batch still does not read back in write order — priority and the `ready` band are semantic ordering and continue to outrank creation order.
 
@@ -109,7 +109,7 @@ This covers `tick list`, `tick ready` and `tick blocked`, filtered and unfiltere
 
 `created` outranks `seq`. Two tasks whose recorded creation dates differ are ordered by those dates; the sequence speaks only when they tie.
 
-This cuts both ways and the trade is deliberate. Keeping `created` above preserves true chronology on imports, where the provider supplies real historical timestamps (`internal/migrate/beads/beads.go:119` parses RFC3339) and import order would otherwise override them; it also confines duplicate-sequence damage (§5) to within a single second. The cost: a backwards wall-clock step of a second or more between two creations still misorders them, and the sequence never gets to speak because the dates differ — the same failure mode cited against sub-second precision (§2.1), knowingly retained. A backwards step of ≥1s between two task creations on an NTP-synced machine is rare enough to trade against an everyday import benefit, and the final ID term (§5.1) bounds the damage when it happens.
+This cuts both ways and the trade is deliberate. Keeping `created` above preserves true chronology on imports, where the provider supplies real historical timestamps (`internal/migrate/beads/beads.go:119` parses RFC3339) and import order would otherwise override them; it also confines duplicate-sequence damage (§5) to within a single second. The chronology carried across is whole-second: a fraction in the source is flattened on write as it is today, so imported tasks that share a second tie on `created` and fall to the sequence — within one second the import's own order decides, not the source's. The cost: a backwards wall-clock step of a second or more between two creations still misorders them, and the sequence never gets to speak because the dates differ — the same failure mode cited against sub-second precision (§2.1), knowingly retained. A backwards step of ≥1s between two task creations on an NTP-synced machine is rare enough to trade against an everyday import benefit, and the final ID term (§5.1) bounds the damage when it happens.
 
 #### 4.3 `tick show`'s sub-lists
 
