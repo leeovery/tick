@@ -22,6 +22,16 @@ status: draft
 - [ ] Two same-second tasks sharing one seq: filtered and unfiltered listings both return them in task-ID order, the same every run
 - [ ] Existing ordering tests pass unchanged. The migrate "values already in storage untouched" test is updated for the added field
 
+#### Tasks
+
+| Internal ID | Name | Edge Cases |
+|-------------|------|------------|
+| same-second-tasks-sort-by-id-1-1 | Sort same-second tasks by creation sequence | parent-filtered query takes a different plan and must also be asserted (§8.1), `--count 1` under a tie returns the first-authored task (§1.2, §8.1), a v2 cache rebuilds at v3 on the next command (§3.4), the cache seq column is asserted directly and not only through ordering (§3.2, §8.2), seq round-trips through JSONL unchanged (§3.1, §8.2) |
+| same-second-tasks-sort-by-id-1-2 | Keep the order total across the ready band, blocked and duplicate sequences | an in_progress task authored after tied open tasks stays at the top of `ready` (§8.1), `tick blocked` has a different WHERE shape (§4.1, §8.1), a duplicate seq gives deterministic ID order under both the filtered and unfiltered plans (§5.1, §8.3), existing ordering tests pass unchanged (§8.5) |
+| same-second-tasks-sort-by-id-1-3 | Assign a sequence when a task is created | an empty project numbers from 1 and zero means "no sequence" (§2.2), assignment is monotonic (§8.2), the value survives update, remove and rebuild (§8.2), removing the highest-numbered task frees its number and no collision results (§2.2, §7.2) |
+| same-second-tasks-sort-by-id-1-4 | Backfill missing sequences by running maximum on read | a file with no seq on any record orders by line position, including after a create, update or remove (§2.3, §8.2), a mixed seq/no-seq file orders its newest record last and not first (§2.3, §8.2), a record whose seq was stripped by a binary that does not know the field is reassigned correctly (§7.1, §8.2), blank lines are skipped so seq order matches record order rather than line number (§8.2), a new task numbers above the backfilled values (§2.2), the ReadTasks, Rebuild and readAndEnsureFresh paths all get the same rule (§2.3), the stored-record byte-immutability break is accepted (§3.1, §7.2) |
+| same-second-tasks-sort-by-id-1-5 | Keep import order for in-process migration batches | an in-process batch with identical timestamps (§8.1), provider-supplied historical creation times outrank the sequence (§4.2), source fractions are flattened to whole seconds, so imported tasks that share a second fall to import order (§4.2) |
+
 ### Phase 2: tick show sub-lists in creation and declaration order
 status: draft
 
