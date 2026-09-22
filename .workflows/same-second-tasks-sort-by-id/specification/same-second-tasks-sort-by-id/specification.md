@@ -179,6 +179,49 @@ Regular release. No urgency — no active work unit holds affected data (§1.2),
 
 Regression risk is low: a final sort term cannot reorder any result whose earlier keys already differ, verified empirically by adding the terms and observing zero new failures. The one intended behaviour change is `tick show`'s children and blockers moving from ID order to creation and declaration order, which has no existing coverage to update and needs new assertions instead (§4.4, §8).
 
+### 8. Verification Requirements
+
+No test constructs a creation-time tie today. Every ordering test gives each task in a priority band a distinct `Created` — `ready_test.go:306` uses `now`, `now+1s`, `now+2s`; `blocked_test.go:212` and `list_filter_test.go:368` follow the same fixture shape — so the tie branch has never executed. And it would pass by coincidence if it had: those fixtures use hand-written IDs (`tick-hi1111`, `tick-low111`, `tick-low222`) that already sort into the expected order, so an ID-ordered result would satisfy the assertions.
+
+Two constraints therefore apply to every ordering fixture below.
+
+- **IDs must contradict the authoring order.** An ascending-ID result and a creation-order result must be distinguishable, or the assertion proves nothing.
+- **Fixture size must not be load-bearing.** The query plan flips on data shape alone (§1.1), so a test keyed to "this command returns this order at this size" would be asserting a coincidence of its own fixture. Assertions state the required order, never the plan.
+
+#### 8.1 Ordering
+
+- A same-second tie orders correctly, asserted from an unfiltered list **and** from a `--parent`-filtered one — those take different query plans, and the unfiltered case passes today by accident.
+- `tick blocked` carries its own tie assertion — `BlockedConditions()` builds a different `WHERE` shape (§4.1).
+- The `ready` band still wins over the sequence: an `in_progress` task authored *after* tied `open` tasks stays at the top. Without this, a final term inserted before the band term passes everything else.
+- `--count 1` under a tie returns the first-authored task, not the ID-lowest.
+- An in-process batch, not only separate invocations — the migration framework is the natural fixture, with the explicit note that its timestamps are identical.
+
+#### 8.2 The sequence itself
+
+- Assigned monotonically.
+- **Backfill: a fixture file carrying no sequence field at all orders by line position**, permanently, including after the first mutation materialises the assignment. This is the durable legacy case, not a transient window, and it is what pins the backfill as the mechanism carrying every pre-existing project.
+- A file with sequences on some records and absent on others — the post-merge shape — backfills by running maximum, with the newest record ordering **last** rather than first. This is the case a line-position rule gets wrong (§2.3).
+- A record whose sequence is absent because a binary that did not know the field stripped it is reassigned correctly on the next read.
+- Survives create, update, remove and `tick rebuild`. The invariant is phrased "sequence order equals record order", not "equals line number" — `ParseJSONL` skips blank lines (`internal/storage/jsonl.go:99-101`).
+- Round-trips through JSONL: written, read, unchanged.
+- The cache column carries the sequence and the sort uses it, asserted directly (§3.2).
+
+#### 8.3 Duplicate sequences
+
+- Two tasks sharing a sequence produce a **deterministic** order — the ID tiebreak — under both the filtered and unfiltered query plans. The assertion is that tie order can no longer vary with the plan.
+- The new doctor check reports a duplicate with its line numbers, mirroring `DuplicateIdCheck`'s existing tests, and reports nothing on a clean file.
+
+#### 8.4 `tick show`'s sub-lists
+
+- Children follow creation order, and **priority does not participate** — a child with better priority does not float above an earlier-created sibling (§4.3).
+- Blockers follow declaration order: a fixture where a blocker created *later* was declared *first* must list it first, and `tick show` must agree with `tick dep tree` and with the `blocked_by` array in the record on that same fixture. This single assertion pins the key against drift.
+- The same sections render under `create`, `update` and both `note` handlers via `outputMutationResult` — their detail documents and the conformance inventory are in scope, not only `tick show` (§4.4).
+- `--field children.N` and `--field blocked_by.N` positional addressing changes meaning — asserted rather than discovered.
+
+#### 8.5 Regression floor
+
+Existing ordering tests stay green **unchanged**. A final sort term must not disturb any result whose earlier keys already differ, and this is empirically satisfiable (§7.3).
+
 ---
 
 ## Working Notes
