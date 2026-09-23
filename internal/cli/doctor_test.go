@@ -537,9 +537,6 @@ func TestDoctorFourChecks(t *testing.T) {
 	})
 }
 
-// healthyTenCheckContent returns tasks.jsonl content that passes all 10 checks:
-// valid IDs, no duplicates, valid JSON, no orphaned parents/deps, no self-refs,
-// no cycles, no child-blocked-by-parent, and no done parent with open children.
 func healthyTenCheckContent() string {
 	return `{"id":"tick-aaa111","title":"Parent","status":"open"}
 {"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
@@ -762,7 +759,6 @@ func TestDoctorTenChecks(t *testing.T) {
 	})
 
 	t.Run("it runs all 10 checks even when early checks fail (no short-circuit)", func(t *testing.T) {
-		// Stale cache (first check fails), but all 10 should still run.
 		dir, _ := setupDoctorProjectWithContentStale(t, healthyTenCheckContent())
 
 		stdout, _, _ := runDoctor(t, dir)

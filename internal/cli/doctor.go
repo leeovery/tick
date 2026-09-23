@@ -8,13 +8,9 @@ import (
 	"github.com/leeovery/tick/internal/doctor"
 )
 
-// RunDoctor executes the doctor diagnostic command. It creates a DiagnosticRunner,
-// registers all 11 checks (CacheStalenessCheck, JsonlSyntaxCheck, IdFormatCheck,
-// DuplicateIdCheck, OrphanedParentCheck, OrphanedDependencyCheck, SelfReferentialDepCheck,
-// DependencyCycleCheck, ChildBlockedByParentCheck, ParentDoneWithOpenChildrenCheck,
-// DuplicateSeqCheck),
-// runs all checks, formats the output to stdout, and returns the appropriate exit code.
-// Doctor is read-only and never modifies data.
+// RunDoctor executes the doctor diagnostic command, writing the report to
+// stdout and returning the process exit code. Doctor is read-only and never
+// modifies data.
 func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
 	runner := doctor.NewDiagnosticRunner()
 	runner.Register(&doctor.CacheStalenessCheck{})

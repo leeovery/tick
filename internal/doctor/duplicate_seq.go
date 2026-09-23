@@ -13,10 +13,8 @@ type seqOccurrence struct {
 }
 
 // DuplicateSeqCheck warns when more than one record in tasks.jsonl carries the
-// same creation sequence. Each shared value is reported as its own warning
-// naming the tasks and their line numbers. Records with an absent or zero
-// sequence carry none and are not compared. It is read-only and never
-// modifies the file.
+// same creation sequence. Records with an absent or zero sequence carry none
+// and are not compared. It is read-only and never modifies the file.
 type DuplicateSeqCheck struct{}
 
 // Run executes the duplicate sequence check against tasks.jsonl in tickDir.
