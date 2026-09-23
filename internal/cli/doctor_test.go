@@ -537,22 +537,23 @@ func TestDoctorFourChecks(t *testing.T) {
 	})
 }
 
-func healthyTenCheckContent() string {
+func healthyAllChecksContent() string {
 	return `{"id":"tick-aaa111","title":"Parent","status":"open"}
 {"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
 {"id":"tick-ccc333","title":"Independent","status":"done"}`
 }
 
-func TestDoctorTenChecks(t *testing.T) {
+func TestDoctorAllChecks(t *testing.T) {
 	allLabels := []string{
 		"Cache", "JSONL syntax", "ID format", "ID uniqueness",
 		"Orphaned parents", "Orphaned dependencies",
 		"Self-referential dependencies", "Dependency cycles",
 		"Child blocked by parent", "Parent done with open children",
+		"Sequence uniqueness",
 	}
 
-	t.Run("it registers all 10 checks (4 existing + 6 new relationship/hierarchy checks)", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+	t.Run("it registers all 11 checks", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyAllChecksContent())
 
 		stdout, _, _ := runDoctor(t, dir)
 
@@ -564,7 +565,7 @@ func TestDoctorTenChecks(t *testing.T) {
 	})
 
 	t.Run("it runs all 11 checks in a single tick doctor invocation", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+		dir, _ := setupDoctorProjectWithContent(t, healthyAllChecksContent())
 
 		stdout, _, _ := runDoctor(t, dir)
 
@@ -574,8 +575,8 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it exits 0 when all 10 checks pass (healthy store)", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+	t.Run("it exits 0 when all 11 checks pass (healthy store)", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyAllChecksContent())
 
 		_, _, exitCode := runDoctor(t, dir)
 
@@ -584,7 +585,7 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it exits 1 when only the orphaned parent check fails (other 9 pass)", func(t *testing.T) {
+	t.Run("it exits 1 when only the orphaned parent check fails (other 10 pass)", func(t *testing.T) {
 		content := `{"id":"tick-aaa111","title":"Task","status":"open","parent":"tick-ffffff"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
@@ -595,7 +596,7 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it exits 1 when only the orphaned dependency check fails (other 9 pass)", func(t *testing.T) {
+	t.Run("it exits 1 when only the orphaned dependency check fails (other 10 pass)", func(t *testing.T) {
 		content := `{"id":"tick-aaa111","title":"Task","status":"open","blocked_by":["tick-ffffff"]}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
@@ -606,7 +607,7 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it exits 1 when only the self-referential dependency check fails (other 9 pass)", func(t *testing.T) {
+	t.Run("it exits 1 when only the self-referential dependency check fails (other 10 pass)", func(t *testing.T) {
 		content := `{"id":"tick-aaa111","title":"Task","status":"open","blocked_by":["tick-aaa111"]}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
@@ -617,7 +618,7 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it exits 1 when only the dependency cycle check fails (other 9 pass)", func(t *testing.T) {
+	t.Run("it exits 1 when only the dependency cycle check fails (other 10 pass)", func(t *testing.T) {
 		content := `{"id":"tick-aaa111","title":"Task A","status":"open","blocked_by":["tick-bbb222"]}
 {"id":"tick-bbb222","title":"Task B","status":"open","blocked_by":["tick-aaa111"]}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
@@ -629,7 +630,7 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it exits 1 when only the child-blocked-by-parent check fails (other 9 pass)", func(t *testing.T) {
+	t.Run("it exits 1 when only the child-blocked-by-parent check fails (other 10 pass)", func(t *testing.T) {
 		content := `{"id":"tick-aaa111","title":"Parent","status":"open"}
 {"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111","blocked_by":["tick-aaa111"]}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
@@ -718,8 +719,8 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it displays results for all 10 checks in output (10 check labels visible when all pass)", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+	t.Run("it displays results for all 11 checks in output (11 check labels visible when all pass)", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyAllChecksContent())
 
 		stdout, _, _ := runDoctor(t, dir)
 
@@ -758,8 +759,8 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it runs all 10 checks even when early checks fail (no short-circuit)", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContentStale(t, healthyTenCheckContent())
+	t.Run("it runs all 11 checks even when early checks fail (no short-circuit)", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContentStale(t, healthyAllChecksContent())
 
 		stdout, _, _ := runDoctor(t, dir)
 
@@ -770,7 +771,7 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it handles empty tasks.jsonl - all 10 checks report their respective passing/failing results", func(t *testing.T) {
+	t.Run("it handles empty tasks.jsonl - all 11 checks report their respective passing/failing results", func(t *testing.T) {
 		dir, _ := setupDoctorProject(t) // Empty tasks.jsonl, fresh cache.
 
 		stdout, _, exitCode := runDoctor(t, dir)
@@ -785,8 +786,8 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it does not modify tasks.jsonl or cache.db (read-only invariant preserved with 10 checks)", func(t *testing.T) {
-		dir, tickDir := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+	t.Run("it does not modify tasks.jsonl or cache.db (read-only invariant preserved with 11 checks)", func(t *testing.T) {
+		dir, tickDir := setupDoctorProjectWithContent(t, healthyAllChecksContent())
 
 		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
 		cachePath := filepath.Join(tickDir, "cache.db")
@@ -812,15 +813,15 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 
 		if string(jsonlBefore) != string(jsonlAfter) {
-			t.Error("tasks.jsonl was modified by doctor with 10 checks")
+			t.Error("tasks.jsonl was modified by doctor with 11 checks")
 		}
 		if string(cacheBefore) != string(cacheAfter) {
-			t.Error("cache.db was modified by doctor with 10 checks")
+			t.Error("cache.db was modified by doctor with 11 checks")
 		}
 	})
 
-	t.Run("it shows 'No issues found.' summary when all 10 checks pass", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+	t.Run("it shows 'No issues found.' summary when all 11 checks pass", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyAllChecksContent())
 
 		stdout, _, _ := runDoctor(t, dir)
 
@@ -885,7 +886,7 @@ func TestDoctorDuplicateSequence(t *testing.T) {
 	})
 
 	t.Run("it passes the sequence check on records predating the field", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+		dir, _ := setupDoctorProjectWithContent(t, healthyAllChecksContent())
 
 		assertSeqCheckPasses(t, dir)
 	})

@@ -92,11 +92,11 @@ func TestCreateAssignsSequence(t *testing.T) {
 		}
 	})
 
-	t.Run("it keeps a created task's sequence through update, remove, create and rebuild", func(t *testing.T) {
+	t.Run("it keeps a created task's sequence through remove, update, create and rebuild", func(t *testing.T) {
 		dir, tickDir := setupTickProject(t)
-		keptID := createTaskID(t, dir, tickDir, "kept")
 		otherID := createTaskID(t, dir, tickDir, "other")
-		const wantSeq = 1
+		keptID := createTaskID(t, dir, tickDir, "kept")
+		const wantSeq = 2
 
 		assertKept := func(step string) {
 			t.Helper()
@@ -109,10 +109,10 @@ func TestCreateAssignsSequence(t *testing.T) {
 		}
 
 		assertKept("create")
-		runToonCommand(t, dir, "update", keptID, "--title", "kept renamed")
-		assertKept("update")
 		runToonCommand(t, dir, "remove", otherID, "--force")
 		assertKept("remove")
+		runToonCommand(t, dir, "update", keptID, "--title", "kept renamed")
+		assertKept("update")
 		createTaskID(t, dir, tickDir, "later-1")
 		createTaskID(t, dir, tickDir, "later-2")
 		assertKept("further creates")
