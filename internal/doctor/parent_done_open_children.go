@@ -8,9 +8,9 @@ import (
 )
 
 // ParentDoneWithOpenChildrenCheck validates that no parent task marked "done"
-// has children that are still open (status "open" or "in_progress"). This is
-// the only warning-severity check in the doctor suite — it flags suspicious
-// but allowed states. It is read-only and never modifies the file.
+// has children that are still open (status "open" or "in_progress"). It flags
+// a suspicious but allowed state at warning severity. It is read-only and
+// never modifies the file.
 type ParentDoneWithOpenChildrenCheck struct{}
 
 // Run executes the parent-done-with-open-children check. It parses task
