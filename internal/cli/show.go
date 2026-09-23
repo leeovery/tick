@@ -143,7 +143,7 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 
 		// Query children with context.
 		data.children, err = queryRelatedTasks(db,
-			`SELECT id, title, status FROM tasks WHERE parent = ? ORDER BY id`,
+			`SELECT id, title, status FROM tasks WHERE parent = ? ORDER BY created ASC, seq ASC, id ASC`,
 			id,
 		)
 		if err != nil {
