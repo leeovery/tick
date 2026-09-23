@@ -146,7 +146,7 @@ func parseListFlags(flagArgs, _ []string) (ListFilter, error) {
 }
 
 // RunList executes the list command: queries tasks from SQLite with optional filters
-// and outputs them via the Formatter, ordered by priority ASC, then created ASC.
+// and outputs them via the Formatter.
 func RunList(dir string, fc FormatConfig, fmtr Formatter, filter ListFilter, stdout io.Writer) error {
 	store, err := openStore(dir, fc)
 	if err != nil {

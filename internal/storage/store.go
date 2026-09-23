@@ -169,8 +169,9 @@ func (s *Store) ReadTasks() ([]task.Task, error) {
 	return tasks, nil
 }
 
-// Mutate executes a write mutation with exclusive file locking.
-// The full flow: lock -> read JSONL -> freshness check -> mutate -> atomic write -> update cache -> unlock.
+// Mutate executes a write mutation with exclusive file locking. Tasks fn
+// returns without a sequence are numbered, in order, above the highest sequence
+// any returned task carries.
 func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	unlock, err := s.acquireExclusive()
 	if err != nil {
