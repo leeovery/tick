@@ -44,9 +44,9 @@
     "planning": {
       "items": {
         "same-second-tasks-sort-by-id": {
-          "status": "in-progress",
+          "status": "completed",
           "format": "tick",
-          "spec_commit": "e75d42f600fff447e98d827defff5a03730d34b7",
+          "spec_commit": "3aa36c4ce00f39446120cf4b014498564dd016d1",
           "task_list_gate_mode": "auto",
           "author_gate_mode": "auto",
           "finding_gate_mode": "auto",
