@@ -642,21 +642,10 @@ func TestREADMEDocumentsEndOfFlagsMarker(t *testing.T) {
 	})
 
 	t.Run("it states that an argument spelling a global flag is text after the marker", func(t *testing.T) {
-		section := readmeSection(t, "## Global Flags")
-		var prose strings.Builder
-		inFence := false
-		for line := range strings.SplitSeq(section, "\n") {
-			if strings.HasPrefix(line, "```") {
-				inFence = !inFence
-				continue
-			}
-			if !inFence {
-				prose.WriteString(line + "\n")
-			}
-		}
+		prose := readmeProse(readmeSection(t, "## Global Flags"))
 		for _, want := range []string{backticked(endOfFlagsMarker), backticked("--json")} {
-			if !strings.Contains(prose.String(), want) {
-				t.Errorf("README Global Flags prose does not mention %s:\n%s", want, prose.String())
+			if !strings.Contains(prose, want) {
+				t.Errorf("README Global Flags prose does not mention %s:\n%s", want, prose)
 			}
 		}
 	})
@@ -677,6 +666,69 @@ func TestREADMEDocumentsEndOfFlagsMarker(t *testing.T) {
 			}
 			if marked != 1 {
 				t.Errorf("%s section has %d %q invocations, want 1", heading, marked, endOfFlagsMarker)
+			}
+		})
+	}
+}
+
+// readmeProse returns the lines of a README section that sit outside every
+// fenced block.
+func readmeProse(section string) string {
+	var prose strings.Builder
+	inFence := false
+	for line := range strings.SplitSeq(section, "\n") {
+		if strings.HasPrefix(line, "```") {
+			inFence = !inFence
+			continue
+		}
+		if !inFence {
+			prose.WriteString(line + "\n")
+		}
+	}
+	return prose.String()
+}
+
+func TestREADMEDocumentsSortContract(t *testing.T) {
+	prose := readmeProse(readmeSection(t, "### `list`"))
+
+	for _, want := range []string{
+		"sorted by priority (ascending), then creation date",
+		"within a priority band, tasks tied on creation date come back in creation order",
+	} {
+		t.Run("it states "+want, func(t *testing.T) {
+			if !strings.Contains(prose, want) {
+				t.Errorf("README `list` prose does not state %q:\n%s", want, prose)
+			}
+		})
+	}
+}
+
+// readmeDoctorChecks returns the entries of the README `doctor` section's
+// "Checks for:" enumeration.
+func readmeDoctorChecks(t *testing.T) []string {
+	t.Helper()
+	for line := range strings.SplitSeq(readmeProse(readmeSection(t, "### `doctor`")), "\n") {
+		list, ok := strings.CutPrefix(line, "Checks for: ")
+		if !ok {
+			continue
+		}
+		var checks []string
+		for entry := range strings.SplitSeq(strings.TrimSuffix(list, "."), ", ") {
+			checks = append(checks, strings.TrimPrefix(entry, "and "))
+		}
+		return checks
+	}
+	t.Fatal("README `doctor` section has no \"Checks for:\" enumeration")
+	return nil
+}
+
+func TestREADMEDocumentsDuplicateSequenceCheck(t *testing.T) {
+	checks := readmeDoctorChecks(t)
+
+	for _, want := range []string{"duplicates", "duplicate creation sequences"} {
+		t.Run("it lists "+want+" as an entry of its own", func(t *testing.T) {
+			if !slices.Contains(checks, want) {
+				t.Errorf("README `doctor` checks are %q, want an entry %q", checks, want)
 			}
 		})
 	}

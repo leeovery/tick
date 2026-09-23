@@ -112,7 +112,7 @@ tick create -- "--dry-run support"     # -- passes a dash-leading title
 
 ### `list`
 
-List tasks with optional filters. Results are sorted by priority (ascending), then creation date.
+List tasks with optional filters. Results are sorted by priority (ascending), then creation date; within a priority band, tasks tied on creation date come back in creation order.
 
 ```bash
 tick list [flags]
@@ -393,7 +393,7 @@ Run diagnostic checks against your task data. Read-only, never modifies data.
 tick doctor
 ```
 
-Checks for: JSONL syntax errors, invalid IDs, duplicates, orphaned references, self-referential dependencies, dependency cycles, parent/child constraint violations, and cache staleness.
+Checks for: JSONL syntax errors, invalid IDs, duplicates, duplicate creation sequences, orphaned references, self-referential dependencies, dependency cycles, parent/child constraint violations, and cache staleness.
 
 ### `rebuild`
 
