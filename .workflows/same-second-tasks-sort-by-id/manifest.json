@@ -135,7 +135,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 2,
-          "current_task": "same-second-tasks-sort-by-id-2-3",
+          "current_task": null,
           "completed_tasks": [
             "same-second-tasks-sort-by-id-1-1",
             "same-second-tasks-sort-by-id-1-2",
@@ -144,7 +144,8 @@
             "same-second-tasks-sort-by-id-1-5",
             "same-second-tasks-sort-by-id-1-6",
             "same-second-tasks-sort-by-id-2-1",
-            "same-second-tasks-sort-by-id-2-2"
+            "same-second-tasks-sort-by-id-2-2",
+            "same-second-tasks-sort-by-id-2-3"
           ],
           "staging": {
             "p1": {
