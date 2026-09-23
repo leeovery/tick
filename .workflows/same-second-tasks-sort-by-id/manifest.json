@@ -67,7 +67,8 @@
             "same-second-tasks-sort-by-id-3-1": "tick-deafbb",
             "same-second-tasks-sort-by-id-3": "tick-4018d0",
             "same-second-tasks-sort-by-id-3-2": "tick-1867d8",
-            "same-second-tasks-sort-by-id-3-3": "tick-1e70a2"
+            "same-second-tasks-sort-by-id-3-3": "tick-1e70a2",
+            "same-second-tasks-sort-by-id-1-6": "tick-ac4d88"
           },
           "storage_paths": [
             ".tick/"
@@ -97,7 +98,7 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "auto",
           "analysis_gate_mode": "gated",
-          "consolidation_gate_mode": "gated",
+          "consolidation_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle_total": 0,
           "linters": [
@@ -142,43 +143,15 @@
             "same-second-tasks-sort-by-id-1-4",
             "same-second-tasks-sort-by-id-1-5"
           ],
-          "bank": [
-            {
-              "task": "same-second-tasks-sort-by-id-1-4",
-              "source": "reviewer",
-              "summary": "Create-sequence tests read stored sequences through the backfilling parser, so three no longer check what create writes",
-              "failure": "If create stops assigning a sequence, the subtests named for the stored sequence still pass (backfill renumbers on read); Task 1-5 import-order checks through readPersistedTasks would pass with no implementation",
-              "detail": "persistedSeqs (internal/cli/create_seq_test.go:26-33) and the slice at :67-78 read via readPersistedTasks -> storage.ReadJSONL (internal/cli/create_test.go:49-57), which now backfills; :61-80, :82-94, :124-142 pass with Seq: task.NextSeq(tasks) removed from create.go:221. Fix: decode raw seq as rawSeqs does (internal/cli/backfill_seq_test.go:23-43)",
-              "files": [
-                "internal/cli/create_seq_test.go",
-                "internal/cli/create_test.go",
-                "internal/cli/backfill_seq_test.go"
-              ]
-            },
-            {
-              "task": "same-second-tasks-sort-by-id-1-4",
-              "source": "reviewer",
-              "summary": "Store.Mutate rebuilds the cache from the mutated slice, not a parse of the written bytes, so an appended unnumbered task caches at seq 0 while every fresh parse backfills a number",
-              "failure": "After such a write, tick list / tick ready put the unnumbered task first among same-second peers until the next write, and tick rebuild changes the listed order: the silent misordering the feature removes; reachable today via tick migrate (StoreTaskCreator assigns no seq until Task 1-5)",
-              "detail": "internal/storage/store.go:193-206 writes MarshalJSONL(mutated) and calls cache.Rebuild(mutated, newRawJSONL); internal/migrate/store_creator.go:76-87 appends task.Task with no Seq. Structural fix: call backfillSeqs(mutated) in Mutate before marshalling so no write can store an unnumbered record and the cache equals a parse of the file bytes",
-              "files": [
-                "internal/storage/store.go",
-                "internal/storage/jsonl.go",
-                "internal/migrate/store_creator.go"
-              ]
-            },
-            {
-              "task": "same-second-tasks-sort-by-id-1-5",
-              "source": "reviewer",
-              "summary": "The sequence invariant depends on every task-creation site calling NextSeq; Store.Mutate does not backfill the mutated slice before writing and caching it",
-              "failure": "Any creation path leaving Seq at 0 reproduces the fixed defect: the cache is rebuilt from the mutated slice at seq 0, the next read sees a matching hash and does not refresh, and the newest task lists first among same-second same-priority ties, silently; task.NewTask (internal/task/task.go:284) builds exactly such a task and is the obvious trap for the next creation path",
-              "detail": "Running the numbering pass from internal/storage/jsonl.go:124-127 over mutated in Store.Mutate (internal/storage/store.go:188-205) before MarshalJSONL makes file and cache agree whatever the caller supplied; alternatively NewTask takes the task set and assigns NextSeq, or is deleted as dead production code",
-              "files": [
-                "internal/storage/store.go",
-                "internal/storage/jsonl.go",
-                "internal/task/task.go"
-              ]
+          "staging": {
+            "p1": {
+              "tasks": {
+                "1": "approved"
+              }
             }
+          },
+          "consolidated_phases": [
+            1
           ]
         }
       }
