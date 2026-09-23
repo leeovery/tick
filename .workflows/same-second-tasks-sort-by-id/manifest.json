@@ -95,7 +95,7 @@
         "same-second-tasks-sort-by-id": {
           "status": "in-progress",
           "task_gate_mode": "auto",
-          "fix_gate_mode": "gated",
+          "fix_gate_mode": "auto",
           "analysis_gate_mode": "gated",
           "consolidation_gate_mode": "gated",
           "fix_attempts": 0,
@@ -134,9 +134,10 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 1,
-          "current_task": "same-second-tasks-sort-by-id-1-2",
+          "current_task": "same-second-tasks-sort-by-id-1-3",
           "completed_tasks": [
-            "same-second-tasks-sort-by-id-1-1"
+            "same-second-tasks-sort-by-id-1-1",
+            "same-second-tasks-sort-by-id-1-2"
           ]
         }
       }
