@@ -173,7 +173,7 @@
     "review": {
       "items": {
         "same-second-tasks-sort-by-id": {
-          "status": "in-progress",
+          "status": "completed",
           "reviewed_tasks": [
             "same-second-tasks-sort-by-id-1-1",
             "same-second-tasks-sort-by-id-1-2",
