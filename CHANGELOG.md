@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-09-23
+
+✨ Added
+- `doctor` now flags duplicate creation sequences — surfaced as a warning naming the affected tasks and lines.
+
+🔧 Changed
+- Same-second, same-priority tasks now list, ready, and show in creation order instead of an unstable tie-break, including across `list`, `ready`, `blocked`, and a parent's `children`/`blocked_by` sections.
+- Cache schema bumped to v3 to store each task's creation sequence and dependency declaration order, with automatic rebuild from older caches.
+- Tasks written before this release are backfilled with a sequence number on first read, in file order, with no visible change to existing output.
+
 ## [0.3.0] - 2026-09-21
 
 ✨ Added
