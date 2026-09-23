@@ -1,0 +1,7 @@
+AGENT: duplication
+FINDINGS: none
+COMMENT_CORRECTIONS:
+- internal/storage/store.go:173 — the step list copies Mutate's body and has already drifted from it: this work added a numbering step (`backfillSeqs(mutated)`, :191) between mutate and the atomic write, which the "full flow" leaves out
+  OLD: // The full flow: lock -> read JSONL -> freshness check -> mutate -> atomic write -> update cache -> unlock.
+  NEW:
+SUMMARY: None of the duplication clears the floor. The creation-order key `created ASC, seq ASC, id ASC` appears three times (list.go:313 ready view, :315 neutral view, show.go:146 children), but tests check every term at every site: the ready ID term through the ready assertion in the shared-sequence loop at list_order_test.go:424, and the children terms through TestShowChildrenOrder, so any drift would fail a test. The numbering rule has a single body. Creation (create.go:221, store_creator.go:82), the read-time backfill (jsonl.go:116) and the write-time backfill (store.go:191) all go through `task.NextSeq`. The rule that a zero sequence means "none" matches between storage and doctor, as phase 3 already confirmed. The repeated test helpers (`listedIDs`, `shownChildIDs`, `shownBlockerIDs`, `sectionIDs`; `seqLine`, `bareLine`, `childLine`, `fixtureTask.line`) are duplication for reuse only. Each one fails the test when its section is missing (toonRows fatals), so none of them passes while checking nothing.
