@@ -1,7 +1,7 @@
 {
   "leeovery/agentic-workflows": {
-    "ref": "v0.7.77",
-    "commit": "1b1fc3a1857c5b5ba248553a681a370baa225d71",
+    "ref": "v0.7.78",
+    "commit": "c835d98330b45b980081664c11c357a51478cbb7",
     "agents": [
       "claude"
     ],
@@ -558,6 +558,7 @@
       ".claude/skills/workflow-shared/references/backlogging.md",
       ".claude/skills/workflow-shared/references/cancelling-the-topic.md",
       ".claude/skills/workflow-shared/references/casing-conventions.md",
+      ".claude/skills/workflow-shared/references/choosing-a-horizon.md",
       ".claude/skills/workflow-shared/references/closing-recap.md",
       ".claude/skills/workflow-shared/references/code-session-gate.md",
       ".claude/skills/workflow-shared/references/compliance-check.md",
@@ -577,9 +578,11 @@
       ".claude/skills/workflow-shared/references/natural-breaks.md",
       ".claude/skills/workflow-shared/references/off-topic-epic.md",
       ".claude/skills/workflow-shared/references/pivot-to-epic.md",
+      ".claude/skills/workflow-shared/references/postponing-the-topic.md",
       ".claude/skills/workflow-shared/references/product-lens.md",
       ".claude/skills/workflow-shared/references/raising-a-decision.md",
       ".claude/skills/workflow-shared/references/read-brief-context.md",
+      ".claude/skills/workflow-shared/references/read-prior-record.md",
       ".claude/skills/workflow-shared/references/reconcile-advisory.md",
       ".claude/skills/workflow-shared/references/rerouted-concerns.md",
       ".claude/skills/workflow-shared/references/resume-detection.md",
@@ -696,7 +699,7 @@
     ],
     "type": "plugin",
     "cloneUrl": "https://github.com/leeovery/agentic-workflows.git",
-    "installedAt": "2026-09-22T14:16:58.110Z",
+    "installedAt": "2026-09-23T21:28:24.448Z",
     "constraint": "^0.7.54"
   },
   "samber/cc-skills-golang": {

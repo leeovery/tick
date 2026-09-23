@@ -46,6 +46,12 @@ Set source="continue".
 
 → Return to caller.
 
+#### If status is `postponed`
+
+The topic waits on the roadmap — it returns through the epic menu's `f/forward` row, never through entry. Tell the user in one line.
+
+**STOP.** Do not proceed — terminal condition.
+
 #### Otherwise
 
 The discussion is cancelled — its topic returns through the epic menu's reactivate option, never through entry. Tell the user in one line.
