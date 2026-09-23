@@ -314,3 +314,112 @@ func TestSequenceNotSurfaced(t *testing.T) {
 		}
 	})
 }
+
+// fixtureTask is one stored task record for ordering fixtures; every record is
+// created and updated at sameSecond with priority 2.
+type fixtureTask struct {
+	id, status, parent string
+	blockedBy          []string
+	seq                int
+}
+
+func (f fixtureTask) line(t *testing.T) string {
+	t.Helper()
+	record := map[string]any{
+		"id":       f.id,
+		"title":    "task " + f.id,
+		"status":   f.status,
+		"priority": 2,
+		"seq":      f.seq,
+		"created":  sameSecond,
+		"updated":  sameSecond,
+	}
+	if f.parent != "" {
+		record["parent"] = f.parent
+	}
+	if len(f.blockedBy) > 0 {
+		record["blocked_by"] = f.blockedBy
+	}
+	b, err := json.Marshal(record)
+	if err != nil {
+		t.Fatalf("failed to marshal fixture task: %v", err)
+	}
+	return string(b)
+}
+
+func fixtureLines(t *testing.T, tasks ...fixtureTask) []string {
+	t.Helper()
+	lines := make([]string, len(tasks))
+	for i, f := range tasks {
+		lines[i] = f.line(t)
+	}
+	return lines
+}
+
+func TestTotalListFamilyOrdering(t *testing.T) {
+	t.Run("it keeps a later-authored in_progress task above tied open tasks in ready", func(t *testing.T) {
+		const (
+			open1ID      = "tick-e00001"
+			open2ID      = "tick-d00002"
+			open3ID      = "tick-c00003"
+			inProgressID = "tick-a00004"
+		)
+		dir, _ := setupRawProject(t, fixtureLines(t,
+			fixtureTask{id: open1ID, status: "open", seq: 1},
+			fixtureTask{id: open2ID, status: "open", seq: 2},
+			fixtureTask{id: open3ID, status: "open", seq: 3},
+			fixtureTask{id: inProgressID, status: "in_progress", seq: 4},
+		)...)
+
+		want := []string{inProgressID, open1ID, open2ID, open3ID}
+		assertIDOrder(t, listedIDs(t, dir, "ready"), want)
+	})
+
+	t.Run("it lists same-second blocked tasks in authoring order", func(t *testing.T) {
+		const (
+			blockerID  = "tick-000b10"
+			blocked1ID = "tick-e00001"
+			blocked2ID = "tick-d00002"
+			blocked3ID = "tick-c00003"
+		)
+		blockers := []string{blockerID}
+		dir, _ := setupRawProject(t, fixtureLines(t,
+			fixtureTask{id: blockerID, status: "open", seq: 1},
+			fixtureTask{id: blocked1ID, status: "open", seq: 2, blockedBy: blockers},
+			fixtureTask{id: blocked2ID, status: "open", seq: 3, blockedBy: blockers},
+			fixtureTask{id: blocked3ID, status: "open", seq: 4, blockedBy: blockers},
+		)...)
+
+		want := []string{blocked1ID, blocked2ID, blocked3ID}
+		assertIDOrder(t, listedIDs(t, dir, "blocked"), want)
+	})
+
+	t.Run("it falls back to ascending ID order for children sharing a sequence", func(t *testing.T) {
+		// Line order c, a, d, b contradicts ascending-ID order a, b, c, d.
+		const (
+			parentID  = "tick-f00000"
+			childA    = "tick-a00000"
+			childB    = "tick-b00000"
+			childC    = "tick-c00000"
+			childD    = "tick-d00000"
+			sharedSeq = 7
+		)
+		dir, _ := setupRawProject(t, fixtureLines(t,
+			fixtureTask{id: parentID, status: "open", seq: 1},
+			fixtureTask{id: childC, status: "open", parent: parentID, seq: sharedSeq},
+			fixtureTask{id: childA, status: "open", parent: parentID, seq: sharedSeq},
+			fixtureTask{id: childD, status: "open", parent: parentID, seq: sharedSeq},
+			fixtureTask{id: childB, status: "open", parent: parentID, seq: sharedSeq},
+		)...)
+
+		children := []string{childA, childB, childC, childD}
+		for run := range 3 {
+			assertIDOrder(t, listedIDs(t, dir, "list"), append([]string{parentID}, children...))
+			assertIDOrder(t, listedIDs(t, dir, "list", "--parent", parentID), children)
+			assertIDOrder(t, listedIDs(t, dir, "ready"), children)
+			if t.Failed() {
+				t.Fatalf("order diverged on run %d", run+1)
+			}
+		}
+	})
+}
