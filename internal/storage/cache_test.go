@@ -43,7 +43,7 @@ func TestCacheSchema(t *testing.T) {
 
 		// Verify dependencies table exists with correct columns
 		depCols := queryColumns(t, db, "dependencies")
-		expectedDepCols := map[string]bool{"task_id": true, "blocked_by": true}
+		expectedDepCols := map[string]bool{"task_id": true, "blocked_by": true, "ordinal": true}
 		if len(depCols) != len(expectedDepCols) {
 			t.Errorf("dependencies table: expected %d columns, got %d: %v", len(expectedDepCols), len(depCols), depCols)
 		}

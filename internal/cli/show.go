@@ -134,7 +134,7 @@ func queryShowData(store *storage.Store, id string) (showData, error) {
 
 		// Query blocked_by dependencies with context.
 		data.blockedBy, err = queryRelatedTasks(db,
-			`SELECT t.id, t.title, t.status FROM dependencies d JOIN tasks t ON d.blocked_by = t.id WHERE d.task_id = ? ORDER BY t.id`,
+			`SELECT t.id, t.title, t.status FROM dependencies d JOIN tasks t ON d.blocked_by = t.id WHERE d.task_id = ? ORDER BY d.ordinal`,
 			id,
 		)
 		if err != nil {

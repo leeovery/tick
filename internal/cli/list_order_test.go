@@ -144,7 +144,8 @@ CREATE TABLE task_transitions (task_id TEXT NOT NULL, from_status TEXT NOT NULL,
 CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT);
 `
 
-// createV2Cache writes a cache.db shaped as schema version 2 — no seq column —
+// createV2Cache writes a cache.db shaped as schema version 2 — no seq column,
+// no dependency ordinal —
 // holding the project's tasks and a hash matching its tasks.jsonl, so only the
 // version is stale.
 func createV2Cache(t *testing.T, tickDir string) {
@@ -173,6 +174,11 @@ func createV2Cache(t *testing.T, tickDir string) {
 			tk.ID, tk.Title, string(tk.Status), tk.Priority, tk.Parent, sameSecond, sameSecond,
 		); err != nil {
 			t.Fatalf("failed to insert v2 task row: %v", err)
+		}
+		for _, blocker := range tk.BlockedBy {
+			if _, err := db.Exec(`INSERT INTO dependencies (task_id, blocked_by) VALUES (?, ?)`, tk.ID, blocker); err != nil {
+				t.Fatalf("failed to insert v2 dependency row: %v", err)
+			}
 		}
 	}
 	hash := sha256.Sum256(raw)

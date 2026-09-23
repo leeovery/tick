@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE TABLE IF NOT EXISTS dependencies (
   task_id TEXT NOT NULL,
   blocked_by TEXT NOT NULL,
+  ordinal INTEGER NOT NULL,
   PRIMARY KEY (task_id, blocked_by)
 );
 
@@ -141,7 +142,7 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 	}
 	defer insertTask.Close()
 
-	insertDep, err := tx.Prepare(`INSERT INTO dependencies (task_id, blocked_by) VALUES (?, ?)`)
+	insertDep, err := tx.Prepare(`INSERT INTO dependencies (task_id, blocked_by, ordinal) VALUES (?, ?, ?)`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare dependency insert: %w", err)
 	}
@@ -209,8 +210,8 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 			return fmt.Errorf("failed to insert task %s: %w", t.ID, err)
 		}
 
-		for _, dep := range t.BlockedBy {
-			if _, err := insertDep.Exec(t.ID, dep); err != nil {
+		for i, dep := range t.BlockedBy {
+			if _, err := insertDep.Exec(t.ID, dep, i); err != nil {
 				return fmt.Errorf("failed to insert dependency %s -> %s: %w", t.ID, dep, err)
 			}
 		}
