@@ -269,6 +269,16 @@ func FormatTimestamp(t time.Time) string {
 	return t.UTC().Format(TimestampFormat)
 }
 
+// NextSeq returns the creation sequence a new task takes: one above the
+// highest sequence in tasks, or 1 when none carries one.
+func NextSeq(tasks []Task) int {
+	highest := 0
+	for _, t := range tasks {
+		highest = max(highest, t.Seq)
+	}
+	return highest + 1
+}
+
 // NewTask creates a new Task with the given title and default values.
 // The exists function is used for ID collision detection; pass nil to skip collision checks.
 func NewTask(title string, exists func(id string) bool) (*Task, error) {

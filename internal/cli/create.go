@@ -218,6 +218,7 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals [
 			Description: task.TrimDescription(opts.description),
 			BlockedBy:   opts.blockedBy,
 			Parent:      opts.parent,
+			Seq:         task.NextSeq(tasks),
 			Created:     now,
 			Updated:     now,
 		}

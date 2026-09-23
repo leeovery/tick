@@ -647,3 +647,26 @@ func TestValidateTypeNotEmpty(t *testing.T) {
 		}
 	})
 }
+
+func TestNextSeq(t *testing.T) {
+	cases := []struct {
+		name string
+		seqs []int
+		want int
+	}{
+		{"it starts at 1 for no tasks", nil, 1},
+		{"it starts at 1 when no task carries a sequence", []int{0, 0}, 1},
+		{"it numbers one above the highest, not the last or the count", []int{3, 7, 5}, 8},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tasks := make([]Task, len(tc.seqs))
+			for i, s := range tc.seqs {
+				tasks[i] = Task{Seq: s}
+			}
+			if got := NextSeq(tasks); got != tc.want {
+				t.Errorf("NextSeq = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
