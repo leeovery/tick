@@ -258,4 +258,39 @@ func TestStoreTaskCreator(t *testing.T) {
 			t.Errorf("priority = %d, want 0", tk.Priority)
 		}
 	})
+
+	t.Run("StoreTaskCreator numbers the task one above the highest sequence in the store", func(t *testing.T) {
+		store := &mockStore{tasks: []task.Task{
+			{ID: "tick-aaa111", Seq: 3},
+			{ID: "tick-bbb222", Seq: 7},
+			{ID: "tick-ccc333", Seq: 5},
+		}}
+		creator := NewStoreTaskCreator(store)
+
+		id, err := creator.CreateTask(MigratedTask{Title: "Imported"})
+		if err != nil {
+			t.Fatalf("CreateTask returned error: %v", err)
+		}
+
+		tk := store.mutated[len(store.mutated)-1]
+		if tk.ID != id {
+			t.Fatalf("last task ID = %q, want created %q", tk.ID, id)
+		}
+		if tk.Seq != 8 {
+			t.Errorf("seq = %d, want 8", tk.Seq)
+		}
+	})
+
+	t.Run("StoreTaskCreator numbers the first task 1 in an empty store", func(t *testing.T) {
+		store := &mockStore{}
+		creator := NewStoreTaskCreator(store)
+
+		if _, err := creator.CreateTask(MigratedTask{Title: "Imported"}); err != nil {
+			t.Fatalf("CreateTask returned error: %v", err)
+		}
+
+		if got := store.mutated[0].Seq; got != 1 {
+			t.Errorf("seq = %d, want 1", got)
+		}
+	})
 }

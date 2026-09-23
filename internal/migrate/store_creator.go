@@ -79,6 +79,7 @@ func (c *StoreTaskCreator) CreateTask(mt MigratedTask) (string, error) {
 			Status:      status,
 			Priority:    priority,
 			Description: mt.Description,
+			Seq:         task.NextSeq(tasks),
 			Created:     created,
 			Updated:     updated,
 			Closed:      closed,
