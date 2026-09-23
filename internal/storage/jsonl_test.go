@@ -206,6 +206,40 @@ func TestReadJSONL(t *testing.T) {
 }
 
 func TestRoundTrip(t *testing.T) {
+	t.Run("it round-trips the creation sequence byte-identically", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		original := []task.Task{
+			{ID: "tick-a1b2c3", Title: "Sequenced", Status: task.StatusOpen, Priority: 2, Seq: 7, Created: created, Updated: created},
+		}
+
+		first, err := MarshalJSONL(original)
+		if err != nil {
+			t.Fatalf("MarshalJSONL returned error: %v", err)
+		}
+		if !strings.Contains(string(first), `"seq":7`) {
+			t.Fatalf("written record carries no seq: %s", first)
+		}
+
+		parsed, err := ParseJSONL(first)
+		if err != nil {
+			t.Fatalf("ParseJSONL returned error: %v", err)
+		}
+		if len(parsed) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(parsed))
+		}
+		if parsed[0].Seq != 7 {
+			t.Errorf("Seq = %d, want 7", parsed[0].Seq)
+		}
+
+		second, err := MarshalJSONL(parsed)
+		if err != nil {
+			t.Fatalf("MarshalJSONL returned error: %v", err)
+		}
+		if string(second) != string(first) {
+			t.Errorf("second write differs\nfirst:  %s\nsecond: %s", first, second)
+		}
+	})
+
 	t.Run("it omits optional fields when empty", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "tasks.jsonl")

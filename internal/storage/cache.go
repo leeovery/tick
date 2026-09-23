@@ -12,7 +12,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 const schemaSQL = `
 CREATE TABLE IF NOT EXISTS tasks (
@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   parent TEXT,
   created TEXT NOT NULL,
   updated TEXT NOT NULL,
-  closed TEXT
+  closed TEXT,
+  seq INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS dependencies (
@@ -134,7 +135,7 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 	}
 
 	// Insert all tasks.
-	insertTask, err := tx.Prepare(`INSERT INTO tasks (id, title, status, priority, description, type, parent, created, updated, closed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	insertTask, err := tx.Prepare(`INSERT INTO tasks (id, title, status, priority, description, type, parent, created, updated, closed, seq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare task insert: %w", err)
 	}
@@ -203,6 +204,7 @@ func (c *Cache) Rebuild(tasks []task.Task, rawJSONL []byte) error {
 			task.FormatTimestamp(t.Created),
 			task.FormatTimestamp(t.Updated),
 			closedStr,
+			t.Seq,
 		); err != nil {
 			return fmt.Errorf("failed to insert task %s: %w", t.ID, err)
 		}

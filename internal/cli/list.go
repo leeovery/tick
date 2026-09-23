@@ -311,12 +311,12 @@ func buildListQuery(f ListFilter, descendantIDs []string) (string, []any) {
 	}
 	if f.Ready {
 		// Resume-first ordering for the ready view: in_progress floats to the top
-		// as a band; within each band the existing priority ASC, created ASC holds.
+		// as a band; within each band the neutral clause's order below holds.
 		// With zero in_progress rows the band term is uniformly false (no-op), so
 		// ordering is byte-identical to the neutral clause below.
-		query += " ORDER BY (t.status = 'in_progress') DESC, t.priority ASC, t.created ASC"
+		query += " ORDER BY (t.status = 'in_progress') DESC, t.priority ASC, t.created ASC, t.seq ASC"
 	} else {
-		query += " ORDER BY t.priority ASC, t.created ASC"
+		query += " ORDER BY t.priority ASC, t.created ASC, t.seq ASC"
 	}
 
 	if f.HasCount {

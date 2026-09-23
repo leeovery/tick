@@ -30,7 +30,7 @@ func TestCacheSchema(t *testing.T) {
 		expectedTaskCols := map[string]bool{
 			"id": true, "title": true, "status": true, "priority": true,
 			"type": true, "description": true, "parent": true, "created": true,
-			"updated": true, "closed": true,
+			"updated": true, "closed": true, "seq": true,
 		}
 		if len(taskCols) != len(expectedTaskCols) {
 			t.Errorf("tasks table: expected %d columns, got %d: %v", len(expectedTaskCols), len(taskCols), taskCols)
@@ -211,6 +211,33 @@ func queryIndexes(t *testing.T, db *sql.DB) map[string]bool {
 }
 
 func TestCacheRebuild(t *testing.T) {
+	t.Run("it stores each task's creation sequence in the seq column", func(t *testing.T) {
+		cache, err := OpenCache(filepath.Join(t.TempDir(), "cache.db"))
+		if err != nil {
+			t.Fatalf("OpenCache returned error: %v", err)
+		}
+		defer cache.Close()
+
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-bbb222", Title: "Second", Status: task.StatusOpen, Priority: 2, Seq: 2, Created: created, Updated: created},
+			{ID: "tick-aaa111", Title: "First", Status: task.StatusOpen, Priority: 2, Seq: 9, Created: created, Updated: created},
+		}
+		if err := cache.Rebuild(tasks, []byte("seq")); err != nil {
+			t.Fatalf("Rebuild returned error: %v", err)
+		}
+
+		for _, want := range tasks {
+			var seq int
+			if err := cache.DB().QueryRow("SELECT seq FROM tasks WHERE id = ?", want.ID).Scan(&seq); err != nil {
+				t.Fatalf("querying seq for %s: %v", want.ID, err)
+			}
+			if seq != want.Seq {
+				t.Errorf("seq for %s = %d, want %d", want.ID, seq, want.Seq)
+			}
+		}
+	})
+
 	t.Run("it rebuilds cache from parsed tasks — all fields round-trip correctly", func(t *testing.T) {
 		dir := t.TempDir()
 		dbPath := filepath.Join(dir, "cache.db")
@@ -1136,8 +1163,8 @@ func TestSchemaVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("querying schema_version: %v", err)
 		}
-		if value != "2" {
-			t.Errorf("schema_version = %q, want %q", value, "2")
+		if value != "3" {
+			t.Errorf("schema_version = %q, want %q", value, "3")
 		}
 	})
 
@@ -1159,8 +1186,8 @@ func TestSchemaVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("SchemaVersion returned error: %v", err)
 		}
-		if version != 2 {
-			t.Errorf("SchemaVersion() = %d, want %d", version, 2)
+		if version != 3 {
+			t.Errorf("SchemaVersion() = %d, want %d", version, 3)
 		}
 	})
 
@@ -1240,8 +1267,8 @@ func TestSchemaVersion(t *testing.T) {
 		if err != nil {
 			t.Fatalf("SchemaVersion returned error: %v", err)
 		}
-		if version != 2 {
-			t.Errorf("SchemaVersion() = %d, want %d (original should be preserved)", version, 2)
+		if version != 3 {
+			t.Errorf("SchemaVersion() = %d, want %d (original should be preserved)", version, 3)
 		}
 
 		// Verify jsonl_hash was also NOT updated (still from valid rebuild).
@@ -1258,8 +1285,8 @@ func TestSchemaVersion(t *testing.T) {
 
 	t.Run("it returns compiled-in version via CurrentSchemaVersion()", func(t *testing.T) {
 		version := CurrentSchemaVersion()
-		if version != 2 {
-			t.Errorf("CurrentSchemaVersion() = %d, want %d", version, 2)
+		if version != 3 {
+			t.Errorf("CurrentSchemaVersion() = %d, want %d", version, 3)
 		}
 	})
 }
@@ -1750,10 +1777,9 @@ func TestTaskTransitionsSchema(t *testing.T) {
 	})
 
 	t.Run("it triggers rebuild on schema version mismatch", func(t *testing.T) {
-		// This test verifies the schema version constant changed to 2.
 		version := CurrentSchemaVersion()
-		if version != 2 {
-			t.Errorf("CurrentSchemaVersion() = %d, want %d", version, 2)
+		if version != 3 {
+			t.Errorf("CurrentSchemaVersion() = %d, want %d", version, 3)
 		}
 	})
 }

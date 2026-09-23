@@ -54,6 +54,7 @@ type Task struct {
 	Transitions []TransitionRecord `json:"transitions,omitempty"`
 	BlockedBy   []string           `json:"blocked_by,omitempty"`
 	Parent      string             `json:"parent,omitempty"`
+	Seq         int                `json:"seq,omitempty"` // creation sequence; zero means none
 	Created     time.Time          `json:"-"`
 	Updated     time.Time          `json:"-"`
 	Closed      *time.Time         `json:"-"`
@@ -73,6 +74,7 @@ type taskJSON struct {
 	Transitions []TransitionRecord `json:"transitions,omitempty"`
 	BlockedBy   []string           `json:"blocked_by,omitempty"`
 	Parent      string             `json:"parent,omitempty"`
+	Seq         int                `json:"seq,omitempty"`
 	Created     string             `json:"created"`
 	Updated     string             `json:"updated"`
 	Closed      string             `json:"closed,omitempty"`
@@ -93,6 +95,7 @@ func (t Task) MarshalJSON() ([]byte, error) {
 		Transitions: t.Transitions,
 		BlockedBy:   t.BlockedBy,
 		Parent:      t.Parent,
+		Seq:         t.Seq,
 		Created:     FormatTimestamp(t.Created),
 		Updated:     FormatTimestamp(t.Updated),
 	}
@@ -130,6 +133,7 @@ func (t *Task) UnmarshalJSON(data []byte) error {
 	t.Transitions = jt.Transitions
 	t.BlockedBy = jt.BlockedBy
 	t.Parent = jt.Parent
+	t.Seq = jt.Seq
 	t.Created = created
 	t.Updated = updated
 
