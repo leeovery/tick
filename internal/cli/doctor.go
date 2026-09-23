@@ -9,9 +9,10 @@ import (
 )
 
 // RunDoctor executes the doctor diagnostic command. It creates a DiagnosticRunner,
-// registers all 10 checks (CacheStalenessCheck, JsonlSyntaxCheck, IdFormatCheck,
+// registers all 11 checks (CacheStalenessCheck, JsonlSyntaxCheck, IdFormatCheck,
 // DuplicateIdCheck, OrphanedParentCheck, OrphanedDependencyCheck, SelfReferentialDepCheck,
-// DependencyCycleCheck, ChildBlockedByParentCheck, ParentDoneWithOpenChildrenCheck),
+// DependencyCycleCheck, ChildBlockedByParentCheck, ParentDoneWithOpenChildrenCheck,
+// DuplicateSeqCheck),
 // runs all checks, formats the output to stdout, and returns the appropriate exit code.
 // Doctor is read-only and never modifies data.
 func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
@@ -26,6 +27,7 @@ func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
 	runner.Register(&doctor.DependencyCycleCheck{})
 	runner.Register(&doctor.ChildBlockedByParentCheck{})
 	runner.Register(&doctor.ParentDoneWithOpenChildrenCheck{})
+	runner.Register(&doctor.DuplicateSeqCheck{})
 
 	ctx := context.Background()
 

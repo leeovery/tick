@@ -322,10 +322,9 @@ func TestDoctorFourChecks(t *testing.T) {
 
 		stdout, _, _ := runDoctor(t, dir)
 
-		// Count check marks — should have 10 passing checks (4 original + 6 relationship/hierarchy).
 		checkCount := strings.Count(stdout, "\u2713")
-		if checkCount != 10 {
-			t.Errorf("expected 10 check marks, got %d; stdout = %q", checkCount, stdout)
+		if checkCount != 11 {
+			t.Errorf("expected 11 check marks, got %d; stdout = %q", checkCount, stdout)
 		}
 	})
 
@@ -567,14 +566,14 @@ func TestDoctorTenChecks(t *testing.T) {
 		}
 	})
 
-	t.Run("it runs all 10 checks in a single tick doctor invocation", func(t *testing.T) {
+	t.Run("it runs all 11 checks in a single tick doctor invocation", func(t *testing.T) {
 		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
 
 		stdout, _, _ := runDoctor(t, dir)
 
 		checkCount := strings.Count(stdout, "\u2713")
-		if checkCount != 10 {
-			t.Errorf("expected 10 check marks, got %d; stdout = %q", checkCount, stdout)
+		if checkCount != 11 {
+			t.Errorf("expected 11 check marks, got %d; stdout = %q", checkCount, stdout)
 		}
 	})
 
@@ -832,5 +831,89 @@ func TestDoctorTenChecks(t *testing.T) {
 		if !strings.Contains(stdout, "No issues found.") {
 			t.Errorf("stdout should contain 'No issues found.', got %q", stdout)
 		}
+	})
+}
+
+const seqCheckPassLine = "✓ Sequence uniqueness: OK\n"
+
+func assertSeqCheckPasses(t *testing.T, dir string) {
+	t.Helper()
+	stdout, stderr, exitCode := runDoctor(t, dir)
+	if exitCode != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr = %q; stdout = %q", exitCode, stderr, stdout)
+	}
+	if got := strings.Count(stdout, seqCheckPassLine); got != 1 {
+		t.Errorf("stdout carries %d passing sequence-uniqueness lines, want 1; stdout = %q", got, stdout)
+	}
+	if strings.Contains(stdout, "✗ Sequence uniqueness") {
+		t.Errorf("stdout reports a sequence-uniqueness failure; stdout = %q", stdout)
+	}
+}
+
+func TestDoctorDuplicateSequence(t *testing.T) {
+	t.Run("it warns on two records sharing a sequence and exits 0", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"First","status":"open","seq":3}
+{"id":"tick-bbb222","title":"Second","status":"open","seq":3}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		stdout, stderr, exitCode := runDoctor(t, dir)
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		want := "✗ Sequence uniqueness: Duplicate sequence 3: tick-aaa111 (line 1), tick-bbb222 (line 2)\n" +
+			"  → Edit the seq values in tasks.jsonl so they differ\n"
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout should contain %q, got %q", want, stdout)
+		}
+		if got := strings.Count(stdout, "✓"); got != 10 {
+			t.Errorf("expected the 10 other checks passing, got %d check marks; stdout = %q", got, stdout)
+		}
+		if !strings.HasSuffix(stdout, "\n1 issue found.\n") {
+			t.Errorf("stdout should end with the 1 issue summary, got %q", stdout)
+		}
+	})
+
+	t.Run("it passes the sequence check alongside the ten other checks when sequences are distinct", func(t *testing.T) {
+		content := `{"id":"tick-aaa111","title":"First","status":"open","seq":1}
+{"id":"tick-bbb222","title":"Second","status":"open","seq":2}
+{"id":"tick-ccc333","title":"Third","status":"done","seq":3}`
+		dir, _ := setupDoctorProjectWithContent(t, content)
+
+		assertSeqCheckPasses(t, dir)
+
+		stdout, _, _ := runDoctor(t, dir)
+		if got := strings.Count(stdout, "✓"); got != 11 {
+			t.Errorf("expected 11 check marks, got %d; stdout = %q", got, stdout)
+		}
+	})
+
+	t.Run("it passes the sequence check on records predating the field", func(t *testing.T) {
+		dir, _ := setupDoctorProjectWithContent(t, healthyTenCheckContent())
+
+		assertSeqCheckPasses(t, dir)
+	})
+
+	t.Run("it reports no duplicate once a merge-shaped file has been written", func(t *testing.T) {
+		dir, tickDir := setupRawProject(t, mergeShapeLines()...)
+
+		runToonCommand(t, dir, "update", mergeA, "--title", "a renamed")
+
+		records := rawRecords(t, tickDir)
+		if len(records) != len(mergeShapeSeqs) {
+			t.Fatalf("tasks.jsonl carries %d records, want %d", len(records), len(mergeShapeSeqs))
+		}
+		seen := make(map[int]string)
+		for _, record := range records {
+			if want := mergeShapeSeqs[record.ID]; record.Seq != want {
+				t.Errorf("stored seq for %s = %d, want %d", record.ID, record.Seq, want)
+			}
+			if other, dup := seen[record.Seq]; dup {
+				t.Errorf("stored seq %d carried by both %s and %s", record.Seq, other, record.ID)
+			}
+			seen[record.Seq] = record.ID
+		}
+
+		assertSeqCheckPasses(t, dir)
 	})
 }
