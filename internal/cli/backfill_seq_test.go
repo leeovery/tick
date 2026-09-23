@@ -18,25 +18,41 @@ func bareLine(id, title string) string {
 		sameSecond + `","updated":"` + sameSecond + `"}`
 }
 
-// rawSeqs returns the seq each record in tasks.jsonl carries on disk, in
-// record order, 0 where the record carries none.
-func rawSeqs(t *testing.T, tickDir string) []int {
+// storedRecord is the identity and sequence one tasks.jsonl record carries on
+// disk, Seq 0 where it carries none.
+type storedRecord struct {
+	ID  string `json:"id"`
+	Seq int    `json:"seq"`
+}
+
+// rawRecords decodes each record in tasks.jsonl, in record order, without the
+// read-time backfill.
+func rawRecords(t *testing.T, tickDir string) []storedRecord {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(tickDir, "tasks.jsonl"))
 	if err != nil {
 		t.Fatalf("failed to read tasks.jsonl: %v", err)
 	}
-	var seqs []int
+	var records []storedRecord
 	for line := range strings.SplitSeq(string(data), "\n") {
 		if line == "" {
 			continue
 		}
-		var record struct {
-			Seq int `json:"seq"`
-		}
+		var record storedRecord
 		if err := json.Unmarshal([]byte(line), &record); err != nil {
 			t.Fatalf("failed to decode tasks.jsonl line %q: %v", line, err)
 		}
+		records = append(records, record)
+	}
+	return records
+}
+
+// rawSeqs returns the seq each record in tasks.jsonl carries on disk, in
+// record order, 0 where the record carries none.
+func rawSeqs(t *testing.T, tickDir string) []int {
+	t.Helper()
+	var seqs []int
+	for _, record := range rawRecords(t, tickDir) {
 		seqs = append(seqs, record.Seq)
 	}
 	return seqs

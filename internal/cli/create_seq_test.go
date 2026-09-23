@@ -23,11 +23,13 @@ func createTaskID(t *testing.T, dir, tickDir, title string) string {
 	return ""
 }
 
+// persistedSeqs maps each task ID to the seq its tasks.jsonl record carries,
+// 0 where it carries none.
 func persistedSeqs(t *testing.T, tickDir string) map[string]int {
 	t.Helper()
 	seqs := map[string]int{}
-	for _, tk := range readPersistedTasks(t, tickDir) {
-		seqs[tk.ID] = tk.Seq
+	for _, record := range rawRecords(t, tickDir) {
+		seqs[record.ID] = record.Seq
 	}
 	return seqs
 }
@@ -46,14 +48,14 @@ func cachedSeq(t *testing.T, tickDir, id string) int {
 	return seq
 }
 
-func assertUniqueSeqs(t *testing.T, tasks []task.Task) {
+func assertUniqueSeqs(t *testing.T, records []storedRecord) {
 	t.Helper()
 	seen := map[int]string{}
-	for _, tk := range tasks {
-		if other, ok := seen[tk.Seq]; ok {
-			t.Errorf("tasks %s and %s share sequence %d", other, tk.ID, tk.Seq)
+	for _, record := range records {
+		if other, ok := seen[record.Seq]; ok {
+			t.Errorf("tasks %s and %s share sequence %d", other, record.ID, record.Seq)
 		}
-		seen[tk.Seq] = tk.ID
+		seen[record.Seq] = record.ID
 	}
 }
 
@@ -64,17 +66,14 @@ func TestCreateAssignsSequence(t *testing.T) {
 			createTaskID(t, dir, tickDir, title)
 		}
 
-		tasks := readPersistedTasks(t, tickDir)
 		var titles []string
-		var seqs []int
-		for _, tk := range tasks {
+		for _, tk := range readPersistedTasks(t, tickDir) {
 			titles = append(titles, tk.Title)
-			seqs = append(seqs, tk.Seq)
 		}
 		if !slices.Equal(titles, []string{"first", "second", "third"}) {
 			t.Fatalf("titles = %v, want creation order", titles)
 		}
-		if !slices.Equal(seqs, []int{1, 2, 3}) {
+		if seqs := rawSeqs(t, tickDir); !slices.Equal(seqs, []int{1, 2, 3}) {
 			t.Errorf("seqs = %v, want [1 2 3]", seqs)
 		}
 	})
@@ -138,7 +137,7 @@ func TestCreateAssignsSequence(t *testing.T) {
 		if got := persistedSeqs(t, tickDir)[idD]; got != 3 {
 			t.Errorf("seq after removing C = %d, want 3", got)
 		}
-		assertUniqueSeqs(t, readPersistedTasks(t, tickDir))
+		assertUniqueSeqs(t, rawRecords(t, tickDir))
 	})
 
 	t.Run("it lists same-second same-priority creates in creation order", func(t *testing.T) {

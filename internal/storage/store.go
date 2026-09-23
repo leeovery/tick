@@ -188,6 +188,7 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	if err != nil {
 		return err
 	}
+	backfillSeqs(mutated)
 
 	// Marshal to bytes once — used for both atomic write and cache rebuild (no re-read).
 	newRawJSONL, err := MarshalJSONL(mutated)
