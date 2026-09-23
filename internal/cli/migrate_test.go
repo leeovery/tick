@@ -2,9 +2,11 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -676,6 +678,15 @@ func readJSONLLine(t *testing.T, tickDir, id string) string {
 	return ""
 }
 
+func decodeJSONLRecord(t *testing.T, line string) map[string]any {
+	t.Helper()
+	var record map[string]any
+	if err := json.Unmarshal([]byte(line), &record); err != nil {
+		t.Fatalf("failed to decode tasks.jsonl line %q: %v", line, err)
+	}
+	return record
+}
+
 func TestMigrateFreeTextNormalization(t *testing.T) {
 	t.Run("it stores the trimmed values end to end", func(t *testing.T) {
 		dir, tickDir := setupTickProject(t)
@@ -699,7 +710,7 @@ func TestMigrateFreeTextNormalization(t *testing.T) {
 		}
 	})
 
-	t.Run("it leaves values already in storage untouched", func(t *testing.T) {
+	t.Run("it leaves values already in storage untouched apart from a gained sequence", func(t *testing.T) {
 		now := time.Now().UTC().Truncate(time.Second)
 		seeded := task.Task{
 			ID:          "tick-aaa111",
@@ -720,8 +731,17 @@ func TestMigrateFreeTextNormalization(t *testing.T) {
 		if exitCode != 0 {
 			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
 		}
-		if after := readJSONLLine(t, tickDir, seeded.ID); after != before {
-			t.Errorf("seeded record changed:\n before = %q\n  after = %q", before, after)
+		beforeRecord := decodeJSONLRecord(t, before)
+		afterRecord := decodeJSONLRecord(t, readJSONLLine(t, tickDir, seeded.ID))
+		if _, ok := beforeRecord["seq"]; ok {
+			t.Fatalf("seeded record already carries seq: %v", beforeRecord)
+		}
+		if afterRecord["seq"] != float64(1) {
+			t.Errorf("seeded record seq = %v, want 1", afterRecord["seq"])
+		}
+		delete(afterRecord, "seq")
+		if !reflect.DeepEqual(afterRecord, beforeRecord) {
+			t.Errorf("seeded record changed:\n before = %v\n  after = %v", beforeRecord, afterRecord)
 		}
 	})
 

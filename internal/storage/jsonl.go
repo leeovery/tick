@@ -85,7 +85,7 @@ func writeAtomic(path string, data []byte) error {
 }
 
 // ParseJSONL parses tasks from raw JSONL-formatted bytes, returning one Task per line.
-// Empty input returns an empty task list.
+// Tasks stored without a sequence are assigned one. Empty input returns an empty task list.
 func ParseJSONL(data []byte) ([]task.Task, error) {
 	if len(data) == 0 {
 		return nil, nil
@@ -113,7 +113,21 @@ func ParseJSONL(data []byte) ([]task.Task, error) {
 		return nil, fmt.Errorf("error reading JSONL data: %w", err)
 	}
 
+	backfillSeqs(tasks)
 	return tasks, nil
+}
+
+// backfillSeqs numbers tasks without a sequence above the highest any task
+// carries, not the highest seen so far: that would duplicate sequences carried
+// further down.
+func backfillSeqs(tasks []task.Task) {
+	next := task.NextSeq(tasks)
+	for i := range tasks {
+		if tasks[i].Seq == 0 {
+			tasks[i].Seq = next
+			next++
+		}
+	}
 }
 
 // ReadJSONL reads tasks from a JSONL file, returning one Task per line.

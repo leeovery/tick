@@ -3,6 +3,7 @@ package storage
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -754,5 +755,64 @@ func TestFieldVariations(t *testing.T) {
 		if len(tasks) != 2 {
 			t.Fatalf("expected 2 tasks (skipping empty line), got %d", len(tasks))
 		}
+	})
+}
+
+func TestParseJSONLBackfillsSequence(t *testing.T) {
+	record := func(id, seqField string) string {
+		return `{"id":"` + id + `","title":"T","status":"open","priority":2,` + seqField +
+			`"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+	}
+	seqsOf := func(t *testing.T, lines ...string) []int {
+		t.Helper()
+		tasks, err := ParseJSONL([]byte(strings.Join(lines, "\n") + "\n"))
+		if err != nil {
+			t.Fatalf("ParseJSONL returned error: %v", err)
+		}
+		seqs := make([]int, len(tasks))
+		for i, tk := range tasks {
+			seqs[i] = tk.Seq
+		}
+		return seqs
+	}
+	assertSeqs := func(t *testing.T, got, want []int) {
+		t.Helper()
+		if !slices.Equal(got, want) {
+			t.Errorf("seqs = %v, want %v", got, want)
+		}
+	}
+
+	t.Run("it numbers a file with no sequences in record order from 1", func(t *testing.T) {
+		got := seqsOf(t, record("tick-ccc333", ""), record("tick-bbb222", ""), record("tick-aaa111", ""))
+		assertSeqs(t, got, []int{1, 2, 3})
+	})
+
+	t.Run("it numbers by record, not line, across blank lines", func(t *testing.T) {
+		got := seqsOf(t, record("tick-ccc333", ""), "", record("tick-bbb222", ""), "", "", record("tick-aaa111", ""))
+		assertSeqs(t, got, []int{1, 2, 3})
+	})
+
+	t.Run("it numbers unnumbered records above the file's highest sequence", func(t *testing.T) {
+		got := seqsOf(t, record("tick-ccc333", `"seq":5,`), record("tick-bbb222", `"seq":6,`), record("tick-aaa111", ""))
+		assertSeqs(t, got, []int{5, 6, 7})
+	})
+
+	t.Run("it numbers unnumbered records above numbered ones further down", func(t *testing.T) {
+		got := seqsOf(t,
+			record("tick-a", `"seq":1,`), record("tick-b", `"seq":2,`), record("tick-c", `"seq":3,`),
+			record("tick-x", ""), record("tick-y", ""),
+			record("tick-d", `"seq":4,`), record("tick-e", `"seq":5,`),
+		)
+		assertSeqs(t, got, []int{1, 2, 3, 6, 7, 4, 5})
+	})
+
+	t.Run("it treats a zero sequence as none", func(t *testing.T) {
+		got := seqsOf(t, record("tick-ccc333", `"seq":0,`), record("tick-bbb222", `"seq":2,`), record("tick-aaa111", `"seq":0,`))
+		assertSeqs(t, got, []int{3, 2, 4})
+	})
+
+	t.Run("it keeps carried sequences unchanged", func(t *testing.T) {
+		got := seqsOf(t, record("tick-ccc333", `"seq":9,`), record("tick-bbb222", `"seq":4,`))
+		assertSeqs(t, got, []int{9, 4})
 	})
 }
