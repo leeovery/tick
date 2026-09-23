@@ -52,8 +52,8 @@ Keep the one-second tie, because §8's fixture constraints require it. A batch s
 
 > §8 fixture constraints apply. The migration framework generates the task IDs itself, so the fixture cannot choose them; the assertion must still be one an ascending-ID result could not satisfy. Nor does the import guarantee the one-second tie the constraints require. Each imported task is stamped by its own `time.Now()` inside its own `Store.Mutate` (`internal/migrate/store_creator.go:60-63`). A five-issue import takes about 46ms, and 9 of 300 measured runs straddled a second boundary. The tie is a condition the test sets up, not a result it asserts of the import. A batch that straddles a boundary still lists in import order, by `created`, and proves nothing about the sequence.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Auto-approved. Applied to planning.md (Phase 1 Acceptance bullet), phase-1-tasks.md and tick-a21794 (description, verified against the detail file).
 
 ---
 

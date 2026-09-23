@@ -155,14 +155,14 @@
 
 ### Task 1-5: Keep import order for in-process migration batches
 
-**Problem**: `tick migrate` is the in-process batch writer: one run creates every imported task back to back, so a source that carries no creation times of its own stamps the whole batch with one second. Finer timestamps would not have separated them — 100 in-process stamps taken with tick's own ID generation in the loop produced one distinct millisecond. Unless each imported task carries a sequence, such a batch reads back in plan-dependent order. Imports that do carry historical creation times must keep that chronology rather than have import order override it.
+**Problem**: `tick migrate` is the in-process batch writer: one run creates every imported task back to back, so a source that carries no creation times of its own stamps the batch with one second, except for the occasional run that crosses a second boundary. Finer timestamps would not have separated them — 100 in-process stamps taken with tick's own ID generation in the loop produced one distinct millisecond. Unless each imported task carries a sequence, such a batch reads back in plan-dependent order. Imports that do carry historical creation times must keep that chronology rather than have import order override it.
 
 **Solution**: Give each task the migration framework creates the next sequence above the highest in the file, the same rule `tick create` follows, and leave provider-supplied creation times as they are — so recorded chronology outranks the sequence and whole-second ties fall to import order.
 
 **Outcome**: An import whose source has no creation times lists in import order. An import with real creation times lists by those times, to whole-second resolution. Imported tasks that share a second list in import order, whatever their source fractions said.
 
 **Acceptance Criteria**:
-- [ ] A beads source of five issues carrying no `created_at` and one priority, imported by a single `tick migrate` run: the stored tasks record one identical creation second, carry sequences in import order, and `tick list` returns them in import order — a result ascending task-ID order could not produce (§1.3, §8.1)
+- [ ] A beads source of five issues carrying no `created_at` and one priority, imported by a single `tick migrate` run whose imported tasks record one creation second: the stored tasks carry sequences in import order, and `tick list` returns them in import order — a result ascending task-ID order could not produce (§1.3, §8.1)
 - [ ] A beads import into a project that already holds tasks: each imported task carries a sequence above the project's highest, increasing in import order (§2.2)
 - [ ] Issues of one priority whose `created_at` values fall in different seconds and run against import order: `tick list` returns them by those creation times, not by import order (§1.3, §4.2)
 - [ ] Issues of one priority whose `created_at` values share one second but carry fractions that run against import order: the stored creation times are whole-second and equal, and `tick list` returns the tasks in import order (§4.2)
@@ -180,7 +180,7 @@
 >
 > §8.1: "An in-process batch, not only separate invocations — the migration framework is the natural fixture, with the explicit note that its timestamps are identical."
 >
-> §8 fixture constraints apply. The migration framework generates the task IDs itself, so the fixture cannot choose them; the assertion must still be one an ascending-ID result could not satisfy.
+> §8 fixture constraints apply. The migration framework generates the task IDs itself, so the fixture cannot choose them; the assertion must still be one an ascending-ID result could not satisfy. Nor does the import guarantee the one-second tie the constraints require. Each imported task is stamped by its own `time.Now()` inside its own `Store.Mutate` (`internal/migrate/store_creator.go:60-63`). A five-issue import takes about 46ms, and 9 of 300 measured runs straddled a second boundary. The tie is a condition the test sets up, not a result it asserts of the import. A batch that straddles a boundary still lists in import order, by `created`, and proves nothing about the sequence.
 >
 > §2.3: backfill is new-task numbering applied to each unnumbered record in turn, "so backfill and creation are a single rule"; `tick create`'s assignment is Task 1-3.
 

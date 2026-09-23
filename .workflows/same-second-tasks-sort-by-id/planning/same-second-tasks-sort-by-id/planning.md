@@ -14,7 +14,7 @@ status: draft
 - [ ] Same fixture: `tick ready --parent P --count 1` returns step-1, not the ID-lowest task
 - [ ] Tied open tasks plus an in_progress task authored after them: `tick ready` lists the in_progress task first, then the open tasks in authoring order
 - [ ] Same-second blocked tasks: `tick blocked` returns them in authoring order
-- [ ] A migration import whose source carries no creation times writes a batch with identical timestamps: listing it returns import order
+- [ ] A migration import whose source carries no creation times, its batch recording one creation second: listing it returns import order
 - [ ] A tasks.jsonl with no seq field on any record and one shared creation second: listing returns line order, and after a create/update/remove it still does. The rewritten file now carries seq values in record order
 - [ ] A file where some records carry seq and some do not (post-merge shape), all in one second: each record without a seq is numbered, in record order, above the highest seq the file carries, and the newest record orders last
 - [ ] A file whose unnumbered records lie above numbered ones (merge shape: a, b, c at seq 1–3, then x and y with none, then d and e at 4 and 5), all in one second: backfill gives x and y seq 6 and 7, no seq equals any carried one, and listing returns a, b, c, d, e, x, y
