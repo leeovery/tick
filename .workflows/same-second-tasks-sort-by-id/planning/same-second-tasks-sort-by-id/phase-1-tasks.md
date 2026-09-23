@@ -97,7 +97,7 @@
 - `internal/cli/create.go` — the new task is built inside `Store.Mutate` (around line 208). `Store.Mutate` (`internal/storage/store.go:174`) reads the current task set under the exclusive file lock before calling the mutation function, so the next number is computed from that set with no race (§2.2).
 
 **Context**:
-> §2.2: "A new task takes the next number above the highest sequence currently in the file. Sequences are positive: numbering begins at 1, so an absent or zero value on a record means it carries no sequence. The highest is taken from the task set as read, not from the stored bytes: backfill (§2.3) runs first, so records that reached the file without a sequence already carry one and the next number sits above those too." Backfill is Task 1-4; §2.3 notes the running-maximum rule "collapses backfill and new-task numbering into a single rule".
+> §2.2: "A new task takes the next number above the highest sequence currently in the file. Sequences are positive: numbering begins at 1, so an absent or zero value on a record means it carries no sequence. The highest is taken from the task set as read, not from the stored bytes: backfill (§2.3) runs first, so records that reached the file without a sequence already carry one and the next number sits above those too." Backfill is Task 1-4; §2.3 applies this same numbering to each record lacking a sequence in turn, "so backfill and creation are a single rule".
 >
 > §2.2 / §7.2: "Numbers are not guaranteed unreused. Removing the highest-numbered task frees its number for the next creation. Ordering does not need the guarantee — a reused number cannot collide, because the task that held it is gone." This is a dropped claim, not a defect.
 >
@@ -111,19 +111,20 @@
 
 ## same-second-tasks-sort-by-id-1-4
 
-### Task 1-4: Backfill missing sequences by running maximum on read
+### Task 1-4: Backfill missing sequences above the file's highest on read
 
-**Problem**: Every existing project's `tasks.jsonl` predates the field, so none of its records carries a sequence and its same-second ties stay plan-dependent. Records without a sequence keep arriving afterwards too: from a merge of branches, or from a write by a binary that does not know the field and drops it. Numbering those by line position gets the post-merge shape wrong — records that already carry sequences numbered above their line positions would sort the newest, unnumbered record first.
+**Problem**: Every existing project's `tasks.jsonl` predates the field, so none of its records carries a sequence and its same-second ties stay plan-dependent. Records without a sequence keep arriving afterwards too: from a merge of branches, or from a write by a binary that does not know the field and drops it. Numbering those by line position gets the post-merge shape wrong — records that already carry sequences numbered above their line positions would sort the newest, unnumbered record first. Numbering them from the highest sequence seen so far collides instead: a merge can leave unnumbered records above numbered ones, and a running maximum hands them numbers a record further down already carries — duplicates tick would manufacture itself, silent until the next write froze them into the file.
 
-**Solution**: As records are parsed, walk them in order tracking the highest sequence seen so far, starting at 0, and give the next number to each record that has none — a running maximum, not line position. Doing it in the one parse funnel puts every read path on the same rule, and the next write makes the assignment permanent.
+**Solution**: As records are parsed, take the highest sequence any record in the file carries (0 when none carries one), then walk the records in order and give each record that has none the next number above it — new-task numbering applied to each unnumbered record in turn, not line position and not a running maximum. Doing it in the one parse funnel puts every read path on the same rule, and the next write makes the assignment permanent.
 
-**Outcome**: Existing projects read back in line order, which is their authoring order, with no migration and no repair. The first mutation writes the assigned sequences into the file. Post-merge and stripped files order their newest record last, and a new task numbers above the backfilled values.
+**Outcome**: Existing projects read back in line order, which is their authoring order, with no migration and no repair. The first mutation writes the assigned sequences into the file. Post-merge and stripped files order their newest record last, a backfilled number never equals a sequence the file already carries, and a new task numbers above the backfilled values.
 
 **Acceptance Criteria**:
 - [ ] A `tasks.jsonl` with no `seq` on any record, every record recording one creation second and one priority, IDs contradicting line order: `tick list` returns line order, and still does after a `tick update`, a `tick remove` and a `tick create`; from the first of those writes on, every record in the file carries a sequence and the sequences follow record order (§2.3, §8.2)
 - [ ] Running `tick list` on that file leaves `tasks.jsonl` byte-identical — the assignment reaches the file only on the next write (§2.3)
 - [ ] A no-`seq` file of three records: `tick create` writes the new task with sequence 4 (§2.2)
 - [ ] A file whose first records carry sequences numbered above their line positions, followed by a newest record carrying none, all in one creation second and one priority: the newest record is assigned a number above every carried sequence and `tick list` returns it last (§2.3, §8.2)
+- [ ] A file in the merge shape, every record in one creation second and one priority, with IDs contradicting the expected order — in line order `a`, `b`, `c` carrying `seq` 1, 2 and 3, then `x` and `y` carrying none, then `d` and `e` carrying 4 and 5: backfill assigns `x` and `y` sequences 6 and 7, no record's sequence equals another's, and `tick list` returns `a`, `b`, `c`, `d`, `e`, `x`, `y` (§2.3, §8.2)
 - [ ] A file whose records once carried sequences, rewritten by a binary that did not know the field — no `seq` on any record, line order kept, a record that binary created appended last — all in one creation second and one priority: `tick list` returns the original order with the appended record last (§7.1, §8.2)
 - [ ] A no-`seq` file with blank lines between its records: `tick list` returns record order, and the assigned sequences follow record order rather than line numbers (§8.2)
 - [ ] A file whose records carry `seq` 0 orders and backfills exactly as one whose records carry no `seq` field (§2.2)
@@ -132,11 +133,11 @@
 
 **Do**:
 - `internal/storage/jsonl.go` — backfill lives in `ParseJSONL` (line 89), the single funnel for every read path: `ReadTasks` (`internal/storage/store.go:164`, used by `dep tree`), `Rebuild` (`:246`) and `readAndEnsureFresh` (`:363`, used by every query and mutation). Placing it anywhere else leaves one of those paths on a different rule (§2.3).
-- The rule: walk the records in order, tracking the highest sequence seen so far starting at 0, and give the next number to any record that has none — absent or zero (§2.2, §2.3).
+- The rule: take the highest sequence any record in the file carries, 0 when none carries one; then walk the records in order and give each record that has none — absent or zero — the next number above it. This is new-task numbering (§2.2) applied to each unnumbered record in turn, so a backfilled number can never equal a carried one (§2.2, §2.3).
 - `internal/cli/migrate_test.go:702` ("it leaves values already in storage untouched") changes with this work: the seeded record gains a sequence on the import's write (§3.1).
 
 **Context**:
-> §2.3: "This is a running-maximum rule, **not** line position. On a file where some records carry a sequence and some do not — the shape produced by a merge, or by a write from a binary that does not know the field — assigning line position would sort the newest record first. Running maximum gets it right and collapses backfill and new-task numbering into a single rule." For a file with no sequences at all it yields line order, which is authoring order — verified across the project's entire history: no sort call has ever existed on the storage, task or create paths, and every JSONL writer has iterated the task slice unsorted.
+> §2.3, as corrected by the specification's 2026-09-22 corrigendum: "This numbers above the file's highest sequence, **not** by line position. On a file where some records carry a sequence and some do not — the shape produced by a merge, or by a write from a binary that does not know the field — assigning line position would sort the newest record first. Numbering above the file's highest gets it right, and it is new-task numbering (§2.2) applied to each unnumbered record in turn, so backfill and creation are a single rule." It is "also **not** a running maximum — the highest seen so far — because that collides": in the merge shape (`a`, `b`, `c` at 1–3, then `x` and `y` with none, then `d` and `e` at 4 and 5) a running maximum numbers `x` and `y` 4 and 5, duplicating `d` and `e`; numbering above the file's highest gives them 6 and 7. "The cost is that an unnumbered record lying above numbered ones sorts after them where they share a creation second." On a file with no sequences, a file stripped by an older binary, and a file whose numbered records all precede its unnumbered ones, the two rules assign identically. For a file with no sequences at all the rule yields line order, which is authoring order — verified across the project's entire history: no sort call has ever existed on the storage, task or create paths, and every JSONL writer has iterated the task slice unsorted. The merge shape's end-to-end doctor assertion after the next write is Task 3-2.
 >
 > §2.3: "Existing projects need no migration and no repair. The assignment becomes permanent on the next write."
 >
@@ -181,6 +182,6 @@
 >
 > §8 fixture constraints apply. The migration framework generates the task IDs itself, so the fixture cannot choose them; the assertion must still be one an ascending-ID result could not satisfy.
 >
-> §2.3 notes the running-maximum rule "collapses backfill and new-task numbering into a single rule"; `tick create`'s assignment is Task 1-3.
+> §2.3: backfill is new-task numbering applied to each unnumbered record in turn, "so backfill and creation are a single rule"; `tick create`'s assignment is Task 1-3.
 
 **Spec Reference**: `.workflows/same-second-tasks-sort-by-id/specification/same-second-tasks-sort-by-id/specification.md` — §1.3, §2.1, §2.2, §2.3, §4.2, §7.1, §8 (fixture constraints), §8.1

@@ -118,8 +118,8 @@ Backfill is Task 1-4; §2.3 applies this same numbering to each record lacking a
 
 > §2.3: backfill is new-task numbering applied to each unnumbered record in turn, "so backfill and creation are a single rule"; `tick create`'s assignment is Task 1-3.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Approved via auto. Applied to planning.md (Phase 1 Goal, Acceptance, task table row), phase-1-tasks.md, and tick tasks tick-ecc73a (title and description), tick-0bb4f7 and tick-a21794 (descriptions); each tick description verified against the detail file.
 
 ---
 
