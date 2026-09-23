@@ -159,11 +159,13 @@
           },
           "consolidated_phases": [
             1,
-            2
+            2,
+            3
           ],
           "completed_phases": [
             1,
-            2
+            2,
+            3
           ]
         }
       }
