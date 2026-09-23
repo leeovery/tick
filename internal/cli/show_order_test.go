@@ -10,8 +10,6 @@ const (
 	laterSecond  = "2026-01-19T10:00:01Z"
 )
 
-// childLine renders one stored child of showParentID with the given
-// sequence, priority and creation instant.
 func childLine(id, title string, seq, priority int, created string) string {
 	return `{"id":"` + id + `","title":"` + title + `","status":"open","priority":` + strconv.Itoa(priority) +
 		`,"parent":"` + showParentID + `","seq":` + strconv.Itoa(seq) +

@@ -144,10 +144,9 @@ CREATE TABLE task_transitions (task_id TEXT NOT NULL, from_status TEXT NOT NULL,
 CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT);
 `
 
-// createV2Cache writes a cache.db shaped as schema version 2 — no seq column,
-// no dependency ordinal —
-// holding the project's tasks and a hash matching its tasks.jsonl, so only the
-// version is stale.
+// createV2Cache writes a cache.db shaped as schema version 2, holding the
+// project's tasks and a hash matching its tasks.jsonl, so only the version is
+// stale.
 func createV2Cache(t *testing.T, tickDir string) {
 	t.Helper()
 	tasks, err := storage.ReadJSONL(filepath.Join(tickDir, "tasks.jsonl"))
