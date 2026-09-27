@@ -68,7 +68,24 @@ Alternative routes to the same over-ceiling line (from discovery, to be confirme
 
 ### Hypotheses
 
-**Checkpoint depth:** {straight-through | check-ins}
+**Checkpoint depth:** straight-through
+
+- **H1: The store's reader gives up on any line over 64 KiB, and every command reads through it — rebuild included** [suspected]
+  Basis: `ParseJSONL` builds a `bufio.Scanner` with no `Buffer` call (`internal/storage/jsonl.go:95`); `ReadTasks`, `Rebuild` and `readAndEnsureFresh` all call it.
+- **H2: Nothing on the write path measures the record, so the oversized line is committed and the cache is built to match it** [suspected]
+  Basis: `Mutate` marshals, writes, then rebuilds the cache from the in-memory tasks and the written bytes — never parses them back (`internal/storage/store.go:195-209`); description is unbounded by the v1 spec.
+- **H3: Doctor reads only up to the first overlong line, drops it and everything after it, and checks that prefix as if it were the whole store** [suspected]
+  Basis: `ScanJSONLines` never consults `scanner.Err()` (`internal/doctor/jsonl_reader.go:37-66`); a `Scanner` stops at the first `ErrTooLong`, so later lines are lost too, not just the long one.
+- **H4: Per-field character caps cannot bound the line: a record crosses the ceiling with every field under its cap** [suspected]
+  Basis: caps count runes (`internal/task/task.go:185`, `internal/task/notes.go:57`) while the reader counts encoded bytes — UTF-8 width and JSON escaping inflate — and note count, transitions and dependencies are unbounded.
+
+Trace lines, in order:
+1. Reproduce on current main with a built binary: >64 KiB description; notes-only route; a description under any plausible character cap that encodes past the ceiling.
+2. Store read paths: every caller of `ParseJSONL` / `ReadJSONL` — confirm no command reads the store another way.
+3. Write path: `Mutate` → `MarshalJSONL` → write → cache rebuild; every `Mutate` caller (create, update, note add, dep, transitions, migrate import) and the field validation each applies.
+4. Doctor: `ScanJSONLines` and its wiring in `internal/cli/doctor.go`; what each check sees on a truncated prefix; the cache-staleness check.
+5. Encoding width: `json.Marshal` escaping on task fields; worst-case line size under today's caps.
+6. Blast radius: the beads importer's own scanner; existing tests at the reader boundaries.
 
 ### Code Trace
 
