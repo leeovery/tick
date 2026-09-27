@@ -39,6 +39,7 @@ Alternative routes to the same over-ceiling line (from discovery, to be confirme
 - **Affected environments:** Any — local CLI, every platform the static binary ships for.
 - **Browser/platform:** n/a
 - **User conditions:** A project whose `tasks.jsonl` holds (or is about to hold) any single line over ~64 KiB.
+- **Real-world headroom (this repo's own dogfood store, `.tick/tasks.jsonl`, measured 2026-09-27):** 263 records, median line 3,146 bytes, longest line 13,317 bytes (~20% of the 65,536-byte ceiling). The five largest records are all description-driven (10.8k–12.5k chars of description, titles ~50 chars, no notes, 2 transitions). Real descriptions in this store already reach ~12 KB.
 
 ### Impact
 
