@@ -72,7 +72,7 @@ The map exists; editing existing items is available alongside new exploration. R
 node .claude/skills/workflow-discovery/scripts/gateway.cjs map-view {work_unit}
 ```
 
-The output arrives in demarcated sections: read `=== DATA` to reason from (never display it); emit the TITLE section (markdown), then the `=== DISPLAY` section verbatim as a code block.
+The output arrives in demarcated sections: read `=== DATA` to reason from (never display it); emit the TITLE section, then the `=== DISPLAY` section, each verbatim per its marker.
 
 With the map rendered, read the prior sessions to resume the conversation:
 
@@ -139,7 +139,7 @@ No fixed cadence — follow the conversation, not a checklist. **The loop is the
    - **A staged product capability — the park valve.** The user places a surfaced capability beyond this epic (*"that's a v2 thing"*), or confirms your proposed placement. Park it on the roadmap (born at the first park; the verb validates and self-commits), record it under **Edits** (`Parked: {name} → {horizon}` — the lazy-creation rule applies when no log exists yet, [template.md](template.md)), and continue — capture-weight, never shaping:
 
      ```bash
-     node .claude/skills/workflow-engine/scripts/engine.cjs roadmap add {name} --horizon {horizon} --summary "{one-liner}" --origin park:{work_unit} --source {work_unit}/discovery/sessions/session-{session_number}.md
+     node .claude/skills/workflow-engine/scripts/engine.cjs roadmap add {name} --horizon "{horizon}" --summary "{one-liner}" --origin park:{work_unit} --source {work_unit}/discovery/sessions/session-{session_number}.md
      ```
 
      A thought about an item already **pulled into in-flight work** is that work's business, not a park — when this session materially deepened its ground, flag the join instead (`engine roadmap flag {name}`). An unplaced tangent stays the inbox's (the scope-down in the detection core). A surfaced capability parks; a topic already on the map postpones instead — the edit operation above.
@@ -151,7 +151,7 @@ No fixed cadence — follow the conversation, not a checklist. **The loop is the
 
      A refusal naming a previously dismissed topic needs the user's deliberate re-add — confirm it, then re-run with `--force-dismissed`.
    - **Shared files** — paths offered in conversation land as imports with `discovery` as their origin: → Load **[landing-shared-files.md](../../workflow-shared/references/landing-shared-files.md)** with work_unit = `{work_unit}`, origin = `discovery` and enter its **A. Land It**. Record each landing under **Edits** (`Imported: {filename}` — the lazy-creation rule applies when no log exists yet, [template.md](template.md)).
-   - **A request to see the map** — *"show map"*, *"what's on the map"*. Re-run `gateway.cjs map-view {work_unit}` and emit its TITLE section (markdown) then its `=== DISPLAY` section verbatim as a code block. No STOP gate; just render and continue.
+   - **A request to see the map** — *"show map"*, *"what's on the map"*. Re-run `gateway.cjs map-view {work_unit}` and emit its TITLE and DISPLAY sections verbatim per their markers. No STOP gate; just render and continue.
    - **A request to see dismissed items** — *"show dismissed"*, *"what was removed"*. Load [show-dismissed.md](show-dismissed.md).
    - **A KB query for prior context** — when a conversational thread would benefit from prior work on this or sibling work units, invoke `knowledge query` with a query derived from the thread (see [contextual-query.md](../../workflow-knowledge/references/contextual-query.md) for the pattern).
    - **A harvest pull** — *"let's pull topics"*, *"that covers it"*, *"good enough to start"*, *"let's wrap"*, *"done"*, *"ready to go"*. Route to **C. Harvest**.

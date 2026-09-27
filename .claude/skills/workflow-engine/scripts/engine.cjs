@@ -26,7 +26,7 @@ const fs = require('fs');
 const path = require('path');
 const { signpost, box, wrapWithPrefix, renderTree, WIDTH } = require('./kernel/render.cjs');
 const { resetDisplayWidth } = require('./kernel/terminal.cjs');
-const { commitPathspecScoped, commitPathspecWithKb, discoveryScope, KB_DIR } = require('./domain/commit.cjs');
+const { commitPathspecScoped, discoveryScope } = require('./domain/commit.cjs');
 const { dirtyPaths, stageableSpecs, hasStagedDeletions } = require('./kernel/git.cjs');
 const { recordSubtopicAdd, recordSubtopicState, recordSubtopicStates, SUBTOPIC_STATES } = require('./domain/discussion-map.cjs');
 const { recordThreadAdd, recordThreadState, recordThreadStates, recordThreadReframe, recordThreadRemove } = require('./domain/research-threads.cjs');
@@ -42,6 +42,7 @@ const agentState = require('./domain/agent-state.cjs');
 const { boot } = require('./domain/boot.cjs');
 const { beatPresence, clearPresence, beatQuietly, refreshQuietly, clearQuietly, scanPresence, scanProject, cleanupPresence, deferralSection, CODE_PHASES } = require('./domain/presence.cjs');
 const { applySessionLabel, restoreSessionLabel, repairSessionLabels, resumeSessionLabel, recordLabelChoice } = require('./domain/session-label.cjs');
+const { markConversation, endConversation } = require('./domain/conversation.cjs');
 const { createWorkUnit } = require('./domain/workunit-create.cjs');
 const { importWorkUnitFiles } = require('./domain/workunit-import.cjs');
 const { completeWorkUnit, cancelWorkUnit, reactivateWorkUnit, pivotWorkUnit } = require('./domain/workunit-lifecycle.cjs');
@@ -214,6 +215,7 @@ Commands:
   session repair
   session cleanup [session-id]
   session resume [session-id]
+  conversation end
   topic complete <work-unit> <phase> <topic>
   topic reopen <work-unit> <phase> <topic>
   topic supersede <work-unit> <phase> <topic> --by <topic>
@@ -264,7 +266,7 @@ Commands:
   agent announce <work-unit> <phase> <topic> <id>
   agent surface  <work-unit> <phase> <topic> <id> <finding>[,<finding>…]
   agent incorporate <work-unit> <phase> <topic> <id>
-  commit <work-unit> -m <message> [--plan <topic> | --discovery | --imports | --topic <phase>/<topic> [--kb] [--sweep]]
+  commit <work-unit> -m <message> [--plan <topic> | --discovery | --imports | --topic <phase>/<topic> [--sweep]]
   commit --paths <file> … -m <message> --for <work-unit> <implementation|review>/<topic>
   commit --inbox -m <message>
   commit --roadmap -m <message>
@@ -281,6 +283,7 @@ Commands:
   render spec-completion-gate <wu.specification.topic> --variant assessment|signoff
   render carry-note-gate  <wu.research.topic> --file <payload.json>
   render hypothesis-board <wu.investigation.topic> --file <payload.json> --variant plan|resume|check-in|pivot
+  render findings-signoff-gate <wu.investigation.topic>
   render fix-direction     <wu.investigation.topic> --file <payload.json>
   render validation-gate   <wu.investigation.topic> --variant root-cause
   render validation-report <wu.investigation.topic> --file <payload.json> --variant root-cause|fix
@@ -303,9 +306,11 @@ Commands:
   render backlog-gate     <wu.phase.topic> --file <payload.json>
   render map-op-gate      <wu> --op edit-summary|edit-description|remove|rename|reroute|close|reopen --file <payload.json>
   render candidate-gate   <wu> --file <payload.json>
+  render dismissed-topics <wu>
   render triage-closed-target <wu.discovery.target>
   render conclude-gate    <wu.phase.topic>   (discussion|investigation|implementation|planning)
   render closing-gate     <wu.discussion.topic> --variant re-review|findings-owed|review-running|final-review|wrap-up
+  render defer-gate       <wu.discussion.topic>
   render experiment-register <wu.experiment.topic>
   render experiment-approval-gate <wu.experiment.topic> --id <E{n}>
   render experiment-pick <wu.experiment.topic>
@@ -313,22 +318,28 @@ Commands:
   render experiment-spawn-gate <wu.research|discussion.topic> --id <E{n}>
   render wait-gate        <wu.research|discussion|planning.topic>  (empty when the item holds no wait)
   render summary-backfill-gate <wu> --variant batch|unsourced [--file <payload.json>]
-  render external-dependency-gate <wu.planning.topic> --variant blocking|pick [--blocking <topic,topic,…>]
+  render external-dependency-gate <wu.planning.topic> --variant blocking|pick --blocking <topic,topic,…>
   render checkpoint-files-gate <wu.implementation.topic>
   render executor-block-gate <wu.implementation.topic> --result blocked --file <sides.json> | --result failed
   render dependency-approval-gate <wu.planning.topic> --variant graph|updated-graph|resolution
   render task-count-gate  <wu.planning.topic>
-  render plan-format-gate
+  render plan-context-gate <wu.planning.topic>
+  render cross-cutting-gate --file <payload.json>
+  render cross-cutting-references --file <payload.json>
+  render plan-format-gate [--variant select --file <payload.json>]
   render plan-review-gate <wu.planning.topic> --variant continue|reloop
+  render complexity-gate  <wu> --file <payload.json>
+  render first-phase-gate <wu> --file <payload.json>
   render correction-gate  <wu.specification.topic>
   render analysis-proceed-gate <wu>
+  render spec-confirm-gate <wu.specification.topic> --variant create|continue|refine|unify [--file <payload.json>]
   render proposed-task    <wu.phase.topic> --file <payload.json> --gate gated|auto [--comment-hint STR]
   render incoherence-gate <wu.phase.topic> --file <payload.json> --variant conflict|gap-route|held-doc
   render resurface-gate   <wu.phase.topic> --file <payload.json> [--view full]
   render construction-gate <wu.phase.topic>
   render tasks-overview   <wu.phase.topic> --file <payload.json>
   render author-task-gate <wu.planning.topic> --m N --total N --title STR
-  render phase-tree       <wu.planning.topic> --file <payload.json> [--approve]
+  render phase-tree       <wu.planning.topic> --file <payload.json> [--approve] | --menu-only
   render phase-completed   <wu> --phase <phase> [--paths]
   render phase-paused      <wu> --phase <research|discussion|planning>
   render phase-note        <wu.phase.topic> --verb <Word> [--noun <word>]
@@ -364,6 +375,7 @@ Commands:
   render plan-topics       <wu>
   render archived-actions  --path <archived path>
   render archived-delete-gate --path <archived path>
+  render completed-actions <wu>
   render revisit-phases    <wu>
   render roadmap-view
   render roadmap-add-gate --horizon <name>
@@ -392,7 +404,8 @@ Commands:
   render walkthrough-topic --name <slug> [--menu-only]
   render migration-gate
   render label-gate
-  render knowledge-gate --variant reuse|deviate|mode|retry [--provider <name> --model <name>]
+  render knowledge-gate --variant reuse|deviate|mode|retry|wizard [--provider <name> --model <name>]
+  render knowledge-ready
   render legacy-split-gate --variant themes|plan|remove
   render legacy-split-display --variant candidates|plan|errors --file <payload.json>
   render signpost <label> [--style step|substep] [--width N]     (dev aid)
@@ -864,17 +877,28 @@ const TOPIC_BEATS = ['start'];
 const UNIT_VERBS = ['cancel', 'reactivate'];
 
 /**
+ * The JSON Claude Code hands a session hook on stdin; empty where none
+ * arrived or it does not parse.
+ * @param {Call} call @returns {Record<string, unknown>}
+ */
+function hookInput(call) {
+  try {
+    const input = JSON.parse(call.stdin());
+    return input && typeof input === 'object' ? input : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
  * A session hook target's session id: the argument when given, else the
  * hook's stdin JSON.
  * @param {Call} call @param {string[]} rest @param {string} usage @returns {string|null}
  */
 function hookSessionId(call, rest, usage) {
   if (rest.length > 1) throw new Error(usage);
-  let sessionId = rest[0] || null;
-  if (!sessionId) {
-    try { sessionId = (JSON.parse(call.stdin()) || {}).session_id || null; } catch { sessionId = null; }
-  }
-  return sessionId;
+  const sessionId = rest[0] || hookInput(call).session_id;
+  return typeof sessionId === 'string' && sessionId ? sessionId : null;
 }
 
 /**
@@ -971,6 +995,22 @@ function runSession(call, argv) {
       return;
     }
     throw new Error('Usage: engine session <label|label-config|repair|cleanup|resume> …');
+  } catch (err) {
+    failJson(call, err);
+  }
+}
+
+/** @param {Call} call @param {string[]} argv */
+function runConversation(call, argv) {
+  const [command, ...rest] = argv;
+  try {
+    if (command === 'end' && rest.length === 0) {
+      // The SessionEnd hook's target.
+      const input = hookInput(call);
+      respond(call, endConversation(input.session_id, input.transcript_path));
+      return;
+    }
+    throw new Error('Usage: engine conversation end');
   } catch (err) {
     failJson(call, err);
   }
@@ -1537,7 +1577,8 @@ function runAgent(call, argv) {
 
 // ---------------------------------------------------------------------------
 // boot — the entry pipeline: migrations (hard error on failure), knowledge
-// check (failure reports not-ready), compact when ready (warn-don't-block).
+// check (failure reports not-ready), bulk index then compact when ready
+// (warn-don't-block).
 // ---------------------------------------------------------------------------
 
 function runBoot(call) {
@@ -1554,9 +1595,8 @@ function runBoot(call) {
 // roadmap, the whole `.workflows` tree, one topic's artifacts (`--topic`),
 // the discovery session's paths (`--discovery`), the imports home and the
 // manifest that records its entries (`--imports`), a plan's declared storage
-// (`--plan`), or declared code paths (`--paths`). The knowledge store rides
-// the work-unit forms whenever it exists (domain/commit.cjs). A clean scope
-// is fine: {committed: null}.
+// (`--plan`), or declared code paths (`--paths`). A clean scope is fine:
+// {committed: null}.
 // ---------------------------------------------------------------------------
 
 // Per-phase artifact pathspecs for `commit --topic` — the paths a topic's
@@ -1684,7 +1724,7 @@ function commitCodePaths(cwd, paths, message, target) {
   return result;
 }
 
-const COMMIT_USAGE = 'Usage: engine commit <work-unit> -m <message> [--plan <topic> | --discovery | --imports | --state | --topic <phase>/<topic> [--kb] [--sweep]] | engine commit --paths <file> … -m <message> --for <work-unit> <implementation|review>/<topic> | engine commit --state -m <message> | engine commit --inbox -m <message> | engine commit --roadmap -m <message> | engine commit --workflows -m <message>';
+const COMMIT_USAGE = 'Usage: engine commit <work-unit> -m <message> [--plan <topic> | --discovery | --imports | --state | --topic <phase>/<topic> [--sweep]] | engine commit --paths <file> … -m <message> --for <work-unit> <implementation|review>/<topic> | engine commit --state -m <message> | engine commit --inbox -m <message> | engine commit --roadmap -m <message> | engine commit --workflows -m <message>';
 
 /** @param {Call} call @param {string[]} argv */
 function runCommit(call, argv) {
@@ -1702,7 +1742,6 @@ function runCommit(call, argv) {
     let workflows = false;
     let roadmapScope = false;
     let importsScope = false;
-    let kb = false;
     let sweep = false;
     for (let i = 0; i < argv.length; i++) {
       const a = argv[i];
@@ -1713,7 +1752,6 @@ function runCommit(call, argv) {
       // The code commit's target: work unit and phase/topic, in containment
       // order, for the beat and nothing else.
       else if (a === '--for') forSpec.push(argv[++i], argv[++i]);
-      else if (a === '--kb') kb = true;
       else if (a === '--sweep') sweep = true;
       else if (a === '--discovery') discovery = true;
       else if (a === '--imports') importsScope = true;
@@ -1734,7 +1772,7 @@ function runCommit(call, argv) {
       const parts = (forTopicSpec || '').split('/');
       if (!message || files.length === 0 || forSpec.length !== 2 || !forWorkUnit || parts.length !== 2
           || !CODE_PHASES.includes(parts[0]) || !parts[1] || plan !== null || topicSpec !== null
-          || discovery || importsScope || stateScope || inbox || workflows || roadmapScope || kb || sweep || workUnit !== null) {
+          || discovery || importsScope || stateScope || inbox || workflows || roadmapScope || sweep || workUnit !== null) {
         throw new Error(COMMIT_USAGE);
       }
       respond(call, commitCodePaths(cwd, files, message, { workUnit: forWorkUnit, phase: parts[0], topic: parts[1] }));
@@ -1749,26 +1787,18 @@ function runCommit(call, argv) {
     if (!message || scopeCount !== 1 || forSpec.length > 0 || (workUnitFlags > 0 && workUnit === null) ||
         workUnitFlags > 1 || plan === '' || plan === undefined ||
         topicSpec === '' || topicSpec === undefined ||
-        (kb && topicSpec === null) || (sweep && topicSpec === null)) {
+        (sweep && topicSpec === null)) {
       throw new Error(COMMIT_USAGE);
     }
     /** @type {string|string[]} */ let scope;
-    // The knowledge store rides only where the form's own action can dirty
-    // it: a work unit's cadence commits, the whole-tree migration commit, and
-    // the product session's. A plan authoring pass, an inbox transaction and
-    // the global state dir never touch the store, so sweeping its dirt in
-    // would be the theft the confinement removes.
-    let rider = true;
     if (globalState) {
       // `.workflows/.state` — migrations, environment setup: project-level
       // bookkeeping written from inside whatever session happened to need it.
       scope = '.workflows/.state';
-      rider = false;
     } else if (workflows) {
       scope = '.workflows';
     } else if (inbox) {
       scope = '.workflows/.inbox';
-      rider = false;
     } else if (roadmapScope) {
       // The product session's cadence commit: the roadmap dir (sessions,
       // imports) plus the project manifest (the roadmap node lives there).
@@ -1789,9 +1819,7 @@ function runCommit(call, argv) {
         // --topic: the action-scoped pathspec commit. `git commit -- <paths>`
         // confines the commit to the topic's artifact paths plus the
         // work-unit manifest — a concurrent session's dirty or staged files
-        // are never swept up. The KB dir does not ride: no KB-touching verb
-        // precedes a session-cadence commit, and KB-dirtying transactions
-        // commit their own store dirt.
+        // are never swept up.
         const parts = topicSpec.split('/');
         const phase = parts[0];
         const topic = parts[1];
@@ -1800,13 +1828,7 @@ function runCommit(call, argv) {
           throw new Error(`commit --topic: expected <phase>/<topic> with phase one of ${Object.keys(TOPIC_COMMIT_ARTIFACTS).join(', ')} — got "${topicSpec}"`);
         }
         if (topic === '' || topic.includes('..')) throw new Error(`invalid topic name "${topic}"`);
-        // --kb: the caller's action dirtied the store (a completion's
-        // knowledge index) — stage it with the write that produced it.
-        const specs = stageableSpecs(cwd, [
-          `.workflows/${wu}/manifest.json`,
-          ...artifact(wu, topic),
-          ...(kb ? [KB_DIR] : []),
-        ]);
+        const specs = stageableSpecs(cwd, [`.workflows/${wu}/manifest.json`, ...artifact(wu, topic)]);
         const committed = specs.length === 0 ? null : commitPathspecScoped(cwd, specs, message);
         // `--sweep` outranks everything. It marks a commit on a topic this
         // session is not working — the conclude sweep's leavings, a
@@ -1818,13 +1840,12 @@ function runCommit(call, argv) {
         // Otherwise the item's own status decides. A terminal item is
         // finished, so every commit that follows its close — the conclusion,
         // the plan wrap-up, review's complete-then-commit — releases the slot
-        // rather than re-taking it until the process dies. `--kb` clears for
-        // the same reason at the conclusion moment. Anything else is the
-        // session's own cadence commit, and that is its heartbeat.
+        // rather than re-taking it until the process dies. Anything else is
+        // the session's own cadence commit, and that is its heartbeat.
         if (!sweep) {
           const status = topicStatus(cwd, wu, phase, topic);
           if (status !== null) {
-            if (kb || TERMINAL_TOPIC_STATUSES.includes(status)) clearQuietly(cwd, wu, phase, topic);
+            if (TERMINAL_TOPIC_STATUSES.includes(status)) clearQuietly(cwd, wu, phase, topic);
             else beatQuietly(cwd, wu, phase, topic);
           }
         }
@@ -1838,8 +1859,7 @@ function runCommit(call, argv) {
         // analysis, build-order sequencing). Every one of them runs beside
         // live topic sessions whose half-written documents sit in the same
         // work unit, so the analysis slices its own paths and never theirs.
-        // The store rides: an analysis that stamped its cache indexed it.
-        const committed = commitPathspecWithKb(cwd, [
+        const committed = commitPathspecScoped(cwd, [
           `.workflows/${wu}/.state`,
           `.workflows/${wu}/manifest.json`,
         ], message);
@@ -1901,12 +1921,9 @@ function runCommit(call, argv) {
           '.workflows/manifest.json',
           ...declared,
         ]);
-        rider = false;
       }
     }
-    const committed = rider
-      ? commitPathspecWithKb(cwd, scope, message)
-      : commitPathspecScoped(cwd, scope, message);
+    const committed = commitPathspecScoped(cwd, scope, message);
     if (committed === null) respond(call, { committed: null, note: 'nothing to commit' });
     else respond(call, { committed });
   } catch (err) {
@@ -2010,6 +2027,9 @@ function runCli(call, argv) {
     case 'session':
       runSession(call, rest);
       break;
+    case 'conversation':
+      runConversation(call, rest);
+      break;
     case 'task':
       runTask(call, rest);
       break;
@@ -2042,11 +2062,18 @@ function runCli(call, argv) {
   }
 }
 
+// The commands Claude Code's own hooks run as any conversation in the project
+// ends or resumes, whether it ran the workflows or not.
+const HOOK_TARGETS = ['presence cleanup', 'session cleanup', 'session resume', 'conversation end'];
+
 /**
  * One command against a bound call, answering its exit code. Every stop a
  * handler takes arrives here as an ExitSignal; anything else that escapes is
  * a handler that threw without answering, and gets the CLI's last word — the
- * message on stderr, exit 1.
+ * message on stderr, exit 1. Whatever the exit, a command the conversation
+ * ran marks it as one that runs the workflows — after the command, which
+ * may take the folder the mark lives in: boot's tidy-up deletes one whose
+ * transcript is gone.
  * @param {Call} call @param {string[]} argv @returns {number}
  */
 function dispatch(call, argv) {
@@ -2056,6 +2083,8 @@ function dispatch(call, argv) {
     if (err instanceof ExitSignal) return err.code;
     call.err(messageOf(err) + '\n');
     return 1;
+  } finally {
+    if (!HOOK_TARGETS.includes(argv.slice(0, 2).join(' '))) markConversation(call.cwd);
   }
   return 0;
 }

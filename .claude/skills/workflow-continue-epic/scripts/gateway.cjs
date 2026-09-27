@@ -6,6 +6,7 @@
 // engine answers the skill's flow needs and sections the output.
 //
 //   gateway.cjs               → thin index dump, all active epics (head insert)
+//   gateway.cjs select        → the index dump, then the pick list and its menu (Step 3)
 //   gateway.cjs {work_unit}   → scoped state dump, one epic (Steps 5–8, bridge)
 //   gateway.cjs view {work_unit} [new_arrivals_json]
 //                               → DATA + DISPLAY + MENU snapshot (Step 9)
@@ -109,7 +110,13 @@ function format(result) {
   for (const u of result.cancelled) {
     lines.push(`  ${u.name} (last phase: ${u.last_phase || 'none'})`);
   }
-  return lines.join('\n') + '\n'
+  return lines.join('\n') + '\n';
+}
+
+// The select step's snapshot: the index dump its validation reads, then the
+// pick list and the menu that takes the pick.
+function select(result) {
+  return format(result)
     + engine.project.selectionSections('epic', result.epics, { completed: result.completed_count, cancelled: result.cancelled_count });
 }
 
@@ -252,20 +259,19 @@ function view(workUnit, newArrivalsJson) {
   dataLines.push(`unaccounted_discussions: ${d.unaccounted_discussions.join(', ') || '(none)'}`);
   dataLines.push(`reopened_discussions: ${d.reopened_discussions.join(', ') || '(none)'}`);
   dataLines.push(`spec_blocked: ${d.spec_blocked.map((b) => `${b.name} (${b.by.join(', ')})`).join(', ') || '(none)'}`);
-  dataLines.push('ACTIONS (key  action  topic  → route):');
-  for (const k of menu.keys) {
-    let line = `  ${k.key}  ${k.action}  ${k.topic || '—'}  → ${k.route || '(internal)'}`;
-    if (k.recommended) line += '  (recommended)';
+  dataLines.push(...engine.project.actionsTable(['action', 'topic', '→ route'], menu.keys, (k) => {
+    const cells = [k.action, k.topic || '—', `→ ${k.route || '(internal)'}`];
+    if (k.recommended) cells.push('(recommended)');
     if (k.in_session) {
       const holder = k.session_holder ? `${k.session_holder.work_unit}/${k.session_holder.topic}, ` : '';
       // A code entry reads as the checkout's slot, not this topic's session:
       // its own marker keeps the menu's in-session gate from firing, because
       // the entry skill's code gate owns that stop.
       const label = k.code_session ? 'code session' : 'in session';
-      line += `  (${label}: ${holder}last active ${engine.presence.fmtAge(k.session_age || 0)} ago)`;
+      cells.push(`(${label}: ${holder}last active ${engine.presence.fmtAge(k.session_age || 0)} ago)`);
     }
-    dataLines.push(line);
-  }
+    return cells;
+  }));
 
   const display = engine.project.epicDashboard(e.name, d, { newArrivals, presence });
   const key = engine.project.epicKey(d);
@@ -290,8 +296,7 @@ function inSessionGate(workUnit, key) {
   const presence = engine.presence.scanPresence(process.cwd(), e.name).sessions
     .filter((r) => !engine.presence.ownsRow(r));
   const codeHeld = engine.presence.heldCodeSessions(process.cwd());
-  const menu = engine.project.epicMenu(e.name, e.detail, { presence, codeHeld });
-  const entry = menu.keys.find((k) => k.key === key);
+  const entry = engine.project.epicMenuKeys(e.name, e.detail, { presence, codeHeld }).find((k) => k.key === key);
   if (!entry) {
     return engine.gateway.dataBlock({ work_unit: e.name, error: `no menu entry with key "${key}"` });
   }
@@ -322,14 +327,12 @@ function subView(workUnit, projection) {
     .filter((r) => !engine.presence.ownsRow(r));
   const view = projection(e.name, e.detail, { presence });
 
-  const dataLines = [`work_unit: ${e.name}`];
-  dataLines.push('ACTIONS (key  action  topic  phase  → route):');
-  for (const k of view.keys) {
-    let line = `  ${k.key}  ${k.action}  ${k.topic || '—'}  ${k.phase || '—'}  → ${k.route || '(internal)'}`;
-    if (k.dep) line += `  (dep: ${k.dep})`;
-    if (k.item) line += `  (item: ${k.item})`;
-    dataLines.push(line);
-  }
+  const dataLines = [
+    `work_unit: ${e.name}`,
+    ...engine.project.actionsTable(['action', 'topic', 'phase', '→ route'], view.keys, (k) => [
+      k.action, k.topic || '—', k.phase || '—', `→ ${k.route || '(internal)'}`, ...(k.dep ? [`(dep: ${k.dep})`] : []), ...(k.item ? [`(item: ${k.item})`] : []),
+    ]),
+  ];
 
   return [
     engine.gateway.dataBlock(dataLines.join('\n')),
@@ -339,7 +342,7 @@ function subView(workUnit, projection) {
   ].join('\n');
 }
 
-const USAGE = 'Usage: gateway.cjs | gateway.cjs {work_unit} | gateway.cjs view {work_unit} [new_arrivals_json] | gateway.cjs (completed-menu|cancel-menu|reactivate-menu|postpone-menu|pull-forward-menu|unblock-menu) {work_unit}';
+const USAGE = 'Usage: gateway.cjs | gateway.cjs select | gateway.cjs {work_unit} | gateway.cjs view {work_unit} [new_arrivals_json] | gateway.cjs (completed-menu|cancel-menu|reactivate-menu|postpone-menu|pull-forward-menu|unblock-menu) {work_unit}';
 
 /** Reject the call: usage to stderr, exit 1. @param {string} message @returns {string} */
 function usageError(message) {
@@ -360,6 +363,9 @@ if (require.main === module) {
     index: (...rest) => (rest.length > 0
       ? usageError('index takes no arguments')
       : format(discover(process.cwd()))),
+    select: (...rest) => (rest.length > 0
+      ? usageError('select takes no arguments')
+      : select(discover(process.cwd()))),
     view: (workUnit, newArrivalsJson, ...rest) => (!workUnit || rest.length > 0
       ? usageError('view takes a work unit and an optional new-arrivals JSON')
       : view(workUnit, newArrivalsJson)),
@@ -378,4 +384,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { discover, format, formatScoped };
+module.exports = { discover, format, select, formatScoped };
