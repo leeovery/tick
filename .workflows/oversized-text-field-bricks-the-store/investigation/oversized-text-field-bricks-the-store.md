@@ -30,7 +30,7 @@ A task record whose JSONL line passes ~64 KiB is accepted and written (exit 0, n
 
 Alternative routes to the same over-ceiling line (from discovery, to be confirmed in analysis):
 - Notes are capped at 2000 characters each but their count is unbounded — roughly 33 full-length notes push a task's line past the reader's ceiling with no description at all.
-- Titles are uncapped.
+- Titles: the seed and discovery log say titles are uncapped — **incorrect**. `internal/task/task.go:34` sets `maxTitleLen = 500`, enforced by rune count at `task.go:185`. A title alone cannot reach the ceiling, though it contributes to a record's size.
 - Transitions accumulate on the record over its lifetime.
 - Lines produced outside tick's capped write path: an older tick binary, hand edits, other tools.
 
@@ -91,3 +91,10 @@ Alternative routes to the same over-ceiling line (from discovery, to be confirme
 - Discovery settled that the two halves are independent: a write-time cap stops tick producing an unreadable line going forward, but does not rescue a store that already holds one, does not cover lines produced outside the capped write path, and the doctor's silent pass hides all of those alike.
 - Starting shape carried from the inbox report (subject to this investigation): no support for arbitrarily large text; a generous but finite limit enforced on the write path with a clear error, consistent with the existing note cap. Discovery added that the bound has to be reasoned about per record (the line the reader consumes), not only per field — or the reader's ceiling itself reconsidered.
 - Open question carried from discovery: recovery for stores already over the ceiling.
+
+### Prior decisions on this ground (knowledge base, 2026-09-27)
+
+- **v1/tick-core specification** (Task Schema → Title and Description Limits): title required, max 500 characters, single line; description optional, **"No maximum length"**, newlines and markdown allowed. An unbounded description is a specified decision, not an omission — a description cap would contradict that specification.
+- **increase-note-char-limit specification**: raised `maxNoteTextLen` 500 → 2000; Exclusions state the description is "intentionally unbounded (only empty/whitespace rejected via `ValidateDescriptionUpdate`)" and that neither JSONL nor the `task_notes` TEXT column enforces a length cap.
+- **free-text-round-trip specification §10.3**: declines a stdin/file input path for descriptions; measured `ARG_MAX` = 1,048,576 and a 200 KB argument passing through a process call; states "an arbitrarily large description remains possible in principle". The argument channel carries far more than the store's reader can read back — the ceiling that bites is the reader's, not the shell's.
+- **v1/doctor-validation specification**: doctor is "report, don't fix", a "safety net" that "catches what slipped through write-time validation or got corrupted"; error check #2 is "JSONL syntax errors — malformed JSON lines that can't be parsed"; exit 1 when any error is found. The spec calls doctor human-focused and says agents don't parse its output — in practice (see Impact) agents do run it.
