@@ -89,7 +89,7 @@ Alternative routes to the same over-ceiling line (measured on current main unles
   Basis: caps count runes (`internal/task/task.go:185`, `internal/task/notes.go:57`) while the reader counts encoded bytes — UTF-8 width and JSON escaping inflate — and note count, transitions and dependencies are unbounded.
   Evidence: Go's `json.Marshal` escapes `<`, `>`, `&`, U+2028/U+2029 and control characters (other than `\n`, `\r`, `\t`) to 6-byte `\uXXXX` sequences; `"`, `\`, `\n`, `\r`, `\t` to 2 bytes; a non-ASCII rune is 2–4 bytes raw. Worst case is **6 encoded bytes per rune**. Measured on current main: 11,000 `<` in a description → 66,163-byte line (bricked); 6 notes of 2000 `&` → 72,423 bytes (bricked); 32 plain 2000-char notes → 65,589 bytes (bricked) with no description at all. Real text inflates little: this repo's descriptions over 500 chars encode at most ~1.08× their character count, with ≤ 2 `<>&` characters each. So a character cap sized for real text (the largest real description is 12,473 chars) still admits a record that bricks the store, and caps on individual fields leave the unbounded counts (notes, transitions, `blocked_by`) open regardless.
 - **H5: Doctor's idea of a readable line is looser than the store's — a line that is valid JSON but not a valid task passes doctor and still bricks the store** [confirmed]
-  Basis: surfaced mid-trace — doctor parses each line into `map[string]any` (`jsonl_reader.go:55-58`) and the syntax check asks only `json.Valid` (`jsonl_syntax.go:34`); the store unmarshals into the typed task (`jsonl.go:105`).
+  Basis: surfaced mid-trace — doctor parses each line into `map[string]any` (`jsonl_reader.go:53-56`) and the syntax check asks only `json.Valid` (`jsonl_syntax.go:34`); the store unmarshals into the typed task (`jsonl.go:105`).
   Evidence: hand-edited line 2's `"priority":2` → `"priority":"high"`. `tick list` fails `failed to parse line 2: json: cannot unmarshal string into Go struct field taskJSON.priority of type int`; doctor reports `✓ JSONL syntax: OK`, flags only `✗ Cache: stale`, and suggests `tick rebuild` — which fails the same way. The v1 doctor-validation specification scopes this out on purpose ("Schema validation … happens at write time, not in doctor"), so this is a specified boundary rather than an oversight; it is the same doctor/store disagreement as H3 (doctor passes a store the store cannot open), reached by a different route.
 
 Trace lines, in order:
@@ -101,6 +101,35 @@ Trace lines, in order:
 6. Blast radius: the beads importer's own scanner; existing tests at the reader boundaries.
 
 ### Code Trace
+
+**Entry point:**
+Any mutating command (`create`, `update`, `note add`, `start`/`done`/`cancel`/`reopen`, `dep add`, `migrate`) that leaves one task's encoded JSON at ≥ 65,536 bytes.
+
+**Execution path — the write that succeeds:**
+1. `internal/task/task.go:177-190` / `internal/task/notes.go:52-61` — field validation: title ≤ 500 runes, each note ≤ 2000 runes; description checked only for non-empty (`task.go:203-208`). No record-level bound anywhere. (`migrate/migrate.go:43-54`: title non-empty only.)
+2. `internal/storage/store.go:175-216` `Store.Mutate` — `readAndEnsureFresh` (succeeds: the store is still readable), closure appends/edits the task.
+3. `internal/storage/jsonl.go:16-31` `MarshalJSONL` — `json.Marshal` per task, HTML-safe escaping (`<`/`>`/`&` → 6 bytes). No size check.
+4. `internal/storage/jsonl.go:44-85` `WriteJSONLRaw` → `writeAtomic` — temp file, fsync, rename. The oversized line is now the source of truth.
+5. `internal/storage/store.go:209` `cache.Rebuild(mutated, newRawJSONL)` — cache populated from the in-memory slice; hash of the written bytes stored. Cache is fresh.
+6. `internal/cli/helpers.go:17-32` `outputMutationResult` — with `--quiet`, prints the ID, exit 0. Otherwise `queryShowData` → `Store.Query` → step 7 below fails → exit 1 after a committed write.
+
+**Execution path — every later command:**
+7. `internal/storage/store.go:359-375` `readAndEnsureFresh` (via `Mutate`/`Query`), `store.go:151-170` `ReadTasks`, or `store.go:222-266` `Rebuild` (which first deletes `cache.db`, `store.go:235-238`) → `os.ReadFile` → `ParseJSONL`.
+8. `internal/storage/jsonl.go:95` — `bufio.NewScanner` with Go's default `MaxScanTokenSize` (64 × 1024); `Scan` returns false at the first line of ≥ 65,536 bytes.
+9. `internal/storage/jsonl.go:112-114` — `scanner.Err()` = `bufio.ErrTooLong`, wrapped as `error reading JSONL data: …` without the line number; `store.go` wraps as `failed to parse tasks.jsonl: …`. Command exits 1.
+
+**Execution path — doctor:**
+10. `internal/cli/doctor.go:30-33` → `internal/doctor/jsonl_reader.go:27-66` `ScanJSONLines` — same default scanner; `Scan` stops at the oversized line; `scanner.Err()` never consulted; returns the prefix with a nil error.
+11. Every line/relationship check runs over the prefix via `JSONLinesKey`; the syntax check (`jsonl_syntax.go:19-56`) finds nothing malformed in it → `✓ JSONL syntax: OK`. Relationship checks can report false orphans for references into the unseen suffix.
+12. `internal/doctor/cache_staleness.go:22-80` — hashes the whole raw file; matches the hash `Mutate` stored → `✓ Cache: OK` (or, after a failed `rebuild`, `✗ cache.db not found` → "Run `tick rebuild`").
+
+**Key files involved:**
+- `internal/storage/jsonl.go` — the reader with the unchosen 64 KiB ceiling (`:95`), the error that omits the line (`:112-114`), the marshal with no size check (`:16-31`).
+- `internal/storage/store.go` — `Mutate` (write never meets the reader), `Rebuild` (deletes cache before parsing), `readAndEnsureFresh`/`ReadTasks` (every read funnels into `ParseJSONL`).
+- `internal/doctor/jsonl_reader.go` — doctor's reader: same ceiling, scanner error dropped.
+- `internal/doctor/helpers.go` — `fileNotFoundResult`, the only reader-failure result checks can emit.
+- `internal/task/task.go`, `internal/task/notes.go`, `internal/migrate/migrate.go` — field caps in runes, no record-level bound, migrate looser than the CLI.
+- `internal/cli/helpers.go` — post-write read-back that turns a committed write into exit 1.
 
 ### Root Cause
 
