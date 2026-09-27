@@ -44,7 +44,9 @@ Alternative routes to the same over-ceiling line (from discovery, to be confirme
 ### Impact
 
 - **Severity:** High — a successful save leaves the whole project unusable through tick itself, and the diagnostic built to catch store damage reports it healthy.
-- **Scope:** Any project where one task accumulates enough text (description, title, notes, transitions) to cross the ceiling; agents writing long descriptions are the most likely trigger.
+- **Scope:** Any project where one task accumulates enough text (description, title, notes, transitions) to cross the ceiling. Not known to have bricked a real store — the maintainer's own projects have not hit it — but tick is open source, so stores in the wild are unknown; an already-over-ceiling store cannot be ruled out.
+- **Who writes the text:** For the maintainer, tasks are written by agents only, never by hand. The party that meets any write-time refusal is therefore an agent, and the refusal has to be something an agent can read and act on.
+- **Who reads `doctor`:** The maintainer does not run `tick doctor`; agents do, at times, as a health check. A false "healthy" tells an agent a store is fine when no other command can open it — the agent then has no signal pointing at the JSONL line as the cause.
 - **Business impact:** Trust in the store — data is intact on disk but unreachable without manual JSONL surgery.
 
 ### References
