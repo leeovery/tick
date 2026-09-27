@@ -133,11 +133,50 @@ Any mutating command (`create`, `update`, `note add`, `start`/`done`/`cancel`/`r
 
 ### Root Cause
 
+Two defects, independent of each other, meeting at the same ceiling.
+
+**RC1 — tick writes records its own reader cannot read.** The store's reader (`ParseJSONL`, `internal/storage/jsonl.go:95`) carries an implicit per-line ceiling — Go's default `bufio.Scanner` maximum token size, so any line of 65,536 bytes or more fails — that nobody chose and nothing on the write side knows about. The write path (`Store.Mutate` → `MarshalJSONL` → atomic write → cache rebuild from memory) bounds some fields in characters and never measures the encoded record, so it commits a line past that ceiling. Because every command — reads, writes and `rebuild` alike — parses the whole file first, one such line makes the entire store unreachable through tick, including the commands that could shrink or remove the offending task.
+
+**RC2 — doctor treats a partial read as a full read.** Doctor's reader (`ScanJSONLines`, `internal/doctor/jsonl_reader.go:37-66`) has the same ceiling but never consults `scanner.Err()`. When the scanner stops at an unreadable line, doctor receives the lines before it with a nil error and runs every check over that prefix as if it were the whole store — passing a store no other command can open, and able to report false errors about references into the part it never saw.
+
+**Why this happens:**
+The ceiling is a library default rather than a decision, so it is stated nowhere a writer could consult it. The write side reasons in characters per field; the reader fails on bytes per line; JSON escaping (up to 6 bytes per character) and unbounded repeated fields (notes, transitions, `blocked_by`) sit between the two. On the doctor side, the reader was written to model only one failure — the file not opening — and the scanner's own failure mode fell outside it.
+
 ### Contributing Factors
+
+- **Description is unbounded by specification** (v1/tick-core, reaffirmed by increase-note-char-limit), and note, transition and `blocked_by` counts are unbounded by construction — nothing caps a record's total size.
+- **Character caps don't bound bytes.** Title and note caps count runes; Go's `json.Marshal` writes `<`, `>`, `&`, U+2028/9 and control characters as 6-byte escapes. Worst case 6 bytes per character.
+- **All-or-nothing parse on every command.** `Mutate` reads before it writes, so no mutation — `update`, `remove`, `cancel` of the oversized task — can run to repair it. Recovery requires editing `tasks.jsonl` by hand.
+- **`rebuild` deletes the cache before parsing** (`store.go:235-238`), so a failed rebuild leaves the project worse off, and doctor's resulting advice (`Run tick rebuild`) points at the command that cannot succeed.
+- **Post-write read-back** (`cli/helpers.go:23`): outside `--quiet`, the write that bricks the store is committed and then reported as failed (exit 1). An agent is told its save failed when it succeeded.
+- **The read error names no line or task** (`jsonl.go:112-114` drops `lineNum`), so the user cannot find the record to hand-edit from the message.
+- **Doctor's only reader-failure result is "tasks.jsonl not found"** (`doctor/helpers.go:14-22`) — the check layer has no way to express "the file opened but could not be read in full".
+- **The migrate route is looser than the CLI** — `MigratedTask.Validate` skips the 500-rune title cap.
+- **Doctor's readability test is looser than the store's** (H5): a JSON object passes doctor; the store needs a valid task. Scoped out of doctor by the v1 doctor-validation specification — a boundary, not an oversight — but it produces the same "healthy while bricked" outcome by a second route.
 
 ### Why It Wasn't Caught
 
+- **No test touches line length.** Nothing in the codebase references the scanner's token limit; `TestParseJSONL`, `TestReadJSONL`, `TestScanJSONLines` use small fixtures. The reader's ceiling has never been asserted in either direction.
+- **Real data sits well below it.** This repo's own store peaks at 13,317 bytes (~20% of the ceiling); dogfooding never reached it.
+- **Doctor's reader tests cover blank and malformed lines, not reader failure**; the per-check scanners that `ScanJSONLines` replaced (`d555c22f`) never checked the scanner error either, so the omission was carried over rather than introduced.
+- **The one measurement of large descriptions measured the wrong channel.** free-text-round-trip §10.3 measured the argument limit (`ARG_MAX` = 1 MiB) and concluded large descriptions were viable; the store's reader, at 64 KiB, was never measured until that review's change-set verification probed it.
+- **"No maximum length" was specified without a storage bound beside it** — the v1 schema treats JSONL lines as unbounded, which the reader never was.
+
 ### Blast Radius
+
+**Directly affected:**
+- Every tick command in a project whose `tasks.jsonl` holds any line ≥ 65,536 bytes — reads, writes, `rebuild`, `show`, `migrate` into that project.
+- `create` / `update` / `note add` / transitions that push a record over: committed, and (outside `--quiet`) reported as failed.
+- `tick doctor`'s verdict: false "healthy" when the oversized line is last; false relationship errors when it isn't; misleading `rebuild` advice after a failed rebuild.
+
+**Potentially affected:**
+- `internal/migrate/beads/beads.go:84` — the beads provider reads its source with the same default scanner. It does check the error, so an `issues.jsonl` line ≥ 64 KiB aborts the import before anything is written, with a message that names no line. A beads issue under 64 KiB whose tick encoding exceeds the ceiling (escape inflation) would be written, brick the store mid-import, and fail every remaining task (inferred from the engine's per-task `Mutate`; not reproduced).
+- `doctor.ParseTaskRelationships` (`task_relationships.go:82`) — exported, same prefix semantics.
+- Any future reader of `tasks.jsonl` that constructs a default scanner.
+
+**Not affected:**
+- Doctor's cache check — hashes the whole raw file; its verdict is correct.
+- `cli/remove.go:242` — a `bufio.Reader.ReadString` for the confirmation prompt; no line ceiling.
 
 ---
 
