@@ -155,7 +155,7 @@
 - [ ] Same store: a write such as `tick create` and `tick rebuild` each fail with the same line, task ID and reason (§3)
 - [ ] A line carrying a string `id` whose `created` timestamp does not parse: the error names the line, that ID and the timestamp reason (§3)
 - [ ] A malformed-JSON line or a whitespace-only line: the error names the line by number alone, with no task ID, followed by the reason (§3, §8.2)
-- [ ] A line with no string `id` (the key is missing, the `id` is not a string, or the value is not a JSON object, such as `null` or `[]`): the error names the line by number alone, followed by the reason (§3)
+- [ ] A line that fails to load and carries no string `id`: the `id` key is missing (such as `{"title":"T"}`, which fails on its empty `created` timestamp), the `id` is not a string, or the value is not a JSON object (such as `null` or `[]`). The error names the line by number alone, followed by the reason (§3)
 - [ ] An empty line 2 followed by a wrong-typed task on line 3: the error names line 3, counting the skipped line (§2.2, §3)
 
 **Do**:

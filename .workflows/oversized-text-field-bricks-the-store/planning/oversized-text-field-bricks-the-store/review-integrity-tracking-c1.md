@@ -22,8 +22,8 @@ Limit the criterion to a line that fails to load, since that is all §3 governs:
 **Proposed Text**:
 - [ ] A line that fails to load and carries no string `id`: the `id` key is missing (such as `{"title":"T"}`, which fails on its empty `created` timestamp), the `id` is not a string, or the value is not a JSON object (such as `null` or `[]`). The error names the line by number alone, followed by the reason (§3)
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Fixed
+**Notes**: Measured on a build from current source: a complete record without `id` lists with an empty ID; `{"title":"T"}` fails on its empty `created` timestamp.
 
 ---
 
