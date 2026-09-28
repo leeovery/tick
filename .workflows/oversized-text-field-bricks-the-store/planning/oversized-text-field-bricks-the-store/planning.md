@@ -71,7 +71,7 @@ status: draft
 
 **Goal**: Cap the task description at 50,000 characters, counted after trimming (§6.1), on every route that sets one: create, update and migrate. The refusal tells an agent the field, the limit, the submitted length and that nothing was saved (§6.3). Migrate also adopts the CLI's title rules (§6.4).
 
-**Why this order**: The cap is hygiene, not the store's safety device (§6.1), and nothing in it depends on Phases 1 and 2. It lands after the defect fixes so that the store's safety never depends on it.
+**Why this order**: The cap is hygiene, not the store's safety device (§6.1). It lands after the defect fixes so that the store's safety never depends on it. The cap's own check needs nothing from Phases 1 and 2, but its multibyte boundary scenarios do. A description of 50,000 multibyte characters takes the task's line past 65,536 bytes, and that line reads back only through Phase 1's shared line reader (§2.1, §6.1). Task 3-1 depends on Task 1-1 for that reason.
 
 **Acceptance**:
 - [ ] Given `tick create --description` of exactly 50,000 characters, the task is created, including when the characters are multibyte. Given 50,001 characters, the command exits 1 with an error naming the description field, the 50,000 limit, the submitted length and that nothing was saved, and `tasks.jsonl` and the cache are unchanged.

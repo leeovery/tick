@@ -51,7 +51,7 @@ State the dependency the graph already records. The cap check itself needs nothi
 **Proposed Text**:
 **Why this order**: The cap is hygiene, not the store's safety device (§6.1). It lands after the defect fixes so that the store's safety never depends on it. The cap's own check needs nothing from Phases 1 and 2, but its multibyte boundary scenarios do. A description of 50,000 multibyte characters takes the task's line past 65,536 bytes, and that line reads back only through Phase 1's shared line reader (§2.1, §6.1). Task 3-1 depends on Task 1-1 for that reason.
 
-**Resolution**: Pending
+**Resolution**: Fixed
 **Notes**:
 
 ---
