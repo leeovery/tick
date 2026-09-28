@@ -192,10 +192,11 @@ The ceiling is a library default rather than a decision, so it is stated nowhere
 **Remove the reader's ceiling, make doctor report what it could not read, and cap the description in characters.**
 
 - **Readers accept any line the file holds.** The store's reader (`ParseJSONL`), doctor's reader (`ScanJSONLines`) and the beads importer's reader stop imposing Go's default 64 KiB token limit. The store is already read whole into memory (`os.ReadFile`) before parsing, so the ceiling bought no resource protection — it only created the failure. With it gone, no route can brick the store by line length: not the CLI's own writes, cascades onto unnamed tasks, status changes, `dep add`, `migrate`, hand edits, other tools, or lines written before this fix — a store bricked today opens again once tick is upgraded.
-- **Doctor fails when it could not read the whole store.** A read doctor could not complete is reported as a failure naming the line, never as a pass over the part it did read, and never as "tasks.jsonl not found". Relationship checks do not report on a partial task set as if it were whole.
+- **Store and doctor read `tasks.jsonl` through one shared line reader.** One definition of what a line is — the same splitting, the same blank-line rule (today doctor skips whitespace-only lines, `jsonl_reader.go:44`, while the store skips only empty ones, `jsonl.go:100`), the same line numbering — so the two cannot disagree about the file, and no future reader of the store can quietly reintroduce a ceiling. The beads importer reads an external file and is fixed on its own.
+- **Doctor fails when it could not read the whole store.** A read doctor could not complete is reported as a failure naming the line, never as a pass over the part it did read, and never as "tasks.jsonl not found" — which today is what every check would print, through the per-check fallback in `getJSONLines`, if the reader's error were surfaced naively (`cli/doctor.go:30-33`). "Partial" means lines the reader never reached: relationship checks keep their designed behaviour of skipping a line they cannot parse (`task_relationships.go:26-28`, pinned by `orphaned_dependency_test.go:219`, `task_relationships_test.go:137,238`), since the unparseable line is reported by the readability check itself.
 - **Read errors name the line.** The store's parse error identifies the line (and, where recoverable, the task) that stopped it, so a hand-edit recovery knows where to look.
 - **`rebuild` does not destroy the cache before it knows it can build a new one.**
-- **A generous character cap on the description**, the same shape as the note cap — enforced on `create`, `update` and `migrate` — with an error an agent can act on. With the reader fixed, the cap is hygiene rather than the safety device: it keeps free text finite, as discovery agreed, without having to count encoded bytes or follow cascades onto other records.
+- **A generous character cap on the description**, the same shape as the note cap — enforced on `create`, `update` and `migrate` — with an error an agent can act on. On `migrate`, an issue over the cap is skipped and reported with its reason, exactly as the import already treats any other invalid issue (`migrate/engine.go:74-77`); truncating would alter imported text silently, and aborting would let one oversized issue block a whole import. The migrate route also takes the CLI's existing title rules (500 characters, single line), which it skips today (`migrate/migrate.go:43-54`). With the reader fixed, the cap is hygiene rather than the safety device: it keeps free text finite, as discovery agreed, without having to count encoded bytes or follow cascades onto other records.
 
 **Deciding factor:** removing the reader's ceiling is the only change that makes the store unbrickable from every source, stores already over the ceiling included. Once that is done, the description cap no longer carries correctness, so it can be a plain character limit consistent with titles and notes.
 
@@ -230,12 +231,18 @@ Sibling check: v1/tick-core — Task Schema → Title and Description Limits hol
 - Description cap: exactly-at-cap accepted, cap+1 refused on `create`, `update` and `migrate`; the error names the field and limit; a refused write leaves `tasks.jsonl` untouched.
 - Cascade route: `start <child>` under a parent with a very large record succeeds and the store stays readable; same for `dep add` and status changes on a large record.
 - Beads importer reads an `issues.jsonl` line past 64 KiB.
-- Existing tests to revisit: `TestParseJSONL`, `TestScanJSONLines`, the JSONL-syntax check tests, and the title/note boundary tests as the pattern for the description cap's.
+- Doctor's read-failure path: once the ceiling is gone no file on disk makes the reader fail, so the path needs a test seam over the reader, and must be exercised through `RunDoctor` (not `ScanJSONLines` alone) to catch the per-check "not found" fallback.
+- Store and doctor agree on every line of a fixture carrying empty, whitespace-only and CRLF-terminated lines: same lines read, same line numbers reported.
+- A line past 64 KiB reads through the shared reader — the regression guard against the ceiling returning.
+- Description cap counted in characters, not bytes: a multibyte description exactly at the cap is accepted (as the title and note boundary tests do).
+- Migrate: an over-cap issue is skipped with the field and limit in its reason, the remaining issues import, and `--dry-run` reports the same refusal; an over-500-character or multi-line title is skipped likewise.
+- `rebuild` reordered: `store_test.go:571` (recovers from a corrupt `cache.db`) still passes; the exact-order verbose-log assertion at `store_test.go:679-715` is updated.
+- Existing tests to revisit: `TestParseJSONL`, `TestScanJSONLines`, the JSONL-syntax check tests, `store_test.go:679-715`, and the title/note boundary tests as the pattern for the description cap's.
 
 ### Risk Assessment
 
 - **Fix complexity:** Medium — each change is small, but they span the storage reader, doctor's reader and its error model, the beads reader, task validation plus the migrate path, `rebuild`'s ordering, and corrections owed to three specifications.
-- **Regression risk:** Low–Medium — the reader change only accepts more; the cap refuses input that is accepted today (well above observed use); doctor's output changes shape on failure.
+- **Regression risk:** Low–Medium — the reader change only accepts more (verified by the fix-validation pass against a store bricked by the current binary: it opens, and 1 MiB lines pass through SQLite and all three output formats); the cap refuses input accepted today (well above observed use); migrate imports over-cap or over-long-title issues as skipped rather than imported; doctor's output changes shape on failure; the shared reader must preserve the store's current line numbering exactly.
 - **Recommended approach:** Regular release.
 
 ---
