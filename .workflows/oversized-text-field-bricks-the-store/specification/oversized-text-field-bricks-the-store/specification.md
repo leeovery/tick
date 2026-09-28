@@ -58,6 +58,12 @@ Doctor's current rule of skipping any whitespace-only line (`rg -n 'TrimSpace\(t
 
 `tasks.jsonl` is tracked in git, so collaborators on different tick versions can share one store. A binary from before this fix keeps the 65,536-byte ceiling, so a store written by a fixed tick that holds a longer line stays unreadable to it. The description cap (§6) makes plain-text records of that size rarer but cannot rule them out — escape inflation and unbounded note counts remain. Accepted as the cost of the fix; upgrading is the remedy.
 
+### 3. Store read errors
+
+Every error from reading `tasks.jsonl` into the store names the line that stopped it — 1-based, numbered per §2.2 — and, where the line carries one, the task: when the failing line is a JSON object whose `id` is a string, the error includes that ID. A line that is not valid JSON, or has no string `id`, is named by line alone. The loader's own reason follows. For example: `failed to parse tasks.jsonl: line 2 (tick-a1b2c3): json: cannot unmarshal string into Go struct field taskJSON.priority of type int`.
+
+Today a line that fails to decode is named by number but not by task, and the scanner's failure named neither (§1.1). The purpose is hand-edit recovery: the message alone tells the agent which record to open and what is wrong with it.
+
 ---
 
 ## Working Notes
