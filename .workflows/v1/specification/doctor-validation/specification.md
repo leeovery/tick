@@ -35,7 +35,7 @@ Doctor performs two categories of checks: **errors** (things that break tick) an
 | # | Check | Description |
 |---|-------|-------------|
 | 1 | Cache staleness | Hash mismatch between JSONL and SQLite cache |
-| 2 | JSONL syntax errors | Malformed JSON lines that can't be parsed |
+| 2 | JSONL syntax errors | Lines tick cannot load as a task — malformed JSON, or valid JSON of the wrong shape or type |
 | 3 | Duplicate IDs | Case-insensitive duplicate detection (tick-ABC123 = tick-abc123) |
 | 4 | ID format violations | IDs not matching required format (prefix + 6 hex chars) |
 | 5 | Orphaned parent references | Task references non-existent parent |
@@ -52,7 +52,7 @@ Doctor performs two categories of checks: **errors** (things that break tick) an
 
 ### Out of Scope
 
-Schema validation (field types, required fields, valid enum values) happens at **write time**, not in doctor. Doctor catches corruption and edge cases that slipped through.
+Validation that tick's loader does not itself enforce (valid enum values, value ranges) happens at **write time**, not in doctor. Doctor judges every line the way every tick command loads it, so a passing doctor means every command can open the store; beyond that, it catches corruption and edge cases that slipped through.
 
 ---
 
@@ -149,3 +149,7 @@ Prerequisites that must exist before implementation can begin:
 
 - Doctor validates rules defined in tick-core (ID format, hierarchy constraints, cache hash mechanism)
 - The `tick rebuild` command depends on the dual-write/freshness system defined in tick-core
+
+## Corrigenda
+
+> **Corrigendum 2026-09-28** (from `oversized-text-field-bricks-the-store`): "Schema validation (field types, required fields, valid enum values) happens at **write time**, not in doctor" (Out of Scope) and "Malformed JSON lines that can't be parsed" (Errors #2) — corrected: doctor judges every line the way tick loads it, and a line it cannot load as a task — malformed JSON, or valid JSON of the wrong shape or type — fails the JSONL check with its line named; validation the loader does not enforce (enum membership, value ranges) stays at write time. The original boundary let doctor report a store healthy that no command could open: a valid-JSON line tick cannot load (`"priority":"high"`, `null`, `{}`, a whitespace-only line) makes every command fail, while doctor's JSON-only check passed it and its cache advice pointed at a `rebuild` that fails the same way. Agents run doctor to ask whether a store can be trusted, and only a loader-level check answers that.
