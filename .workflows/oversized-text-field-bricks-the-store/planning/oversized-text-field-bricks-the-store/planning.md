@@ -20,6 +20,18 @@ status: draft
 - [ ] Given a store that fails to parse and an existing `cache.db`, `tick rebuild` exits 1 with that parse error and leaves `cache.db` byte-for-byte unchanged. `tick rebuild --verbose` logs `reading JSONL` before `deleting cache.db`. `tick rebuild` over a corrupt `cache.db` still succeeds.
 - [ ] Given a `.beads/issues.jsonl` holding an issue line longer than 64 KiB, `tick migrate --from beads` reads that line and completes the import. Today the import aborts before anything is written.
 
+#### Tasks
+
+| Internal ID | Name | Edge Cases |
+|-------------|------|------------|
+| oversized-text-field-bricks-the-store-1-1 | Shared line reader with no length ceiling | lines of exactly 65,535 bytes, exactly 65,536 bytes and ~1 MiB, newline excluded (§2.1, §8.1), CRLF-terminated lines read the same as LF (§2.2), final line with no trailing newline with and without one trailing `\r` (§2.2, Corrigendum), file ending `…}\n\r` has an empty skipped final line (§2.2, Corrigendum), empty lines skipped but counted in line numbering (§2.2), whitespace-only line not skipped and fails naming its line number (§2.2) |
+| oversized-text-field-bricks-the-store-1-2 | Stores already over the old ceiling open and operate | line written before the fix opens with no migration or repair step (§2.1), ~1 MiB task renders in full in toon, pretty and JSON (§8.1) |
+| oversized-text-field-bricks-the-store-1-3 | Writes that take their own task past the old ceiling report success | line crosses the ceiling through accumulated notes, each within the 2,000-character note cap (§1.2, §2.4) |
+| oversized-text-field-bricks-the-store-1-4 | Status changes, dep add and cascades on a large record leave the store readable | cascade grows a parent the command never named (§1.1, §8.1) |
+| oversized-text-field-bricks-the-store-1-5 | Beads importer reads issue lines of any length | keeps its own line rules (each line trimmed), not the shared reader (§2.3) |
+| oversized-text-field-bricks-the-store-1-6 | Store read errors name the line and the task | malformed-JSON line named by line number alone (§3), line with no string `id` (missing, non-string, or not a JSON object) named by line number alone (§3) |
+| oversized-text-field-bricks-the-store-1-7 | `tick rebuild` keeps the cache until it can build a new one | corrupt `cache.db` still recovered (§4, §8.3), `--verbose` logs `reading JSONL` before `deleting cache.db` (§4, §8.3) |
+
 ### Phase 2: Doctor passes only a store every command can open
 status: draft
 
@@ -28,6 +40,7 @@ status: draft
 **Why this order**: Doctor's false pass is the second, independent root cause (§1.2). The fix uses Phase 1's shared reader, and its verdicts are checked against Phase 1's store behaviour: every doctor failure fixture must also fail `tick list` on the same line.
 
 **Acceptance**:
+- [ ] Given doctor's own line scanner, left in place by Phase 1, doctor reads `tasks.jsonl` only through Phase 1's shared line reader, so no reader of `tasks.jsonl` keeps its own scanner or line-length ceiling (deferred from Phase 1, task 1-1).
 - [ ] Given a two-task store with one added line, the line being any of: whitespace-only, `null`, `[]`, `{}`, malformed JSON, or a wrong-typed field such as `"priority":"high"`:
   - `tick doctor` exits 1 with a `JSONL syntax` failure that names that line and gives the loader's reason.
   - `tick list` on the same store fails, naming the same line.
