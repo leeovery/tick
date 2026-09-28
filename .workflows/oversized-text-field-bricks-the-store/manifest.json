@@ -43,8 +43,8 @@
           "author_gate_mode": "auto",
           "finding_gate_mode": "gated",
           "review_cycle": 0,
-          "phase": 2,
-          "task": "oversized-text-field-bricks-the-store-2-4",
+          "phase": 3,
+          "task": null,
           "task_map": {
             "oversized-text-field-bricks-the-store-1-1": "tick-1150de",
             "oversized-text-field-bricks-the-store-1": "tick-f83a49",
@@ -70,16 +70,7 @@
               "p2": "2026-09-28"
             }
           },
-          "staging": {
-            "author-p2": {
-              "tasks": {
-                "oversized-text-field-bricks-the-store-2-1": "approved",
-                "oversized-text-field-bricks-the-store-2-2": "approved",
-                "oversized-text-field-bricks-the-store-2-3": "approved",
-                "oversized-text-field-bricks-the-store-2-4": "approved"
-              }
-            }
-          },
+          "staging": {},
           "external_id": "tick-cc7316"
         }
       }
