@@ -32,6 +32,25 @@
           }
         }
       }
+    },
+    "planning": {
+      "items": {
+        "oversized-text-field-bricks-the-store": {
+          "status": "in-progress",
+          "format": "tick",
+          "spec_commit": "9233bb53f81af21fc920bfea8009aa4a856ff1a5",
+          "task_list_gate_mode": "gated",
+          "author_gate_mode": "gated",
+          "finding_gate_mode": "gated",
+          "review_cycle": 0,
+          "phase": 1,
+          "task": null,
+          "task_map": {},
+          "storage_paths": [
+            ".tick/"
+          ]
+        }
+      }
     }
   },
   "seeds": [
