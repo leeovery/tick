@@ -149,7 +149,7 @@ Each task has 10 fields:
 
 - **description**:
   - Optional
-  - No maximum length
+  - Capped at a finite character limit, enforced on every write path (value set by `oversized-text-field-bricks-the-store`)
   - Newlines and markdown allowed
 
 #### Timestamp Format
@@ -810,3 +810,5 @@ None. This is the foundational data layer that other specifications depend on.
 ## Corrigenda
 
 > **Corrigendum 2026-09-20** (from `free-text-round-trip`): "Long text fields get their own unstructured sections" (TOON output principle 3), and the worked `tick show` example that printed the description as an indented raw block — corrected: a long text field is a single TOON-quoted value on the section it belongs to, so the example now reads `description: "Full task description here.\nCan be multiple lines."`. The unstructured section is the form that made tick's toon output unparseable: it is hand-assembled rather than produced by the encoder, and it obliges a reader to know an indentation-stripping rule the document never states. The quoted value is what the library emits from a Go string, and it is the rule note text already obeyed, so all free text in the output now decodes the same way. The `task{…}` and `stats{…}` scope headers in the same passage are left standing: they are superseded by `free-text-round-trip` §5 rather than corrected here.
+
+> **Corrigendum 2026-09-28** (from `oversized-text-field-bricks-the-store`): "No maximum length" (Task Schema → Title and Description Limits, description) — corrected: the description is capped at a finite character limit, enforced on every write path, its value set by `oversized-text-field-bricks-the-store`. The unbounded description was never unbounded in practice: the store's reader stopped at any task line of 65,536 bytes (Go's default `bufio.Scanner` limit, never chosen), so a description large enough to push its line past that was accepted, written, and then made every command — `rebuild` included — fail until `tasks.jsonl` was edited by hand. That work removes the reader's ceiling, which is what makes the store safe; the cap keeps free text finite as hygiene, the same shape as the existing title and note caps.
