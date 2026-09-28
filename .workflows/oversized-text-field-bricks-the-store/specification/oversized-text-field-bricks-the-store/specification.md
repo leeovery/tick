@@ -111,6 +111,32 @@ While any line fails to load (§5.1) or the read is incomplete (§5.3), no docto
 
 The cache check is otherwise unchanged: it hashes the raw file bytes and its verdict is correct.
 
+### 6. Description cap
+
+#### 6.1 The cap
+
+A task description is capped at **50,000 characters**, counted the way the title (500) and note (2000) caps are: Unicode characters, not bytes, after leading and trailing whitespace is trimmed. A description of exactly 50,000 characters is accepted, multibyte ones included; 50,001 is refused. The cap is a fixed constant alongside the title and note caps, not a flag, so the command flag registry, `tick help` and the README do not change.
+
+The cap is hygiene, not the store's safety (§2.1). It keeps free text finite: without it an agent can write a description of any size that every later `tick show` returns in full. It sits well above real use so no legitimate description meets it (longest real description across the maintainer's tick stores: `jq -r '(.description // "") | length' ~/Code/*/.tick/tasks.jsonl | sort -n | tail -1` → `20785`); a description near it signals a task that wants breaking up. It is not sized against the 64 KiB line older binaries still enforce (§2.4).
+
+#### 6.2 Where it is enforced
+
+Every route that sets a description: `tick create --description`, `tick update --description`, and `tick migrate` (`rg -l 'TrimDescription\(' internal/cli internal/migrate -g '!*_test.go'` → `internal/cli/create.go`, `internal/cli/update.go`, `internal/migrate/migrate.go`). The check runs before anything is written: a refused `create` or `update` exits 1 and leaves `tasks.jsonl` and the cache untouched.
+
+The cap applies to a description being set. A description already stored over it is left as it is, reads normally (§2.1), and does not block other changes to its task — a status change, a new title, a note.
+
+#### 6.3 The refusal
+
+The refusal names the field, the limit, the length submitted, and that nothing was saved, so an agent knows how much to cut and that the write must be retried — for example `description is 61,204 characters, over the 50,000-character limit; nothing was saved`. The four elements are required; the exact wording is the implementer's. On `create` and `update` it is the command's error (exit 1); on `migrate` it is the skipped issue's reason (§6.4).
+
+#### 6.4 Migrate
+
+`tick migrate` validates each issue before creating it. An issue whose description exceeds the cap is skipped and reported with its reason, exactly as the import already treats any other invalid issue (`rg -n 'if err := mt.Validate' internal/migrate/engine.go` → `:74`): the remaining issues import, the description is never truncated, and one oversized issue never aborts the import.
+
+Migrate also takes the CLI's title rules, which it skips today (it checks only that the title is non-empty): an issue whose title exceeds 500 characters or spans more than one line is skipped likewise, with its reason.
+
+`--dry-run` reports the same refusals as a real run: validation happens before the dry run's no-op creator is reached.
+
 ---
 
 ## Working Notes
