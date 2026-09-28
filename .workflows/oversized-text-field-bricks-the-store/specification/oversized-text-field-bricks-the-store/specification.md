@@ -151,6 +151,45 @@ Migrate also adopts the CLI's title rules. Today it checks only that the title i
 - **Title and note refusals keep their current messages.** They name the field and limit but not the submitted length or that nothing was saved; bringing them in line with §6.3 is not part of this work.
 - **The post-write signal needs no change of its own.** Today a write that pushes a record over the ceiling is committed and then reported as failed by `create`, `update` and `note` (exit 1), or as plain success by status changes and `dep add` (§1.1). Once the reader accepts any line (§2.1), a write can no longer produce a line the reader refuses, so the read-back succeeds and both inconsistencies disappear.
 
+### 8. Testing
+
+#### 8.1 Reading (§2)
+
+- A task line of about 1 MiB reads through the shared reader, as do lines of exactly 65,535 and 65,536 bytes (excluding the newline). This is the regression guard against a ceiling returning.
+- A fixture store already holding a line over the old ceiling opens: `list`, `show`, `rebuild`, and `update` and `remove` of the oversized task all succeed.
+- A task with a ~1 MiB line round-trips through the SQLite cache and renders in all three output formats (toon, pretty, JSON).
+- Routes that grow a task the command never named leave the store readable: `start <child>` under a parent with a very large record succeeds and the next `list` succeeds; the same holds for `dep add` and for status changes on a large record.
+- The store and doctor agree on every line of a fixture carrying empty, whitespace-only and CRLF-terminated lines: the same lines read, the same line numbers reported.
+- The beads importer reads an `issues.jsonl` line past 64 KiB.
+
+#### 8.2 Read errors (§3)
+
+- A line that fails to load is named by number, with the task ID when the line carries a string `id`; a malformed-JSON line is named by number alone.
+
+#### 8.3 Rebuild (§4)
+
+- `rebuild` on a store that fails to parse exits 1 and leaves the existing `cache.db` byte-for-byte as it was.
+- `it works when cache.db is corrupted` (`internal/storage/store_test.go:571`) still passes; `it logs verbose messages during rebuild` (`:679`) is updated to the new order.
+
+#### 8.4 Doctor (§5)
+
+- Doctor fails, naming the line, on each of: a whitespace-only line, `null`, `[]`, `{}`, and a wrong-typed field. Each fixture is also confirmed to fail `tick list`, so doctor and the store agree. In each case no suggestion in the report names `tick rebuild`.
+- A valid store still reports `No issues found`.
+- An otherwise valid store with a line over 64 KiB mid-file reports no issues — in particular, no false orphan-reference error.
+- The incomplete-read path (§5.3) is driven through a test seam over the reader and exercised through `RunDoctor`, not the reader alone, so the per-check fallback is covered: the report fails naming the line, no line-consuming check passes, and nothing reports `tasks.jsonl not found`.
+
+#### 8.5 Description cap (§6)
+
+- On `create` and `update`: exactly 50,000 characters is accepted and 50,001 refused; a multibyte description of exactly 50,000 characters is accepted; surrounding whitespace does not count toward the cap.
+- A refused `create` or `update` leaves `tasks.jsonl` unchanged, and its error carries the four elements of §6.3.
+- A task whose stored description is already over the cap accepts an `update` that does not set the description.
+- Migrate: an over-cap issue is skipped with §6.3's elements in its reason, the remaining issues import, and `--dry-run` reports the same refusal. An issue with an over-500-character or multi-line title is skipped likewise.
+- The existing title boundary tests (`internal/task/task_test.go:76`, `:106`, `:122`) and their note counterparts are the pattern.
+
+#### 8.6 Existing tests to revisit
+
+`TestParseJSONL` and `TestReadJSONL` (`internal/storage/jsonl_test.go`), `TestScanJSONLines` (`internal/doctor/jsonl_reader_test.go`), `TestJsonlSyntaxCheck` (`internal/doctor/jsonl_syntax_test.go`), and the rebuild tests of §8.3.
+
 ---
 
 ## Working Notes
