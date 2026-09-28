@@ -34,7 +34,7 @@ There are two defects, independent of each other, meeting at the same ceiling:
 
 #### 1.4 Who meets these behaviours
 
-Agents write the tasks, not people, so an agent is what meets a write-time refusal. Every refusal must say which field, what limit, and that nothing was saved. Agents also run `tick doctor` as a health check, and a false "healthy" tells an agent a store is fine when no command can open it. A passing doctor must therefore mean every tick command can open the store.
+Agents write the tasks, not people, so an agent is what meets a write-time refusal. The description cap's refusal therefore carries everything an agent needs to cut the description and retry the write (§6.3). Agents also run `tick doctor` as a health check, and a false "healthy" tells an agent a store is fine when no command can open it. A passing doctor must therefore mean every tick command can open the store.
 
 ### 2. Reading `tasks.jsonl`
 
@@ -134,7 +134,7 @@ The cap applies to a description being set. A description already stored over it
 
 #### 6.3 The refusal
 
-The refusal names the field, the limit, the length submitted, and that nothing was saved, so an agent knows how much to cut and that the write must be retried. For example: `description is 61,204 characters, over the 50,000-character limit; nothing was saved`. The four elements are required; the exact wording is the implementer's. On `create` and `update` it is the command's error, exit 1. On `migrate` it is the skipped issue's reason (§6.4).
+The refusal names the field, the limit, the length submitted, and that nothing was saved, so an agent knows how much to cut and that the write must be retried. For example: `description is 61,204 characters, over the 50,000-character limit; nothing was saved`. The length reported is the description's counted length, its characters after trimming (§6.1), so it compares directly with the limit. The four elements are required; the exact wording is the implementer's. On `create` and `update` it is the command's error, exit 1. On `migrate` it is the skipped issue's reason (§6.4).
 
 #### 6.4 Migrate
 

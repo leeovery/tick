@@ -22,8 +22,8 @@ Agents write the tasks, not people, so an agent is what meets a write-time refus
 **Proposed Text**:
 Agents write the tasks, not people, so an agent is what meets a write-time refusal. The description cap's refusal therefore carries everything an agent needs to cut the description and retry the write (§6.3).
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Settled from §7 and §6.3; §1.4 scoped to the description refusal, landed as staged.
 
 ---
 
@@ -44,8 +44,8 @@ Report the counted length: the description's characters after trimming, the same
 **Proposed Text**:
 (Add after the example sentence in §6.3.) The length reported is the description's counted length, its characters after trimming (§6.1), so it compares directly with the limit.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Settled from §6.1's counting rule and §6.3's purpose; sentence added to §6.3 as staged.
 
 ---
 
