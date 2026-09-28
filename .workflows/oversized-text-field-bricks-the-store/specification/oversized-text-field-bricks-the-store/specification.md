@@ -29,6 +29,35 @@ Two defects, independent of each other, meeting at the same ceiling:
 
 Tasks are written by agents, not by hand, so the party that meets a write-time refusal is an agent: every refusal must say which field, what limit, and that nothing was saved. Agents also run `tick doctor` as a health check; a false "healthy" tells an agent a store is fine when no command can open it. A passing doctor must therefore mean every tick command can open the store.
 
+### 2. Reading `tasks.jsonl`
+
+#### 2.1 No line-length ceiling
+
+Every reader of `tasks.jsonl` accepts a line of any length the file holds. The read side imposes no per-line size limit — neither Go's default scanner limit (§1.2) nor any larger one chosen in its place. With it gone, no route can make the store unreadable by line length: the CLI's own writes, cascades onto tasks a command never named, status changes, `dep add`, `migrate`, hand edits, other tools, or lines written before this fix. A store already holding an over-ceiling line opens once tick is upgraded, with no migration or repair step, and the oversized task can then be shown, updated and removed like any other.
+
+The ceiling bought no resource protection: every store read already loads the whole file into memory before parsing (`rg -n 'os.ReadFile\(s.jsonlPath\)' internal/storage/store.go` → `:159`, `:243`, `:360` — `ReadTasks`, `Rebuild`, `readAndEnsureFresh`).
+
+The readers in scope are the production line scanners (`rg -n 'bufio.NewScanner' internal cmd -g '!*_test.go'` → `internal/storage/jsonl.go:95`, `internal/doctor/jsonl_reader.go:37`, `internal/migrate/beads/beads.go:84`). The first two read `tasks.jsonl` and move onto the shared reader (§2.2); the third reads an external file (§2.3).
+
+#### 2.2 One shared line reader
+
+The store and doctor read `tasks.jsonl` through one shared line reader, so the two cannot disagree about what the file holds and no future reader of the store can reintroduce a ceiling. It carries one definition of a line — the store's current one, preserved exactly, so commands behave as they do today on every store the old reader could read:
+
+- A line ends at `\n`; one `\r` immediately before it is stripped, so CRLF files read the same as LF. A final line with no trailing newline is still read.
+- Lines are numbered from 1, and every line counts toward the numbering, skipped ones included.
+- A line that is empty once its terminator is removed is skipped.
+- A line holding only whitespace is not skipped. It is an ordinary line that must load as a task, and fails to (§5.1) — as it does in the store today (measured on current main: a trailing `   ` line makes `tick list` fail with `failed to parse line 3: unexpected end of JSON input`).
+
+Doctor's current rule of skipping any whitespace-only line (`rg -n 'TrimSpace\(text\) == ""' internal/doctor/jsonl_reader.go` → `:44`) gives way to the store's (`rg -n 'line == ""' internal/storage/jsonl.go` → `:100`), because doctor's verdict must match what commands actually do (§5).
+
+#### 2.3 The beads importer's reader
+
+`tick migrate --from beads` reads `.beads/issues.jsonl` — an external file, not the store — so it does not use the shared reader and keeps its own line rules (it trims each line). It drops the ceiling the same way: an `issues.jsonl` line of any length is read. Today a line of 65,536 bytes or more aborts the whole import before anything is written, with an error that names no line.
+
+#### 2.4 Older tick binaries
+
+`tasks.jsonl` is tracked in git, so collaborators on different tick versions can share one store. A binary from before this fix keeps the 65,536-byte ceiling, so a store written by a fixed tick that holds a longer line stays unreadable to it. The description cap (§6) makes plain-text records of that size rarer but cannot rule them out — escape inflation and unbounded note counts remain. Accepted as the cost of the fix; upgrading is the remedy.
+
 ---
 
 ## Working Notes
