@@ -98,7 +98,7 @@ A doctor run that reports no errors therefore means every tick command can open 
 
 #### 5.2 The check keeps its name
 
-The check stays `JSONL syntax` in doctor's output, in the README's doctor "Checks for:" list (`README.md:396`) and in `tick help doctor` (`internal/cli/help.go:217`); none of those change. What changes is its failure detail: a line that fails to load reports the loader's reason in place of `invalid JSON`. Its suggestion stays a hand fix of the named line.
+The check stays `JSONL syntax` in doctor's output, in the README's doctor "Checks for:" list (`README.md:396`) and in `tick help doctor` (`internal/cli/help.go:217`); none of those change. The v1 doctor-validation specification keeps the check titled "JSONL syntax errors" while widening what it covers, and renaming it would change user-visible output and a tested README sample with no change in behaviour. What changes is its failure detail: a line that fails to load reports the loader's reason in place of `invalid JSON`. Its suggestion stays a hand fix of the named line.
 
 #### 5.3 A read doctor cannot complete
 

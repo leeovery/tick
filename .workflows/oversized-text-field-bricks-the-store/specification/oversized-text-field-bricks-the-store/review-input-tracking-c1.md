@@ -14,8 +14,8 @@ After this work, doctor's JSONL check fails lines for reasons that are not synta
 
 **Proposed Text**:
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Routed
+**Notes**: Derived and landed in the investigation (Fix Direction → Chosen Approach, doctor bullet; Testing Recommendations, README/help bullet): the check keeps its name because v1/doctor-validation keeps it titled "JSONL syntax errors" while widening its scope, and a rename would change user-visible output and a tested README sample with no behaviour change; alternative that also fit — rename with README and help moving together. §5.2 re-aligned to carry the reason.
 
 ---
 
