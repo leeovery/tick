@@ -44,7 +44,7 @@
           "finding_gate_mode": "gated",
           "review_cycle": 0,
           "phase": 3,
-          "task": "oversized-text-field-bricks-the-store-3-1",
+          "task": "oversized-text-field-bricks-the-store-3-2",
           "task_map": {
             "oversized-text-field-bricks-the-store-1-1": "tick-1150de",
             "oversized-text-field-bricks-the-store-1": "tick-f83a49",
@@ -58,7 +58,9 @@
             "oversized-text-field-bricks-the-store-2": "tick-e8ed78",
             "oversized-text-field-bricks-the-store-2-2": "tick-9ab6e2",
             "oversized-text-field-bricks-the-store-2-3": "tick-28f4a7",
-            "oversized-text-field-bricks-the-store-2-4": "tick-87cccf"
+            "oversized-text-field-bricks-the-store-2-4": "tick-87cccf",
+            "oversized-text-field-bricks-the-store-3-1": "tick-70bb02",
+            "oversized-text-field-bricks-the-store-3": "tick-bc4d84"
           },
           "storage_paths": [
             ".tick/"
@@ -71,7 +73,16 @@
               "p3": "2026-09-28"
             }
           },
-          "staging": {},
+          "staging": {
+            "author-p3": {
+              "tasks": {
+                "oversized-text-field-bricks-the-store-3-1": "approved",
+                "oversized-text-field-bricks-the-store-3-2": "approved",
+                "oversized-text-field-bricks-the-store-3-3": "approved",
+                "oversized-text-field-bricks-the-store-3-4": "approved"
+              }
+            }
+          },
           "external_id": "tick-cc7316"
         }
       }
