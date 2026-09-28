@@ -29,8 +29,9 @@ otherwise unchanged.
 - **Task title limit** (`maxTitleLen`, `internal/task/task.go:33`) stays at
   500. `internal/cli/update_test.go:443` and `internal/task/task_test.go`
   title-boundary tests are unaffected.
-- **Task description** — intentionally unbounded (only empty/whitespace
-  rejected via `ValidateDescriptionUpdate`). No change.
+- **Task description** — left as it was (only empty/whitespace rejected via
+  `ValidateDescriptionUpdate`); later capped at a finite character limit by
+  `oversized-text-field-bricks-the-store`. No change here.
 - No storage-schema change: notes persist in JSONL and a `task_notes` TEXT
   column, neither of which enforces a length cap.
 
@@ -42,3 +43,7 @@ otherwise unchanged.
 - A note of exactly 2000 chars is accepted; 2001 is rejected, with the error
   message reporting the maximum as 2000.
 - `go vet ./...` clean; `gofmt` clean.
+
+## Corrigenda
+
+> **Corrigendum 2026-09-28** (from `oversized-text-field-bricks-the-store`): "Task description — intentionally unbounded" (Exclusions) — corrected: this change left the description as it was, and the description is now capped at a finite character limit by `oversized-text-field-bricks-the-store`. It was never unbounded in practice: the store's reader stopped at any task line of 65,536 bytes, so a description past that was accepted, written, and then made every command fail until `tasks.jsonl` was edited by hand. The exclusion's scope statement — this work did not touch the description — is unchanged.
