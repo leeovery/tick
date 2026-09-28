@@ -183,7 +183,7 @@ Migrate also adopts the CLI's title rules. Today it checks only that the title i
 - On `create` and `update`: exactly 50,000 characters is accepted and 50,001 refused; a multibyte description of exactly 50,000 characters is accepted; surrounding whitespace does not count toward the cap.
 - A refused `create` or `update` leaves `tasks.jsonl` unchanged, and its error carries the four elements of §6.3.
 - A task whose stored description is already over the cap accepts an `update` that does not set the description.
-- Migrate: an over-cap issue is skipped with §6.3's elements in its reason, the remaining issues import, and `--dry-run` reports the same refusal. An issue with an over-500-character or multi-line title is skipped likewise.
+- Migrate: an issue whose description is exactly 50,000 characters imports, and one of 50,001 characters is skipped with §6.3's elements in its reason; the remaining issues import, and `--dry-run` reports the same refusal. An issue with an over-500-character or multi-line title is skipped likewise.
 - The existing title boundary tests (`internal/task/task_test.go:76`, `:106`, `:122`) and their note counterparts are the pattern.
 
 #### 8.6 Existing tests to revisit

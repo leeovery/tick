@@ -38,8 +38,8 @@ Add the boundary to the migrate test bullet: an issue with exactly 50,000 charac
 **Proposed Text**:
 - Migrate: an issue whose description is exactly 50,000 characters imports, and one of 50,001 characters is skipped with §6.3's elements in its reason; the remaining issues import, and `--dry-run` reports the same refusal. An issue with an over-500-character or multi-line title is skipped likewise.
 
-**Resolution**: Pending
-**Notes**:
+**Resolution**: Approved
+**Notes**: Settled from the investigation's testing recommendations; landed in §8.5.
 
 ---
 
