@@ -50,7 +50,7 @@ The readers in scope are the production line scanners (`rg -n 'bufio.NewScanner'
 
 The store and doctor read `tasks.jsonl` through one shared line reader, so the two cannot disagree about what the file holds and no future reader of the store can reintroduce a ceiling. It carries one definition of a line — the store's current one, preserved exactly, so commands behave as they do today on every store the old reader could read:
 
-- A line ends at `\n`; one `\r` immediately before it is stripped, so CRLF files read the same as LF. A final line with no trailing newline is still read.
+- A line ends at `\n`; one `\r` immediately before it is stripped, so CRLF files read the same as LF. A final line with no trailing newline is still read, and one `\r` at its end is stripped the same way — as `bufio.ScanLines` does today — so a file ending `…}\n\r` has an empty, skipped final line rather than a whitespace-only one.
 - Lines are numbered from 1, and every line counts toward the numbering, skipped ones included.
 - A line that is empty once its terminator is removed is skipped.
 - A line holding only whitespace is not skipped. It is an ordinary line that must load as a task, and fails to (§5.1) — as it does in the store today (measured on current main: a trailing `   ` line makes `tick list` fail with `failed to parse line 3: unexpected end of JSON input`).
@@ -193,3 +193,7 @@ Migrate also adopts the CLI's title rules. Today it checks only that the title i
 ---
 
 ## Working Notes
+
+## Corrigenda
+
+> **Corrigendum 2026-09-28** (from `planning/oversized-text-field-bricks-the-store`): §2.2 left open whether a final line with no trailing newline has a trailing `\r` stripped — corrected: it does, one `\r`, exactly as `bufio.ScanLines` does today (measured: its at-EOF branch returns `dropCR(data)`, and both current readers use the default split), which §2.2's governing rule ("the store's current one, preserved exactly") already required.
