@@ -144,6 +144,13 @@ Migrate also adopts the CLI's title rules. Today it checks only that the title i
 
 `--dry-run` reports the same refusals as a real run, because validation happens before the dry run's no-op creator is reached.
 
+### 7. Unchanged by this work
+
+- **No record-level size bound.** Nothing on the write path measures a record's encoded size or refuses a write for its byte length. With the reader's ceiling gone (§2.1), such a bound would protect nothing.
+- **Note, transition and `blocked_by` counts stay unbounded.** The title (500), note (2000), tag and ref caps are unchanged.
+- **Title and note refusals keep their current messages.** They name the field and limit but not the submitted length or that nothing was saved; bringing them in line with §6.3 is not part of this work.
+- **The post-write signal needs no change of its own.** Today a write that pushes a record over the ceiling is committed and then reported as failed by `create`, `update` and `note` (exit 1), or as plain success by status changes and `dep add` (§1.1). Once the reader accepts any line (§2.1), a write can no longer produce a line the reader refuses, so the read-back succeeds and both inconsistencies disappear.
+
 ---
 
 ## Working Notes
