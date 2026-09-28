@@ -36,9 +36,9 @@
     "planning": {
       "items": {
         "oversized-text-field-bricks-the-store": {
-          "status": "in-progress",
+          "status": "completed",
           "format": "tick",
-          "spec_commit": "9233bb53f81af21fc920bfea8009aa4a856ff1a5",
+          "spec_commit": "74d583001532bf7ff53a9b9e2262d48592074582",
           "task_list_gate_mode": "auto",
           "author_gate_mode": "auto",
           "finding_gate_mode": "auto",
