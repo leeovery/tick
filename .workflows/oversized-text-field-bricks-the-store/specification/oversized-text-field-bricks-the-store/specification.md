@@ -72,6 +72,45 @@ Today rebuild deletes the cache first and parses second (`rg -n '"deleting cache
 
 Rebuild still recovers from a corrupt `cache.db`. Its `--verbose` log follows the new order: `reading JSONL` comes before `deleting cache.db`.
 
+### 5. Doctor
+
+#### 5.1 Each line judged the way tick loads it
+
+Every line doctor reads through the shared reader (§2.2) must load as a task exactly as every tick command loads it — the same decoding, timestamp parsing included. A line that does not load fails the JSONL check, one failure per line, naming the line and giving the loader's reason. That covers:
+
+- malformed JSON;
+- a whitespace-only line;
+- valid JSON of the wrong shape — `null`, `[]`, `{}`;
+- a wrong-typed field, such as `"priority":"high"`.
+
+Each of these makes every command fail today while doctor's JSONL check passes it (measured on current main with a built binary, each line added to a two-task store: `tick list` exits 1 naming the line; `tick doctor` prints `✓ JSONL syntax: OK`, flags only the stale cache, and advises `tick rebuild`).
+
+Validation the loader does not itself enforce — enum membership (status, type) and value ranges (priority 0–4) — stays at write time and is not doctor's.
+
+A doctor run that reports no errors therefore means every tick command can open the store. A valid store still reports `No issues found`.
+
+#### 5.2 The check keeps its name
+
+The check stays `JSONL syntax` in doctor's output, in the README's doctor "Checks for:" list (`README.md:396`) and in `tick help doctor` (`internal/cli/help.go:217`); none of those change. What changes is its failure detail: a line that fails to load reports the loader's reason in place of `invalid JSON`. Its suggestion stays a hand fix of the named line.
+
+#### 5.3 A read doctor cannot complete
+
+If reading `tasks.jsonl` stops before the end of the file — the file opened, but an error cut the read short — doctor reports a failure naming the line it could not read and saying the file could not be read in full. It never reports a pass over the lines it did read, and never reports `tasks.jsonl not found`: every check that consumes the file's lines fails with that read error in place of its normal verdict, the same shape as today's failure when the file will not open. The not-found result (`rg -n 'func fileNotFoundResult' internal/doctor/helpers.go` → `:14`) stays, for a file that cannot be opened and nothing else.
+
+Today the reader's error is dropped; surfaced through the existing per-check fallback, it would make every check report the file missing (§1.2).
+
+Once the ceiling is gone no file on disk makes the reader fail this way, so the path is reached through a test seam over the reader (§8).
+
+#### 5.4 Relationship checks
+
+"Partial" means lines the reader never reached. A line the reader did reach but that does not load is reported by the JSONL check (§5.1); the relationship and hierarchy checks keep their designed behaviour of skipping a line that is not a JSON object or has no string `id` (`rg -n 'jl.Parsed == nil' internal/doctor/task_relationships.go` → `:26`). Because the whole file is now read, tasks after a long line are no longer invisible to them, so a mid-file oversized line produces no false orphan error.
+
+#### 5.5 No advice to rebuild a store that cannot load
+
+While any line fails to load (§5.1) or the read is incomplete (§5.3), no doctor output directs the user to `tick rebuild` — it fails the same way until the line is fixed. The cache check still reports what it finds (a stale or missing cache is a true finding), but its suggestion points at fixing the lines the JSONL check names, not at `tick rebuild`. Once those lines are fixed, the next doctor run gives the usual rebuild advice if the cache is still stale.
+
+The cache check is otherwise unchanged: it hashes the raw file bytes and its verdict is correct.
+
 ---
 
 ## Working Notes
