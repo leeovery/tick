@@ -187,6 +187,57 @@ The ceiling is a library default rather than a decision, so it is stated nowhere
 
 ## Fix Direction
 
+### Chosen Approach
+
+**Remove the reader's ceiling, make doctor report what it could not read, and cap the description in characters.**
+
+- **Readers accept any line the file holds.** The store's reader (`ParseJSONL`), doctor's reader (`ScanJSONLines`) and the beads importer's reader stop imposing Go's default 64 KiB token limit. The store is already read whole into memory (`os.ReadFile`) before parsing, so the ceiling bought no resource protection — it only created the failure. With it gone, no route can brick the store by line length: not the CLI's own writes, cascades onto unnamed tasks, status changes, `dep add`, `migrate`, hand edits, other tools, or lines written before this fix — a store bricked today opens again once tick is upgraded.
+- **Doctor fails when it could not read the whole store.** A read doctor could not complete is reported as a failure naming the line, never as a pass over the part it did read, and never as "tasks.jsonl not found". Relationship checks do not report on a partial task set as if it were whole.
+- **Read errors name the line.** The store's parse error identifies the line (and, where recoverable, the task) that stopped it, so a hand-edit recovery knows where to look.
+- **`rebuild` does not destroy the cache before it knows it can build a new one.**
+- **A generous character cap on the description**, the same shape as the note cap — enforced on `create`, `update` and `migrate` — with an error an agent can act on. With the reader fixed, the cap is hygiene rather than the safety device: it keeps free text finite, as discovery agreed, without having to count encoded bytes or follow cascades onto other records.
+
+**Deciding factor:** removing the reader's ceiling is the only change that makes the store unbrickable from every source, stores already over the ceiling included. Once that is done, the description cap no longer carries correctness, so it can be a plain character limit consistent with titles and notes.
+
+**Open for specification:**
+- The cap's value. Real descriptions in this repo reach 12,473 characters; the value should sit well above real use.
+- Whether doctor's "readable" means "tick can load every line as a task" — which also catches a valid-JSON line with a wrong-typed field (H5) — at the cost of reversing the v1 doctor-validation specification's exclusion of schema checks from doctor. Lean recorded in discussion: yes, since agents run doctor as a health check and "healthy" should mean "tick can open this".
+
+Sibling check: v1/tick-core — Task Schema → Title and Description Limits holds description "No maximum length"; increase-note-char-limit — Exclusions hold the description "intentionally unbounded"; free-text-round-trip §10.3 — holds "an arbitrarily large description remains possible in principle". All three are contradicted by this direction. v1/doctor-validation — Out of Scope excludes schema validation from doctor; contradicted only if the open doctor question settles toward typed parsing.
+
+### Options Explored
+
+- **A — Remove the reader's ceiling; make doctor tell the truth (no cap).** Same as the chosen approach without the description cap. Not chosen: it leaves free text unbounded, against the direction agreed in discovery — an agent can still write a multi-megabyte description that every later `show` returns in full.
+- **B — A plus a generous description cap.** Chosen.
+- **C — Keep the 64 KiB ceiling; refuse any write that would cross it.** Measure each task's stored size on every write and refuse at the ceiling; doctor fixed as in A. Not chosen: stores already bricked stay bricked; refusals land on tasks the command never named (`start <child>` refused because the parent is full), in byte terms an agent cannot act on; and the ceiling stays a library default nobody chose.
+
+### Discussion
+
+- The investigation reframed the discovery-agreed starting shape. Discovery assumed a write-time text limit was the fix; tracing showed the defect is the reader's unchosen ceiling, and that no per-field character cap can keep records under it (6-byte escapes; unbounded note, transition and dependency counts; cascades growing tasks the command never named). The cap survives, demoted from safety device to hygiene.
+- Tasks are written by agents only, for the maintainer. That makes the refusal's audience an agent — the error has to say which field, what limit, and that nothing was saved — and it rules out C, whose refusals can name a task the agent never touched.
+- Agents, not the maintainer, run `tick doctor`. A false "healthy" misleads the party least able to see past it; hence doctor must fail on anything it could not read, and the lean toward doctor using tick's own parse.
+- tick is open source; whether any store in the wild already sits over the ceiling is unknown. Rescue on upgrade is therefore worth having, and it falls out of the reader fix for free — C cannot offer it.
+- Mixed-version stores: `tasks.jsonl` is tracked in git, so collaborators on different tick versions share one store. Older binaries keep the 64 KiB ceiling; a store written by a fixed tick that holds a longer line stays unreadable to them. The cap limits how often plain text reaches that size but cannot rule it out (escape inflation, notes). Accepted as the cost of the fix; upgrading is the remedy.
+- The inconsistent post-write signal (exit 1 after a committed `create`/`update`; exit 0 from status changes and `dep add` that brick the store) dissolves with the reader fix: a write can no longer produce a line the reader refuses.
+
+### Testing Recommendations
+
+- Store reader: a task line well past 64 KiB (e.g. ~1 MiB) parses; the 65,535 / 65,536-byte boundary both parse.
+- A fixture store already over the old ceiling opens: `list`, `show`, `rebuild`, and `update`/`remove` of the oversized task all succeed.
+- A parse failure names its line (and task where recoverable).
+- `rebuild` on an unparseable store leaves the existing `cache.db` in place.
+- Doctor: a read it cannot complete fails with the line named — not a pass over the prefix, not "tasks.jsonl not found"; the mid-file case produces no false orphan-reference error.
+- Description cap: exactly-at-cap accepted, cap+1 refused on `create`, `update` and `migrate`; the error names the field and limit; a refused write leaves `tasks.jsonl` untouched.
+- Cascade route: `start <child>` under a parent with a very large record succeeds and the store stays readable; same for `dep add` and status changes on a large record.
+- Beads importer reads an `issues.jsonl` line past 64 KiB.
+- Existing tests to revisit: `TestParseJSONL`, `TestScanJSONLines`, the JSONL-syntax check tests, and the title/note boundary tests as the pattern for the description cap's.
+
+### Risk Assessment
+
+- **Fix complexity:** Medium — each change is small, but they span the storage reader, doctor's reader and its error model, the beads reader, task validation plus the migrate path, `rebuild`'s ordering, and corrections owed to three specifications.
+- **Regression risk:** Low–Medium — the reader change only accepts more; the cap refuses input that is accepted today (well above observed use); doctor's output changes shape on failure.
+- **Recommended approach:** Regular release.
+
 ---
 
 ## Notes
