@@ -8,7 +8,7 @@
 Either a task record is refused on the write path with a clear error before it can make the store unreadable, or — once written — every store-reading command can still read it. `tick doctor` reports a store it could not fully read as unhealthy.
 
 **Actual behavior:**
-A task record whose JSONL line passes ~64 KiB is accepted and written (exit 0, new ID printed). From that moment every command that reads the store fails, `tick rebuild` included, so the tool offers no route back to a readable project. `tick doctor` meanwhile reports the project healthy.
+A task record whose JSONL line passes ~64 KiB is accepted and written — reported as success under `--quiet` and by status changes and `dep add`, reported as a failure (exit 1) by `create`/`update`/`note` otherwise, though the write has committed either way. From that moment every command that reads the store fails, `tick rebuild` included, so the tool offers no route back to a readable project. `tick doctor` meanwhile reports the project healthy.
 
 ### Manifestation
 
@@ -209,7 +209,7 @@ Sibling check: v1/tick-core — Task Schema → Title and Description Limits hol
 
 ### Options Explored
 
-- **A — Remove the reader's ceiling; make doctor tell the truth (no cap).** Same as the chosen approach without the description cap. Not chosen: it leaves free text unbounded, against the direction agreed in discovery — an agent can still write a multi-megabyte description that every later `show` returns in full.
+- **A — Remove the reader's ceiling; make doctor tell the truth (no cap).** The reader and doctor changes of the chosen approach, without the description cap. Not chosen: it leaves free text unbounded, against the direction agreed in discovery — an agent can still write a multi-megabyte description that every later `show` returns in full.
 - **B — A plus a generous description cap.** Chosen.
 - **C — Keep the 64 KiB ceiling; refuse any write that would cross it.** Measure each task's stored size on every write and refuse at the ceiling; doctor fixed as in A. Not chosen: stores already bricked stay bricked; refusals land on tasks the command never named (`start <child>` refused because the parent is full), in byte terms an agent cannot act on; and the ceiling stays a library default nobody chose.
 
