@@ -6,28 +6,35 @@
 
 #### 1.1 The defect
 
-A task whose stored JSONL line reaches 65,536 bytes is accepted and written, and from then on every tick command that opens the store fails with `failed to parse tasks.jsonl: error reading JSONL data: bufio.Scanner: token too long` — reads, writes and `tick rebuild` alike, including `update`, `remove` and `cancel` of the oversized task itself. The message names neither the line nor the task. Meanwhile `tick doctor` reports the store healthy. The only recovery today is hand-editing `.tick/tasks.jsonl`.
+A task whose stored JSONL line reaches 65,536 bytes is accepted and written, and from then on every tick command that opens the store fails with `failed to parse tasks.jsonl: error reading JSONL data: bufio.Scanner: token too long`. That covers reads, writes and `tick rebuild` alike, including `update`, `remove` and `cancel` of the oversized task itself. The message names neither the line nor the task. Meanwhile `tick doctor` reports the store healthy. The only recovery today is hand-editing `.tick/tasks.jsonl`.
 
-The failure is independent of which command wrote the line. `create`, `update` and `note add` commit the write and then, outside `--quiet`, exit 1 when their read-back fails; status changes and `dep add` exit 0 with a normal success document. Cascades, `--blocks` and the Rule 6 done-parent reopen grow tasks the command never named, so `tick start <child>` can push a large parent over.
+It doesn't matter which command wrote the line. `create`, `update` and `note add` commit the write, then exit 1 outside `--quiet` when their read-back fails. Status changes and `dep add` exit 0 with a normal success document. Cascades, `--blocks` and the Rule 6 done-parent reopen grow tasks the command never named, so `tick start <child>` can push a large parent over the line.
 
 #### 1.2 Root causes
 
-Two defects, independent of each other, meeting at the same ceiling:
+There are two defects, independent of each other, meeting at the same ceiling:
 
-- **The store writes lines its own reader cannot read.** The store's reader parses `tasks.jsonl` with a `bufio.Scanner` at Go's default maximum token size (`go doc bufio.MaxScanTokenSize` → `MaxScanTokenSize = 64 * 1024`), so any line of 65,536 bytes or more stops it. Nobody chose that limit and nothing on the write path knows of it: fields are bounded in characters (title ≤ 500, each note ≤ 2000), the description is unbounded, and the encoded record is never measured. JSON escaping inflates text up to 6 bytes per character (`<`, `>`, `&`, U+2028/U+2029, and control characters other than `\n`, `\r`, `\t`), and note, transition and `blocked_by` counts are unbounded — so no per-field character cap can keep a record under the ceiling. Every command that opens the store parses the whole file before acting, so one such line makes the entire store unreachable through tick.
-- **Doctor treats a partial read as a full read.** Doctor's reader has the same ceiling and never consults the scanner's error. When it stops at an unreadable line it returns the lines before it with no error, and every check runs over that prefix as if it were the whole store — passing a store no other command can open, and able to report false errors about references into the part it never read (e.g. `Orphaned dependencies` naming a task that exists after the cut). Separately, doctor's readability test is looser than the store's: it asks only whether a line is valid JSON, while the store needs a line that loads as a task — so a line such as `"priority":"high"` passes doctor and still makes every command fail.
+- **The store writes lines its own reader cannot read.** The store's reader parses `tasks.jsonl` with a `bufio.Scanner` at Go's default maximum token size (`go doc bufio.MaxScanTokenSize` → `MaxScanTokenSize = 64 * 1024`), so any line of 65,536 bytes or more stops it. Nobody chose that limit, and nothing on the write path knows about it:
+  - Fields are bounded in characters: title ≤ 500, each note ≤ 2000.
+  - The description is unbounded.
+  - The encoded record is never measured.
+
+  JSON escaping inflates text by up to 6 bytes per character (`<`, `>`, `&`, U+2028/U+2029, and control characters other than `\n`, `\r`, `\t`). Note, transition and `blocked_by` counts are unbounded. So no per-field character cap can keep a record under the ceiling. Every command that opens the store parses the whole file before acting, so one such line makes the entire store unreachable through tick.
+- **Doctor treats a partial read as a full read.** Doctor's reader has the same ceiling and never checks the scanner's error. When it stops at an unreadable line, it returns the lines before that line with no error, and every check runs over that prefix as if it were the whole store. It passes a store no other command can open. It can also report false errors about references into the part it never read, for example `Orphaned dependencies` naming a task that exists after the cut.
+
+  Separately, doctor's readability test is looser than the store's. Doctor asks only whether a line is valid JSON; the store needs a line that loads as a task. So a line such as `"priority":"high"` passes doctor and still makes every command fail.
 
 #### 1.3 The fix
 
-- Every reader of `tasks.jsonl` accepts a line of any length; the store and doctor read through one shared line reader (§2). This alone makes the store unbrickable by line length from every route, and reopens stores already over the old ceiling.
-- Store read errors name the line and, where recoverable, the task (§3).
+- Every reader of `tasks.jsonl` accepts a line of any length, and the store and doctor read through one shared line reader (§2). This alone stops any route from breaking the store by line length, and it reopens stores already over the old ceiling.
+- Store read errors name the line and, where it can be recovered, the task (§3).
 - `tick rebuild` leaves the existing cache in place until it knows it can build a new one (§4).
 - Doctor judges every line the way tick loads it, and fails on anything it could not read (§5).
-- The description gets a generous character cap — hygiene, not the safety device (§6).
+- The description gets a generous character cap. It serves as hygiene, not as the safety device (§6).
 
 #### 1.4 Who meets these behaviours
 
-Tasks are written by agents, not by hand, so the party that meets a write-time refusal is an agent: every refusal must say which field, what limit, and that nothing was saved. Agents also run `tick doctor` as a health check; a false "healthy" tells an agent a store is fine when no command can open it. A passing doctor must therefore mean every tick command can open the store.
+Agents write the tasks, not people, so an agent is what meets a write-time refusal. Every refusal must say which field, what limit, and that nothing was saved. Agents also run `tick doctor` as a health check, and a false "healthy" tells an agent a store is fine when no command can open it. A passing doctor must therefore mean every tick command can open the store.
 
 ### 2. Reading `tasks.jsonl`
 
@@ -95,47 +102,47 @@ The check stays `JSONL syntax` in doctor's output, in the README's doctor "Check
 
 #### 5.3 A read doctor cannot complete
 
-If reading `tasks.jsonl` stops before the end of the file — the file opened, but an error cut the read short — doctor reports a failure naming the line it could not read and saying the file could not be read in full. It never reports a pass over the lines it did read, and never reports `tasks.jsonl not found`: every check that consumes the file's lines fails with that read error in place of its normal verdict, the same shape as today's failure when the file will not open. The not-found result (`rg -n 'func fileNotFoundResult' internal/doctor/helpers.go` → `:14`) stays, for a file that cannot be opened and nothing else.
+If reading `tasks.jsonl` stops before the end of the file — the file opened, but an error cut the read short — doctor reports a failure naming the line it could not read and saying the file could not be read in full. It never reports a pass over the lines it did read, and never reports `tasks.jsonl not found`. Every check that consumes the file's lines fails with that read error in place of its normal verdict, the same shape as today's failure when the file will not open. The not-found result (`rg -n 'func fileNotFoundResult' internal/doctor/helpers.go` → `:14`) stays, for a file that cannot be opened and nothing else.
 
-Today the reader's error is dropped; surfaced through the existing per-check fallback, it would make every check report the file missing (§1.2).
+Today the reader's error is dropped. Surfaced through the existing per-check fallback, it would make every check report the file missing (§1.2).
 
-Once the ceiling is gone no file on disk makes the reader fail this way, so the path is reached through a test seam over the reader (§8).
+Once the ceiling is gone, no file on disk makes the reader fail this way, so the path is reached through a test seam over the reader (§8).
 
 #### 5.4 Relationship checks
 
-"Partial" means lines the reader never reached. A line the reader did reach but that does not load is reported by the JSONL check (§5.1); the relationship and hierarchy checks keep their designed behaviour of skipping a line that is not a JSON object or has no string `id` (`rg -n 'jl.Parsed == nil' internal/doctor/task_relationships.go` → `:26`). Because the whole file is now read, tasks after a long line are no longer invisible to them, so a mid-file oversized line produces no false orphan error.
+"Partial" means lines the reader never reached. A line the reader did reach but that does not load is reported by the JSONL check (§5.1). The relationship and hierarchy checks keep their designed behaviour of skipping a line that is not a JSON object or has no string `id` (`rg -n 'jl.Parsed == nil' internal/doctor/task_relationships.go` → `:26`). Because the whole file is now read, tasks after a long line are no longer invisible to them, so a mid-file oversized line produces no false orphan error.
 
 #### 5.5 No advice to rebuild a store that cannot load
 
-While any line fails to load (§5.1) or the read is incomplete (§5.3), no doctor output directs the user to `tick rebuild` — it fails the same way until the line is fixed. The cache check still reports what it finds (a stale or missing cache is a true finding), but its suggestion points at fixing the lines the JSONL check names, not at `tick rebuild`. Once those lines are fixed, the next doctor run gives the usual rebuild advice if the cache is still stale.
+While any line fails to load (§5.1) or the read is incomplete (§5.3), no doctor output directs the user to `tick rebuild`, which fails the same way until the line is fixed. The cache check still reports what it finds, since a stale or missing cache is a true finding. But its suggestion points at fixing the lines the JSONL check names, not at `tick rebuild`. Once those lines are fixed, the next doctor run gives the usual rebuild advice if the cache is still stale.
 
-The cache check is otherwise unchanged: it hashes the raw file bytes and its verdict is correct.
+Everything else about the cache check is unchanged. It hashes the raw file bytes and its verdict is correct.
 
 ### 6. Description cap
 
 #### 6.1 The cap
 
-A task description is capped at **50,000 characters**, counted the way the title (500) and note (2000) caps are: Unicode characters, not bytes, after leading and trailing whitespace is trimmed. A description of exactly 50,000 characters is accepted, multibyte ones included; 50,001 is refused. The cap is a fixed constant alongside the title and note caps, not a flag, so the command flag registry, `tick help` and the README do not change.
+A task description is capped at **50,000 characters**. It is counted the way the title (500) and note (2000) caps are: Unicode characters, not bytes, after leading and trailing whitespace is trimmed. A description of exactly 50,000 characters is accepted, multibyte ones included; 50,001 is refused. The cap is a fixed constant alongside the title and note caps, not a flag, so the command flag registry, `tick help` and the README do not change.
 
 The cap is hygiene, not the store's safety (§2.1). It keeps free text finite: without it an agent can write a description of any size that every later `tick show` returns in full. It sits well above real use so no legitimate description meets it (longest real description across the maintainer's tick stores: `jq -r '(.description // "") | length' ~/Code/*/.tick/tasks.jsonl | sort -n | tail -1` → `20785`); a description near it signals a task that wants breaking up. It is not sized against the 64 KiB line older binaries still enforce (§2.4).
 
 #### 6.2 Where it is enforced
 
-Every route that sets a description: `tick create --description`, `tick update --description`, and `tick migrate` (`rg -l 'TrimDescription\(' internal/cli internal/migrate -g '!*_test.go'` → `internal/cli/create.go`, `internal/cli/update.go`, `internal/migrate/migrate.go`). The check runs before anything is written: a refused `create` or `update` exits 1 and leaves `tasks.jsonl` and the cache untouched.
+Every route that sets a description enforces it: `tick create --description`, `tick update --description`, and `tick migrate` (`rg -l 'TrimDescription\(' internal/cli internal/migrate -g '!*_test.go'` → `internal/cli/create.go`, `internal/cli/update.go`, `internal/migrate/migrate.go`). The check runs before anything is written, so a refused `create` or `update` exits 1 and leaves `tasks.jsonl` and the cache untouched.
 
 The cap applies to a description being set. A description already stored over it is left as it is, reads normally (§2.1), and does not block other changes to its task — a status change, a new title, a note.
 
 #### 6.3 The refusal
 
-The refusal names the field, the limit, the length submitted, and that nothing was saved, so an agent knows how much to cut and that the write must be retried — for example `description is 61,204 characters, over the 50,000-character limit; nothing was saved`. The four elements are required; the exact wording is the implementer's. On `create` and `update` it is the command's error (exit 1); on `migrate` it is the skipped issue's reason (§6.4).
+The refusal names the field, the limit, the length submitted, and that nothing was saved, so an agent knows how much to cut and that the write must be retried. For example: `description is 61,204 characters, over the 50,000-character limit; nothing was saved`. The four elements are required; the exact wording is the implementer's. On `create` and `update` it is the command's error, exit 1. On `migrate` it is the skipped issue's reason (§6.4).
 
 #### 6.4 Migrate
 
-`tick migrate` validates each issue before creating it. An issue whose description exceeds the cap is skipped and reported with its reason, exactly as the import already treats any other invalid issue (`rg -n 'if err := mt.Validate' internal/migrate/engine.go` → `:74`): the remaining issues import, the description is never truncated, and one oversized issue never aborts the import.
+`tick migrate` validates each issue before creating it. An issue whose description exceeds the cap is skipped and reported with its reason, exactly as the import already treats any other invalid issue (`rg -n 'if err := mt.Validate' internal/migrate/engine.go` → `:74`). The remaining issues import. The description is never truncated, and one oversized issue never aborts the import.
 
-Migrate also takes the CLI's title rules, which it skips today (it checks only that the title is non-empty): an issue whose title exceeds 500 characters or spans more than one line is skipped likewise, with its reason.
+Migrate also adopts the CLI's title rules. Today it checks only that the title is non-empty. An issue whose title exceeds 500 characters or spans more than one line is now skipped the same way, with its reason.
 
-`--dry-run` reports the same refusals as a real run: validation happens before the dry run's no-op creator is reached.
+`--dry-run` reports the same refusals as a real run, because validation happens before the dry run's no-op creator is reached.
 
 ---
 
