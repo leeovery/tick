@@ -64,6 +64,14 @@ Every error from reading `tasks.jsonl` into the store names the line that stoppe
 
 Today a line that fails to decode is named by number but not by task, and the scanner's failure named neither (§1.1). The purpose is hand-edit recovery: the message alone tells the agent which record to open and what is wrong with it.
 
+### 4. `tick rebuild` keeps the cache until it can build a new one
+
+`tick rebuild` reads and parses `tasks.jsonl` before it touches `cache.db`. If the parse fails, rebuild exits 1 with the parse error (§3) and the existing `cache.db` is left exactly as it was. Only after a successful parse is the old cache removed and a fresh one built from the parsed tasks.
+
+Today rebuild deletes the cache first and parses second (`rg -n '"deleting cache.db"|"reading JSONL"' internal/storage/store.go` → `:236` deleting, `:242` reading), so one failed rebuild leaves the project worse off: doctor then reports `cache.db not found` and advises running `tick rebuild` — the command that just failed.
+
+Rebuild still recovers from a corrupt `cache.db`. Its `--verbose` log follows the new order: `reading JSONL` comes before `deleting cache.db`.
+
 ---
 
 ## Working Notes
