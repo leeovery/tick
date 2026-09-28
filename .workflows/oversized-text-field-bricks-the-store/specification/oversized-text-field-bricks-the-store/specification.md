@@ -94,6 +94,8 @@ Each of these makes every command fail today while doctor's JSONL check passes i
 
 Validation the loader does not itself enforce — enum membership (status, type) and value ranges (priority 0–4) — stays at write time and is not doctor's.
 
+A value repeated within one task's own `tags`, `refs` or `blocked_by` list is not doctor's either. The line loads, but the cache rebuild every command runs refuses it on that list's uniqueness constraint (measured: `"tags":["x","x"]` makes `tick list` fail with `failed to insert tag tick-fa204e -> x: … UNIQUE constraint failed: task_tags.task_id, task_tags.tag`). No tick write produces one — every write de-duplicates these lists, `dep add` refuses a repeat, and `migrate` carries no tags or dependencies — so only a hand edit or another tool reaches it. Doctor adds no check for it and its JSONL check passes such a line. Doctor still reports an error for that store (the stale cache), and the rebuild its cache suggestion leads to fails with an error naming the task and the repeated value.
+
 A doctor run that reports no errors therefore means every tick command can open the store. A valid store still reports `No issues found`.
 
 #### 5.2 The check keeps its name
@@ -197,3 +199,5 @@ Migrate also adopts the CLI's title rules. Today it checks only that the title i
 ## Corrigenda
 
 > **Corrigendum 2026-09-28** (from `planning/oversized-text-field-bricks-the-store`): §2.2 left open whether a final line with no trailing newline has a trailing `\r` stripped — corrected: it does, one `\r`, exactly as `bufio.ScanLines` does today (measured: its at-EOF branch returns `dropCR(data)`, and both current readers use the default split), which §2.2's governing rule ("the store's current one, preserved exactly") already required.
+
+> **Corrigendum 2026-09-28** (from `planning/oversized-text-field-bricks-the-store`): §5.1 left open whether doctor judges a line that loads but repeats a value within its own `tags`, `refs` or `blocked_by` list, which the cache rebuild every command runs refuses — corrected: it is not doctor's; doctor adds no check for it, per the investigation's decision to keep it outside this fix (only hand edits or other tools produce one; doctor still flags the stale cache, and the failing rebuild names the task and value).
