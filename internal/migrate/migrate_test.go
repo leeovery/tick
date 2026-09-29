@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -123,7 +124,27 @@ func TestMigratedTaskValidation(t *testing.T) {
 	})
 }
 
-// TestProviderInterface verifies at compile time that a mock can satisfy the Provider interface.
+func TestMigratedTaskDescriptionCap(t *testing.T) {
+	t.Run("it accepts a description of exactly 50000 characters", func(t *testing.T) {
+		mt := MigratedTask{Title: "T", Description: strings.Repeat("a", 50000)}
+		if err := mt.Validate(); err != nil {
+			t.Errorf("expected valid, got error: %v", err)
+		}
+	})
+
+	t.Run("it rejects a description of 50001 characters with the description cap reason", func(t *testing.T) {
+		mt := MigratedTask{Title: "T", Description: strings.Repeat("a", 50001)}
+		err := mt.Validate()
+		if err == nil {
+			t.Fatal("expected error for 50001-character description, got nil")
+		}
+		want := "description is 50001 characters, over the 50000-character limit; nothing was saved"
+		if err.Error() != want {
+			t.Errorf("error = %q, want %q", err.Error(), want)
+		}
+	})
+}
+
 func TestProviderInterface(t *testing.T) {
 	t.Run("Provider interface is implementable by a mock", func(t *testing.T) {
 		mock := &mockProvider{

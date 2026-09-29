@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -821,5 +822,92 @@ func TestMigrateBeadsLongIssueLine(t *testing.T) {
 			}
 		}
 		assertListedIDs(t, dir, byTitle["Before"].ID, longTask.ID, byTitle["After"].ID)
+	})
+}
+
+func TestMigrateDescriptionCap(t *testing.T) {
+	beadsIssue := func(t *testing.T, id, title, description string) string {
+		t.Helper()
+		line, err := json.Marshal(map[string]any{
+			"id":          id,
+			"title":       title,
+			"description": description,
+			"status":      "pending",
+		})
+		if err != nil {
+			t.Fatalf("marshal issue %s: %v", id, err)
+		}
+		return string(line)
+	}
+	const refusal = "description is 50001 characters, over the 50000-character limit; nothing was saved"
+	assertSkipped := func(t *testing.T, stdout, title string) {
+		t.Helper()
+		if !strings.Contains(stdout, "\u2717 Task: "+title+" (skipped: "+refusal+")") {
+			t.Errorf("stdout missing skip line for %q with the cap reason, got:\n%s", title, stdout)
+		}
+		if !strings.Contains(stdout, "\nFailures:\n- Task "+strconv.Quote(title)+": "+refusal+"\n") {
+			t.Errorf("stdout missing Failures entry for %q with the cap reason, got:\n%s", title, stdout)
+		}
+		if !strings.Contains(stdout, "Done: 2 imported, 1 failed") {
+			t.Errorf("stdout missing summary, got:\n%s", stdout)
+		}
+	}
+	source := func(t *testing.T, pad string) string {
+		t.Helper()
+		return beadsIssue(t, "b-001", "At cap", pad+strings.Repeat("a", 50000)+pad) + "\n" +
+			beadsIssue(t, "b-002", "Over cap", pad+strings.Repeat("b", 50001)+pad) + "\n" +
+			beadsIssue(t, "b-003", "Ordinary", "short") + "\n"
+	}
+
+	for _, tc := range []struct {
+		name string
+		pad  string
+	}{
+		{name: "it imports the at-cap issue in full and skips the over-cap issue", pad: ""},
+		{name: "it trims surrounding whitespace before counting", pad: " \t\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir, tickDir := setupTickProject(t)
+			setupBeadsFixture(t, dir, source(t, tc.pad))
+
+			stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+			if exitCode != 0 {
+				t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+			}
+			assertSkipped(t, stdout, "Over cap")
+			tasks := readPersistedTasks(t, tickDir)
+			if len(tasks) != 2 {
+				t.Fatalf("expected 2 persisted tasks, got %d", len(tasks))
+			}
+			if tasks[0].Title != "At cap" || tasks[1].Title != "Ordinary" {
+				t.Errorf("persisted titles = %q, %q; want At cap, Ordinary", tasks[0].Title, tasks[1].Title)
+			}
+			if tasks[0].Description != strings.Repeat("a", 50000) {
+				t.Errorf("at-cap description is %d characters, want the full 50000", len([]rune(tasks[0].Description)))
+			}
+			for _, tk := range tasks {
+				if strings.Contains(tk.Description, "b") {
+					t.Errorf("task %q carries text from the over-cap issue", tk.Title)
+				}
+			}
+		})
+	}
+
+	t.Run("it reports the same skip under --dry-run and writes nothing", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		setupBeadsFixture(t, dir, source(t, ""))
+		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+		before := readFileBytes(t, jsonlPath)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--dry-run")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		assertSkipped(t, stdout, "Over cap")
+		if !bytes.Equal(readFileBytes(t, jsonlPath), before) {
+			t.Error("tasks.jsonl changed during a dry run")
+		}
 	})
 }

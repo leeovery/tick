@@ -39,7 +39,8 @@ type MigratedTask struct {
 
 // Validate checks that a MigratedTask satisfies tick's constraints.
 // It returns an error if the title is empty, the status is unrecognized,
-// or the priority is outside the 0-4 range.
+// the priority is outside the 0-4 range, or the description exceeds the
+// description cap.
 func (mt MigratedTask) Validate() error {
 	if strings.TrimSpace(mt.Title) == "" {
 		return fmt.Errorf("title is required and cannot be empty")
@@ -50,7 +51,7 @@ func (mt MigratedTask) Validate() error {
 	if mt.Priority != nil && (*mt.Priority < minPriority || *mt.Priority > maxPriority) {
 		return fmt.Errorf("priority must be between %d and %d, got %d", minPriority, maxPriority, *mt.Priority)
 	}
-	return nil
+	return task.ValidateDescription(mt.Description)
 }
 
 // Normalize returns a copy of the task with edge whitespace removed from its
