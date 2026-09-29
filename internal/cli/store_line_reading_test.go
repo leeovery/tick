@@ -97,7 +97,7 @@ func TestStoreLineReading(t *testing.T) {
 		if code != 1 {
 			t.Fatalf("exit code = %d, want 1; stdout = %q", code, stdout)
 		}
-		want := "Error: failed to parse tasks.jsonl: failed to parse line 3: unexpected end of JSON input\n"
+		want := "Error: failed to parse tasks.jsonl: line 3: unexpected end of JSON input\n"
 		if stderr != want {
 			t.Errorf("stderr = %q, want %q", stderr, want)
 		}

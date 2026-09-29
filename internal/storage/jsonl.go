@@ -99,7 +99,7 @@ func ParseJSONL(data []byte) ([]task.Task, error) {
 
 		var t task.Task
 		if err := json.Unmarshal(line.Text, &t); err != nil {
-			return nil, fmt.Errorf("failed to parse line %d: %w", line.Num, err)
+			return nil, lineError(line, err)
 		}
 
 		tasks = append(tasks, t)
@@ -107,6 +107,18 @@ func ParseJSONL(data []byte) ([]task.Task, error) {
 
 	backfillSeqs(tasks)
 	return tasks, nil
+}
+
+// lineError names a line that failed to load by number and, when the line is
+// a JSON object whose id is a string, by that task ID.
+func lineError(line jsonl.Line, err error) error {
+	var probe struct {
+		ID *string `json:"id"`
+	}
+	if json.Unmarshal(line.Text, &probe) != nil || probe.ID == nil {
+		return fmt.Errorf("line %d: %w", line.Num, err)
+	}
+	return fmt.Errorf("line %d (%s): %w", line.Num, *probe.ID, err)
 }
 
 // backfillSeqs numbers tasks without a sequence above the highest any task

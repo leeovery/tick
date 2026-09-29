@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -633,21 +634,63 @@ func TestParseJSONL(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for whitespace-only line, got nil")
 		}
-		if want := "failed to parse line 3: unexpected end of JSON input"; err.Error() != want {
+		if want := "line 3: unexpected end of JSON input"; err.Error() != want {
 			t.Errorf("err = %q, want %q", err.Error(), want)
 		}
 	})
 
-	t.Run("it returns error for invalid JSON in bytes", func(t *testing.T) {
-		content := []byte(`{"id":"tick-a1b2c3","title":"Valid task","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
-not valid json
-`)
+	t.Run("it returns error for invalid JSON in bytes, naming the line alone", func(t *testing.T) {
+		assertParseError(t, simpleTaskLine("tick-a1b2c3")+"\nnot valid json\n", "line 2: ", "not valid json")
+	})
 
-		_, err := ParseJSONL(content)
-		if err == nil {
-			t.Fatal("expected error for invalid JSON, got nil")
+	t.Run("it names the line and task of a wrong-typed field", func(t *testing.T) {
+		bad := `{"id":"tick-a1b2c3","title":"T","status":"open","priority":"high","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+		content := simpleTaskLine("tick-aaa111") + "\n" + bad + "\n"
+		_, err := ParseJSONL([]byte(content))
+		want := "line 2 (tick-a1b2c3): json: cannot unmarshal string into Go struct field taskJSON.priority of type int"
+		if err == nil || err.Error() != want {
+			t.Errorf("err = %v, want %q", err, want)
 		}
 	})
+
+	t.Run("it names the line and task of an unparseable created timestamp", func(t *testing.T) {
+		bad := `{"id":"tick-a1b2c3","title":"T","status":"open","priority":2,"created":"yesterday","updated":"2026-01-19T10:00:00Z"}`
+		assertParseError(t, bad+"\n", "line 1 (tick-a1b2c3): ", bad)
+	})
+
+	t.Run("it names a failing line with no string id by number alone", func(t *testing.T) {
+		for _, bad := range []string{
+			`{"title":"T"}`,
+			`{"id":42,"title":"T","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`,
+			`{"id":null,"title":"T"}`,
+			`null`,
+			`[]`,
+			`"tick-a1b2c3"`,
+			`{"id":"tick-a1b2c3","title":`,
+		} {
+			assertParseError(t, simpleTaskLine("tick-aaa111")+"\n"+bad+"\n", "line 2: ", bad)
+		}
+	})
+
+	t.Run("it counts a skipped empty line when naming a failing task line", func(t *testing.T) {
+		bad := `{"id":"tick-a1b2c3","title":"T","status":"open","priority":"high","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+		assertParseError(t, simpleTaskLine("tick-aaa111")+"\n\n"+bad+"\n", "line 3 (tick-a1b2c3): ", bad)
+	})
+}
+
+// assertParseError checks ParseJSONL's error is prefix followed by the reason
+// the task loader gives for badLine.
+func assertParseError(t *testing.T, content, prefix, badLine string) {
+	t.Helper()
+	var tk task.Task
+	reason := json.Unmarshal([]byte(badLine), &tk)
+	if reason == nil {
+		t.Fatalf("line %q loads as a task; want a failing line", badLine)
+	}
+	_, err := ParseJSONL([]byte(content))
+	if want := prefix + reason.Error(); err == nil || err.Error() != want {
+		t.Errorf("err = %v, want %q", err, want)
+	}
 }
 
 func TestMarshalJSONL(t *testing.T) {
