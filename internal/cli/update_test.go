@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -1447,6 +1448,177 @@ func TestUpdateChangedSection(t *testing.T) {
 		want := "\ntick-ddd444: done \u2192 open\ntick-aaa111: in_progress \u2192 done\n"
 		if !strings.HasSuffix(stdout, want) {
 			t.Errorf("stdout does not end with %q:\n%s", want, stdout)
+		}
+	})
+}
+
+func TestUpdateDescriptionCap(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	seedTask := func(description string) task.Task {
+		return task.Task{ID: "tick-aaa111", Title: "Original", Description: description, Status: task.StatusOpen, Priority: 2, Created: now, Updated: now}
+	}
+	persistedTask := func(t *testing.T, tickDir string) task.Task {
+		t.Helper()
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(tasks))
+		}
+		return tasks[0]
+	}
+	showDescription := func(t *testing.T, dir string) string {
+		t.Helper()
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "show", "tick-aaa111"))
+		desc, ok := doc["description"].(string)
+		if !ok {
+			t.Fatalf("show document has no string description: %#v", doc["description"])
+		}
+		return desc
+	}
+	const refusal = "Error: description is 50001 characters, over the 50000-character limit; nothing was saved\n"
+
+	acceptedCases := []struct {
+		name        string
+		description string
+		want        string
+	}{
+		{
+			name:        "it sets a description of exactly 50000 characters",
+			description: strings.Repeat("a", 50000),
+			want:        strings.Repeat("a", 50000),
+		},
+		{
+			name:        "it sets a description of exactly 50000 multibyte characters",
+			description: strings.Repeat("\U0001F600", 50000),
+			want:        strings.Repeat("\U0001F600", 50000),
+		},
+		{
+			name:        "it sets 50000 characters wrapped in whitespace and stores them trimmed",
+			description: " \t\n" + strings.Repeat("b", 50000) + "\n\t ",
+			want:        strings.Repeat("b", 50000),
+		},
+	}
+	for _, tc := range acceptedCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir, tickDir := setupTickProjectWithTasks(t, []task.Task{seedTask("short")})
+			_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--description", tc.description)
+			if exitCode != 0 {
+				t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+			}
+			if got := persistedTask(t, tickDir).Description; got != tc.want {
+				t.Errorf("stored description differs: %d characters, want %d", len([]rune(got)), len([]rune(tc.want)))
+			}
+			if got := showDescription(t, dir); got != tc.want {
+				t.Errorf("show description differs: %d characters, want %d", len([]rune(got)), len([]rune(tc.want)))
+			}
+		})
+	}
+
+	t.Run("it refuses 50001 characters and leaves a current store byte-for-byte unchanged", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{seedTask("short")})
+		if got := showDescription(t, dir); got != "short" {
+			t.Fatalf("seed description = %q, want %q", got, "short")
+		}
+		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+		cachePath := filepath.Join(tickDir, "cache.db")
+		jsonlBefore := readFileBytes(t, jsonlPath)
+		cacheBefore := readFileBytes(t, cachePath)
+
+		stdout, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--description", strings.Repeat("a", 50001))
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if stderr != refusal {
+			t.Errorf("stderr = %q, want %q", stderr, refusal)
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+		if !bytes.Equal(readFileBytes(t, jsonlPath), jsonlBefore) {
+			t.Error("tasks.jsonl changed after a refused update")
+		}
+		if !bytes.Equal(readFileBytes(t, cachePath), cacheBefore) {
+			t.Error("cache.db changed after a refused update")
+		}
+		if got := persistedTask(t, tickDir).Description; got != "short" {
+			t.Errorf("description = %q, want %q", got, "short")
+		}
+	})
+
+	t.Run("it refuses a title change carried alongside an over-cap description", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{seedTask("short")})
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--title", "New", "--description", strings.Repeat("a", 50001))
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if stderr != refusal {
+			t.Errorf("stderr = %q, want %q", stderr, refusal)
+		}
+		got := persistedTask(t, tickDir)
+		if got.Title != "Original" {
+			t.Errorf("title = %q, want %q", got.Title, "Original")
+		}
+		if got.Description != "short" {
+			t.Errorf("description = %q, want %q", got.Description, "short")
+		}
+	})
+
+	t.Run("it reports the trimmed length of a padded over-cap description", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{seedTask("short")})
+		description := "  \n\t" + strings.Repeat("a", 50001) + "\t\n  "
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--description", description)
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		if stderr != refusal {
+			t.Errorf("stderr = %q, want %q", stderr, refusal)
+		}
+		if got := persistedTask(t, tickDir).Description; got != "short" {
+			t.Errorf("description = %q, want %q", got, "short")
+		}
+	})
+
+	overCap := strings.Repeat("d", 60000)
+
+	t.Run("it shows and retitles a task whose stored description is over the cap", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{seedTask(overCap)})
+		if got := showDescription(t, dir); got != overCap {
+			t.Errorf("show description differs: %d characters, want %d", len([]rune(got)), len([]rune(overCap)))
+		}
+		_, stderr, exitCode := runUpdate(t, dir, "tick-aaa111", "--title", "New")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		got := persistedTask(t, tickDir)
+		if got.Title != "New" {
+			t.Errorf("title = %q, want %q", got.Title, "New")
+		}
+		if got.Description != overCap {
+			t.Errorf("description changed: %d characters, want %d", len([]rune(got.Description)), len([]rune(overCap)))
+		}
+	})
+
+	t.Run("it starts and notes a task whose stored description is over the cap", func(t *testing.T) {
+		dir, tickDir := setupTickProjectWithTasks(t, []task.Task{seedTask(overCap)})
+		if _, stderr, exitCode := runTransition(t, dir, "start", "tick-aaa111"); exitCode != 0 {
+			t.Fatalf("start exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		got := persistedTask(t, tickDir)
+		if got.Status != task.StatusInProgress {
+			t.Errorf("status = %q, want %q", got.Status, task.StatusInProgress)
+		}
+		if got.Description != overCap {
+			t.Errorf("description changed after start: %d characters, want %d", len([]rune(got.Description)), len([]rune(overCap)))
+		}
+
+		if _, stderr, exitCode := runNote(t, dir, "add", "tick-aaa111", "text"); exitCode != 0 {
+			t.Fatalf("note add exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		got = persistedTask(t, tickDir)
+		if len(got.Notes) != 1 || got.Notes[0].Text != "text" {
+			t.Errorf("notes = %#v, want one note with text %q", got.Notes, "text")
+		}
+		if got.Description != overCap {
+			t.Errorf("description changed after note add: %d characters, want %d", len([]rune(got.Description)), len([]rune(overCap)))
 		}
 	})
 }

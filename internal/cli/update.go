@@ -196,6 +196,9 @@ func RunUpdate(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals [
 		if err := task.ValidateDescriptionUpdate(trimmed); err != nil {
 			return err
 		}
+		if err := task.ValidateDescription(trimmed); err != nil {
+			return err
+		}
 	}
 
 	// Validate type flags.
