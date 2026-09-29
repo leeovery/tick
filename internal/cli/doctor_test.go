@@ -42,7 +42,7 @@ func setupDoctorProjectStale(t *testing.T) (string, string) {
 	if err := os.Mkdir(tickDir, 0755); err != nil {
 		t.Fatalf("failed to create .tick/: %v", err)
 	}
-	content := []byte(`{"id":"tick-aaa111","title":"Test"}`)
+	content := []byte(`{"id":"tick-aaa111","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`)
 	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
 	if err := os.WriteFile(jsonlPath, content, 0644); err != nil {
 		t.Fatalf("failed to create tasks.jsonl: %v", err)
@@ -329,7 +329,7 @@ func TestDoctorFourChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 0 when all four checks pass", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContent(t, `{"id":"tick-aaa111","title":"Test"}`)
+		dir, _ := setupDoctorProjectWithContent(t, `{"id":"tick-aaa111","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`)
 
 		_, _, exitCode := runDoctor(t, dir)
 
@@ -351,7 +351,7 @@ func TestDoctorFourChecks(t *testing.T) {
 
 	t.Run("it exits 1 when only the ID format check fails (other three pass)", func(t *testing.T) {
 		// Valid JSON, valid cache hash, but invalid ID format.
-		dir, _ := setupDoctorProjectWithContent(t, `{"id":"bad-id","title":"Test"}`)
+		dir, _ := setupDoctorProjectWithContent(t, `{"id":"bad-id","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`)
 
 		_, _, exitCode := runDoctor(t, dir)
 
@@ -361,8 +361,8 @@ func TestDoctorFourChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 1 when only the duplicate ID check fails (other three pass)", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Test1"}
-{"id":"tick-aaa111","title":"Test2"}`
+		content := `{"id":"tick-aaa111","title":"Test1","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-aaa111","title":"Test2","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -377,9 +377,9 @@ func TestDoctorFourChecks(t *testing.T) {
 		// Line 2: valid JSON, bad ID (id format fails).
 		// Line 3 & 4: valid JSON, duplicate IDs (dup check fails).
 		content := `not valid json
-{"id":"bad-id","title":"Test"}
-{"id":"tick-bbb222","title":"Dup1"}
-{"id":"tick-bbb222","title":"Dup2"}`
+{"id":"bad-id","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-bbb222","title":"Dup1","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-bbb222","title":"Dup2","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -392,9 +392,9 @@ func TestDoctorFourChecks(t *testing.T) {
 	t.Run("it exits 1 when all four checks fail", func(t *testing.T) {
 		// Invalid JSON + bad ID + duplicates + stale cache.
 		content := `not valid json
-{"id":"bad-id","title":"Test"}
-{"id":"tick-bbb222","title":"Dup1"}
-{"id":"tick-bbb222","title":"Dup2"}`
+{"id":"bad-id","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-bbb222","title":"Dup1","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-bbb222","title":"Dup2","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
 		dir, _ := setupDoctorProjectWithContentStale(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -405,7 +405,7 @@ func TestDoctorFourChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 1 when cache check fails but all three new checks pass", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContentStale(t, `{"id":"tick-aaa111","title":"Test"}`)
+		dir, _ := setupDoctorProjectWithContentStale(t, `{"id":"tick-aaa111","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`)
 
 		_, _, exitCode := runDoctor(t, dir)
 
@@ -416,7 +416,7 @@ func TestDoctorFourChecks(t *testing.T) {
 
 	t.Run("it reports mixed results correctly — passing checks show checkmark, failing checks show details", func(t *testing.T) {
 		// Only ID format fails: valid JSON, fresh cache, no duplicates, but bad ID.
-		dir, _ := setupDoctorProjectWithContent(t, `{"id":"bad-id","title":"Test"}`)
+		dir, _ := setupDoctorProjectWithContent(t, `{"id":"bad-id","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`)
 
 		stdout, _, _ := runDoctor(t, dir)
 
@@ -437,7 +437,7 @@ func TestDoctorFourChecks(t *testing.T) {
 	})
 
 	t.Run("it displays results for all four checks in output (four check labels visible)", func(t *testing.T) {
-		dir, _ := setupDoctorProjectWithContent(t, `{"id":"tick-aaa111","title":"Test"}`)
+		dir, _ := setupDoctorProjectWithContent(t, `{"id":"tick-aaa111","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`)
 
 		stdout, _, _ := runDoctor(t, dir)
 
@@ -456,9 +456,9 @@ func TestDoctorFourChecks(t *testing.T) {
 		// Cache: fresh.
 		// Total: 3 errors (syntax=1, id=1, dup=1).
 		content := `not valid json
-{"id":"bad-id","title":"Test"}
-{"id":"tick-bbb222","title":"Dup1"}
-{"id":"tick-bbb222","title":"Dup2"}`
+{"id":"bad-id","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-bbb222","title":"Dup1","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-bbb222","title":"Dup2","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		stdout, _, _ := runDoctor(t, dir)
@@ -470,7 +470,7 @@ func TestDoctorFourChecks(t *testing.T) {
 
 	t.Run("it runs all four checks even when the first check fails (no short-circuit)", func(t *testing.T) {
 		// Stale cache (first check fails), but the other three checks should still run.
-		dir, _ := setupDoctorProjectWithContentStale(t, `{"id":"tick-aaa111","title":"Test"}`)
+		dir, _ := setupDoctorProjectWithContentStale(t, `{"id":"tick-aaa111","title":"Test","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`)
 
 		stdout, _, _ := runDoctor(t, dir)
 
@@ -501,8 +501,8 @@ func TestDoctorFourChecks(t *testing.T) {
 	})
 
 	t.Run("it does not modify tasks.jsonl or cache.db (read-only invariant preserved with four checks)", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Test1"}
-{"id":"tick-bbb222","title":"Test2"}`
+		content := `{"id":"tick-aaa111","title":"Test1","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
+{"id":"tick-bbb222","title":"Test2","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
 		dir, tickDir := setupDoctorProjectWithContent(t, content)
 
 		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
@@ -538,9 +538,9 @@ func TestDoctorFourChecks(t *testing.T) {
 }
 
 func healthyAllChecksContent() string {
-	return `{"id":"tick-aaa111","title":"Parent","status":"open"}
-{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
-{"id":"tick-ccc333","title":"Independent","status":"done"}`
+	return `{"id":"tick-aaa111","title":"Parent","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open"}
+{"id":"tick-bbb222","title":"Child","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Independent","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"done"}`
 }
 
 func TestDoctorAllChecks(t *testing.T) {
@@ -586,7 +586,7 @@ func TestDoctorAllChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 1 when only the orphaned parent check fails (other 10 pass)", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Task","status":"open","parent":"tick-ffffff"}`
+		content := `{"id":"tick-aaa111","title":"Task","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-ffffff"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -597,7 +597,7 @@ func TestDoctorAllChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 1 when only the orphaned dependency check fails (other 10 pass)", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Task","status":"open","blocked_by":["tick-ffffff"]}`
+		content := `{"id":"tick-aaa111","title":"Task","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","blocked_by":["tick-ffffff"]}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -608,7 +608,7 @@ func TestDoctorAllChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 1 when only the self-referential dependency check fails (other 10 pass)", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Task","status":"open","blocked_by":["tick-aaa111"]}`
+		content := `{"id":"tick-aaa111","title":"Task","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","blocked_by":["tick-aaa111"]}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -619,8 +619,8 @@ func TestDoctorAllChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 1 when only the dependency cycle check fails (other 10 pass)", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Task A","status":"open","blocked_by":["tick-bbb222"]}
-{"id":"tick-bbb222","title":"Task B","status":"open","blocked_by":["tick-aaa111"]}`
+		content := `{"id":"tick-aaa111","title":"Task A","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","blocked_by":["tick-bbb222"]}
+{"id":"tick-bbb222","title":"Task B","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","blocked_by":["tick-aaa111"]}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -631,8 +631,8 @@ func TestDoctorAllChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 1 when only the child-blocked-by-parent check fails (other 10 pass)", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Parent","status":"open"}
-{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111","blocked_by":["tick-aaa111"]}`
+		content := `{"id":"tick-aaa111","title":"Parent","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open"}
+{"id":"tick-bbb222","title":"Child","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-aaa111","blocked_by":["tick-aaa111"]}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -643,8 +643,8 @@ func TestDoctorAllChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 0 when only the parent-done-with-open-children warning fires (all 9 error checks pass)", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
-{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}`
+		content := `{"id":"tick-aaa111","title":"Parent","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"done"}
+{"id":"tick-bbb222","title":"Child","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-aaa111"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		stdout, _, exitCode := runDoctor(t, dir)
@@ -656,9 +656,9 @@ func TestDoctorAllChecks(t *testing.T) {
 
 	t.Run("it exits 1 when both error checks and warning check produce failures", func(t *testing.T) {
 		// Orphaned parent (error) + done parent with open child (warning).
-		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
-{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
-{"id":"tick-ccc333","title":"Orphan","status":"open","parent":"tick-ffffff"}`
+		content := `{"id":"tick-aaa111","title":"Parent","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"done"}
+{"id":"tick-bbb222","title":"Child","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Orphan","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-ffffff"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -669,7 +669,7 @@ func TestDoctorAllChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 1 when a Phase 1 error (cache stale) and a Phase 3 error (orphaned parent) both fire", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Task","status":"open","parent":"tick-ffffff"}`
+		content := `{"id":"tick-aaa111","title":"Task","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-ffffff"}`
 		dir, _ := setupDoctorProjectWithContentStale(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -680,9 +680,9 @@ func TestDoctorAllChecks(t *testing.T) {
 	})
 
 	t.Run("it exits 1 when a Phase 2 error (duplicate ID) and a Phase 3 error (dependency cycle) both fire", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"Task A","status":"open","blocked_by":["tick-bbb222"]}
-{"id":"tick-bbb222","title":"Task B","status":"open","blocked_by":["tick-aaa111"]}
-{"id":"tick-aaa111","title":"Dup","status":"open"}`
+		content := `{"id":"tick-aaa111","title":"Task A","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","blocked_by":["tick-bbb222"]}
+{"id":"tick-bbb222","title":"Task B","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","blocked_by":["tick-aaa111"]}
+{"id":"tick-aaa111","title":"Dup","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		_, _, exitCode := runDoctor(t, dir)
@@ -695,9 +695,9 @@ func TestDoctorAllChecks(t *testing.T) {
 	t.Run("it reports mixed results correctly - passing checks show checkmark, failing error checks show cross with details, warning check shows cross with details", func(t *testing.T) {
 		// Orphaned parent (error) + done parent with open child (warning).
 		// All other checks pass.
-		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
-{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
-{"id":"tick-ccc333","title":"Orphan","status":"open","parent":"tick-ffffff"}`
+		content := `{"id":"tick-aaa111","title":"Parent","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"done"}
+{"id":"tick-bbb222","title":"Child","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Orphan","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-ffffff"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		stdout, _, _ := runDoctor(t, dir)
@@ -733,9 +733,9 @@ func TestDoctorAllChecks(t *testing.T) {
 
 	t.Run("it shows correct summary count reflecting errors and warnings from all checks combined", func(t *testing.T) {
 		// Orphaned parent (1 error) + done parent with open child (1 warning) = 2 issues.
-		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
-{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
-{"id":"tick-ccc333","title":"Orphan","status":"open","parent":"tick-ffffff"}`
+		content := `{"id":"tick-aaa111","title":"Parent","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"done"}
+{"id":"tick-bbb222","title":"Child","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Orphan","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-ffffff"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		stdout, _, _ := runDoctor(t, dir)
@@ -747,9 +747,9 @@ func TestDoctorAllChecks(t *testing.T) {
 
 	t.Run("it shows summary count including warnings (e.g., 1 error + 1 warning = '2 issues found.')", func(t *testing.T) {
 		// Same scenario: 1 error + 1 warning.
-		content := `{"id":"tick-aaa111","title":"Parent","status":"done"}
-{"id":"tick-bbb222","title":"Child","status":"open","parent":"tick-aaa111"}
-{"id":"tick-ccc333","title":"Orphan","status":"open","parent":"tick-ffffff"}`
+		content := `{"id":"tick-aaa111","title":"Parent","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"done"}
+{"id":"tick-bbb222","title":"Child","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-aaa111"}
+{"id":"tick-ccc333","title":"Orphan","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","parent":"tick-ffffff"}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		stdout, _, _ := runDoctor(t, dir)
@@ -849,8 +849,8 @@ func assertSeqCheckPasses(t *testing.T, dir string) {
 
 func TestDoctorDuplicateSequence(t *testing.T) {
 	t.Run("it warns on two records sharing a sequence and exits 0", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"First","status":"open","seq":3}
-{"id":"tick-bbb222","title":"Second","status":"open","seq":3}`
+		content := `{"id":"tick-aaa111","title":"First","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","seq":3}
+{"id":"tick-bbb222","title":"Second","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","seq":3}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		stdout, stderr, exitCode := runDoctor(t, dir)
@@ -872,9 +872,9 @@ func TestDoctorDuplicateSequence(t *testing.T) {
 	})
 
 	t.Run("it passes the sequence check alongside the ten other checks when sequences are distinct", func(t *testing.T) {
-		content := `{"id":"tick-aaa111","title":"First","status":"open","seq":1}
-{"id":"tick-bbb222","title":"Second","status":"open","seq":2}
-{"id":"tick-ccc333","title":"Third","status":"done","seq":3}`
+		content := `{"id":"tick-aaa111","title":"First","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","seq":1}
+{"id":"tick-bbb222","title":"Second","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"open","seq":2}
+{"id":"tick-ccc333","title":"Third","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z","status":"done","seq":3}`
 		dir, _ := setupDoctorProjectWithContent(t, content)
 
 		assertSeqCheckPasses(t, dir)

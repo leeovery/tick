@@ -1,14 +1,19 @@
 package doctor
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
 
+func loadableLine(id string) string {
+	return `{"id":"` + id + `","title":"T","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+}
+
 func TestJsonlSyntaxCheck(t *testing.T) {
 	t.Run("it returns passing result when all lines are valid JSON", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n{\"id\":\"def\"}\n"))
+		writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\n"+loadableLine("tick-bbb222")+"\n"))
 
 		check := &JsonlSyntaxCheck{}
 		results := check.Run(ctxWithTickDir(tickDir), tickDir)
@@ -73,7 +78,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 
 	t.Run("it returns failing result for a single malformed line with line number in details", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\nnot json\n{\"id\":\"def\"}\n"))
+		writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\nnot json\n"+loadableLine("tick-bbb222")+"\n"))
 
 		check := &JsonlSyntaxCheck{}
 		results := check.Run(ctxWithTickDir(tickDir), tickDir)
@@ -108,7 +113,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 
 	t.Run("it returns failing results only for malformed lines when mixed with valid lines", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\nnot json\n{\"id\":\"def\"}\nalso bad\n"))
+		writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\nnot json\n"+loadableLine("tick-bbb222")+"\nalso bad\n"))
 
 		check := &JsonlSyntaxCheck{}
 		results := check.Run(ctxWithTickDir(tickDir), tickDir)
@@ -126,7 +131,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 	t.Run("it skips blank lines without counting them as valid or invalid", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 		// Line 1: valid, Line 2: blank, Line 3: invalid
-		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n\nnot json\n"))
+		writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\n\nnot json\n"))
 
 		check := &JsonlSyntaxCheck{}
 		results := check.Run(ctxWithTickDir(tickDir), tickDir)
@@ -146,7 +151,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 
 	t.Run("it skips trailing newline that produces empty last line", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n"))
+		writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\n"))
 
 		check := &JsonlSyntaxCheck{}
 		results := check.Run(ctxWithTickDir(tickDir), tickDir)
@@ -216,7 +221,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 				name: "passing",
 				setup: func(t *testing.T) string {
 					tickDir := setupTickDir(t)
-					writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n"))
+					writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\n"))
 					return tickDir
 				},
 			},
@@ -293,7 +298,7 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 	t.Run("it reports correct 1-based line numbers (skipped blank lines still count in numbering)", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 		// Line 1: valid, Line 2: blank, Line 3: blank, Line 4: invalid, Line 5: valid
-		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n\n\nnot json\n{\"id\":\"def\"}\n"))
+		writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\n\n\nnot json\n"+loadableLine("tick-bbb222")+"\n"))
 
 		check := &JsonlSyntaxCheck{}
 		results := check.Run(ctxWithTickDir(tickDir), tickDir)
@@ -327,25 +332,87 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		}
 	})
 
-	t.Run("it does not validate JSON field names or values — only syntax", func(t *testing.T) {
-		tickDir := setupTickDir(t)
-		// {} and [] are valid JSON syntax, arbitrary field names are fine
-		writeJSONL(t, tickDir, []byte("{}\n[]\n{\"bogus_field\":999}\n"))
-
-		check := &JsonlSyntaxCheck{}
-		results := check.Run(ctxWithTickDir(tickDir), tickDir)
-
-		if len(results) != 1 {
-			t.Fatalf("expected 1 result, got %d", len(results))
+	t.Run("it fails a line that does not load as a task, giving the loader's reason", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			line       string
+			wantReason string
+		}{
+			{"whitespace-only", "  \t ", "unexpected end of JSON input"},
+			{"null", "null", `invalid created timestamp "": parsing time "" as "2006-01-02T15:04:05Z": cannot parse "" as "2006"`},
+			{"array", "[]", "json: cannot unmarshal array into Go value of type task.taskJSON"},
+			{"empty object", "{}", `invalid created timestamp "": parsing time "" as "2006-01-02T15:04:05Z": cannot parse "" as "2006"`},
+			{"malformed JSON", "{\"id\":", "unexpected end of JSON input"},
+			{
+				"wrong-typed field",
+				`{"id":"tick-ccc333","title":"T","priority":"high"}`,
+				"json: cannot unmarshal string into Go struct field taskJSON.priority of type int",
+			},
+			{
+				"unparseable created timestamp",
+				`{"id":"tick-ccc333","title":"T","created":"yesterday"}`,
+				`invalid created timestamp "yesterday": parsing time "yesterday" as "2006-01-02T15:04:05Z": cannot parse "yesterday" as "2006"`,
+			},
 		}
-		if !results[0].Passed {
-			t.Errorf("expected Passed true — only syntax matters; details: %s", results[0].Details)
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				tickDir := setupTickDir(t)
+				writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\n"+loadableLine("tick-bbb222")+"\n"+tc.line+"\n"))
+
+				results := (&JsonlSyntaxCheck{}).Run(ctxWithTickDir(tickDir), tickDir)
+
+				if len(results) != 1 {
+					t.Fatalf("expected 1 result, got %d: %+v", len(results), results)
+				}
+				want := CheckResult{
+					Name:       "JSONL syntax",
+					Passed:     false,
+					Severity:   SeverityError,
+					Details:    "Line 3: " + tc.wantReason + " — " + tc.line,
+					Suggestion: "Manual fix required",
+				}
+				if results[0] != want {
+					t.Errorf("result = %+v, want %+v", results[0], want)
+				}
+			})
+		}
+	})
+
+	t.Run("it passes a line that loads but carries values the loader does not restrict", func(t *testing.T) {
+		tests := []struct {
+			name   string
+			fields string
+		}{
+			{"status outside the allowed values", `"status":"bogus","priority":2`},
+			{"type outside the allowed values", `"status":"open","priority":2,"type":"weird"`},
+			{"priority above 4", `"status":"open","priority":9`},
+			{"priority below 0", `"status":"open","priority":-1`},
+			{"repeated tag", `"status":"open","priority":2,"tags":["x","x"]`},
+			{"repeated ref", `"status":"open","priority":2,"refs":["gh-1","gh-1"]`},
+			{"repeated blocker", `"status":"open","priority":2,"blocked_by":["tick-aaa111","tick-aaa111"]`},
+			{"field the task does not define", `"status":"open","priority":2,"bogus_field":999`},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				tickDir := setupTickDir(t)
+				line := `{"id":"tick-bbb222","title":"T",` + tc.fields + `,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+				writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\n"+line+"\n"))
+
+				results := (&JsonlSyntaxCheck{}).Run(ctxWithTickDir(tickDir), tickDir)
+
+				want := []CheckResult{{Name: "JSONL syntax", Passed: true}}
+				if !slices.Equal(results, want) {
+					t.Errorf("results = %+v, want %+v", results, want)
+				}
+			})
 		}
 	})
 
 	t.Run("it does not modify tasks.jsonl (read-only verification)", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		content := []byte("{\"id\":\"abc\"}\nnot json\n{\"id\":\"def\"}\n")
+		content := []byte(loadableLine("tick-aaa111") + "\nnot json\n" + loadableLine("tick-bbb222") + "\n")
 		assertReadOnly(t, tickDir, content, func() {
 			check := &JsonlSyntaxCheck{}
 			check.Run(ctxWithTickDir(tickDir), tickDir)

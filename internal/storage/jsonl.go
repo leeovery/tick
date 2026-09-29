@@ -97,8 +97,8 @@ func ParseJSONL(data []byte) ([]task.Task, error) {
 			return nil, fmt.Errorf("error reading JSONL data: %w", err)
 		}
 
-		var t task.Task
-		if err := json.Unmarshal(line.Text, &t); err != nil {
+		t, err := DecodeTaskLine(line.Text)
+		if err != nil {
 			return nil, lineError(line, err)
 		}
 
@@ -107,6 +107,14 @@ func ParseJSONL(data []byte) ([]task.Task, error) {
 
 	backfillSeqs(tasks)
 	return tasks, nil
+}
+
+// DecodeTaskLine loads one tasks.jsonl line as a task, the way the store reads
+// it. The error is the loader's reason alone; it does not name the line.
+func DecodeTaskLine(text []byte) (task.Task, error) {
+	var t task.Task
+	err := json.Unmarshal(text, &t)
+	return t, err
 }
 
 // lineError names a line that failed to load by number and, when the line is
