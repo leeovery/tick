@@ -200,8 +200,7 @@ func TrimDescription(desc string) string {
 }
 
 // ValidateDescription checks that a description, after trimming, is at most
-// 50,000 characters. The refusal carries the counted length and states that
-// nothing was saved.
+// 50,000 characters.
 func ValidateDescription(desc string) error {
 	n := utf8.RuneCountInString(strings.TrimSpace(desc))
 	if n > maxDescriptionLen {

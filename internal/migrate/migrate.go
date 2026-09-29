@@ -37,9 +37,6 @@ type MigratedTask struct {
 }
 
 // Validate checks that a MigratedTask satisfies tick's constraints.
-// It returns an error if the title breaks the CLI's title rules, the status
-// is unrecognized, the priority is outside the 0-4 range, or the description
-// exceeds the description cap.
 func (mt MigratedTask) Validate() error {
 	if err := task.ValidateTitle(mt.Title); err != nil {
 		return err
