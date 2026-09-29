@@ -1,0 +1,3 @@
+AGENT: architecture
+FINDINGS: none
+SUMMARY: The cycle-1 defect is resolved. RunDoctor now stores the whole scan outcome, error included, through doctor.WithScan, so every line-consuming check and refreshSuggestion judge the same single read. The rest of the implementation fits together without drift. Store and doctor share one line definition (jsonl.Lines) and one per-line loader (storage.DecodeTaskLine), so they cannot disagree about what loads. Rebuild parses before it touches cache.db. The description cap lives in task.ValidateDescription, and create, update and migrate each call it. No remaining candidate names a failure that clears the floor.
