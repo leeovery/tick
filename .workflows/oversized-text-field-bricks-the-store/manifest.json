@@ -153,10 +153,12 @@
             }
           },
           "consolidated_phases": [
-            1
+            1,
+            2
           ],
           "completed_phases": [
-            1
+            1,
+            2
           ]
         }
       }
