@@ -1501,3 +1501,137 @@ func TestCreateChangedSection(t *testing.T) {
 		}
 	})
 }
+
+func TestCreateDescriptionCap(t *testing.T) {
+	showDescription := func(t *testing.T, dir, id string) string {
+		t.Helper()
+		doc := decodeToonDoc(t, runToonCommand(t, dir, "show", id))
+		desc, ok := doc["description"].(string)
+		if !ok {
+			t.Fatalf("show document has no string description: %#v", doc["description"])
+		}
+		return desc
+	}
+
+	acceptedCases := []struct {
+		name        string
+		description string
+		want        string
+	}{
+		{
+			name:        "it accepts a description of exactly 50000 characters",
+			description: strings.Repeat("a", 50000),
+			want:        strings.Repeat("a", 50000),
+		},
+		{
+			name:        "it accepts a description of exactly 50000 multibyte characters",
+			description: strings.Repeat("\U0001F600", 50000),
+			want:        strings.Repeat("\U0001F600", 50000),
+		},
+		{
+			name:        "it accepts 50000 characters wrapped in whitespace and stores them trimmed",
+			description: " \t\n" + strings.Repeat("b", 50000) + "\n\t ",
+			want:        strings.Repeat("b", 50000),
+		},
+	}
+	for _, tc := range acceptedCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir, tickDir := setupTickProject(t)
+			_, stderr, exitCode := runCreate(t, dir, "T", "--description", tc.description)
+			if exitCode != 0 {
+				t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+			}
+			tasks := readPersistedTasks(t, tickDir)
+			if len(tasks) != 1 {
+				t.Fatalf("expected 1 task, got %d", len(tasks))
+			}
+			if tasks[0].Description != tc.want {
+				t.Errorf("stored description differs: %d characters, want %d", len([]rune(tasks[0].Description)), len([]rune(tc.want)))
+			}
+			if got := showDescription(t, dir, tasks[0].ID); got != tc.want {
+				t.Errorf("show description differs: %d characters, want %d", len([]rune(got)), len([]rune(tc.want)))
+			}
+		})
+	}
+
+	t.Run("it refuses 50001 characters and leaves a current store byte-for-byte unchanged", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		if _, stderr, exitCode := runCreate(t, dir, "Existing"); exitCode != 0 {
+			t.Fatalf("seed create exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+		cachePath := filepath.Join(tickDir, "cache.db")
+		jsonlBefore := readFileBytes(t, jsonlPath)
+		cacheBefore := readFileBytes(t, cachePath)
+
+		stdout, stderr, exitCode := runCreate(t, dir, "T", "--description", strings.Repeat("a", 50001))
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		want := "Error: description is 50001 characters, over the 50000-character limit; nothing was saved\n"
+		if stderr != want {
+			t.Errorf("stderr = %q, want %q", stderr, want)
+		}
+		if stdout != "" {
+			t.Errorf("stdout = %q, want empty", stdout)
+		}
+		if !bytes.Equal(readFileBytes(t, jsonlPath), jsonlBefore) {
+			t.Error("tasks.jsonl changed after a refused create")
+		}
+		if !bytes.Equal(readFileBytes(t, cachePath), cacheBefore) {
+			t.Error("cache.db changed after a refused create")
+		}
+	})
+
+	t.Run("it reports the trimmed character count of a padded multibyte over-cap description", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		description := "  \n\t" + strings.Repeat("世", 50001) + "\t\n  "
+		_, stderr, exitCode := runCreate(t, dir, "T", "--description", description)
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		want := "Error: description is 50001 characters, over the 50000-character limit; nothing was saved\n"
+		if stderr != want {
+			t.Errorf("stderr = %q, want %q", stderr, want)
+		}
+		if tasks := readPersistedTasks(t, tickDir); len(tasks) != 0 {
+			t.Errorf("expected no persisted tasks, got %d", len(tasks))
+		}
+	})
+
+	t.Run("it keeps the title refusal message", func(t *testing.T) {
+		dir, _ := setupTickProject(t)
+		_, stderr, exitCode := runCreate(t, dir, strings.Repeat("a", 501))
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		want := "Error: title exceeds maximum length of 500 characters\n"
+		if stderr != want {
+			t.Errorf("stderr = %q, want %q", stderr, want)
+		}
+	})
+
+	t.Run("it keeps the note refusal message", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		dir, _ := setupTickProjectWithTasks(t, []task.Task{
+			{ID: "tick-aaa111", Title: "Task", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		})
+		_, stderr, exitCode := runNote(t, dir, "add", "tick-aaa111", strings.Repeat("a", 2001))
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1", exitCode)
+		}
+		want := "Error: note text exceeds maximum length of 2000 characters\n"
+		if stderr != want {
+			t.Errorf("stderr = %q, want %q", stderr, want)
+		}
+	})
+}
+
+func readFileBytes(t *testing.T, path string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read %s: %v", path, err)
+	}
+	return data
+}

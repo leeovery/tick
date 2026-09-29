@@ -28,13 +28,14 @@ const (
 )
 
 const (
-	maxIDRetries    = 5
-	idByteLength    = 3
-	idPrefix        = "tick-"
-	maxTitleLen     = 500
-	defaultPriority = 2
-	minPriority     = 0
-	maxPriority     = 4
+	maxIDRetries      = 5
+	idByteLength      = 3
+	idPrefix          = "tick-"
+	maxTitleLen       = 500
+	maxDescriptionLen = 50000
+	defaultPriority   = 2
+	minPriority       = 0
+	maxPriority       = 4
 )
 
 // TimestampFormat is the ISO 8601 UTC format used for all task timestamps.
@@ -196,6 +197,17 @@ func TrimTitle(title string) string {
 // TrimDescription removes leading and trailing whitespace from a description.
 func TrimDescription(desc string) string {
 	return strings.TrimSpace(desc)
+}
+
+// ValidateDescription checks that a description, after trimming, is at most
+// 50,000 characters. The refusal carries the counted length and states that
+// nothing was saved.
+func ValidateDescription(desc string) error {
+	n := utf8.RuneCountInString(strings.TrimSpace(desc))
+	if n > maxDescriptionLen {
+		return fmt.Errorf("description is %d characters, over the %d-character limit; nothing was saved", n, maxDescriptionLen)
+	}
+	return nil
 }
 
 // ValidateDescriptionUpdate checks that a description update is not empty or whitespace-only.

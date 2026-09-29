@@ -670,3 +670,53 @@ func TestNextSeq(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateDescription(t *testing.T) {
+	t.Run("it accepts description at 50000 characters", func(t *testing.T) {
+		if err := ValidateDescription(strings.Repeat("a", 50000)); err != nil {
+			t.Errorf("expected no error for 50000-char description, got: %v", err)
+		}
+	})
+
+	t.Run("it rejects description of 50001 characters naming field, limit, length and that nothing was saved", func(t *testing.T) {
+		err := ValidateDescription(strings.Repeat("a", 50001))
+		if err == nil {
+			t.Fatal("expected error for 50001-char description, got nil")
+		}
+		want := "description is 50001 characters, over the 50000-character limit; nothing was saved"
+		if err.Error() != want {
+			t.Errorf("error = %q, want %q", err.Error(), want)
+		}
+	})
+
+	t.Run("it counts multi-byte Unicode characters as single characters", func(t *testing.T) {
+		if err := ValidateDescription(strings.Repeat("\U0001F600", 50000)); err != nil {
+			t.Errorf("expected no error for 50000 multi-byte chars, got: %v", err)
+		}
+		if err := ValidateDescription(strings.Repeat("\U0001F600", 50001)); err == nil {
+			t.Fatal("expected error for 50001 multi-byte chars, got nil")
+		}
+	})
+
+	t.Run("it does not count surrounding whitespace toward the cap", func(t *testing.T) {
+		if err := ValidateDescription(" \t\n" + strings.Repeat("a", 50000) + "\n\t "); err != nil {
+			t.Errorf("expected no error for 50000 chars wrapped in whitespace, got: %v", err)
+		}
+	})
+
+	t.Run("it reports the trimmed length of a padded over-cap description", func(t *testing.T) {
+		err := ValidateDescription("  \n" + strings.Repeat("世", 50001) + "\t\n ")
+		if err == nil {
+			t.Fatal("expected error for 50001 padded multi-byte chars, got nil")
+		}
+		if !strings.HasPrefix(err.Error(), "description is 50001 characters,") {
+			t.Errorf("error = %q, want the trimmed character count 50001", err.Error())
+		}
+	})
+
+	t.Run("it accepts an empty description", func(t *testing.T) {
+		if err := ValidateDescription(""); err != nil {
+			t.Errorf("expected no error for empty description, got: %v", err)
+		}
+	})
+}

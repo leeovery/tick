@@ -125,6 +125,10 @@ func RunCreate(dir string, fc FormatConfig, fmtr Formatter, flagArgs, literals [
 		return err
 	}
 
+	if err := task.ValidateDescription(opts.description); err != nil {
+		return err
+	}
+
 	// Validate priority.
 	if err := task.ValidatePriority(opts.priority); err != nil {
 		return err
