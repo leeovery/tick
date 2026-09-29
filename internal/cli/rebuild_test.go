@@ -277,6 +277,13 @@ func TestRebuild(t *testing.T) {
 			}
 		}
 
+		// The store is read before the cache is touched.
+		readAt := strings.Index(stderr, "reading JSONL")
+		deleteAt := strings.Index(stderr, "deleting cache.db")
+		if readAt < 0 || deleteAt < 0 || readAt > deleteAt {
+			t.Errorf("stderr should log %q before %q, got %q", "reading JSONL", "deleting cache.db", stderr)
+		}
+
 		// All verbose lines should be prefixed.
 		for line := range strings.SplitSeq(strings.TrimSpace(stderr), "\n") {
 			if !strings.HasPrefix(line, "verbose: ") {
@@ -287,6 +294,79 @@ func TestRebuild(t *testing.T) {
 		// Stdout should still have the confirmation message.
 		if !strings.Contains(stdout, "Cache rebuilt:") {
 			t.Errorf("stdout should contain confirmation, got %q", stdout)
+		}
+	})
+
+	t.Run("it exits 1 and leaves cache.db unchanged when tasks.jsonl fails to parse", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task one", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		if _, stderr, exitCode := runRebuild(t, dir); exitCode != 0 {
+			t.Fatalf("initial rebuild exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		cachePath := filepath.Join(tickDir, "cache.db")
+		before, err := os.ReadFile(cachePath)
+		if err != nil {
+			t.Fatalf("failed to read cache.db: %v", err)
+		}
+
+		// Hand-edit a wrong-typed field onto line 2.
+		broken := `{"id":"tick-aaa111","title":"Task one","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}` + "\n" +
+			`{"id":"tick-bbb222","title":"Task two","status":"open","priority":"high","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}` + "\n"
+		if err := os.WriteFile(filepath.Join(tickDir, "tasks.jsonl"), []byte(broken), 0644); err != nil {
+			t.Fatalf("failed to write tasks.jsonl: %v", err)
+		}
+
+		stdout, stderr, exitCode := runRebuild(t, dir)
+		if exitCode != 1 {
+			t.Fatalf("exit code = %d, want 1; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stderr, "failed to parse tasks.jsonl: line 2 (tick-bbb222)") {
+			t.Errorf("stderr should carry the parse error naming line 2 and tick-bbb222, got %q", stderr)
+		}
+		if stdout != "" {
+			t.Errorf("stdout should be empty on failure, got %q", stdout)
+		}
+
+		after, err := os.ReadFile(cachePath)
+		if err != nil {
+			t.Fatalf("cache.db should survive a failed rebuild: %v", err)
+		}
+		if !bytes.Equal(before, after) {
+			t.Error("cache.db changed after a failed rebuild, want byte-for-byte unchanged")
+		}
+	})
+
+	t.Run("it replaces a corrupt cache.db and the rebuilt cache answers queries", func(t *testing.T) {
+		tasks := []task.Task{
+			{ID: "tick-aaa111", Title: "Task one", Status: task.StatusOpen, Priority: 2, Created: now, Updated: now},
+		}
+		dir, tickDir := setupTickProjectWithTasks(t, tasks)
+
+		cachePath := filepath.Join(tickDir, "cache.db")
+		if err := os.WriteFile(cachePath, []byte("not a sqlite database"), 0644); err != nil {
+			t.Fatalf("failed to write corrupt cache.db: %v", err)
+		}
+
+		if _, stderr, exitCode := runRebuild(t, dir); exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+
+		db, err := sql.Open("sqlite", cachePath)
+		if err != nil {
+			t.Fatalf("failed to open cache.db: %v", err)
+		}
+		defer db.Close()
+
+		var id string
+		if err := db.QueryRow("SELECT id FROM tasks").Scan(&id); err != nil {
+			t.Fatalf("rebuilt cache should answer queries: %v", err)
+		}
+		if id != "tick-aaa111" {
+			t.Errorf("cached task id = %q, want %q", id, "tick-aaa111")
 		}
 	})
 

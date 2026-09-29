@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"os"
@@ -611,6 +612,60 @@ func TestStoreRebuild(t *testing.T) {
 		}
 	})
 
+	t.Run("it leaves cache.db unchanged when tasks.jsonl fails to parse", func(t *testing.T) {
+		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
+		tasks := []task.Task{
+			{ID: "tick-aaaaaa", Title: "Task A", Status: task.StatusOpen, Priority: 2, Created: created, Updated: created},
+		}
+		tickDir := setupTickDirWithTasks(t, tasks)
+
+		// Build a valid cache from the parseable store first.
+		first, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		if _, err := first.Rebuild(); err != nil {
+			t.Fatalf("initial Rebuild returned error: %v", err)
+		}
+		first.Close()
+
+		cachePath := filepath.Join(tickDir, "cache.db")
+		before, err := os.ReadFile(cachePath)
+		if err != nil {
+			t.Fatalf("failed to read cache.db: %v", err)
+		}
+
+		// Hand-edit a wrong-typed field onto line 2.
+		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+		broken := `{"id":"tick-aaaaaa","title":"Task A","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}` + "\n" +
+			`{"id":"tick-bbbbbb","title":"Task B","status":"open","priority":"high","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}` + "\n"
+		if err := os.WriteFile(jsonlPath, []byte(broken), 0644); err != nil {
+			t.Fatalf("failed to write tasks.jsonl: %v", err)
+		}
+
+		store, err := NewStore(tickDir)
+		if err != nil {
+			t.Fatalf("NewStore returned error: %v", err)
+		}
+		defer store.Close()
+
+		_, err = store.Rebuild()
+		if err == nil {
+			t.Fatal("expected parse error, got nil")
+		}
+		if !strings.Contains(err.Error(), "line 2 (tick-bbbbbb)") {
+			t.Errorf("error = %q, want it to name line 2 and tick-bbbbbb", err.Error())
+		}
+
+		after, err := os.ReadFile(cachePath)
+		if err != nil {
+			t.Fatalf("cache.db should survive a failed rebuild: %v", err)
+		}
+		if !bytes.Equal(before, after) {
+			t.Error("cache.db changed after a failed rebuild, want byte-for-byte unchanged")
+		}
+	})
+
 	t.Run("it updates hash in metadata after rebuild", func(t *testing.T) {
 		created := time.Date(2026, 1, 19, 10, 0, 0, 0, time.UTC)
 		tasks := []task.Task{
@@ -701,8 +756,8 @@ func TestStoreRebuild(t *testing.T) {
 		expectedMessages := []string{
 			"acquiring exclusive lock",
 			"lock acquired",
-			"deleting cache.db",
 			"reading JSONL",
+			"deleting cache.db",
 			"rebuilding cache with 1 tasks",
 			"hash updated",
 			"lock released",

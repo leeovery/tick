@@ -216,15 +216,27 @@ func (s *Store) Mutate(fn func(tasks []task.Task) ([]task.Task, error)) error {
 	return nil
 }
 
-// Rebuild forces a complete cache rebuild from JSONL. It acquires an exclusive lock,
-// deletes the existing cache.db, reads tasks.jsonl, creates a fresh cache, and populates it.
-// Returns the number of tasks rebuilt.
+// Rebuild forces a complete cache rebuild from JSONL under an exclusive lock and returns
+// the number of tasks rebuilt. A tasks.jsonl that cannot be read or parsed leaves cache.db
+// as it was.
 func (s *Store) Rebuild() (int, error) {
 	unlock, err := s.acquireExclusive()
 	if err != nil {
 		return 0, err
 	}
 	defer unlock()
+
+	// Read and parse JSONL before touching the cache.
+	s.verbose("reading JSONL")
+	rawJSONL, err := os.ReadFile(s.jsonlPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read tasks.jsonl: %w", err)
+	}
+
+	tasks, err := ParseJSONL(rawJSONL)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse tasks.jsonl: %w", err)
+	}
 
 	// Close existing cache if open.
 	if s.cache != nil {
@@ -236,18 +248,6 @@ func (s *Store) Rebuild() (int, error) {
 	s.verbose("deleting cache.db")
 	if err := s.removeCache(); err != nil {
 		return 0, err
-	}
-
-	// Read JSONL.
-	s.verbose("reading JSONL")
-	rawJSONL, err := os.ReadFile(s.jsonlPath)
-	if err != nil {
-		return 0, fmt.Errorf("failed to read tasks.jsonl: %w", err)
-	}
-
-	tasks, err := ParseJSONL(rawJSONL)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse tasks.jsonl: %w", err)
 	}
 
 	// Open fresh cache (creates schema).
