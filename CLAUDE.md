@@ -31,6 +31,7 @@ cmd/tick/main.go          → entry point, injects Stdout/Stderr/Getwd/IsTTY int
 internal/cli/             → command handlers, flag parsing, formatters (Toon/Pretty/JSON)
 internal/task/            → domain model (Task, Status, StateMachine, cascades, transition history)
 internal/storage/         → JSONL persistence + SQLite cache, file locking via .tick/lock
+internal/jsonl/           → tasks.jsonl line reader with no line-length ceiling; read tasks.jsonl through it, never bufio.Scanner
 internal/doctor/          → diagnostic checks (JSONL syntax, dependency cycles, cache staleness)
 internal/migrate/         → import framework: Provider interface + Engine for external tool migration
 internal/testutil/        → shared test helpers (FindRepoRoot)
