@@ -136,8 +136,6 @@ func TestDoctorIncompleteRead(t *testing.T) {
 	})
 }
 
-// countingOpener opens tasks.jsonl for real, except that each open faultOn
-// reports true for is cut short at line 3 with boom. It counts every open.
 func countingOpener(twoLines string, boom error, faultOn func(open int) bool) (func(string) (io.ReadCloser, error), *int) {
 	opens := 0
 	return func(path string) (io.ReadCloser, error) {

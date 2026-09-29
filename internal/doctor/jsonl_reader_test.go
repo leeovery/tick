@@ -204,7 +204,6 @@ func TestScanJSONLines(t *testing.T) {
 	})
 }
 
-// ctxWithoutOpening returns a context whose tasks.jsonl opener fails the test.
 func ctxWithoutOpening(t *testing.T) context.Context {
 	t.Helper()
 	return WithTasksOpener(context.Background(), func(path string) (io.ReadCloser, error) {
