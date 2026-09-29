@@ -6,16 +6,14 @@ import (
 	"fmt"
 )
 
-// JsonlSyntaxCheck validates that every non-blank line in tasks.jsonl is
+// JsonlSyntaxCheck validates that every non-empty line in tasks.jsonl is
 // syntactically valid JSON. It reports each malformed line individually with
 // its 1-based line number. It is read-only and never modifies the file.
 type JsonlSyntaxCheck struct{}
 
 // Run executes the JSONL syntax check. It reads tasks.jsonl from the given
-// tick directory and validates each line. Blank and whitespace-only lines are
-// silently skipped but still count in line numbering. Returns a single passing
-// result if all non-blank lines are valid JSON, or one failing result per
-// malformed line.
+// tick directory and validates each line. Returns a single passing result if
+// every line is valid JSON, or one failing result per malformed line.
 func (c *JsonlSyntaxCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {

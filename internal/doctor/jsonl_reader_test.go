@@ -1,8 +1,13 @@
 package doctor
 
 import (
+	"bytes"
 	"context"
+	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/leeovery/tick/internal/jsonl"
 )
 
 func TestScanJSONLines(t *testing.T) {
@@ -114,7 +119,7 @@ func TestScanJSONLines(t *testing.T) {
 		}
 	})
 
-	t.Run("it skips whitespace-only lines", func(t *testing.T) {
+	t.Run("it keeps whitespace-only lines, numbered, with nil Parsed", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte("   \n\t\n{\"id\":\"abc\"}\n"))
 
@@ -123,13 +128,84 @@ func TestScanJSONLines(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(lines) != 1 {
-			t.Fatalf("expected 1 line (skipping whitespace), got %d", len(lines))
+		want := []JSONLine{
+			{LineNum: 1, Raw: "   "},
+			{LineNum: 2, Raw: "\t"},
+			{LineNum: 3, Raw: `{"id":"abc"}`, Parsed: map[string]any{"id": "abc"}},
 		}
-		if lines[0].LineNum != 3 {
-			t.Errorf("expected line number 3, got %d", lines[0].LineNum)
+		assertJSONLines(t, lines, want)
+	})
+
+	t.Run("it reads a line over 64 KiB and the lines after it", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+		long := `{"id":"abc","description":"` + strings.Repeat("d", 70000) + `"}`
+		writeJSONL(t, tickDir, []byte(long+"\n{\"id\":\"def\"}\n"))
+
+		lines, err := ScanJSONLines(tickDir)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(lines) != 2 {
+			t.Fatalf("expected 2 lines, got %d", len(lines))
+		}
+		if lines[0].Raw != long || lines[0].Parsed == nil {
+			t.Errorf("long line not read whole: len(Raw) = %d, Parsed nil = %t", len(lines[0].Raw), lines[0].Parsed == nil)
+		}
+		if lines[1].LineNum != 2 || lines[1].Raw != `{"id":"def"}` {
+			t.Errorf("second line = %d %q, want 2 %q", lines[1].LineNum, lines[1].Raw, `{"id":"def"}`)
 		}
 	})
+
+	t.Run("it strips CRLF terminators and skips a final lone carriage return", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\r\n\r\n{\"id\":\"def\"}\n\r"))
+
+		lines, err := ScanJSONLines(tickDir)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := []JSONLine{
+			{LineNum: 1, Raw: `{"id":"abc"}`, Parsed: map[string]any{"id": "abc"}},
+			{LineNum: 3, Raw: `{"id":"def"}`, Parsed: map[string]any{"id": "def"}},
+		}
+		assertJSONLines(t, lines, want)
+	})
+
+	t.Run("it reads the same lines with the same numbers as the store's line reader", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+		content := []byte("\r\n{\"id\":\"abc\"}\r\n\n  \n{\"id\":\"def\"}\n\r\n\t\r\nnot json")
+		writeJSONL(t, tickDir, content)
+
+		lines, err := ScanJSONLines(tickDir)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		var want []JSONLine
+		for line, err := range jsonl.Lines(bytes.NewReader(content)) {
+			if err != nil {
+				t.Fatalf("store reader: %v", err)
+			}
+			want = append(want, JSONLine{LineNum: line.Num, Raw: string(line.Text)})
+		}
+		if len(lines) != len(want) {
+			t.Fatalf("doctor read %d lines, store read %d", len(lines), len(want))
+		}
+		for i := range want {
+			if lines[i].LineNum != want[i].LineNum || lines[i].Raw != want[i].Raw {
+				t.Errorf("line %d: doctor = %d %q, store = %d %q", i, lines[i].LineNum, lines[i].Raw, want[i].LineNum, want[i].Raw)
+			}
+		}
+	})
+}
+
+func assertJSONLines(t *testing.T, got, want []JSONLine) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("lines = %#v, want %#v", got, want)
+	}
 }
 
 func TestGetJSONLines(t *testing.T) {

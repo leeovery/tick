@@ -51,18 +51,23 @@ func TestJsonlSyntaxCheck(t *testing.T) {
 		}
 	})
 
-	t.Run("it returns passing result when file contains only whitespace-only lines", func(t *testing.T) {
+	t.Run("it fails each whitespace-only line, naming it by number", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		writeJSONL(t, tickDir, []byte("   \n\t\n  \t  \n"))
+		writeJSONL(t, tickDir, []byte("   \n\n  \t  \n"))
 
 		check := &JsonlSyntaxCheck{}
 		results := check.Run(ctxWithTickDir(tickDir), tickDir)
 
-		if len(results) != 1 {
-			t.Fatalf("expected 1 result, got %d", len(results))
+		if len(results) != 2 {
+			t.Fatalf("expected 2 results, got %d", len(results))
 		}
-		if !results[0].Passed {
-			t.Errorf("expected Passed true for whitespace-only file; details: %s", results[0].Details)
+		for i, wantPrefix := range []string{"Line 1:", "Line 3:"} {
+			if results[i].Passed {
+				t.Errorf("result %d: expected Passed false", i)
+			}
+			if !strings.HasPrefix(results[i].Details, wantPrefix) {
+				t.Errorf("result %d: Details = %q, want prefix %q", i, results[i].Details, wantPrefix)
+			}
 		}
 	})
 

@@ -75,10 +75,10 @@ func taskRelationshipsFromLines(lines []JSONLine) []TaskRelationshipData {
 }
 
 // ParseTaskRelationships reads tasks.jsonl from the given tick directory and
-// extracts relationship data for each valid task line. Blank lines, unparseable
-// JSON, and lines with missing or non-string id fields are silently skipped.
-// Returns an error if the file cannot be opened. Returns an empty slice for an
-// empty file. This function is read-only and never modifies the file.
+// extracts relationship data for each valid task line. Unparseable JSON and
+// lines with missing or non-string id fields are silently skipped. Returns an
+// error if the file cannot be opened or read in full, and an empty slice for
+// an empty file. This function is read-only and never modifies the file.
 func ParseTaskRelationships(tickDir string) ([]TaskRelationshipData, error) {
 	lines, err := ScanJSONLines(tickDir)
 	if err != nil {

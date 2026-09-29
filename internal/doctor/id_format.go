@@ -15,10 +15,9 @@ var idFormatRegex = regexp.MustCompile(`^tick-[0-9a-f]{6}$`)
 type IdFormatCheck struct{}
 
 // Run executes the ID format check. It reads tasks.jsonl from the given tick
-// directory and validates each task's id field. Blank and whitespace-only lines
-// are silently skipped but still count in line numbering. Unparseable JSON
-// lines are skipped silently (syntax check handles those). Returns a single
-// passing result if all IDs are valid, or one failing result per invalid ID.
+// directory and validates each task's id field. Unparseable JSON lines are
+// skipped silently (syntax check handles those). Returns a single passing
+// result if all IDs are valid, or one failing result per invalid ID.
 func (c *IdFormatCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {

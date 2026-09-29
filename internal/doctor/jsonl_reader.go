@@ -1,13 +1,13 @@
 package doctor
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/leeovery/tick/internal/jsonl"
 )
 
 // JSONLine represents a single line from tasks.jsonl.
@@ -21,9 +21,9 @@ type JSONLine struct {
 }
 
 // ScanJSONLines reads tasks.jsonl from the given tick directory and returns
-// all non-blank lines with their line numbers and parse results.
-// Lines that fail JSON parsing have Parsed set to nil (Raw is still populated).
-// Returns error only for file-open failures.
+// each line the store reads, with its line number and parse result. Lines that
+// fail JSON parsing have Parsed set to nil (Raw is still populated). Returns an
+// error if the file cannot be opened or read in full.
 func ScanJSONLines(tickDir string) ([]JSONLine, error) {
 	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
 
@@ -33,33 +33,23 @@ func ScanJSONLines(tickDir string) ([]JSONLine, error) {
 	}
 	defer f.Close()
 
-	var lines []JSONLine
-	scanner := bufio.NewScanner(f)
-	lineNum := 0
-
-	for scanner.Scan() {
-		lineNum++
-		text := scanner.Text()
-
-		if strings.TrimSpace(text) == "" {
-			continue
+	lines := []JSONLine{}
+	for l, err := range jsonl.Lines(f) {
+		if err != nil {
+			return nil, fmt.Errorf("read tasks.jsonl: %w", err)
 		}
 
 		line := JSONLine{
-			LineNum: lineNum,
-			Raw:     text,
+			LineNum: l.Num,
+			Raw:     string(l.Text),
 		}
 
 		var obj map[string]any
-		if err := json.Unmarshal([]byte(text), &obj); err == nil {
+		if err := json.Unmarshal(l.Text, &obj); err == nil {
 			line.Parsed = obj
 		}
 
 		lines = append(lines, line)
-	}
-
-	if lines == nil {
-		lines = []JSONLine{}
 	}
 
 	return lines, nil
