@@ -11,7 +11,7 @@ func loadableLine(id string) string {
 }
 
 func TestJsonlSyntaxCheck(t *testing.T) {
-	t.Run("it returns passing result when all lines are valid JSON", func(t *testing.T) {
+	t.Run("it returns passing result when every line loads as a task", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte(loadableLine("tick-aaa111")+"\n"+loadableLine("tick-bbb222")+"\n"))
 
