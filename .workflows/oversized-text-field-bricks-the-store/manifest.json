@@ -63,7 +63,8 @@
             "oversized-text-field-bricks-the-store-3": "tick-bc4d84",
             "oversized-text-field-bricks-the-store-3-2": "tick-a34c9c",
             "oversized-text-field-bricks-the-store-3-3": "tick-277d5a",
-            "oversized-text-field-bricks-the-store-3-4": "tick-2f337d"
+            "oversized-text-field-bricks-the-store-3-4": "tick-2f337d",
+            "oversized-text-field-bricks-the-store-1-8": "tick-ce257a"
           },
           "storage_paths": [
             ".tick/"
@@ -92,7 +93,7 @@
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
           "analysis_gate_mode": "gated",
-          "consolidation_gate_mode": "gated",
+          "consolidation_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle_total": 0,
           "linters": [
@@ -130,18 +131,6 @@
           ],
           "current_phase": 1,
           "current_task": null,
-          "bank": [
-            {
-              "task": "oversized-text-field-bricks-the-store-1-1",
-              "source": "reviewer",
-              "summary": "CLAUDE.md Architecture block does not list the new internal/jsonl shared line reader package",
-              "failure": "An agent adding a new tasks.jsonl reader orients from CLAUDE.md, never finds the shared reader, reaches for bufio.Scanner and reintroduces the 64 KiB ceiling — unnoticed until a store holds a >64 KiB line and every command fails",
-              "detail": "CLAUDE.md lists each internal/ package under Architecture; add internal/jsonl/ → shared tasks.jsonl line reader (no length ceiling; store and doctor read through it). Natural point is the phase boundary once Task 2-1 moves doctor onto the reader",
-              "files": [
-                "CLAUDE.md"
-              ]
-            }
-          ],
           "completed_tasks": [
             "oversized-text-field-bricks-the-store-1-1",
             "oversized-text-field-bricks-the-store-1-2",
@@ -150,6 +139,16 @@
             "oversized-text-field-bricks-the-store-1-5",
             "oversized-text-field-bricks-the-store-1-6",
             "oversized-text-field-bricks-the-store-1-7"
+          ],
+          "staging": {
+            "p1": {
+              "tasks": {
+                "1": "approved"
+              }
+            }
+          },
+          "consolidated_phases": [
+            1
           ]
         }
       }
