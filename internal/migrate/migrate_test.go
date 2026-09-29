@@ -145,6 +145,42 @@ func TestMigratedTaskDescriptionCap(t *testing.T) {
 	})
 }
 
+func TestMigratedTaskTitleRules(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		title string
+		want  string
+	}{
+		{name: "it rejects a 501-character title with the CLI's length refusal", title: strings.Repeat("a", 501), want: "title exceeds maximum length of 500 characters"},
+		{name: "it rejects a two-line title with the CLI's single-line refusal", title: "First line\nSecond line", want: "title must be a single line (no newlines)"},
+		{name: "it rejects a title with a carriage return inside it", title: "First\rSecond", want: "title must be a single line (no newlines)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := MigratedTask{Title: tc.title}.Validate()
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if err.Error() != tc.want {
+				t.Errorf("error = %q, want %q", err.Error(), tc.want)
+			}
+		})
+	}
+
+	for _, tc := range []struct {
+		name  string
+		title string
+	}{
+		{name: "it accepts a title of exactly 500 characters", title: strings.Repeat("a", 500)},
+		{name: "it accepts a title of exactly 500 multibyte characters", title: strings.Repeat("\u00e9", 500)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := (MigratedTask{Title: tc.title}).Validate(); err != nil {
+				t.Errorf("expected valid, got error: %v", err)
+			}
+		})
+	}
+}
+
 func TestProviderInterface(t *testing.T) {
 	t.Run("Provider interface is implementable by a mock", func(t *testing.T) {
 		mock := &mockProvider{

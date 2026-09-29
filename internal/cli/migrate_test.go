@@ -911,3 +911,109 @@ func TestMigrateDescriptionCap(t *testing.T) {
 		}
 	})
 }
+
+func TestMigrateTitleRules(t *testing.T) {
+	beadsIssue := func(t *testing.T, id, title string) string {
+		t.Helper()
+		line, err := json.Marshal(map[string]any{"id": id, "title": title, "status": "pending"})
+		if err != nil {
+			t.Fatalf("marshal issue %s: %v", id, err)
+		}
+		return string(line)
+	}
+	longTitle := strings.Repeat("x", 501)
+	twoLineTitle := "First line\nSecond line"
+	atCapTitle := strings.Repeat("a", 500)
+	const (
+		longReason      = "title exceeds maximum length of 500 characters"
+		multiLineReason = "title must be a single line (no newlines)"
+	)
+	source := beadsIssue(t, "b-001", longTitle) + "\n" +
+		beadsIssue(t, "b-002", twoLineTitle) + "\n" +
+		beadsIssue(t, "b-003", atCapTitle) + "\n" +
+		beadsIssue(t, "b-004", "Ordinary") + "\n"
+
+	assertSkips := func(t *testing.T, stdout string) {
+		t.Helper()
+		for _, skip := range []struct{ title, reason string }{
+			{longTitle, longReason},
+			{twoLineTitle, multiLineReason},
+		} {
+			if !strings.Contains(stdout, "✗ Task: "+skip.title+" (skipped: "+skip.reason+")") {
+				t.Errorf("stdout missing skip line for %q with reason %q, got:\n%s", skip.title, skip.reason, stdout)
+			}
+			if !strings.Contains(stdout, "\n- Task "+strconv.Quote(skip.title)+": "+skip.reason+"\n") {
+				t.Errorf("stdout missing Failures entry for %q with reason %q, got:\n%s", skip.title, skip.reason, stdout)
+			}
+		}
+		if !strings.Contains(stdout, "Done: 2 imported, 2 failed") {
+			t.Errorf("stdout missing summary, got:\n%s", stdout)
+		}
+	}
+
+	t.Run("it skips the over-long and multi-line titles and imports the rest", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		setupBeadsFixture(t, dir, source)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		assertSkips(t, stdout)
+		tasks := readPersistedTasks(t, tickDir)
+		if len(tasks) != 2 {
+			t.Fatalf("expected 2 persisted tasks, got %d", len(tasks))
+		}
+		if tasks[0].Title != atCapTitle || tasks[1].Title != "Ordinary" {
+			t.Errorf("persisted titles = %q, %q; want the 500-character title, Ordinary", tasks[0].Title, tasks[1].Title)
+		}
+	})
+
+	t.Run("it reports the same skips under --dry-run and writes nothing", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		setupBeadsFixture(t, dir, source)
+		jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
+		before := readFileBytes(t, jsonlPath)
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads", "--dry-run")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		assertSkips(t, stdout)
+		if !bytes.Equal(readFileBytes(t, jsonlPath), before) {
+			t.Error("tasks.jsonl changed during a dry run")
+		}
+	})
+
+	for _, tc := range []struct {
+		name  string
+		title string
+		want  string
+	}{
+		{name: "it imports a title of exactly 500 multibyte characters", title: strings.Repeat("é", 500), want: strings.Repeat("é", 500)},
+		{name: "it imports a title with line breaks only at its edges, trimmed", title: "Ship it\n", want: "Ship it"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir, tickDir := setupTickProject(t)
+			setupBeadsFixture(t, dir, beadsIssue(t, "b-001", tc.title)+"\n")
+
+			stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+			if exitCode != 0 {
+				t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+			}
+			if !strings.Contains(stdout, "Done: 1 imported, 0 failed") {
+				t.Errorf("stdout missing summary, got:\n%s", stdout)
+			}
+			tasks := readPersistedTasks(t, tickDir)
+			if len(tasks) != 1 {
+				t.Fatalf("expected 1 persisted task, got %d", len(tasks))
+			}
+			if tasks[0].Title != tc.want {
+				t.Errorf("persisted title = %q, want %q", tasks[0].Title, tc.want)
+			}
+		})
+	}
+}

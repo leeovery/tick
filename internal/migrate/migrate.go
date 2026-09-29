@@ -3,7 +3,6 @@ package migrate
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/leeovery/tick/internal/task"
@@ -38,12 +37,12 @@ type MigratedTask struct {
 }
 
 // Validate checks that a MigratedTask satisfies tick's constraints.
-// It returns an error if the title is empty, the status is unrecognized,
-// the priority is outside the 0-4 range, or the description exceeds the
-// description cap.
+// It returns an error if the title breaks the CLI's title rules, the status
+// is unrecognized, the priority is outside the 0-4 range, or the description
+// exceeds the description cap.
 func (mt MigratedTask) Validate() error {
-	if strings.TrimSpace(mt.Title) == "" {
-		return fmt.Errorf("title is required and cannot be empty")
+	if err := task.ValidateTitle(mt.Title); err != nil {
+		return err
 	}
 	if mt.Status != "" && !validStatuses[mt.Status] {
 		return fmt.Errorf("invalid status %q: must be open, in_progress, done, or cancelled", mt.Status)
