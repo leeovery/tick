@@ -104,11 +104,11 @@ The check stays `JSONL syntax` in doctor's output, in the README's doctor "Check
 
 #### 5.3 A read doctor cannot complete
 
-If reading `tasks.jsonl` stops before the end of the file — the file opened, but an error cut the read short — doctor reports a failure naming the line it could not read and saying the file could not be read in full. It never reports a pass over the lines it did read, and never reports `tasks.jsonl not found`. Every check that consumes the file's lines fails with that read error in place of its normal verdict, the same shape as today's failure when the file will not open. The not-found result (`rg -n 'func fileNotFoundResult' internal/doctor/helpers.go` → `:14`) stays, for a file that cannot be opened and nothing else.
+If reading `tasks.jsonl` stops before the end of the file — the file opened, but an error cut the read short — doctor reports a failure naming the line it could not read and saying the file could not be read in full. No check that consumes the file's lines reports a pass over the lines it did read, or reports `tasks.jsonl not found`. Every check that consumes the file's lines fails with that read error in place of its normal verdict, the same shape as today's failure when the file will not open. The not-found result (`rg -n 'func fileNotFoundResult' internal/doctor/helpers.go` → `:14`) stays, for a file that cannot be opened and nothing else. The cache check does not consume the file's lines: it reads the file's bytes itself and is unchanged (§5.5), so when those bytes cannot be read either it reports its own existing `tasks.jsonl not found or unreadable` result, carrying the read error.
 
 Today the reader's error is dropped. Surfaced through the existing per-check fallback, it would make every check report the file missing (§1.2).
 
-Once the ceiling is gone, no file on disk makes the reader fail this way, so the path is reached through a test seam over the reader (§8).
+Once the ceiling is gone, only an I/O error makes the reader fail this way: a disk or mount failing mid-read, or a directory standing at the `tasks.jsonl` path, which opens and then fails to read. None of these is a fixture a test can hold reliably, so the path is reached through a test seam over the reader (§8).
 
 #### 5.4 Relationship checks
 
@@ -201,3 +201,7 @@ Migrate also adopts the CLI's title rules. Today it checks only that the title i
 > **Corrigendum 2026-09-28** (from `planning/oversized-text-field-bricks-the-store`): §2.2 left open whether a final line with no trailing newline has a trailing `\r` stripped — corrected: it does, one `\r`, exactly as `bufio.ScanLines` does today (measured: its at-EOF branch returns `dropCR(data)`, and both current readers use the default split), which §2.2's governing rule ("the store's current one, preserved exactly") already required.
 
 > **Corrigendum 2026-09-28** (from `planning/oversized-text-field-bricks-the-store`): §5.1 left open whether doctor judges a line that loads but repeats a value within its own `tags`, `refs` or `blocked_by` list, which the cache rebuild every command runs refuses — corrected: it is not doctor's; doctor adds no check for it, per the investigation's decision to keep it outside this fix (only hand edits or other tools produce one; doctor still flags the stale cache, and the failing rebuild names the task and value).
+
+> **Corrigendum 2026-09-29** (from `implementation/oversized-text-field-bricks-the-store`): §5.3 "It never reports a pass over the lines it did read, and never reports `tasks.jsonl not found`" — corrected: the claim holds for the checks that consume the file's lines; the cache check reads the bytes itself and §5.5 leaves it unchanged, so on a real incomplete read it reports its own `tasks.jsonl not found or unreadable: <read error>` result (measured). Derived from §5.5's explicit freeze of the cache check and §5.3's own scoping of the read-error failure to line-consuming checks.
+
+> **Corrigendum 2026-09-29** (from `implementation/oversized-text-field-bricks-the-store`): §5.3 "Once the ceiling is gone, no file on disk makes the reader fail this way" — corrected: a directory at the `tasks.jsonl` path opens and then fails to read with `is a directory` (measured with a built binary), alongside I/O failures mid-read; the test seam stays the way the path is exercised.
