@@ -22,14 +22,7 @@ func (c *JsonlSyntaxCheck) Run(ctx context.Context, tickDir string) []CheckResul
 		return linesUnavailableResult("JSONL syntax", err)
 	}
 
-	var failures []CheckResult
-	for _, line := range lines {
-		if _, err := storage.DecodeTaskLine([]byte(line.Raw)); err != nil {
-			failures = append(failures, loadFailure(line, err))
-		}
-	}
-
-	if len(failures) > 0 {
+	if failures := loadFailures(lines); len(failures) > 0 {
 		return failures
 	}
 
@@ -37,6 +30,18 @@ func (c *JsonlSyntaxCheck) Run(ctx context.Context, tickDir string) []CheckResul
 		Name:   "JSONL syntax",
 		Passed: true,
 	}}
+}
+
+// loadFailures returns one failing result per line that does not load as a
+// task the way the store loads it.
+func loadFailures(lines []JSONLine) []CheckResult {
+	var failures []CheckResult
+	for _, line := range lines {
+		if _, err := storage.DecodeTaskLine([]byte(line.Raw)); err != nil {
+			failures = append(failures, loadFailure(line, err))
+		}
+	}
+	return failures
 }
 
 func loadFailure(line JSONLine, err error) CheckResult {

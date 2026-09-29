@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,7 +20,7 @@ type CacheStalenessCheck struct{}
 
 // Run executes the cache staleness check. It computes the SHA256 hash of
 // tasks.jsonl and compares it to the hash stored in cache.db's metadata table.
-func (c *CacheStalenessCheck) Run(_ context.Context, tickDir string) []CheckResult {
+func (c *CacheStalenessCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	jsonlPath := filepath.Join(tickDir, "tasks.jsonl")
 	cachePath := filepath.Join(tickDir, "cache.db")
 
@@ -46,7 +47,7 @@ func (c *CacheStalenessCheck) Run(_ context.Context, tickDir string) []CheckResu
 			Passed:     false,
 			Severity:   SeverityError,
 			Details:    "cache.db not found — cache has not been built",
-			Suggestion: "Run `tick rebuild` to refresh cache",
+			Suggestion: refreshSuggestion(ctx, tickDir),
 		}}
 	}
 
@@ -59,7 +60,7 @@ func (c *CacheStalenessCheck) Run(_ context.Context, tickDir string) []CheckResu
 			Passed:     false,
 			Severity:   SeverityError,
 			Details:    "cache.db is stale — hash mismatch between tasks.jsonl and cache",
-			Suggestion: "Run `tick rebuild` to refresh cache",
+			Suggestion: refreshSuggestion(ctx, tickDir),
 		}}
 	}
 
@@ -70,7 +71,7 @@ func (c *CacheStalenessCheck) Run(_ context.Context, tickDir string) []CheckResu
 			Passed:     false,
 			Severity:   SeverityError,
 			Details:    "cache.db is stale — hash mismatch between tasks.jsonl and cache",
-			Suggestion: "Run `tick rebuild` to refresh cache",
+			Suggestion: refreshSuggestion(ctx, tickDir),
 		}}
 	}
 
@@ -78,6 +79,16 @@ func (c *CacheStalenessCheck) Run(_ context.Context, tickDir string) []CheckResu
 		Name:   "Cache",
 		Passed: true,
 	}}
+}
+
+// refreshSuggestion advises a rebuild unless the store cannot load, in which
+// case a rebuild fails the same way and the lines must be fixed first.
+func refreshSuggestion(ctx context.Context, tickDir string) string {
+	lines, err := getJSONLines(ctx, tickDir)
+	if errors.Is(err, errIncompleteRead) || (err == nil && len(loadFailures(lines)) > 0) {
+		return "Fix the tasks.jsonl lines the JSONL syntax check names, then run tick doctor again"
+	}
+	return "Run `tick rebuild` to refresh cache"
 }
 
 // queryStoredHash opens cache.db in read-only mode, queries the metadata table

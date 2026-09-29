@@ -213,7 +213,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 
 	t.Run("it suggests Run tick rebuild to refresh cache when cache is stale", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		writeJSONL(t, tickDir, []byte(`{"id":"abc"}`))
+		writeJSONL(t, tickDir, []byte(`{"id":"tick-aaa111","title":"T","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`))
 		createCacheWithHash(t, tickDir, "wrong-hash")
 
 		check := &CacheStalenessCheck{}
@@ -230,7 +230,7 @@ func TestCacheStalenessCheck(t *testing.T) {
 
 	t.Run("it suggests Run tick rebuild to refresh cache when cache.db is missing", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		writeJSONL(t, tickDir, []byte(`{"id":"abc"}`))
+		writeJSONL(t, tickDir, []byte(`{"id":"tick-aaa111","title":"T","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`))
 
 		check := &CacheStalenessCheck{}
 		results := check.Run(ctxWithTickDir(tickDir), tickDir)
@@ -515,6 +515,67 @@ func TestCacheStalenessCheck(t *testing.T) {
 		}
 		if results[0].Details != "cache.db is stale — hash mismatch between tasks.jsonl and cache" {
 			t.Errorf("unexpected Details: %s", results[0].Details)
+		}
+	})
+}
+
+func TestCacheStalenessCheckWhileALineFailsToLoad(t *testing.T) {
+	const (
+		loadable    = `{"id":"tick-aaa111","title":"T","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+		fixAdvice   = "Fix the tasks.jsonl lines the JSONL syntax check names, then run tick doctor again"
+		staleDetail = "cache.db is stale — hash mismatch between tasks.jsonl and cache"
+	)
+	content := []byte(loadable + "\nnull\n")
+
+	t.Run("it passes when the stored hash matches the file bytes, the failing line included", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+		writeJSONL(t, tickDir, content)
+		createCacheWithHash(t, tickDir, computeTestHash(content))
+
+		results := (&CacheStalenessCheck{}).Run(context.Background(), tickDir)
+
+		want := []CheckResult{{Name: "Cache", Passed: true}}
+		if len(results) != 1 || results[0] != want[0] {
+			t.Errorf("results = %+v, want %+v", results, want)
+		}
+	})
+
+	t.Run("it keeps the verdict and details it gives today and changes only the suggestion", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			setup   func(t *testing.T, tickDir string)
+			details string
+		}{
+			{"stale hash", func(t *testing.T, tickDir string) { createCacheWithHash(t, tickDir, "stale-hash") }, staleDetail},
+			{"no jsonl_hash key", createCacheWithoutHash, staleDetail},
+			{"no cache.db", func(*testing.T, string) {}, "cache.db not found — cache has not been built"},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				tickDir := setupTickDir(t)
+				writeJSONL(t, tickDir, content)
+				tc.setup(t, tickDir)
+
+				results := (&CacheStalenessCheck{}).Run(context.Background(), tickDir)
+
+				want := CheckResult{Name: "Cache", Passed: false, Severity: SeverityError, Details: tc.details, Suggestion: fixAdvice}
+				if len(results) != 1 || results[0] != want {
+					t.Errorf("results = %+v, want [%+v]", results, want)
+				}
+			})
+		}
+	})
+
+	t.Run("it keeps the rebuild advice when every line loads", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+		writeJSONL(t, tickDir, []byte(loadable+"\n"))
+		createCacheWithHash(t, tickDir, "stale-hash")
+
+		results := (&CacheStalenessCheck{}).Run(context.Background(), tickDir)
+
+		if len(results) != 1 || results[0].Suggestion != "Run `tick rebuild` to refresh cache" {
+			t.Errorf("results = %+v, want the rebuild suggestion", results)
 		}
 	})
 }
