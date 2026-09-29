@@ -88,14 +88,14 @@ const MIGRATIONS_RUN_MARKER = '---MIGRATIONS_RUN---';
  * @typedef {object} BootResult
  * @property {{changed: boolean, ran: number, output: string, verify: VerifyAddendum[]}} migrations `changed` counts files, `ran` counts migrations executed — a migration can run and change nothing
  * @property {'ready'|'not-ready'} knowledge
- * @property {boolean} indexed the bulk `knowledge index` ran clean — no artifact left failing
+ * @property {boolean} indexed the bulk `knowledge index` ran clean — no artifact left failing, no chunk left awaiting its vector, no store provider key left unresolved
  * @property {boolean} compacted
  * @property {string|null} migrations_committed short sha of the tracking-ledger commit, or null when nothing was committed — set only where no reviewed migration commit follows, whatever boot left the ledger dirty
  * @property {string[]} warnings non-blocking failures (knowledge index, compaction, the store's untracking, ledger commit, the worktree include, an unreadable report block)
  * @property {'no-tmux'|'on'|'off'|'prompt'} tmux_labels session-label opt-in state — `prompt` means in tmux and never asked, workflow-start's one-time prompt
  * @property {boolean} label_repaired a session label on this terminal — this session's own, arriving at the start menu, or a stranded one whose owner is gone — was put back to the original name
  * @property {boolean} session_hooks_installed this boot wrote the session hooks into `.claude/settings.json` — SessionEnd's `presence cleanup` and `conversation end` for every project, `session cleanup` and SessionStart's `session resume` (matcher `resume`) while labels are on; false when the file already carried exactly those
- * @property {boolean} worktree_include_installed this boot wrote the knowledge files into `.worktreeinclude`; false when it already listed them
+ * @property {boolean} worktree_include_installed this boot changed `.worktreeinclude` — a knowledge file appended, or the retired store file's line renamed or dropped; false when it left the file as it was
  * @property {import('./gate-surface.cjs').GateSurface} gate_surface the gate mod — `unavailable` where it cannot run here (Claude Code on the web, another entrypoint than the terminal app, a version before 2.1.282, the mod not installed) and boot wrote nothing; where it can: `on` where it is running, its announcement in boot's own environment; `restart` where this boot wrote the function-hooks flag into `.claude/settings.json` and the mod is not running; `not-running` where the flag was already there and the mod is not running — workflow-start stops on both
  * @property {'none'|'native'|'in-progress'|'completed'|'skipped'} baseline project baseline status from the project manifest — `none` means nothing recorded yet (workflow-start's one-time judgment: native, or the offer)
  * @property {'none'|'walked'|'skipped'} walkthrough the answer to the walkthrough offer from the project manifest — `none` means nothing recorded yet, the state workflow-start's one-time offer keys on
