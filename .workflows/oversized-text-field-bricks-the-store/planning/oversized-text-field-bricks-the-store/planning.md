@@ -31,6 +31,7 @@ status: draft
 | oversized-text-field-bricks-the-store-1-5 | Beads importer reads issue lines of any length | keeps its own line rules (each line trimmed), not the shared reader (§2.3) |
 | oversized-text-field-bricks-the-store-1-6 | Store read errors name the line and the task | malformed-JSON line named by line number alone (§3), line with no string `id` (missing, non-string, or not a JSON object) named by line number alone (§3) |
 | oversized-text-field-bricks-the-store-1-7 | `tick rebuild` keeps the cache until it can build a new one | corrupt `cache.db` still recovered (§4, §8.3), `--verbose` logs `reading JSONL` before `deleting cache.db` (§4, §8.3) |
+| oversized-text-field-bricks-the-store-1-8 | Corrections | - |
 
 ### Phase 2: Doctor passes only a store every command can open
 status: draft
