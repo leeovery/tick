@@ -11,7 +11,7 @@ import (
 // RunDoctor executes the doctor diagnostic command, writing the report to
 // stdout and returning the process exit code. Doctor is read-only and never
 // modifies data.
-func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
+func RunDoctor(ctx context.Context, stdout io.Writer, stderr io.Writer, tickDir string) int {
 	runner := doctor.NewDiagnosticRunner()
 	runner.Register(&doctor.CacheStalenessCheck{})
 	runner.Register(&doctor.JsonlSyntaxCheck{})
@@ -25,9 +25,7 @@ func RunDoctor(stdout io.Writer, stderr io.Writer, tickDir string) int {
 	runner.Register(&doctor.ParentDoneWithOpenChildrenCheck{})
 	runner.Register(&doctor.DuplicateSeqCheck{})
 
-	ctx := context.Background()
-
-	lines, err := doctor.ScanJSONLines(tickDir)
+	lines, err := doctor.ScanJSONLines(ctx, tickDir)
 	if err == nil {
 		ctx = context.WithValue(ctx, doctor.JSONLinesKey, lines)
 	}
@@ -55,5 +53,5 @@ func (a *App) handleDoctor() int {
 		return 1
 	}
 
-	return RunDoctor(a.Stdout, a.Stderr, tickDir)
+	return RunDoctor(context.Background(), a.Stdout, a.Stderr, tickDir)
 }

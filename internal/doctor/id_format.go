@@ -21,7 +21,7 @@ type IdFormatCheck struct{}
 func (c *IdFormatCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult("ID format")
+		return linesUnavailableResult("ID format", err)
 	}
 
 	var failures []CheckResult

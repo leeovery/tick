@@ -14,7 +14,7 @@ func TestScanJSONLines(t *testing.T) {
 	t.Run("it returns error for missing file", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 
-		_, err := ScanJSONLines(tickDir)
+		_, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err == nil {
 			t.Fatal("expected error for missing file, got nil")
@@ -25,7 +25,7 @@ func TestScanJSONLines(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte{})
 
-		lines, err := ScanJSONLines(tickDir)
+		lines, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -40,7 +40,7 @@ func TestScanJSONLines(t *testing.T) {
 		// Line 1: valid JSON, Line 2: blank, Line 3: blank, Line 4: valid JSON
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n\n\n{\"id\":\"def\"}\n"))
 
-		lines, err := ScanJSONLines(tickDir)
+		lines, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -60,7 +60,7 @@ func TestScanJSONLines(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\",\"status\":\"open\"}\n"))
 
-		lines, err := ScanJSONLines(tickDir)
+		lines, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -83,7 +83,7 @@ func TestScanJSONLines(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte("not json\n"))
 
-		lines, err := ScanJSONLines(tickDir)
+		lines, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -106,7 +106,7 @@ func TestScanJSONLines(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\n"))
 
-		lines, err := ScanJSONLines(tickDir)
+		lines, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -123,7 +123,7 @@ func TestScanJSONLines(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte("   \n\t\n{\"id\":\"abc\"}\n"))
 
-		lines, err := ScanJSONLines(tickDir)
+		lines, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -141,7 +141,7 @@ func TestScanJSONLines(t *testing.T) {
 		long := `{"id":"abc","description":"` + strings.Repeat("d", 70000) + `"}`
 		writeJSONL(t, tickDir, []byte(long+"\n{\"id\":\"def\"}\n"))
 
-		lines, err := ScanJSONLines(tickDir)
+		lines, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -161,7 +161,7 @@ func TestScanJSONLines(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte("{\"id\":\"abc\"}\r\n\r\n{\"id\":\"def\"}\n\r"))
 
-		lines, err := ScanJSONLines(tickDir)
+		lines, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -178,7 +178,7 @@ func TestScanJSONLines(t *testing.T) {
 		content := []byte("\r\n{\"id\":\"abc\"}\r\n\n  \n{\"id\":\"def\"}\n\r\n\t\r\nnot json")
 		writeJSONL(t, tickDir, content)
 
-		lines, err := ScanJSONLines(tickDir)
+		lines, err := ScanJSONLines(context.Background(), tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

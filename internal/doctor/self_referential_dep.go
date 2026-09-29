@@ -18,7 +18,7 @@ type SelfReferentialDepCheck struct{}
 func (c *SelfReferentialDepCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult("Self-referential dependencies")
+		return linesUnavailableResult("Self-referential dependencies", err)
 	}
 
 	var failures []CheckResult

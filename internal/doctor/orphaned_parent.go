@@ -17,7 +17,7 @@ type OrphanedParentCheck struct{}
 func (c *OrphanedParentCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult("Orphaned parents")
+		return linesUnavailableResult("Orphaned parents", err)
 	}
 
 	knownIDs := buildKnownIDs(tasks)

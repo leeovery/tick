@@ -1,5 +1,7 @@
 package doctor
 
+import "context"
+
 // TaskRelationshipData holds the fields extracted from a single task line
 // that are needed by relationship and hierarchy checks.
 type TaskRelationshipData struct {
@@ -80,7 +82,7 @@ func taskRelationshipsFromLines(lines []JSONLine) []TaskRelationshipData {
 // error if the file cannot be opened or read in full, and an empty slice for
 // an empty file. This function is read-only and never modifies the file.
 func ParseTaskRelationships(tickDir string) ([]TaskRelationshipData, error) {
-	lines, err := ScanJSONLines(tickDir)
+	lines, err := ScanJSONLines(context.Background(), tickDir)
 	if err != nil {
 		return nil, err
 	}

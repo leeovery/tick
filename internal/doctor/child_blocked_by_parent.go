@@ -22,7 +22,7 @@ type ChildBlockedByParentCheck struct{}
 func (c *ChildBlockedByParentCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult("Child blocked by parent")
+		return linesUnavailableResult("Child blocked by parent", err)
 	}
 
 	var failures []CheckResult

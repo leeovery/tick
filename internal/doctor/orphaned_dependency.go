@@ -17,7 +17,7 @@ type OrphanedDependencyCheck struct{}
 func (c *OrphanedDependencyCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult("Orphaned dependencies")
+		return linesUnavailableResult("Orphaned dependencies", err)
 	}
 
 	knownIDs := buildKnownIDs(tasks)

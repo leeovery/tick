@@ -26,7 +26,7 @@ func (c *DuplicateSeqCheck) Run(ctx context.Context, tickDir string) []CheckResu
 
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult(checkName)
+		return linesUnavailableResult(checkName, err)
 	}
 
 	groups := make(map[float64][]seqOccurrence)

@@ -19,7 +19,7 @@ type JsonlSyntaxCheck struct{}
 func (c *JsonlSyntaxCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult("JSONL syntax")
+		return linesUnavailableResult("JSONL syntax", err)
 	}
 
 	var failures []CheckResult

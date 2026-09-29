@@ -25,7 +25,7 @@ type DuplicateIdCheck struct{}
 func (c *DuplicateIdCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult("ID uniqueness")
+		return linesUnavailableResult("ID uniqueness", err)
 	}
 
 	// Map from lowercase(id) to list of occurrences.

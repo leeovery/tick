@@ -22,7 +22,7 @@ type DependencyCycleCheck struct{}
 func (c *DependencyCycleCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult("Dependency cycles")
+		return linesUnavailableResult("Dependency cycles", err)
 	}
 
 	knownIDs := buildKnownIDs(tasks)

@@ -21,7 +21,7 @@ type ParentDoneWithOpenChildrenCheck struct{}
 func (c *ParentDoneWithOpenChildrenCheck) Run(ctx context.Context, tickDir string) []CheckResult {
 	tasks, err := getTaskRelationships(ctx, tickDir)
 	if err != nil {
-		return fileNotFoundResult("Parent done with open children")
+		return linesUnavailableResult("Parent done with open children", err)
 	}
 
 	statusMap := make(map[string]string, len(tasks))
