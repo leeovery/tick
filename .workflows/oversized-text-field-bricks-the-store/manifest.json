@@ -129,7 +129,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 1,
-          "current_task": "oversized-text-field-bricks-the-store-1-2",
+          "current_task": "oversized-text-field-bricks-the-store-1-3",
           "bank": [
             {
               "task": "oversized-text-field-bricks-the-store-1-1",
@@ -143,7 +143,8 @@
             }
           ],
           "completed_tasks": [
-            "oversized-text-field-bricks-the-store-1-1"
+            "oversized-text-field-bricks-the-store-1-1",
+            "oversized-text-field-bricks-the-store-1-2"
           ]
         }
       }
