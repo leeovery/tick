@@ -64,7 +64,7 @@ func (p *BeadsProvider) Name() string {
 // as MigratedTask values. Malformed JSON lines are returned as sentinel entries
 // with the title "(malformed entry)" so the engine can report them as failures.
 // Empty titles and validation failures are left for the engine to handle.
-// Returns an error only if the .beads directory or issues.jsonl file is missing.
+// Returns an error if the .beads directory or issues.jsonl is missing or cannot be read.
 func (p *BeadsProvider) Tasks() ([]migrate.MigratedTask, error) {
 	beadsDir := filepath.Join(p.baseDir, ".beads")
 	if _, err := os.Stat(beadsDir); os.IsNotExist(err) {
