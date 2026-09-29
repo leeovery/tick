@@ -3,6 +3,9 @@ package doctor
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -201,6 +204,15 @@ func TestScanJSONLines(t *testing.T) {
 	})
 }
 
+// ctxWithoutOpening returns a context whose tasks.jsonl opener fails the test.
+func ctxWithoutOpening(t *testing.T) context.Context {
+	t.Helper()
+	return WithTasksOpener(context.Background(), func(path string) (io.ReadCloser, error) {
+		t.Errorf("opened %s, want the stored scan used", path)
+		return nil, errors.New("unexpected open")
+	})
+}
+
 func assertJSONLines(t *testing.T, got, want []JSONLine) {
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {
@@ -209,32 +221,42 @@ func assertJSONLines(t *testing.T, got, want []JSONLine) {
 }
 
 func TestGetJSONLines(t *testing.T) {
-	t.Run("it returns data from context when present", func(t *testing.T) {
+	t.Run("it returns the stored lines without opening tasks.jsonl", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		// No file needed - context should provide the data.
 		preloaded := []JSONLine{
 			{LineNum: 1, Raw: "{\"id\":\"abc\"}", Parsed: map[string]any{"id": "abc"}},
 		}
-		ctx := context.WithValue(ctxWithTickDir(tickDir), JSONLinesKey, preloaded)
+		ctx := WithScan(ctxWithoutOpening(t), preloaded, nil)
 
 		lines, err := getJSONLines(ctx, tickDir)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(lines) != 1 {
-			t.Fatalf("expected 1 line, got %d", len(lines))
+		assertJSONLines(t, lines, preloaded)
+	})
+
+	t.Run("it returns the stored read error without opening tasks.jsonl", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+		writeJSONL(t, tickDir, []byte("{\"id\":\"def\"}\n"))
+		stored := fmt.Errorf("%w: read line 3: device went away", errIncompleteRead)
+		ctx := WithScan(ctxWithoutOpening(t), nil, stored)
+
+		lines, err := getJSONLines(ctx, tickDir)
+
+		if !errors.Is(err, stored) {
+			t.Fatalf("error = %v, want the stored error %v", err, stored)
 		}
-		if lines[0].LineNum != 1 {
-			t.Errorf("expected LineNum 1, got %d", lines[0].LineNum)
+		if lines != nil {
+			t.Errorf("lines = %#v, want nil", lines)
 		}
 	})
 
-	t.Run("it falls back to ScanJSONLines when context key missing", func(t *testing.T) {
+	t.Run("it falls back to ScanJSONLines when no scan is stored", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte("{\"id\":\"def\"}\n"))
 
-		ctx := ctxWithTickDir(tickDir) // No JSONLinesKey set.
+		ctx := ctxWithTickDir(tickDir)
 
 		lines, err := getJSONLines(ctx, tickDir)
 
@@ -251,13 +273,12 @@ func TestGetJSONLines(t *testing.T) {
 }
 
 func TestGetTaskRelationships(t *testing.T) {
-	t.Run("it derives data from cached JSONLines in context", func(t *testing.T) {
+	t.Run("it derives data from the stored lines without opening tasks.jsonl", func(t *testing.T) {
 		tickDir := setupTickDir(t)
-		// No file needed - context should provide the JSONLine data.
 		preloaded := []JSONLine{
 			{LineNum: 1, Raw: `{"id":"tick-aaa111","status":"open"}`, Parsed: map[string]any{"id": "tick-aaa111", "status": "open"}},
 		}
-		ctx := context.WithValue(ctxWithTickDir(tickDir), JSONLinesKey, preloaded)
+		ctx := WithScan(ctxWithoutOpening(t), preloaded, nil)
 
 		tasks, err := getTaskRelationships(ctx, tickDir)
 
@@ -275,11 +296,27 @@ func TestGetTaskRelationships(t *testing.T) {
 		}
 	})
 
-	t.Run("it falls back to ScanJSONLines when context key missing", func(t *testing.T) {
+	t.Run("it returns the stored read error without opening tasks.jsonl", func(t *testing.T) {
+		tickDir := setupTickDir(t)
+		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-bbb222\",\"status\":\"open\"}\n"))
+		stored := fmt.Errorf("%w: read line 3: device went away", errIncompleteRead)
+		ctx := WithScan(ctxWithoutOpening(t), nil, stored)
+
+		tasks, err := getTaskRelationships(ctx, tickDir)
+
+		if !errors.Is(err, stored) {
+			t.Fatalf("error = %v, want the stored error %v", err, stored)
+		}
+		if tasks != nil {
+			t.Errorf("tasks = %#v, want nil", tasks)
+		}
+	})
+
+	t.Run("it falls back to ScanJSONLines when no scan is stored", func(t *testing.T) {
 		tickDir := setupTickDir(t)
 		writeJSONL(t, tickDir, []byte("{\"id\":\"tick-bbb222\",\"status\":\"open\"}\n"))
 
-		ctx := ctxWithTickDir(tickDir) // No JSONLinesKey set.
+		ctx := ctxWithTickDir(tickDir)
 
 		tasks, err := getTaskRelationships(ctx, tickDir)
 

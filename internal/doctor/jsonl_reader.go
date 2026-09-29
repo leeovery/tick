@@ -74,26 +74,26 @@ func ScanJSONLines(ctx context.Context, tickDir string) ([]JSONLine, error) {
 	return lines, nil
 }
 
-// jsonLinesKeyType is an unexported type for the context key used to
-// pass pre-scanned JSONL lines to checks.
-type jsonLinesKeyType struct{}
+type scanKeyType struct{}
 
-// JSONLinesKey is the context key used to pass pre-scanned JSONLine data
-// to line-level checks.
-var JSONLinesKey = jsonLinesKeyType{}
+type scanOutcome struct {
+	lines []JSONLine
+	err   error
+}
 
-// getJSONLines returns JSONL line data, first checking the context for
-// pre-scanned data and falling back to ScanJSONLines.
+// WithScan returns a context under which the checks take lines and err as
+// their scan of tasks.jsonl, an error included, in place of scanning it again.
+func WithScan(ctx context.Context, lines []JSONLine, err error) context.Context {
+	return context.WithValue(ctx, scanKeyType{}, scanOutcome{lines: lines, err: err})
+}
+
 func getJSONLines(ctx context.Context, tickDir string) ([]JSONLine, error) {
-	if lines, ok := ctx.Value(JSONLinesKey).([]JSONLine); ok {
-		return lines, nil
+	if scan, ok := ctx.Value(scanKeyType{}).(scanOutcome); ok {
+		return scan.lines, scan.err
 	}
 	return ScanJSONLines(ctx, tickDir)
 }
 
-// getTaskRelationships returns task relationship data derived from JSONLine
-// data. It first attempts to get cached lines from the context via
-// getJSONLines, then converts them to TaskRelationshipData.
 func getTaskRelationships(ctx context.Context, tickDir string) ([]TaskRelationshipData, error) {
 	lines, err := getJSONLines(ctx, tickDir)
 	if err != nil {

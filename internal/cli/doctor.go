@@ -26,9 +26,7 @@ func RunDoctor(ctx context.Context, stdout io.Writer, stderr io.Writer, tickDir 
 	runner.Register(&doctor.DuplicateSeqCheck{})
 
 	lines, err := doctor.ScanJSONLines(ctx, tickDir)
-	if err == nil {
-		ctx = context.WithValue(ctx, doctor.JSONLinesKey, lines)
-	}
+	ctx = doctor.WithScan(ctx, lines, err)
 
 	report := runner.RunAll(ctx, tickDir)
 

@@ -135,3 +135,111 @@ func TestDoctorIncompleteRead(t *testing.T) {
 		}
 	})
 }
+
+// countingOpener opens tasks.jsonl for real, except that each open faultOn
+// reports true for is cut short at line 3 with boom. It counts every open.
+func countingOpener(twoLines string, boom error, faultOn func(open int) bool) (func(string) (io.ReadCloser, error), *int) {
+	opens := 0
+	return func(path string) (io.ReadCloser, error) {
+		opens++
+		if faultOn(opens) {
+			return &cutShortReader{data: []byte(twoLines), err: boom}, nil
+		}
+		return os.Open(path)
+	}, &opens
+}
+
+func TestDoctorSharesOneScan(t *testing.T) {
+	twoLines := plainTaskLine("tick-aaa111") + "\n" + plainTaskLine("tick-bbb222") + "\n"
+	boom := errors.New("device went away")
+	wantDetail := "tasks.jsonl could not be read in full: read line 3: device went away"
+	firstOnly := func(open int) bool { return open == 1 }
+	every := func(int) bool { return true }
+	never := func(int) bool { return false }
+
+	t.Run("it fails every line-consuming check with the read error when only the first read faults", func(t *testing.T) {
+		dir := setupListedProject(t, twoLines)
+		open, _ := countingOpener(twoLines, boom, firstOnly)
+
+		stdout, code := runDoctorWithOpener(t, dir, open)
+
+		if code != 1 {
+			t.Fatalf("doctor exit code = %d, want 1; stdout = %q", code, stdout)
+		}
+		for _, check := range lineConsumingChecks {
+			want := []string{"✗ " + check + ": " + wantDetail}
+			if got := reportFor(stdout, check); !slices.Equal(got, want) {
+				t.Errorf("%s report = %q, want %q; stdout = %q", check, got, want, stdout)
+			}
+		}
+	})
+
+	cacheCases := []struct {
+		name       string
+		breakCache func(t *testing.T, tickDir string)
+		wantCache  string
+	}{
+		{
+			name: "missing",
+			breakCache: func(t *testing.T, tickDir string) {
+				if err := os.Remove(filepath.Join(tickDir, "cache.db")); err != nil {
+					t.Fatalf("remove cache.db: %v", err)
+				}
+			},
+			wantCache: "✗ Cache: cache.db not found — cache has not been built",
+		},
+		{
+			name: "stale",
+			breakCache: func(t *testing.T, tickDir string) {
+				content := twoLines + plainTaskLine("tick-ccc333") + "\n"
+				if err := os.WriteFile(filepath.Join(tickDir, "tasks.jsonl"), []byte(content), 0o644); err != nil {
+					t.Fatalf("rewrite tasks.jsonl: %v", err)
+				}
+			},
+			wantCache: "✗ Cache: cache.db is stale — hash mismatch between tasks.jsonl and cache",
+		},
+	}
+	for _, tc := range cacheCases {
+		t.Run("it points a "+tc.name+" cache at the failing lines, never at rebuild, when only the first read faults", func(t *testing.T) {
+			dir := setupListedProject(t, twoLines)
+			tc.breakCache(t, filepath.Join(dir, ".tick"))
+			open, _ := countingOpener(twoLines, boom, firstOnly)
+
+			stdout, _ := runDoctorWithOpener(t, dir, open)
+
+			if got, want := reportFor(stdout, "Cache"), []string{tc.wantCache}; !slices.Equal(got, want) {
+				t.Errorf("Cache report = %q, want %q; stdout = %q", got, want, stdout)
+			}
+			wantSuggestion := "  → Fix the tasks.jsonl lines the JSONL syntax check names, then run tick doctor again"
+			if !slices.Contains(strings.Split(stdout, "\n"), wantSuggestion) {
+				t.Errorf("doctor stdout = %q, want the line %q", stdout, wantSuggestion)
+			}
+			for line := range strings.SplitSeq(stdout, "\n") {
+				if strings.Contains(line, "tick rebuild") {
+					t.Errorf("doctor report line %q names tick rebuild; stdout = %q", line, stdout)
+				}
+			}
+		})
+	}
+
+	openCases := []struct {
+		name    string
+		faultOn func(int) bool
+	}{
+		{"the store is readable", never},
+		{"every read faults", every},
+		{"only the first read faults", firstOnly},
+	}
+	for _, tc := range openCases {
+		t.Run("it opens tasks.jsonl through the line reader once when "+tc.name, func(t *testing.T) {
+			dir := setupListedProject(t, twoLines)
+			open, opens := countingOpener(twoLines, boom, tc.faultOn)
+
+			stdout, _ := runDoctorWithOpener(t, dir, open)
+
+			if *opens != 1 {
+				t.Errorf("tasks.jsonl opens = %d, want 1; stdout = %q", *opens, stdout)
+			}
+		})
+	}
+}
