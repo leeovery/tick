@@ -64,7 +64,9 @@
             "oversized-text-field-bricks-the-store-3-2": "tick-a34c9c",
             "oversized-text-field-bricks-the-store-3-3": "tick-277d5a",
             "oversized-text-field-bricks-the-store-3-4": "tick-2f337d",
-            "oversized-text-field-bricks-the-store-1-8": "tick-ce257a"
+            "oversized-text-field-bricks-the-store-1-8": "tick-ce257a",
+            "oversized-text-field-bricks-the-store-4": "tick-f4ca43",
+            "oversized-text-field-bricks-the-store-4-1": "tick-c76fe7"
           },
           "storage_paths": [
             ".tick/"
@@ -92,7 +94,7 @@
           "status": "in-progress",
           "task_gate_mode": "auto",
           "fix_gate_mode": "gated",
-          "analysis_gate_mode": "gated",
+          "analysis_gate_mode": "auto",
           "consolidation_gate_mode": "auto",
           "fix_attempts": 0,
           "analysis_cycle_total": 1,
@@ -157,7 +159,7 @@
             },
             "c1": {
               "tasks": {
-                "1": "pending"
+                "1": "approved"
               }
             }
           },
