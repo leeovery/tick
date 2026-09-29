@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-09-29
+
+✨ Added
+- Descriptions are now capped at 50,000 characters on `create`, `update` and `migrate` — over-limit text is refused with a clear message and nothing is saved.
+
+🔧 Changed
+- Task lines of any length now load, so a task with a very large description no longer stops the rest of the store from loading.
+- `tick doctor` checks each `tasks.jsonl` line the way the store loads it and reports the same line number and reason as `list`.
+- `tick doctor` reads `tasks.jsonl` once, shares the result across all checks, and treats whitespace-only lines and CRLF endings the way the store does.
+- `tick doctor` points you at the failing lines, not `tick rebuild`, when a stale or missing cache is caused by lines that can't load.
+- `tick rebuild` reads and parses `tasks.jsonl` before touching the cache, so a parse failure leaves `cache.db` unchanged.
+- Parse errors now name the failing line and, when available, the task ID.
+- `tick migrate` applies the same title rules as `create` (500 characters, single line), skipping non-conforming issues with a reason.
+
+🐛 Fixed
+- Store operations no longer break once a task's line grows past 64 KiB, whether from a large description, notes, dependencies or status changes.
+- `tick doctor` reports "could not be read in full" with the line where reading stopped, instead of a misleading "tasks.jsonl not found".
+- `tick migrate --from beads` imports issue lines over 64 KiB instead of failing.
+
 ## [0.3.1] - 2026-09-23
 
 ✨ Added
