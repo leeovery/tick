@@ -130,7 +130,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 1,
-          "current_task": null,
+          "current_task": "oversized-text-field-bricks-the-store-2-1",
           "completed_tasks": [
             "oversized-text-field-bricks-the-store-1-1",
             "oversized-text-field-bricks-the-store-1-2",
@@ -138,7 +138,8 @@
             "oversized-text-field-bricks-the-store-1-4",
             "oversized-text-field-bricks-the-store-1-5",
             "oversized-text-field-bricks-the-store-1-6",
-            "oversized-text-field-bricks-the-store-1-7"
+            "oversized-text-field-bricks-the-store-1-7",
+            "oversized-text-field-bricks-the-store-1-8"
           ],
           "staging": {
             "p1": {
@@ -148,6 +149,9 @@
             }
           },
           "consolidated_phases": [
+            1
+          ],
+          "completed_phases": [
             1
           ]
         }
