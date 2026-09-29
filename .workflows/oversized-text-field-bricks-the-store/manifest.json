@@ -131,7 +131,7 @@
             ".claude/skills/golang-dependency-management",
             ".claude/skills/golang-continuous-integration"
           ],
-          "current_phase": 3,
+          "current_phase": 4,
           "current_task": null,
           "completed_tasks": [
             "oversized-text-field-bricks-the-store-1-1",
@@ -149,7 +149,8 @@
             "oversized-text-field-bricks-the-store-3-1",
             "oversized-text-field-bricks-the-store-3-2",
             "oversized-text-field-bricks-the-store-3-3",
-            "oversized-text-field-bricks-the-store-3-4"
+            "oversized-text-field-bricks-the-store-3-4",
+            "oversized-text-field-bricks-the-store-4-1"
           ],
           "staging": {
             "p1": {
@@ -172,6 +173,19 @@
             1,
             2,
             3
+          ],
+          "bank": [
+            {
+              "task": "oversized-text-field-bricks-the-store-4-1",
+              "source": "reviewer",
+              "summary": "Retire the production-dead ParseTaskRelationships or route it through getTaskRelationships",
+              "failure": "A future doctor check calling the exported ParseTaskRelationships (its doc reads like the entry point) rescans tasks.jsonl with context.Background(), skipping WithScan and WithTasksOpener; on an intermittent read fault its verdict differs from the other checks — the mixed report task 4-1 removed — and TestDoctorSharesOneScan open count stays at 1 so nothing notices",
+              "detail": "internal/doctor/task_relationships.go:84-91 calls ScanJSONLines(context.Background(), tickDir); only callers are in internal/doctor/task_relationships_test.go, no production caller; last changed by tasks 2-1 and 2-3",
+              "files": [
+                "internal/doctor/task_relationships.go",
+                "internal/doctor/task_relationships_test.go"
+              ]
+            }
           ]
         }
       }
