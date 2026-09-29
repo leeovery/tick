@@ -1,7 +1,7 @@
 {
   "name": "oversized-text-field-bricks-the-store",
   "work_type": "bugfix",
-  "status": "in-progress",
+  "status": "completed",
   "created": "2026-09-27",
   "description": "A task record whose JSONL line passes ~64 KiB is accepted and written, after which every store-reading command (rebuild included) fails, while `tick doctor` reports the project healthy — bound what can be written and make doctor fail on a store it could not fully read.",
   "phases": {
@@ -212,5 +212,6 @@
       "source": "inbox:bug",
       "seeded_at": "2026-09-27T19:43:26Z"
     }
-  ]
+  ],
+  "completed_at": "2026-09-29"
 }
