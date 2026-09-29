@@ -24,8 +24,6 @@ type JSONLine struct {
 
 var errIncompleteRead = errors.New("tasks.jsonl could not be read in full")
 
-// tasksOpenerKeyType is an unexported type for the context key carrying the
-// function that opens tasks.jsonl.
 type tasksOpenerKeyType struct{}
 
 // WithTasksOpener returns a context under which ScanJSONLines opens
