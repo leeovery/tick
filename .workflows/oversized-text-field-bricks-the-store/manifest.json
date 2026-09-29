@@ -130,7 +130,7 @@
             ".claude/skills/golang-continuous-integration"
           ],
           "current_phase": 3,
-          "current_task": "oversized-text-field-bricks-the-store-3-4",
+          "current_task": null,
           "completed_tasks": [
             "oversized-text-field-bricks-the-store-1-1",
             "oversized-text-field-bricks-the-store-1-2",
@@ -146,7 +146,8 @@
             "oversized-text-field-bricks-the-store-2-4",
             "oversized-text-field-bricks-the-store-3-1",
             "oversized-text-field-bricks-the-store-3-2",
-            "oversized-text-field-bricks-the-store-3-3"
+            "oversized-text-field-bricks-the-store-3-3",
+            "oversized-text-field-bricks-the-store-3-4"
           ],
           "staging": {
             "p1": {
@@ -162,6 +163,19 @@
           "completed_phases": [
             1,
             2
+          ],
+          "bank": [
+            {
+              "task": "oversized-text-field-bricks-the-store-3-4",
+              "source": "reviewer",
+              "summary": "Route migrate priority check through task.ValidatePriority as the title check now routes through task.ValidateTitle",
+              "failure": "migrate keeps its own copy of the priority range (0-4) and message; if the task package range or wording changes, migrate imports priorities the CLI refuses or refuses ones it accepts, with no test linking the copies — noticed only when a migrated task cannot be edited to the same value or a skip reason differs from the CLI",
+              "detail": "internal/migrate/migrate.go:22-25 and :51-53 duplicate internal/task/task.go:37-38 and :223-226; messages identical today, so calling task.ValidatePriority when mt.Priority != nil preserves behaviour and the local constants can be deleted",
+              "files": [
+                "internal/migrate/migrate.go",
+                "internal/task/task.go"
+              ]
+            }
           ]
         }
       }
