@@ -2,13 +2,13 @@
 package storage
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/leeovery/tick/internal/jsonl"
 	"github.com/leeovery/tick/internal/task"
 )
 
@@ -92,25 +92,17 @@ func ParseJSONL(data []byte) ([]task.Task, error) {
 	}
 
 	var tasks []task.Task
-	scanner := bufio.NewScanner(bytes.NewReader(data))
-	lineNum := 0
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
-		if line == "" {
-			continue
+	for line, err := range jsonl.Lines(bytes.NewReader(data)) {
+		if err != nil {
+			return nil, fmt.Errorf("error reading JSONL data: %w", err)
 		}
 
 		var t task.Task
-		if err := json.Unmarshal([]byte(line), &t); err != nil {
-			return nil, fmt.Errorf("failed to parse line %d: %w", lineNum, err)
+		if err := json.Unmarshal(line.Text, &t); err != nil {
+			return nil, fmt.Errorf("failed to parse line %d: %w", line.Num, err)
 		}
 
 		tasks = append(tasks, t)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading JSONL data: %w", err)
 	}
 
 	backfillSeqs(tasks)

@@ -204,6 +204,23 @@ func TestReadJSONL(t *testing.T) {
 			t.Errorf("tasks[1].Status = %q, want %q", tasks[1].Status, task.StatusDone)
 		}
 	})
+	t.Run("it reads a task line over 64 KiB from a file", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "tasks.jsonl")
+		content := simpleTaskLine("tick-aaa111") + "\n" + taskLineOfSize(t, "tick-bbb222", 65536) + "\n" + simpleTaskLine("tick-ccc333") + "\n"
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
+
+		tasks, err := ReadJSONL(path)
+		if err != nil {
+			t.Fatalf("ReadJSONL returned error: %v", err)
+		}
+		ids := make([]string, len(tasks))
+		for i, tk := range tasks {
+			ids[i] = tk.ID
+		}
+		assertIDs(t, ids, []string{"tick-aaa111", "tick-bbb222", "tick-ccc333"})
+	})
 }
 
 func TestRoundTrip(t *testing.T) {
@@ -458,6 +475,51 @@ func TestAtomicWrite(t *testing.T) {
 	})
 }
 
+const (
+	sizedLinePrefix = `","title":"T","status":"open","priority":2,"description":"`
+	sizedLineSuffix = `","created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+)
+
+// taskLineOverhead is the byte length of a sized task line minus its description.
+func taskLineOverhead(id string) int {
+	return len(`{"id":"`+id+sizedLinePrefix) + len(sizedLineSuffix)
+}
+
+// taskLineOfSize renders a stored task record padded through its description
+// to exactly size bytes.
+func taskLineOfSize(t *testing.T, id string, size int) string {
+	t.Helper()
+	pad := size - taskLineOverhead(id)
+	if pad < 0 {
+		t.Fatalf("size %d too small for a task line", size)
+	}
+	return `{"id":"` + id + sizedLinePrefix + strings.Repeat("d", pad) + sizedLineSuffix
+}
+
+func simpleTaskLine(id string) string {
+	return `{"id":"` + id + `","title":"T","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}`
+}
+
+func parsedIDs(t *testing.T, content string) []string {
+	t.Helper()
+	tasks, err := ParseJSONL([]byte(content))
+	if err != nil {
+		t.Fatalf("ParseJSONL returned error: %v", err)
+	}
+	ids := make([]string, len(tasks))
+	for i, tk := range tasks {
+		ids[i] = tk.ID
+	}
+	return ids
+}
+
+func assertIDs(t *testing.T, got, want []string) {
+	t.Helper()
+	if !slices.Equal(got, want) {
+		t.Errorf("ids = %v, want %v", got, want)
+	}
+}
+
 func TestParseJSONL(t *testing.T) {
 	t.Run("it parses tasks from raw JSONL bytes", func(t *testing.T) {
 		content := []byte(`{"id":"tick-a1b2c3","title":"First task","status":"open","priority":2,"created":"2026-01-19T10:00:00Z","updated":"2026-01-19T10:00:00Z"}
@@ -503,6 +565,76 @@ func TestParseJSONL(t *testing.T) {
 		}
 		if len(tasks) != 2 {
 			t.Fatalf("expected 2 tasks (skipping empty line), got %d", len(tasks))
+		}
+	})
+
+	t.Run("it parses task lines of 65,535, 65,536 and about 1 MiB bytes", func(t *testing.T) {
+		ids := []string{"tick-aaa111", "tick-bbb222", "tick-ccc333"}
+		sizes := []int{65535, 65536, 1 << 20}
+		lines := make([]string, len(ids))
+		for i := range ids {
+			lines[i] = taskLineOfSize(t, ids[i], sizes[i])
+		}
+
+		tasks, err := ParseJSONL([]byte(strings.Join(lines, "\n") + "\n"))
+		if err != nil {
+			t.Fatalf("ParseJSONL returned error: %v", err)
+		}
+		if len(tasks) != len(ids) {
+			t.Fatalf("expected %d tasks, got %d", len(ids), len(tasks))
+		}
+		for i, tk := range tasks {
+			if tk.ID != ids[i] {
+				t.Errorf("tasks[%d].ID = %q, want %q", i, tk.ID, ids[i])
+			}
+			wantDesc := strings.Repeat("d", sizes[i]-taskLineOverhead(ids[i]))
+			if tk.Description != wantDesc {
+				t.Errorf("tasks[%d] description is %d bytes, want %d", i, len(tk.Description), len(wantDesc))
+			}
+		}
+	})
+
+	t.Run("it parses CRLF lines exactly as LF lines", func(t *testing.T) {
+		lf := simpleTaskLine("tick-aaa111") + "\n" + taskLineOfSize(t, "tick-bbb222", 70000) + "\n"
+		crlf := strings.ReplaceAll(lf, "\n", "\r\n")
+		want, err := ParseJSONL([]byte(lf))
+		if err != nil {
+			t.Fatalf("ParseJSONL(LF) returned error: %v", err)
+		}
+		got, err := ParseJSONL([]byte(crlf))
+		if err != nil {
+			t.Fatalf("ParseJSONL(CRLF) returned error: %v", err)
+		}
+		if !slices.EqualFunc(got, want, func(a, b task.Task) bool {
+			return a.ID == b.ID && a.Description == b.Description && a.Seq == b.Seq && a.Updated.Equal(b.Updated)
+		}) {
+			t.Errorf("CRLF tasks differ from LF tasks")
+		}
+	})
+
+	t.Run("it parses a final task line with no trailing newline", func(t *testing.T) {
+		got := parsedIDs(t, simpleTaskLine("tick-aaa111")+"\n"+simpleTaskLine("tick-bbb222"))
+		assertIDs(t, got, []string{"tick-aaa111", "tick-bbb222"})
+	})
+
+	t.Run("it strips one carriage return from a final line with no trailing newline", func(t *testing.T) {
+		got := parsedIDs(t, simpleTaskLine("tick-aaa111")+"\n"+simpleTaskLine("tick-bbb222")+"\r")
+		assertIDs(t, got, []string{"tick-aaa111", "tick-bbb222"})
+	})
+
+	t.Run("it skips a lone carriage return after the final newline", func(t *testing.T) {
+		got := parsedIDs(t, simpleTaskLine("tick-aaa111")+"\n"+simpleTaskLine("tick-bbb222")+"\n\r")
+		assertIDs(t, got, []string{"tick-aaa111", "tick-bbb222"})
+	})
+
+	t.Run("it fails on a whitespace-only line, naming it after a skipped empty line", func(t *testing.T) {
+		content := simpleTaskLine("tick-aaa111") + "\n\n   \n" + simpleTaskLine("tick-bbb222") + "\n"
+		_, err := ParseJSONL([]byte(content))
+		if err == nil {
+			t.Fatal("expected error for whitespace-only line, got nil")
+		}
+		if want := "failed to parse line 3: unexpected end of JSON input"; err.Error() != want {
+			t.Errorf("err = %q, want %q", err.Error(), want)
 		}
 	})
 
