@@ -1,8 +1,10 @@
 package beads
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -559,6 +561,87 @@ func TestMapToMigratedTask(t *testing.T) {
 		}
 		if tk.Status != task.StatusOpen {
 			t.Errorf("Status = %q, want %q", tk.Status, task.StatusOpen)
+		}
+	})
+}
+
+const paddedIssueFrame = `{"title":"%s","status":"pending","description":"%s"}`
+
+// paddedIssueLine returns a beads issue line of exactly n bytes and the
+// description padding it.
+func paddedIssueLine(t *testing.T, title string, n int) (line, description string) {
+	t.Helper()
+	pad := n - len(fmt.Sprintf(paddedIssueFrame, title, ""))
+	if pad < 0 {
+		t.Fatalf("line of %d bytes cannot hold title %q", n, title)
+	}
+	description = strings.Repeat("d", pad)
+	return fmt.Sprintf(paddedIssueFrame, title, description), description
+}
+
+func TestBeadsProviderLineLength(t *testing.T) {
+	lengths := []struct {
+		name  string
+		bytes int
+	}{
+		{"65,535 bytes", 65535},
+		{"65,536 bytes", 65536},
+		{"1 MiB", 1 << 20},
+		{"16 MiB", 16 << 20},
+	}
+	for _, tt := range lengths {
+		t.Run("it reads an issue line of "+tt.name+" among ordinary issues", func(t *testing.T) {
+			long, description := paddedIssueLine(t, "Long issue", tt.bytes)
+			content := `{"title":"Before","status":"pending"}` + "\n" + long + "\n" + `{"title":"After","status":"closed"}` + "\n"
+			p := NewBeadsProvider(setupBeadsDir(t, content))
+
+			tasks, err := p.Tasks()
+			if err != nil {
+				t.Fatalf("Tasks() returned error: %v", err)
+			}
+			wantTitles := []string{"Before", "Long issue", "After"}
+			if len(tasks) != len(wantTitles) {
+				t.Fatalf("got %d tasks, want %d", len(tasks), len(wantTitles))
+			}
+			for i, want := range wantTitles {
+				if tasks[i].Title != want {
+					t.Errorf("tasks[%d].Title = %q, want %q", i, tasks[i].Title, want)
+				}
+			}
+			if tasks[1].Description != description {
+				t.Errorf("long issue description is %d bytes, want %d", len(tasks[1].Description), len(description))
+			}
+		})
+	}
+}
+
+func TestBeadsProviderWhitespaceLines(t *testing.T) {
+	t.Run("it skips whitespace-only lines among issues without reporting them", func(t *testing.T) {
+		content := "  \n" +
+			`{"title":"First","status":"pending"}` + "\n" +
+			"\t\n" +
+			"   \r\n" +
+			`{"title":"Second","status":"in_progress"}` + "\r\n" +
+			"\n" +
+			" \t "
+		p := NewBeadsProvider(setupBeadsDir(t, content))
+
+		tasks, err := p.Tasks()
+		if err != nil {
+			t.Fatalf("Tasks() returned error: %v", err)
+		}
+		want := []migrate.MigratedTask{
+			{Title: "First", Status: task.StatusOpen},
+			{Title: "Second", Status: task.StatusInProgress},
+		}
+		if len(tasks) != len(want) {
+			t.Fatalf("got %d tasks, want %d: %+v", len(tasks), len(want), tasks)
+		}
+		for i := range want {
+			if tasks[i].Title != want[i].Title || tasks[i].Status != want[i].Status {
+				t.Errorf("tasks[%d] = {Title: %q, Status: %q}, want {Title: %q, Status: %q}",
+					i, tasks[i].Title, tasks[i].Status, want[i].Title, want[i].Status)
+			}
 		}
 	})
 }

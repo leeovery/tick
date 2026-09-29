@@ -773,3 +773,53 @@ func TestMigrateFreeTextNormalization(t *testing.T) {
 		}
 	})
 }
+
+func TestMigrateBeadsLongIssueLine(t *testing.T) {
+	t.Run("it imports every issue when one issue line passes the old ceiling", func(t *testing.T) {
+		dir, tickDir := setupTickProject(t)
+		long, err := json.Marshal(map[string]any{
+			"id":          "b-002",
+			"title":       "Long issue",
+			"description": escapeInflated(12000),
+			"status":      "pending",
+		})
+		if err != nil {
+			t.Fatalf("marshal long issue: %v", err)
+		}
+		if len(long) < oldLineCeiling {
+			t.Fatalf("long issue line is %d bytes, want at least %d", len(long), oldLineCeiling)
+		}
+		setupBeadsFixture(t, dir, `{"id":"b-001","title":"Before","status":"pending"}`+"\n"+
+			string(long)+"\n"+
+			`{"id":"b-003","title":"After","status":"closed"}`+"\n")
+
+		stdout, stderr, exitCode := runMigrate(t, dir, "--from", "beads")
+
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, want 0; stderr = %q", exitCode, stderr)
+		}
+		if !strings.Contains(stdout, "Done: 3 imported, 0 failed") {
+			t.Errorf("stdout missing summary, got:\n%s", stdout)
+		}
+		byTitle := map[string]task.Task{}
+		for _, tk := range readPersistedTasks(t, tickDir) {
+			byTitle[tk.Title] = tk
+		}
+		if len(byTitle) != 3 {
+			t.Fatalf("persisted titles = %v, want Before, Long issue, After", byTitle)
+		}
+		longTask, ok := byTitle["Long issue"]
+		if !ok {
+			t.Fatalf("long issue not persisted; got %v", byTitle)
+		}
+		if longTask.Description != escapeInflated(12000) {
+			t.Errorf("long issue description is %d bytes, want the 12000-character source text", len(longTask.Description))
+		}
+		for _, title := range []string{"Before", "After"} {
+			if _, ok := byTitle[title]; !ok {
+				t.Errorf("issue %q not persisted", title)
+			}
+		}
+		assertListedIDs(t, dir, byTitle["Before"].ID, longTask.ID, byTitle["After"].ID)
+	})
+}

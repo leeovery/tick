@@ -5,7 +5,9 @@ package beads
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,34 +83,37 @@ func (p *BeadsProvider) Tasks() ([]migrate.MigratedTask, error) {
 	defer file.Close()
 
 	var tasks []migrate.MigratedTask
-	scanner := bufio.NewScanner(file)
+	reader := bufio.NewReader(file)
 
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
+	for {
+		raw, readErr := reader.ReadString('\n')
+		if readErr != nil && !errors.Is(readErr, io.EOF) {
+			return tasks, fmt.Errorf("error reading %s: %w", jsonlPath, readErr)
 		}
 
-		var issue beadsIssue
-		if err := json.Unmarshal([]byte(line), &issue); err != nil {
-			// Malformed JSON — return sentinel entry so the engine reports it as a failure.
-			// Status "(invalid)" forces a validation error while the descriptive title
-			// makes the failure visible to the user.
-			tasks = append(tasks, migrate.MigratedTask{
-				Title:  "(malformed entry)",
-				Status: task.Status("(invalid)"),
-			})
-			continue
+		if line := strings.TrimSpace(raw); line != "" {
+			tasks = append(tasks, parseIssueLine(line))
 		}
 
-		tasks = append(tasks, mapToMigratedTask(issue))
-	}
-
-	if err := scanner.Err(); err != nil {
-		return tasks, fmt.Errorf("error reading %s: %w", jsonlPath, err)
+		if readErr != nil {
+			break
+		}
 	}
 
 	return tasks, nil
+}
+
+// Malformed JSON becomes a sentinel entry: status "(invalid)" fails the
+// engine's validation, and the title names the failure to the user.
+func parseIssueLine(line string) migrate.MigratedTask {
+	var issue beadsIssue
+	if err := json.Unmarshal([]byte(line), &issue); err != nil {
+		return migrate.MigratedTask{
+			Title:  "(malformed entry)",
+			Status: task.Status("(invalid)"),
+		}
+	}
+	return mapToMigratedTask(issue)
 }
 
 // mapToMigratedTask converts a beadsIssue to a migrate.MigratedTask.
