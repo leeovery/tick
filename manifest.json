@@ -1,0 +1,91 @@
+{
+  "project_id": "5H9ZYCXjAiObCpG7cDAdY",
+  "work_units": {
+    "qualify-command-tree-leaks-to-note": {
+      "work_type": "bugfix"
+    },
+    "auto-cascade-parent-status": {
+      "work_type": "feature"
+    },
+    "cache-schema-versioning": {
+      "work_type": "bugfix"
+    },
+    "cascade-unchanged-noise": {
+      "work_type": "bugfix"
+    },
+    "cli-enhancements": {
+      "work_type": "feature"
+    },
+    "dep-tree-visualization": {
+      "work_type": "feature"
+    },
+    "rule6-parent-reopen-auto-flag": {
+      "work_type": "bugfix"
+    },
+    "unknown-flags-silently-ignored": {
+      "work_type": "bugfix"
+    },
+    "v1": {
+      "work_type": "epic"
+    },
+    "add-version-flag": {
+      "work_type": "quick-fix"
+    },
+    "ready-includes-in-progress": {
+      "work_type": "feature"
+    },
+    "version-flag-help-and-alias": {
+      "work_type": "quick-fix"
+    },
+    "increase-note-char-limit": {
+      "work_type": "quick-fix"
+    },
+    "free-text-round-trip": {
+      "work_type": "feature"
+    },
+    "same-second-tasks-sort-by-id": {
+      "work_type": "bugfix"
+    },
+    "oversized-text-field-bricks-the-store": {
+      "work_type": "bugfix"
+    }
+  },
+  "defaults": {
+    "session_labels": true
+  },
+  "walkthrough": {
+    "status": "walked"
+  },
+  "environment": {
+    "prepare": [
+      {
+        "name": "From before Ledger",
+        "when": "first",
+        "note": "## Prerequisites\n\n- Go installed and ready for development"
+      }
+    ],
+    "linters": [
+      {
+        "name": "golangci-lint",
+        "command": "golangci-lint run ./..."
+      },
+      {
+        "name": "gofmt",
+        "command": "gofmt -l ./internal ./cmd"
+      }
+    ]
+  },
+  "brownfield_offer": "native",
+  "checklists": {
+    "directive": {
+      "079-records": {
+        "items": {},
+        "closed": "2026-11-22T12:00:55.324Z"
+      },
+      "080-cut-and-merges": {
+        "items": {},
+        "closed": "2026-11-22T12:01:33.985Z"
+      }
+    }
+  }
+}

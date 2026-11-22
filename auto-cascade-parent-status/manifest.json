@@ -1,0 +1,22 @@
+{
+  "name": "auto-cascade-parent-status",
+  "work_type": "feature",
+  "status": "completed",
+  "created": "2026-03-03",
+  "description": "auto-cascade-parent-status work unit",
+  "phases": {
+    "discussion": {
+      "items": {
+        "auto-cascade-parent-status": {
+          "status": "completed"
+        }
+      }
+    }
+  },
+  "completed_at": "2026-03-13",
+  "spec": {
+    "joined": [
+      "auto-cascade-parent-status"
+    ]
+  }
+}

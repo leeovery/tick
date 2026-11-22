@@ -1,0 +1,22 @@
+{
+  "name": "cache-schema-versioning",
+  "work_type": "bugfix",
+  "status": "completed",
+  "created": "2026-03-07",
+  "description": "cache-schema-versioning work unit",
+  "phases": {
+    "investigation": {
+      "items": {
+        "cache-schema-versioning": {
+          "status": "completed"
+        }
+      }
+    }
+  },
+  "completed_at": "2026-03-13",
+  "spec": {
+    "joined": [
+      "cache-schema-versioning"
+    ]
+  }
+}

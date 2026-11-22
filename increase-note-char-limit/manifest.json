@@ -1,0 +1,9 @@
+{
+  "name": "increase-note-char-limit",
+  "work_type": "quick-fix",
+  "status": "completed",
+  "created": "2026-07-11",
+  "description": "Increase note text character limit from 500 to 2000",
+  "phases": {},
+  "completed_at": "2026-07-12"
+}

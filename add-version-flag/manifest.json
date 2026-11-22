@@ -1,0 +1,9 @@
+{
+  "name": "add-version-flag",
+  "work_type": "quick-fix",
+  "status": "completed",
+  "created": "2026-05-23",
+  "description": "Add --version flag as alternative to the version subcommand",
+  "phases": {},
+  "completed_at": "2026-05-23"
+}

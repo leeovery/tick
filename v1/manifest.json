@@ -1,0 +1,141 @@
+{
+  "name": "v1",
+  "work_type": "epic",
+  "status": "completed",
+  "created": "2026-03-07",
+  "description": "v1 work unit",
+  "phases": {
+    "discussion": {
+      "items": {
+        "archive-strategy-implementation": {
+          "status": "completed"
+        },
+        "blocked-ancestor-ready": {
+          "status": "completed"
+        },
+        "cli-command-structure-ux": {
+          "status": "completed"
+        },
+        "config-file-design": {
+          "status": "completed"
+        },
+        "data-schema-design": {
+          "status": "completed"
+        },
+        "doctor-command-validation": {
+          "status": "completed"
+        },
+        "freshness-dual-write": {
+          "status": "completed"
+        },
+        "hierarchy-dependency-model": {
+          "status": "completed"
+        },
+        "id-format-implementation": {
+          "status": "completed"
+        },
+        "installation-options": {
+          "status": "completed"
+        },
+        "migration-subcommand": {
+          "status": "completed"
+        },
+        "project-fundamentals": {
+          "status": "completed"
+        },
+        "task-removal": {
+          "status": "completed"
+        },
+        "task-scoping-by-plan": {
+          "status": "completed"
+        },
+        "toon-output-format": {
+          "status": "completed"
+        },
+        "tui": {
+          "status": "completed"
+        }
+      }
+    },
+    "discovery": {
+      "items": {
+        "archive-strategy-implementation": {
+          "source": "migration-seeded",
+          "order": 1
+        },
+        "blocked-ancestor-ready": {
+          "source": "migration-seeded",
+          "order": 2
+        },
+        "cli-command-structure-ux": {
+          "source": "migration-seeded",
+          "order": 3
+        },
+        "config-file-design": {
+          "source": "migration-seeded",
+          "order": 4
+        },
+        "data-schema-design": {
+          "source": "migration-seeded",
+          "order": 5
+        },
+        "doctor-command-validation": {
+          "source": "migration-seeded",
+          "order": 6
+        },
+        "freshness-dual-write": {
+          "source": "migration-seeded",
+          "order": 7
+        },
+        "hierarchy-dependency-model": {
+          "source": "migration-seeded",
+          "order": 8
+        },
+        "id-format-implementation": {
+          "source": "migration-seeded",
+          "order": 9
+        },
+        "installation-options": {
+          "source": "migration-seeded",
+          "order": 10
+        },
+        "migration-subcommand": {
+          "source": "migration-seeded",
+          "order": 11
+        },
+        "project-fundamentals": {
+          "source": "migration-seeded",
+          "order": 12
+        },
+        "task-removal": {
+          "source": "migration-seeded",
+          "order": 13
+        },
+        "task-scoping-by-plan": {
+          "source": "migration-seeded",
+          "order": 14
+        },
+        "toon-output-format": {
+          "source": "migration-seeded",
+          "order": 15
+        },
+        "tui": {
+          "source": "migration-seeded",
+          "order": 16
+        }
+      },
+      "approved_at": "2026-03-07T00:00:00.000Z"
+    }
+  },
+  "completed_at": "2026-03-13",
+  "spec": {
+    "joined": [
+      "blocked-ancestor-ready",
+      "doctor-validation",
+      "installation",
+      "migration",
+      "task-removal",
+      "tick-core"
+    ]
+  }
+}
